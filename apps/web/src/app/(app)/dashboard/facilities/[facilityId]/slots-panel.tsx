@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { Dialog } from '@/components/ui/dialog';
 import type { FormState } from '../../actions';
 import { addSlotsAction, removeSlotAction, updateSlotAction } from './slots.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * The rows a schedule is written on — POOLSE-44.
@@ -146,7 +147,7 @@ export function SlotsPanel({
             {t('slots.generate')}
           </button>
 
-          {open && (
+          <Reveal open={open}>
             <div id="slot-generator" className="border-t border-border p-4">
               <Generator
                 organizationId={organizationId}
@@ -156,7 +157,7 @@ export function SlotsPanel({
                 existing={shown}
               />
             </div>
-          )}
+          </Reveal>
         </div>
       )}
     </div>

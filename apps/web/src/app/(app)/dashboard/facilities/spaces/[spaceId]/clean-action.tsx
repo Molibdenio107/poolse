@@ -7,6 +7,7 @@ import { useSavedAction } from '@/lib/saved';
 import { TextAreaField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { logCleaning } from '../../spaces.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * "Marcar como limpo" — one tap, and nothing else.
@@ -71,14 +72,14 @@ export function CleanAction({
           </button>
         </div>
 
-        {noting && (
+        <Reveal open={noting}>
           <TextAreaField
             name="note"
             label={t('spaces.note')}
             rows={2}
             hint={t('spaces.noteHint')}
           />
-        )}
+        </Reveal>
 
       </form>
     </section>

@@ -52,7 +52,7 @@ export function QualificationStatus({
         className,
       )}
     >
-      <Icon className="size-4 shrink-0" aria-hidden />
+      <Icon className={cn('size-4 shrink-0', (status === 'red' || status === 'missing') && 'attention')} aria-hidden />
       {text}
     </span>
   );

@@ -60,6 +60,11 @@ export interface Register {
   localTime: string;
   durationMinutes: number;
   status: 'scheduled' | 'cancelled' | 'completed';
+  /**
+   * Whether the class has begun — Rui, 28-10-2026: a register is taken from the
+   * moment a class starts, never ahead of it. The save refuses the same thing.
+   */
+  started: boolean;
   instructorName: string | null;
   entries: RegisterEntry[];
   /**
@@ -111,6 +116,7 @@ export async function findRegister(
       local_time: string;
       duration_minutes: number;
       status: Register['status'];
+      started: boolean;
       instructor_name: string | null;
     }>(
       `
@@ -134,6 +140,7 @@ export async function findRegister(
                      'HH24:MI') AS local_time,
              cs.duration_minutes,
              cs.status,
+             cs.starts_at <= now() AS started,
              (
                SELECT ${NAME_SQL}
                  FROM membership m
@@ -294,6 +301,7 @@ export async function findRegister(
       localTime: session.local_time,
       durationMinutes: session.duration_minutes,
       status: session.status,
+      started: session.started,
       instructorName: session.instructor_name,
       entries: entries.map((row) => ({
         studentId: row.student_id,
@@ -354,8 +362,14 @@ export async function saveRegisterIn(
   marks: Mark[],
   context: ChangeContext = {},
 ): Promise<boolean> {
-  const { rows } = await tx.query<{ id: string; status: string; class_group_id: string | null }>(
-    `SELECT id, status::text AS status, class_group_id FROM class_session WHERE id = $1`,
+  const { rows } = await tx.query<{
+    id: string;
+    status: string;
+    class_group_id: string | null;
+    started: boolean;
+  }>(
+    `SELECT id, status::text AS status, class_group_id, starts_at <= now() AS started
+       FROM class_session WHERE id = $1`,
     [sessionId],
   );
   if (!rows[0]) return false;
@@ -363,6 +377,8 @@ export async function saveRegisterIn(
   // (CLAUDE.md) — refused here, not only by the screen. 13-10-2026 sweep.
   if (rows[0].status === 'cancelled') throw new RegisterRefusedError('cancelled');
   if (rows[0].class_group_id === null) throw new RegisterRefusedError('partnership');
+  // Nobody is marked for a class that has not begun (Rui, 28-10-2026).
+  if (!rows[0].started) throw new RegisterRefusedError('not_started');
 
   const cleared = marks.filter((mark) => mark.status === null).map((mark) => mark.studentId);
   const set = marks.filter((mark) => mark.status !== null);
@@ -552,7 +568,7 @@ export async function summaryForStudent(
 
 /** Why a register was not saved, in a form the controller can say. */
 export class RegisterRefusedError extends Error {
-  constructor(readonly reason: 'cancelled' | 'partnership' | 'credited') {
+  constructor(readonly reason: 'cancelled' | 'partnership' | 'credited' | 'not_started') {
     super(reason);
   }
 }

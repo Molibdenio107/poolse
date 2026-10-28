@@ -88,7 +88,7 @@ export interface NextClass {
   enrolled: number;
   /** Null is "not measured" and is said as such, never as zero. */
   capacity: number | null;
-  /** From 30 minutes before the start to 90 after, and only for a turma. */
+  /** From the start to 90 minutes after, and only for a turma (Rui, 28-10-2026: never before it begins). */
   registerOpen: boolean;
   registerTaken: boolean;
   /** Set when the reader is the stand-in: whose class this normally is. */
@@ -158,7 +158,7 @@ export async function readNextClass(
                 AS enrolled,
               cg.capacity,
               (cs.class_group_id IS NOT NULL
-               AND now() BETWEEN cs.starts_at - interval '30 minutes'
+               AND now() BETWEEN cs.starts_at
                              AND cs.starts_at + interval '90 minutes') AS register_open,
               ${REGISTER_TAKEN} AS register_taken,
               CASE WHEN cs.substitute_instructor_membership_id = $1

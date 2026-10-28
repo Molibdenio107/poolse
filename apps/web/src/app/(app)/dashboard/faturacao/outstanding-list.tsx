@@ -32,7 +32,12 @@ import { ReminderDialog } from './reminder-dialog';
  * **The header checkbox selects every overdue row shown** — POOLSE-104 D. Not
  * the open-but-not-yet-due ones, because a reminder is about what is late; a
  * row ticked by hand stays ticked. Indeterminate while only some are, and a
- * click with every overdue row ticked clears the lot. It is a real labelled
+ * click with every overdue row ticked clears the lot.
+ *
+ * **Ten rows a page** (Rui, 28-10-2026), so "shown" is this page. Once a page's
+ * overdue rows are all ticked and more are overdue elsewhere, a line offers
+ * *Selecionar todas as N em atraso* — the selection is the whole list's, kept
+ * while paging, and the total above is always the whole list's too. It is a real labelled
  * `<input>`, and below `md`, where `.table-stack` clips the header row, this
  * table un-clips that one cell as a line above the cards — the same element,
  * moved by CSS, never a second copy.
@@ -40,9 +45,16 @@ import { ReminderDialog } from './reminder-dialog';
 export function OutstandingList({
   facilityId,
   invoices,
+  shown = invoices,
+  pager,
 }: {
   facilityId: string;
+  /** Everything owed — the total, the selection and "select all" read this. */
   invoices: Invoice[];
+  /** This page's rows. */
+  shown?: Invoice[];
+  /** The page links, rendered on the server; nothing when one page holds all. */
+  pager?: React.ReactNode;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -54,7 +66,10 @@ export function OutstandingList({
   const listed = new Set(invoices.map((invoice) => invoice.id));
   const ticked = new Set([...tickedRaw].filter((id) => listed.has(id)));
   const [reminding, setReminding] = useState(false);
-  const overdue = invoices.filter((invoice) => invoice.status === 'overdue').map((invoice) => invoice.id);
+  const overdueOf = (list: Invoice[]): string[] =>
+    list.filter((invoice) => invoice.status === 'overdue').map((invoice) => invoice.id);
+  const overdue = overdueOf(shown);
+  const overdueEverywhere = overdueOf(invoices);
   const tick = (id: string, on: boolean): void => {
     const next = new Set(ticked);
     if (on) next.add(id);
@@ -69,8 +84,18 @@ export function OutstandingList({
     if (tickAll.current !== null) tickAll.current.indeterminate = someTicked;
   }, [someTicked]);
   const toggleAll = (): void => {
-    setTicked(allOverdue ? new Set() : new Set([...ticked, ...overdue]));
+    if (allOverdue) {
+      const next = new Set(ticked);
+      for (const id of overdue) next.delete(id);
+      setTicked(next);
+    } else {
+      setTicked(new Set([...ticked, ...overdue]));
+    }
   };
+  const allOverdueEverywhere =
+    overdueEverywhere.length > 0 && overdueEverywhere.every((id) => ticked.has(id));
+  // The Gmail line: offered once this page is done and there is more elsewhere.
+  const offerEverywhere = allOverdue && overdueEverywhere.length > overdue.length;
 
   return (
     <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
@@ -98,6 +123,34 @@ export function OutstandingList({
             {t('invoices.reminders.open', { count: ticked.size })}
           </button>
         </div>
+      )}
+
+      {offerEverywhere && (
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded bg-surface-muted px-3 py-2 text-sm">
+          {allOverdueEverywhere ? (
+            <>
+              <span>{t('invoices.reminders.allSelected', { count: overdueEverywhere.length })}</span>
+              <button
+                type="button"
+                onClick={() => setTicked(new Set())}
+                className="rounded font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {t('invoices.reminders.clearSelection')}
+              </button>
+            </>
+          ) : (
+            <>
+              <span>{t('invoices.reminders.pageSelected', { count: overdue.length })}</span>
+              <button
+                type="button"
+                onClick={() => setTicked(new Set([...ticked, ...overdueEverywhere]))}
+                className="rounded font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {t('invoices.reminders.selectEverywhere', { count: overdueEverywhere.length })}
+              </button>
+            </>
+          )}
+        </p>
       )}
 
       <ReminderDialog
@@ -155,7 +208,7 @@ export function OutstandingList({
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {invoices.map((invoice) => (
+              {shown.map((invoice) => (
                 <tr key={invoice.id}>
                   <td className="py-3 align-top">
                     <input
@@ -221,6 +274,7 @@ export function OutstandingList({
           </table>
         </div>
       )}
+      {pager}
     </section>
   );
 }

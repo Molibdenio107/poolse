@@ -2805,6 +2805,8 @@ export interface Register {
   localTime: string;
   durationMinutes: number;
   status: 'scheduled' | 'cancelled' | 'completed';
+  /** Whether the class has begun: the register opens then, never before (Rui, 28-10-2026). */
+  started: boolean;
   instructorName: string | null;
   entries: RegisterEntry[];
   /**

@@ -13,6 +13,7 @@ import {
   removeFoundAction,
   returnFoundAction,
 } from './lost-and-found.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * Lost property — round 5, ticket 6.1.
@@ -100,7 +101,7 @@ export function LostAndFoundPanel({
         </button>
       </h2>
 
-      {open && (
+      <Reveal open={open}>
         <div id="lost-and-found-body" className="border-t border-border p-5">
           {items.length === 0 ? (
             <p className="text-sm text-foreground-muted">{t('inventory.lostAndFound.empty')}</p>
@@ -130,7 +131,7 @@ export function LostAndFoundPanel({
             </div>
           )}
         </div>
-      )}
+      </Reveal>
     </section>
   );
 }

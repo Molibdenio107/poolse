@@ -173,7 +173,7 @@ export default async function ProfilePage({
                     <p className="mt-1 text-sm text-foreground-muted">{t('subscription.subtitle')}</p>
                     {subscriptionWarning?.alert != null && (
                       <p className="mt-2 flex items-start gap-2 text-sm text-warning">
-                        <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                        <AlertTriangle className="attention mt-0.5 size-4 shrink-0" aria-hidden />
                         {subscriptionAlertSentence(t, subscriptionWarning.alert)}
                       </p>
                     )}

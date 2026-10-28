@@ -116,7 +116,7 @@ export default async function MaintenanceHomePage(): Promise<React.ReactElement>
       {home.issues.length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="flex items-center gap-1.5 text-base font-semibold">
-            <AlertTriangle className="size-4" aria-hidden />
+            <AlertTriangle className="attention size-4" aria-hidden />
             {t('app.maintenance.issues', { count: home.issues.length })}
           </h2>
           <ul className="flex flex-col gap-2">

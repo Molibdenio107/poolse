@@ -76,7 +76,7 @@ export function UserMenu({
       {sentence !== null && (
         // On the avatar's corner; it takes no click, so the avatar still opens the menu.
         <span className="pointer-events-none absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-surface ring-1 ring-border">
-          <AlertTriangle className="size-3 text-warning" aria-hidden />
+          <AlertTriangle className="attention size-3 text-warning" aria-hidden />
           <span className="sr-only">{t('subscriptionAlert.badge')}</span>
         </span>
       )}

@@ -147,6 +147,40 @@ export default async function AttendancePage({
             <section className="rounded border border-border bg-surface p-5">
               <p>{t('attendance.classCancelled')}</p>
             </section>
+          ) : register.canRecord && !register.started ? (
+            /*
+              A register opens when the class starts — Rui, 28-10-2026. Before
+              that it says when, and who is expected, with each family's
+              *Não vou* beside its name; nothing can be marked, and the API
+              refuses a save the same way.
+            */
+            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+              <p className="font-medium">
+                {t('attendance.notStarted', {
+                  date: formatDate(register.localDate),
+                  time: register.localTime,
+                })}
+              </p>
+              {register.entries.length > 0 && (
+                <ul className="flex flex-col divide-y divide-border text-sm">
+                  {register.entries.map((entry) => {
+                    const notice = (register.notices ?? []).find(
+                      (one) => one.studentId === entry.studentId,
+                    );
+                    return (
+                      <li key={entry.studentId} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                        <span>{entry.shortName}</span>
+                        {notice !== undefined && (
+                          <span className="rounded border border-border px-2 py-0.5 text-xs text-foreground-muted">
+                            {t(notice.going ? 'attendance.noticeGoing' : 'attendance.noticeNotGoing')}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
           ) : register.canRecord ? (
             <RegisterForm register={register} />
           ) : (

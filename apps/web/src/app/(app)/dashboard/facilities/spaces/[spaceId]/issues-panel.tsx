@@ -11,6 +11,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { archiveIssue, reportIssue, resolveIssue, setIssueSeverity } from '../../spaces.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 const SEVERITIES: readonly Severity[] = ['high', 'normal', 'low'];
 
@@ -83,7 +84,7 @@ function IssueRow({
           */}
           <span className="inline-flex items-center gap-1 text-sm font-medium">
             {issue.status === 'open' && (
-              <AlertCircle className="size-4 text-danger" aria-hidden="true" />
+              <AlertCircle className="attention size-4 text-danger" aria-hidden="true" />
             )}
             {t(`spaces.issueType.${issue.type}`)}
           </span>
@@ -292,7 +293,7 @@ export function IssuesPanel({
               : t('spaces.showResolved', { count: resolved.length })}
           </button>
 
-          {showResolved && (
+          <Reveal open={showResolved}>
             <ul className="flex flex-col divide-y divide-border">
               {resolved.map((issue) => (
                 <IssueRow
@@ -305,7 +306,7 @@ export function IssuesPanel({
                 />
               ))}
             </ul>
-          )}
+          </Reveal>
         </div>
       )}
 

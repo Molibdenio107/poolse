@@ -23,6 +23,7 @@ import {
   type PartnerPreviewRow,
   type ReadState,
 } from './partner-import.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * The partnerships sheet, in four steps — POOLSE-48.
@@ -522,7 +523,7 @@ function MappingStep({
         </button>
       </div>
 
-      {showAll && (
+      <Reveal open={showAll}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FIELD_ORDER.map((field) => (
             <div key={field} className={cn(FIELD_COLUMN, 'max-w-none')}>
@@ -553,7 +554,7 @@ function MappingStep({
             </div>
           ))}
         </div>
-      )}
+      </Reveal>
 
       {!namesMapped && (
         <p className="flex items-start gap-2 text-sm text-danger">

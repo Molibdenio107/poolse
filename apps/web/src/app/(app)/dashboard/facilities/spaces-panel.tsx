@@ -8,6 +8,7 @@ import { useSavedAction } from '@/lib/saved';
 import { timeAgo } from '@/lib/relative-time';
 import type { Space, SpaceType } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
+import { Reveal } from '@/components/ui/reveal';
 import { SelectField, TextAreaField, TextField, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../actions';
@@ -61,7 +62,7 @@ const BUTTON =
 function OverdueBadge({ label }: { label: string }): React.ReactElement {
   return (
     <span className="inline-flex items-center gap-1 rounded bg-danger/10 px-1.5 py-0.5 text-xs font-medium text-danger">
-      <AlertTriangle className="size-3.5" aria-hidden="true" />
+      <AlertTriangle className="attention size-3.5" aria-hidden="true" />
       {label}
     </span>
   );
@@ -169,7 +170,7 @@ export function SpacesPanel({
 
                 {overdue > 0 && (
                   <span className="inline-flex items-center gap-1 rounded bg-danger/10 px-1.5 py-0.5 font-medium text-danger">
-                    <AlertTriangle className="size-3" aria-hidden="true" />
+                    <AlertTriangle className="attention size-3" aria-hidden="true" />
                     {t('spaces.overdueCount', { count: overdue })}
                   </span>
                 )}
@@ -193,7 +194,8 @@ export function SpacesPanel({
         )}
       </div>
 
-      {!open ? null : spaces.length === 0 ? (
+      <Reveal open={open}>
+      {spaces.length === 0 ? (
         <p className="text-sm text-foreground-muted">{t('spaces.none')}</p>
       ) : (
         <ul className="flex flex-col divide-y divide-border">
@@ -256,6 +258,7 @@ export function SpacesPanel({
           })}
         </ul>
       )}
+      </Reveal>
 
       <Dialog
         open={adding}

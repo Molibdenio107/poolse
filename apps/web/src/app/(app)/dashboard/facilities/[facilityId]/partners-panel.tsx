@@ -12,6 +12,7 @@ import { PartnerImportWizard } from './partner-import-wizard';
 import type { FormState } from '../../actions';
 import { savePartnerAction } from './partners.actions';
 import { DownloadLink } from '@/components/download-link';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * Parcerias, on the facility page — POOLSE-47.
@@ -170,7 +171,7 @@ export function PartnersPanel({
         </div>
       </div>
 
-      {importing && canManage && (
+      <Reveal open={importing && canManage}>
         <div className="rounded border border-border bg-surface-muted p-4">
           <PartnerImportWizard
             /*
@@ -185,9 +186,9 @@ export function PartnersPanel({
             onClose={() => setImporting(false)}
           />
         </div>
-      )}
+      </Reveal>
 
-      {open && canManage && (
+      <Reveal open={open && canManage}>
         <form
           action={save}
           className="flex flex-col gap-4 rounded border border-border bg-surface-muted p-4"
@@ -246,7 +247,7 @@ export function PartnersPanel({
             </button>
           </div>
         </form>
-      )}
+      </Reveal>
 
       {partners.length === 0 ? (
         <p className="text-sm text-foreground-muted">{t('partners.none')}</p>

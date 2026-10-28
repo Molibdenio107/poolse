@@ -28,7 +28,7 @@ export function LabGradeChip({
         className,
       )}
     >
-      <Icon aria-hidden className="size-4" />
+      <Icon aria-hidden className={grade === 'nao_conforme' ? 'attention size-4' : 'size-4'} />
       {label}
     </span>
   );

@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import type { FormState } from '../actions';
 import { moveBookingAction } from './classes.actions';
 import { saveGroupAction } from '../facilities/[facilityId]/partners.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * A partnership's timetable, on the Classes screen.
@@ -119,7 +120,7 @@ export function PartnerClasses({
         </button>
       </h2>
 
-      {open && (
+      <Reveal open={open}>
       <ul id="partner-classes-body" className="flex flex-col gap-3 border-t border-border p-5">
         {bookings.map((booking) => (
           <li key={booking.id}>
@@ -137,7 +138,7 @@ export function PartnerClasses({
           </li>
         ))}
       </ul>
-      )}
+      </Reveal>
     </section>
   );
 }

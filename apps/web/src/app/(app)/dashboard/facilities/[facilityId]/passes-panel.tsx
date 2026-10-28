@@ -10,6 +10,7 @@ import { centsToInput, formatCents, parseCents } from '@/lib/money';
 import type { PassKind, PassProduct } from '@/lib/api';
 import type { FormState } from '../../actions';
 import { archiveProductAction, saveProductAction, saveStayAction } from './passes.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * Natação livre — what this site sells at reception (POOLSE-68).
@@ -109,13 +110,13 @@ export function PassesPanel({
                   </button>
                 </div>
               </div>
-              {editing === product.id && (
+              <Reveal open={editing === product.id}>
                 <ProductForm
                   facilityId={facilityId}
                   product={product}
                   onDone={() => setEditing(null)}
                 />
-              )}
+              </Reveal>
             </li>
           ))}
         </ul>

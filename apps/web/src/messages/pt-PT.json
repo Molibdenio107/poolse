@@ -2915,6 +2915,7 @@
     "noteFor": "Nota sobre {name}",
     "notePlaceholder": "Saiu mais cedo, chegou às 18:20…",
     "recordedBy": "Marcado por {name}",
+    "notStarted": "O registo de presenças abre quando a aula começar, a {date} às {time}.",
     "classCancelled": "Esta aula foi cancelada, por isso não há presenças a marcar.",
     "readOnly": "Não tem permissão para marcar presenças.",
     "restricted": "Esta secção é reservada a instrutores, administradores e proprietários.",
@@ -2927,6 +2928,7 @@
     "refused": {
       "cancelled": "Esta aula foi cancelada, por isso não há presenças a marcar.",
       "partnership": "Uma aula de parceria não tem registo de presenças.",
+      "not_started": "Esta aula ainda não começou: as presenças registam-se a partir da hora de início.",
       "credited": "Esta presença já deu origem a uma reposição e não pode ser alterada."
     },
     "notComingCount": "{count, plural, one {# avisou que não vem} other {# avisaram que não vêm}}",
@@ -3991,6 +3993,10 @@
       "send": "{count, plural, =0 {Enviar} one {Enviar # lembrete} other {Enviar # lembretes}}",
       "open": "{count, plural, =0 {Enviar lembrete por email} one {Enviar lembrete por email (# documento)} other {Enviar lembrete por email (# documentos)}}",
       "tickAllOverdue": "Selecionar todos em atraso",
+      "pageSelected": "{count, plural, one {O documento em atraso desta página está selecionado.} other {Os # documentos em atraso desta página estão selecionados.}}",
+      "selectEverywhere": "Selecionar os {count} em atraso",
+      "allSelected": "{count, plural, one {O documento em atraso está selecionado.} other {Todos os # documentos em atraso estão selecionados.}}",
+      "clearSelection": "Limpar a seleção",
       "tickOne": "Escolher o documento {no}",
       "previewFailed": "Não foi possível preparar os lembretes.",
       "nobodyChosen": "Escolha pelo menos uma pessoa.",

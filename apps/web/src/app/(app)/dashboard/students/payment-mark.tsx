@@ -25,7 +25,7 @@ export function PaymentMark({
 
   return (
     <span className="flex items-center gap-1.5 rounded bg-danger/10 px-2 py-0.5 text-sm text-danger">
-      <AlertTriangle aria-hidden className="size-3.5" />
+      <AlertTriangle aria-hidden className="attention size-3.5" />
       {t('fees.overduePayment')}
     </span>
   );

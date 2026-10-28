@@ -332,3 +332,42 @@ test('a role with no business here is still refused before ownership is asked', 
     });
   });
 });
+
+test('a register opens when its class starts, never before (Rui, 28-10-2026)', async () => {
+  await withScratchTenant(async (tenant) => {
+    let fix: Fixture;
+    let later = '';
+    let begun = '';
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      fix = await twoTurmas(tenant);
+      const at = async (offset: string): Promise<string> => {
+        const [made] = await tenant.sql<{ id: string }>(
+          `INSERT INTO class_session
+             (organization_id, class_group_id, pool_id, occurs_on, starts_at,
+              duration_minutes, instructor_membership_id)
+           SELECT $1, cg.id, cg.pool_id,
+                  ((now() + $3::interval) AT TIME ZONE 'Europe/Lisbon')::date,
+                  now() + $3::interval, 45, $4
+             FROM class_group cg WHERE cg.id = $2
+           RETURNING id`,
+          [tenant.organizationId, fix.sandrasTurma, offset, fix.sandra],
+        );
+        return made!.id;
+      };
+      later = await at('2 days');
+      begun = await at('-5 minutes');
+    });
+
+    const attendance = new AttendanceController();
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      // The owner is never refused a register — but nobody marks one in advance.
+      const ahead = await attendance.register(later);
+      assert.equal(ahead.started, false);
+      await expectStatus(() => attendance.record(later, { marks: [] }), 409);
+
+      const now = await attendance.register(begun);
+      assert.equal(now.started, true);
+      await attendance.record(begun, { marks: [] });
+    });
+  });
+});

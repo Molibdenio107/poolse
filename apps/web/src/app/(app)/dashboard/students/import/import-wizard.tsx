@@ -28,6 +28,7 @@ import {
   type MatchState,
   type ReadState,
 } from './import.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * Slice 1.10 — the import, in four steps.
@@ -525,7 +526,7 @@ function MappingStep({
         </button>
       </div>
 
-      {showAll && (
+      <Reveal open={showAll}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FIELD_ORDER.map((field) => (
             <div key={field} className={cn(FIELD_COLUMN, 'max-w-none')}>
@@ -558,7 +559,7 @@ function MappingStep({
             </div>
           ))}
         </div>
-      )}
+      </Reveal>
 
       {levelNames !== '' && (
         <p className="text-sm text-foreground-muted">

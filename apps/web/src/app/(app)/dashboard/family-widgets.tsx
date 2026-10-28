@@ -150,7 +150,7 @@ export async function ChildFeesCard({
           {/* A word and an icon, never colour alone. */}
           {data.overdueCount > 0 && (
             <p className="flex items-center gap-1.5 text-sm text-danger">
-              <AlertTriangle aria-hidden className="size-4 shrink-0" />
+              <AlertTriangle aria-hidden className="attention size-4 shrink-0" />
               {t('family.widget.fees.overdue', { count: data.overdueCount })}
             </p>
           )}

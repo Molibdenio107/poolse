@@ -285,7 +285,11 @@ export default async function CalendarPage({
             take: `attendance` needs a real student on every row. A partnership
             the club runs gets the plan and Cancelar aula, and stops there.
           */
-          mark: cancelled || session.classGroupId === null || calendar?.canTakeRegister !== true
+          // And nothing to mark before it starts (Rui, 28-10-2026).
+          mark: cancelled ||
+            session.classGroupId === null ||
+            calendar?.canTakeRegister !== true ||
+            Date.parse(session.startsAt) > Date.now()
             ? undefined
             : {
                 href: `/dashboard/calendar/sessions/${session.id}?week=${monday}`,

@@ -107,6 +107,8 @@ which is what the sequence is for.
 
 ## What is owed — phase 2.3
 
+**Both views show ten documents a page** (Rui, 28-10-2026), with the app's `Pagination` under the list and `?page=` in the address. The lists arrive whole and are paged on the server page, so the total owed and the selection are always the whole list's. On *Em dívida* the header box ticks this page's overdue rows; once they are all ticked and more are overdue elsewhere, a line offers *Selecionar os N em atraso*, then *Limpar a seleção*.
+
 The **Em dívida** view lists everything still outstanding, oldest debt first, because that is
 a job to work through rather than a record to look something up in.
 

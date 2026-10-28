@@ -27,6 +27,7 @@ import {
   updateFeeAction,
 } from './fees.actions';
 import { formatDate } from '@/lib/date-format';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * What this student pays — POOLSE-42, AC3.
@@ -128,7 +129,7 @@ export function CoverBadge({ cover }: { cover: StudentFees['cover'] }): React.Re
 
   return (
     <p className="flex items-center gap-1.5 text-sm text-warning">
-      <AlertTriangle aria-hidden className="size-4 shrink-0" />
+      <AlertTriangle aria-hidden className="attention size-4 shrink-0" />
       {cover.lapsed
         ? t('fees.coverLapsed', { date: formatDate(cover.coversTo) })
         : t('fees.coverNone')}
@@ -217,7 +218,7 @@ function SeasonCharges({
               </span>
             </div>
 
-            {charging === charge.planId && (
+            <Reveal open={charging === charge.planId}>
               <ChargeSeasonForm
                 studentId={studentId}
                 charge={charge}
@@ -225,7 +226,7 @@ function SeasonCharges({
                 suggestedCategoryId={suggestedCategoryId}
                 onDone={() => setCharging(null)}
               />
-            )}
+            </Reveal>
           </li>
         ))}
       </ul>
@@ -730,7 +731,7 @@ export function FeesBlock({
               */}
               {fees.penalties.mensalidadeCents > 0 && (
                 <span className="flex items-center gap-1.5 text-sm text-danger">
-                  <AlertTriangle aria-hidden className="size-3.5" />
+                  <AlertTriangle aria-hidden className="attention size-3.5" />
                   {t('fees.penaltyMensalidadeApplied', {
                     amount: formatCents(locale, fees.penalties.mensalidadeCents),
                   })}
@@ -738,7 +739,7 @@ export function FeesBlock({
               )}
               {fees.penalties.quotaCents > 0 && (
                 <span className="flex items-center gap-1.5 text-sm text-danger">
-                  <AlertTriangle aria-hidden className="size-3.5" />
+                  <AlertTriangle aria-hidden className="attention size-3.5" />
                   {t('fees.penaltyQuotaApplied', {
                     amount: formatCents(locale, fees.penalties.quotaCents),
                   })}
@@ -872,7 +873,7 @@ function FeeRow({
         */}
         {line.planAmountCentsNow !== null && (
           <span className="flex items-center gap-1.5 rounded bg-warning/10 px-2 py-0.5 text-warning">
-            <AlertTriangle aria-hidden className="size-3.5" />
+            <AlertTriangle aria-hidden className="attention size-3.5" />
             {/*
               A quota can move because the member crossed eighteen rather than
               because the club changed its mind. Different sentence, same one
@@ -948,7 +949,7 @@ function FeeRow({
         />
       </div>
 
-      {editing && (
+      <Reveal open={editing}>
         <EditFeeForm
           studentId={studentId}
           line={line}
@@ -956,7 +957,7 @@ function FeeRow({
           categories={categories}
           onDone={() => setEditing(false)}
         />
-      )}
+      </Reveal>
     </li>
   );
 }
@@ -1408,7 +1409,7 @@ function CurrentPlanRow({
               act on it, rather than silently costing nothing.
             */
             <span className="flex items-center gap-1.5 rounded bg-warning/10 px-2 py-0.5 text-sm text-warning">
-              <AlertTriangle aria-hidden className="size-3.5" />
+              <AlertTriangle aria-hidden className="attention size-3.5" />
               {t('fees.noPriceForClasses')}
             </span>
           ) : (
@@ -1438,7 +1439,8 @@ function CurrentPlanRow({
         </span>
       </div>
 
-      {charging && plan.planId !== null && (
+      <Reveal open={charging && plan.planId !== null}>
+        {plan.planId !== null && (
         <ChargePlanForm
           studentId={studentId}
           planId={plan.planId}
@@ -1448,7 +1450,8 @@ function CurrentPlanRow({
           suggestedCategoryId={suggestedCategoryId}
           onDone={() => setCharging(false)}
         />
-      )}
+        )}
+      </Reveal>
     </li>
   );
 }

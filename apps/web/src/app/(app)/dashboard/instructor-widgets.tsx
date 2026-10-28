@@ -202,7 +202,7 @@ export async function WeekCard({ widget }: { widget: DashboardWidget }): Promise
                   one.past &&
                   !one.partner && (
                     <span className="flex items-center gap-1 text-xs text-warning">
-                      <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+                      <AlertTriangle className="attention size-3.5 shrink-0" aria-hidden="true" />
                       {t('dashboard.widget.week.registerMissing')}
                     </span>
                   )
@@ -267,7 +267,7 @@ export async function TrainingPlanCard({
           ) : (
             <>
               <p className="flex items-center gap-1.5 text-sm text-warning">
-                <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+                <AlertTriangle className="attention size-4 shrink-0" aria-hidden="true" />
                 {t('dashboard.widget.plan.missing')}
               </p>
               {data.canEdit && data.previousOn !== null && (

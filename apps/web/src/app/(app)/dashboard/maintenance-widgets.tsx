@@ -122,7 +122,7 @@ export async function OverdueCleaningsCard({
                     {space.name}
                   </FromLink>
                   <span className="flex items-center gap-1 text-xs text-warning">
-                    <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+                    <AlertTriangle className="attention size-3.5 shrink-0" aria-hidden="true" />
                     {space.lastCleanedAt === null
                       ? t('dashboard.widget.cleanings.never')
                       : t('spaces.cleanedAgo', { ago: timeAgo(space.lastCleanedAt, locale) ?? '' })}
@@ -167,7 +167,7 @@ export async function WaterDueCard({ widget }: { widget: DashboardWidget }): Pro
               <span className="font-medium">{pool.poolName}</span>
               {pool.outOfRange.length > 0 && (
                 <span className="flex items-center gap-1.5 text-danger">
-                  <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+                  <AlertTriangle className="attention size-3.5 shrink-0" aria-hidden="true" />
                   {t('dashboard.widget.water.outOfRange', {
                     metrics: pool.outOfRange.map((metric) => t(`facilities.metric.${metric}`)).join(', '),
                   })}

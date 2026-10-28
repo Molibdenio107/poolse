@@ -8,6 +8,7 @@ import { FIELD_COLUMN, FIELD_LABEL, TextField } from '@/components/ui/field';
 import type { InvoiceSeries } from '@/lib/api';
 import type { FormState } from '../../actions';
 import { saveSeriesAction } from '../../faturacao/invoices.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * The numbering books this site holds.
@@ -89,13 +90,13 @@ export function SeriesPanel({
               </span>
             </div>
 
-            {editing === book.id && (
+            <Reveal open={editing === book.id}>
               <SeriesForm
                 facilityId={facilityId}
                 series={book}
                 onDone={() => setEditing(null)}
               />
-            )}
+            </Reveal>
           </li>
         ))}
       </ul>

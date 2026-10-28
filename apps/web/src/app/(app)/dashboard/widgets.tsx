@@ -187,7 +187,7 @@ async function TasksCard({ widget }: { widget: DashboardWidget }): Promise<React
                   {/* Icon and words together, never colour alone. */}
                   {task.state === 'due' ? (
                     <span className="inline-flex items-center gap-1 rounded bg-danger/10 px-1.5 py-0.5 text-xs font-medium text-danger">
-                      <AlertTriangle className="size-3.5" aria-hidden="true" />
+                      <AlertTriangle className="attention size-3.5" aria-hidden="true" />
                       {task.daysOverdue > 0
                         ? t('maintenance.dueBy', { days: task.daysOverdue })
                         : t('maintenance.due')}
@@ -474,7 +474,7 @@ async function FreeSwimCard({
                     )}
                   >
                     {/* An icon and the words, never the colour alone. */}
-                    {nearlyFull && <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />}
+                    {nearlyFull && <AlertTriangle className="attention size-4 shrink-0" aria-hidden="true" />}
                     {pool.capacity === null
                       ? t('dashboard.widget.freeSwim.inWater', { occupied })
                       : t('dashboard.widget.freeSwim.inWaterOf', {
@@ -528,7 +528,7 @@ async function OccupancyTodayCard({
           {/* An icon and the words, never the colour alone. */}
           {data.withoutInstructor > 0 && (
             <p className="flex items-center gap-1.5 text-sm text-warning">
-              <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+              <AlertTriangle className="attention size-4 shrink-0" aria-hidden="true" />
               {t('dashboard.widget.today.withoutInstructor', { count: data.withoutInstructor })}
             </p>
           )}
@@ -591,7 +591,7 @@ async function WaterCard({
                 </FromLink>
                 {pool.outOfRange.length > 0 && (
                   <span className="flex items-center gap-1.5 text-danger">
-                    <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+                    <AlertTriangle className="attention size-3.5 shrink-0" aria-hidden="true" />
                     {t('dashboard.widget.water.outOfRange', {
                       metrics: pool.outOfRange
                         .map((metric) => t(`facilities.metric.${metric}`))
@@ -676,7 +676,7 @@ async function MaintenanceCard({
             ))}
           {data.overdueCleanings > 0 && (
             <li className="flex items-center gap-1.5 text-warning">
-              <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+              <AlertTriangle className="attention size-3.5 shrink-0" aria-hidden="true" />
               {t('dashboard.widget.maintenance.overdue', { count: data.overdueCleanings })}
             </li>
           )}

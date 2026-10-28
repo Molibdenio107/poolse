@@ -260,7 +260,7 @@ export default async function StudentPage({
               */}
               {loaded.licenceMissing && (
                 <p className="flex items-start gap-2 rounded border border-warning/40 bg-warning/10 p-3 text-sm">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+                  <AlertTriangle className="attention mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
                   {t('students.licenceMissing', { level: loaded.levelName ?? '' })}
                 </p>
               )}

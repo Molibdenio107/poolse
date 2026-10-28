@@ -73,7 +73,7 @@ export async function EnergyDashboard({ summary }: { summary: EnergySummary }): 
 
       {summary.missing.length > 0 && (
         <div role="status" className="flex items-start gap-2 rounded border border-warning/50 bg-warning/10 p-3 text-sm">
-          <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
+          <AlertTriangle aria-hidden className="attention mt-0.5 size-4 shrink-0 text-warning" />
           <div className="flex flex-col gap-1">
             <p className="font-medium">{t('energy.dashboard.missingTitle', { days: 45 })}</p>
             <ul className="flex flex-col gap-1">

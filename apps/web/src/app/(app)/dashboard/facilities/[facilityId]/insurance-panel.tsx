@@ -12,6 +12,7 @@ import type { InsurancePolicy } from '@/lib/api';
 import type { FormState } from '../../actions';
 import { archivePolicyAction, savePolicyAction } from './insurance.actions';
 import { formatDate } from '@/lib/date-format';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * The apólices a club holds — the facility's half of the seguro.
@@ -54,7 +55,7 @@ function Expiry({ policy }: { policy: InsurancePolicy }): React.ReactElement {
   if (policy.expired) {
     return (
       <span className="flex items-center gap-1.5 text-sm text-danger">
-        <AlertTriangle aria-hidden className="size-4 shrink-0" />
+        <AlertTriangle aria-hidden className="attention size-4 shrink-0" />
         {t('insurance.expired', { days: Math.abs(policy.daysToExpiry) })}
       </span>
     );
@@ -63,7 +64,7 @@ function Expiry({ policy }: { policy: InsurancePolicy }): React.ReactElement {
   if (policy.renewalDue) {
     return (
       <span className="flex items-center gap-1.5 text-sm text-warning">
-        <AlertTriangle aria-hidden className="size-4 shrink-0" />
+        <AlertTriangle aria-hidden className="attention size-4 shrink-0" />
         {t('insurance.renewalDue', { days: policy.daysToExpiry })}
       </span>
     );
@@ -174,13 +175,13 @@ export function InsurancePanel({
                 </div>
               </div>
 
-              {canManage && editing === policy.id && (
+              <Reveal open={canManage && editing === policy.id}>
                 <PolicyForm
                   facilityId={facilityId}
                   policy={policy}
                   onDone={() => setEditing(null)}
                 />
-              )}
+              </Reveal>
             </li>
           ))}
         </ul>

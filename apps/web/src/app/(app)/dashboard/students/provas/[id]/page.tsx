@@ -133,7 +133,7 @@ export default async function MeetPage({
                         )}
                         {result.licenceMissing && (
                           <span className="flex items-center gap-1 text-warning">
-                            <AlertTriangle className="size-3.5" aria-hidden />
+                            <AlertTriangle className="attention size-3.5" aria-hidden />
                             {t('meets.noLicence')}
                           </span>
                         )}

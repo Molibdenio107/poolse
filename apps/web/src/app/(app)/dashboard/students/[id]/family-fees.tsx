@@ -69,7 +69,7 @@ export function FamilyFees({ fees }: { fees: StudentFees }): React.ReactElement 
                     {line.isPaid ? (
                       <Check aria-hidden className="size-3.5" />
                     ) : line.isOverdue ? (
-                      <AlertTriangle aria-hidden className="size-3.5" />
+                      <AlertTriangle aria-hidden className="attention size-3.5" />
                     ) : null}
                     {line.isPaid
                       ? line.paidOn === null
@@ -99,7 +99,7 @@ export function FamilyFees({ fees }: { fees: StudentFees }): React.ReactElement 
             </div>
             {fees.penalties.mensalidadeCents > 0 && (
               <p className="flex items-center gap-1.5 text-danger">
-                <AlertTriangle aria-hidden className="size-3.5" />
+                <AlertTriangle aria-hidden className="attention size-3.5" />
                 {t('fees.penaltyMensalidadeApplied', {
                   amount: formatCents(locale, fees.penalties.mensalidadeCents),
                 })}
@@ -107,7 +107,7 @@ export function FamilyFees({ fees }: { fees: StudentFees }): React.ReactElement 
             )}
             {fees.penalties.quotaCents > 0 && (
               <p className="flex items-center gap-1.5 text-danger">
-                <AlertTriangle aria-hidden className="size-3.5" />
+                <AlertTriangle aria-hidden className="attention size-3.5" />
                 {t('fees.penaltyQuotaApplied', {
                   amount: formatCents(locale, fees.penalties.quotaCents),
                 })}

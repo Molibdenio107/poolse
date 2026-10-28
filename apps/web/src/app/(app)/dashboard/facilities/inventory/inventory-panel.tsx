@@ -14,6 +14,7 @@ import { addItemAction, archiveItemAction, updateItemAction } from './inventory.
 import { InventoryImportWizard } from './import-wizard';
 import { Dialog } from '@/components/ui/dialog';
 import { DownloadLink } from '@/components/download-link';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * What the club owns, at one site — round 6.
@@ -286,7 +287,7 @@ export function InventoryPanel({
             </button>
           </h2>
 
-          {adding && (
+          <Reveal open={adding}>
             <div id="inventory-add" className="border-t border-border p-5">
               <AddItemForm
                 organizationId={organizationId}
@@ -295,7 +296,7 @@ export function InventoryPanel({
                 locations={locations}
               />
             </div>
-          )}
+          </Reveal>
         </section>
       )}
 
@@ -456,7 +457,7 @@ export function InventoryPanel({
         )}
       </Dialog>
 
-      {open && (
+      <Reveal open={open}>
         <section ref={panel} className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -490,7 +491,7 @@ export function InventoryPanel({
             onClose={close}
           />
         </section>
-      )}
+      </Reveal>
 
       <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
         <p className="text-sm text-foreground-muted">{t('inventory.hint')}</p>

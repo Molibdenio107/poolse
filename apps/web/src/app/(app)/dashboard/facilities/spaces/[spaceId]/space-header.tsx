@@ -119,7 +119,7 @@ export function SpaceHeader({
       */}
       {space.overdue && (
         <p className="flex items-center gap-2 rounded bg-danger/10 px-3 py-2 text-sm font-medium text-danger">
-          <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+          <AlertTriangle className="attention size-4 shrink-0" aria-hidden="true" />
           {t('spaces.overdueDetail')}
         </p>
       )}

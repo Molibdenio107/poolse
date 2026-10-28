@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { ImportWizard } from './import/import-wizard';
 import { Dialog } from '@/components/ui/dialog';
 import { DownloadLink } from '@/components/download-link';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * The import, on the register itself.
@@ -322,7 +323,7 @@ export function StudentActions({
         )}
       </Dialog>
 
-      {open && (
+      <Reveal open={open}>
         <section
           ref={panel}
           className={cn('flex flex-col gap-4 rounded border border-border bg-surface p-5')}
@@ -356,7 +357,7 @@ export function StudentActions({
             onClose={close}
           />
         </section>
-      )}
+      </Reveal>
     </>
   );
 }

@@ -119,7 +119,7 @@ export async function OccupancyPanel({
             */}
             {occupancy.seatOccupancy !== null && occupancy.lanesWithoutCapacity > 0 && (
               <p className="flex flex-wrap items-start gap-x-2 gap-y-1 text-sm">
-                <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
+                <AlertTriangle aria-hidden className="attention mt-0.5 size-4 shrink-0 text-warning" />
                 <span>{t('occupancy.seats.partial', { count: occupancy.lanesWithoutCapacity })}</span>
                 {facilityId !== undefined && facilityId !== null && (
                   <FromLink

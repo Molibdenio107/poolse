@@ -15,6 +15,7 @@ import {
   reorderSkillsAction,
   skillsOfAction,
 } from '../students.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * What a level consists of — POOLSE-20.
@@ -87,7 +88,7 @@ export function LevelSkills({
           : t('skills.count', { count: skills.length })}
       </button>
 
-      {open && (
+      <Reveal open={open}>
         <div className="mt-3 flex flex-col gap-3 rounded border border-border bg-surface-muted p-3">
           {failed ? (
             <div className="flex flex-col items-start gap-2 rounded border border-danger/40 bg-danger/10 p-4">
@@ -270,7 +271,7 @@ export function LevelSkills({
             </form>
           )}
         </div>
-      )}
+      </Reveal>
     </div>
   );
 }

@@ -10,6 +10,10 @@ import { OutstandingList } from './outstanding-list';
 import { ViewTabs, type InvoiceView } from './view-tabs';
 import { FromLink } from '@/components/from-link';
 import { listInvoices, listOutstanding, previewRun } from './invoices.actions';
+import { Pagination } from '@/components/pagination';
+import { lastPage, PAGE_SIZE, readPage, type Paginated } from '@/lib/pagination';
+
+const BASE = '/dashboard/faturacao';
 
 /**
  * Faturação — phase 2.2.
@@ -38,10 +42,16 @@ function thisMonth(): string {
 export default async function InvoicingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ facilityId?: string; month?: string; view?: string; from?: string }>;
+  searchParams: Promise<{
+    facilityId?: string;
+    month?: string;
+    view?: string;
+    from?: string;
+    page?: string;
+  }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { facilityId: requested = '', month: monthParam, view, from } = await searchParams;
+  const { facilityId: requested = '', month: monthParam, view, from, page } = await searchParams;
   const back = originBack(from);
 
   /*
@@ -111,6 +121,26 @@ export default async function InvoicingPage({
   const issued = issuedLoad?.state === 'ok' ? issuedLoad.data : null;
   const outstanding = outstandingLoad?.state === 'ok' ? outstandingLoad.data : null;
 
+  /*
+   * Ten rows a page — Rui, 28-10-2026: the reader scrolls as little as possible.
+   * Both lists arrive whole and are paged here, because what sits above them is
+   * about the whole list: the total owed, and "select all N" for reminders.
+   */
+  const pageNo = readPage(page);
+  const pageQuery = { facilityId: requested, month: monthParam, view };
+  const pageOf = <T,>(items: T[]): Paginated<T> => {
+    const total = items.length;
+    const at = Math.min(pageNo, lastPage(total));
+    return {
+      items: items.slice((at - 1) * PAGE_SIZE, at * PAGE_SIZE),
+      total,
+      page: at,
+      limit: PAGE_SIZE,
+    };
+  };
+  const issuedPage = issued === null ? null : pageOf(issued.invoices);
+  const outstandingPage = outstanding === null ? null : pageOf(outstanding.invoices);
+
   return (
     <PageShell title={t('invoices.title')} subtitle={t('invoices.hint')} back={backProp(back, t)}>
       <div className="flex flex-col gap-6">
@@ -152,7 +182,12 @@ export default async function InvoicingPage({
           (outstanding === null ? (
             <PageError message={t(failedKey(outstandingLoad))} />
           ) : (
-            <OutstandingList facilityId={chosen} invoices={outstanding.invoices} />
+            <OutstandingList
+              facilityId={chosen}
+              invoices={outstanding.invoices}
+              shown={outstandingPage!.items}
+              pager={<Pagination page={outstandingPage!} basePath={BASE} query={pageQuery} />}
+            />
           ))}
 
         {current === 'month' && (
@@ -170,7 +205,12 @@ export default async function InvoicingPage({
             {issued === null ? (
               <PageError message={t(failedKey(issuedLoad))} />
             ) : (
-              <InvoiceList facilityId={chosen} invoices={issued.invoices} month={month} />
+              <InvoiceList
+                facilityId={chosen}
+                invoices={issuedPage!.items}
+                month={month}
+                pager={<Pagination page={issuedPage!} basePath={BASE} query={pageQuery} />}
+              />
             )}
           </>
         )}

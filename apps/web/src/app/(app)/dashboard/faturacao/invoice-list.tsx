@@ -21,10 +21,14 @@ export function InvoiceList({
   facilityId,
   invoices,
   month,
+  pager,
 }: {
   facilityId: string;
+  /** This page's documents — ten at most. */
   invoices: Invoice[];
   month: string;
+  /** The page links, rendered on the server; nothing when one page holds all. */
+  pager?: React.ReactNode;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -104,6 +108,7 @@ export function InvoiceList({
           </table>
         </div>
       )}
+      {pager}
     </section>
   );
 }

@@ -9,6 +9,7 @@ import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded, useSuccessKey } fro
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
 import { createDraftAction, discardDraftAction, publishSeasonAction } from './drafts.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * Planning next year while this one runs — POOLSE-45.
@@ -107,7 +108,7 @@ export function SeasonDrafts({
           {t('seasons.newDraft')}
         </button>
 
-        {open && (
+        <Reveal open={open}>
           <div id="new-draft" className="border-t border-border p-4">
             <DraftForm
               organizationId={organizationId}
@@ -115,7 +116,7 @@ export function SeasonDrafts({
               published={published}
             />
           </div>
-        )}
+        </Reveal>
       </div>
     </section>
   );

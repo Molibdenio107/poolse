@@ -17,6 +17,7 @@ import {
   reorderCategoriesAction,
   saveCategoryAction,
 } from './categories.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * Categorias de preço — round 19, and the other half of the price list.
@@ -352,9 +353,9 @@ function Row({
           sentence, and the row above is already two columns of chips. */}
       <Cost category={category} canSeeValues={canSeeValues} />
 
-      {canManage && editing && (
+      <Reveal open={canManage && editing}>
         <CategoryForm facilityId={facilityId} category={category} onDone={onEdit} />
-      )}
+      </Reveal>
     </div>
   );
 }

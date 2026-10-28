@@ -570,3 +570,53 @@
   --primary-ink: var(--app-primary-ink);
   --ring: var(--app-primary);
 }
+
+/*
+ * A disclosure opens smoothly — Rui, 28-10-2026: a card that springs open shoves
+ * everything under it at once. A native `<details>` animates its content's height
+ * here; the hand-built ones use `Reveal` (components/ui/reveal.tsx) for the same
+ * curve. Where a browser cannot animate to `auto` it opens instantly, as before.
+ */
+:root {
+  interpolate-size: allow-keywords;
+}
+details::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  transition:
+    block-size 220ms ease-out,
+    content-visibility 220ms allow-discrete;
+}
+details[open]::details-content {
+  block-size: auto;
+}
+
+/*
+ * A warning that needs attention pulses three times as it appears and then keeps
+ * still — Rui, 28-10-2026. Three, not for ever: a warning that never stops moving
+ * tires the reader and fails WCAG 2.2.2, and it is never faster than one beat a
+ * second. `.attention` on the icon, not on the words.
+ */
+@keyframes attention-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(1.15);
+  }
+}
+.attention {
+  animation: attention-pulse 1.1s ease-in-out 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  details::details-content {
+    transition: none;
+  }
+  .attention {
+    animation: none;
+  }
+}

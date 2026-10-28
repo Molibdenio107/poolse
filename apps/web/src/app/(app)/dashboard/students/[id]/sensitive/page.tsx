@@ -8,7 +8,6 @@ import {
   type Student,
 } from '../../../../../../lib/api';
 import { DetailPage } from '@/components/detail-page';
-import { ChevronRight } from 'lucide-react';
 import { MedicalLeavePanel } from './medical-leave';
 import { storageConfigured } from '@/lib/storage-status';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -278,8 +277,8 @@ export default async function SensitivePage({
           /*
             Its own tab — round 5. A leave is not a consent and not a medical
             note: it is an operational fact about the next six weeks of
-            registers. Still folded inside its tab, as it was on the page:
-            most students have no leave and never will.
+            registers. Open, not folded (Rui, 28-10-2026): the tab is already
+            the choice to look, so a second click inside it only hid the list.
           */
           slug: 'leave',
           labelKey: 'sensitive.leave',
@@ -287,19 +286,15 @@ export default async function SensitivePage({
             ? { kind: 'dot', labelKey: 'sensitive.leaveActive' }
             : undefined,
           content: () => (
-            <details className="group rounded border border-border bg-surface">
-              <summary className="flex cursor-pointer list-none items-center gap-2 p-5 text-sm font-medium uppercase tracking-wider text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-                <ChevronRight
-                  aria-hidden
-                  className="size-4 transition-transform group-open:rotate-90"
-                />
+            <section className="rounded border border-border bg-surface">
+              <h2 className="flex items-center gap-2 p-5 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('sensitive.leave')}
                 {loaded.medicalLeave.some((period) => period.active) && (
                   <span className="rounded bg-warning/20 px-2 py-0.5 text-xs font-medium normal-case tracking-normal text-warning">
                     {t('sensitive.leaveActive')}
                   </span>
                 )}
-              </summary>
+              </h2>
               <div className="border-t border-border p-5">
                 <MedicalLeavePanel
                   organizationId={loaded.organizationId}
@@ -309,7 +304,7 @@ export default async function SensitivePage({
                   storageReady={storageReady}
                 />
               </div>
-            </details>
+            </section>
           ),
         },
         {

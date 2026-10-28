@@ -10,7 +10,7 @@ call off.
 | Action | Roles |
 |---|---|
 | Read the week, the hover card and the register | everybody |
-| Take the register | owner, admin, instructor |
+| Take the register (from the moment the class starts) | owner, admin, instructor |
 | Cancel a class, and undo it | owner, admin |
 | Move a class on the grid | owner, admin |
 | Adjust the slot grid | owner, admin |
@@ -20,6 +20,8 @@ Every write is refused by the API for anyone else. Hiding a control is never the
 **On a phone the week is a day agenda** (POOLSE-88 phone views, Rui 21-10-2026). Below `md` the lane grid would be seven unreadable slivers, so it is not shown. `CalendarAgenda` takes its place: a row of seven days, each with its count of lessons (`?day=`, defaulting to today in the current week, else the Monday), then that day's lessons in time order across every tank. Each card shows the time and end, the turma and level, the tank and pistas, and the teacher (or the stand-in), with *Cancelada*, *Cancelada por encerramento*, *Presenças marcadas* and *Mudou só esta semana* in words and icons. A turma lesson opens its own page; a parceria or a free-swim block has no page to open. Nothing is dragged on a phone. The agenda is read-only and moves are the desk's, and from `md` up the grid is unchanged. The grid's scroll box is `isolate`d so its sticky hour column never slides over the app bar.
 
 **The lesson's page is the lesson on a phone** (POOLSE-88 slice 2). `/dashboard/calendar/sessions/:id` carries the register and, above it, *Plano de treino*, the stand-in picker and *Cancelar aula*. These are the same three components as the calendar's hover card. The dashboard's lessons open it: *Abrir a aula*, the week list, and the plan card with `?plan=open`. A parceria has no register page, so it still opens on the calendar. *Cancelar aula* shows when the register read's `canCancel` is true, which uses the cancel endpoint's own test: owner, admin, or the instructor teaching it. An instructor gets no scope question and no *Anular*. Ending the series and putting a lesson back are owner and admin (`canEndSeries`), as the endpoints have always said.
+
+**A register opens when its class starts** (Rui, 28-10-2026). Before then the lesson's page says when it opens and lists who is expected, with any *Não vou* beside a name; the calendar offers no *Marcar presenças*, the dashboard's next-class card offers it from the start to 90 minutes after, and the API refuses a save with 409 `register_not_started`. The register read carries `started`.
 
 **The register on a phone** (POOLSE-88 slice 2). Below `md` each student is a card. The first line holds
 the name and its warnings, and the second holds the three states as equal thirds across the

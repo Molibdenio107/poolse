@@ -25,6 +25,7 @@ import {
   savePeriodAction,
   savePlanAction,
 } from './prices.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * What a price actually charges — round 5, ticket 3.0.
@@ -250,6 +251,7 @@ export function PricesPanel({
                     {editingPlan === plan.id && (
                       <tr>
                         <td colSpan={canManage ? 4 : 3} className="pb-3">
+                          <Reveal open appear>
                           <PlanForm
                             facilityId={facilityId}
                             plan={plan}
@@ -258,6 +260,7 @@ export function PricesPanel({
                             levels={levels}
                             onDone={() => setEditingPlan(null)}
                           />
+                          </Reveal>
                         </td>
                       </tr>
                     )}
@@ -340,7 +343,7 @@ export function PricesPanel({
                 </span>
               </div>
 
-              {canManage && editingPlan === quota.id && (
+              <Reveal open={canManage && editingPlan === quota.id}>
                 <PlanForm
                   facilityId={facilityId}
                   plan={quota}
@@ -349,7 +352,7 @@ export function PricesPanel({
                   levels={levels}
                   onDone={() => setEditingPlan(null)}
                 />
-              )}
+              </Reveal>
             </li>
           ))}
         </ul>
@@ -529,13 +532,13 @@ export function PricesPanel({
                     )}
                   </div>
 
-                  {editingPeriod === period.id && (
+                  <Reveal open={editingPeriod === period.id}>
                     <PeriodForm
                       facilityId={facilityId}
                       period={period}
                       onDone={() => setEditingPeriod(null)}
                     />
-                  )}
+                  </Reveal>
                 </li>
               ))}
             </ul>
@@ -786,7 +789,7 @@ function SeasonalPrices({
               </span>
             </div>
 
-            {canManage && editingPlan === plan.id && (
+            <Reveal open={canManage && editingPlan === plan.id}>
               <PlanForm
                 facilityId={facilityId}
                 plan={plan}
@@ -796,7 +799,7 @@ function SeasonalPrices({
                 seasons={seasons}
                 onDone={() => setEditingPlan(null)}
               />
-            )}
+            </Reveal>
           </li>
         ))}
       </ul>

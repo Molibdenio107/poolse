@@ -333,7 +333,7 @@ export function RosterGrid({
                 };
                 const body = (
                   <span className="flex items-start gap-1 text-xs font-medium text-warning">
-                    <TriangleAlert aria-hidden className="mt-px size-3.5 shrink-0" />
+                    <TriangleAlert aria-hidden className="attention mt-px size-3.5 shrink-0" />
                     <span className="min-w-0 break-words">{label}</span>
                   </span>
                 );
@@ -400,7 +400,7 @@ export function RosterGrid({
                     }}
                   >
                     <span className="flex items-start gap-1 font-medium">
-                      {!one.duty.licensed && <TriangleAlert aria-hidden className="mt-px size-3.5 shrink-0 text-warning" />}
+                      {!one.duty.licensed && <TriangleAlert aria-hidden className="attention mt-px size-3.5 shrink-0 text-warning" />}
                       <span className="min-w-0 truncate">{name}</span>
                     </span>
                     <span className="block truncate tabular-nums text-foreground-muted">

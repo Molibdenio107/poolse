@@ -80,7 +80,7 @@ export async function MyPoolPanel({ pool }: { pool: PoolDetail }): Promise<React
                   </dd>
                   {excursion !== undefined && text !== null ? (
                     <dd className="inline-flex items-center gap-1 text-xs font-medium text-warning">
-                      <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+                      <AlertTriangle className="attention size-3.5 shrink-0" aria-hidden="true" />
                       {t(text.key, text.values)}
                     </dd>
                   ) : judged ? (

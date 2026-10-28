@@ -2915,6 +2915,7 @@
     "noteFor": "Note about {name}",
     "notePlaceholder": "Left early, arrived at 18:20…",
     "recordedBy": "Marked by {name}",
+    "notStarted": "The register opens when the class starts, on {date} at {time}.",
     "classCancelled": "This class was cancelled, so there is no register to take.",
     "readOnly": "You do not have permission to take the register.",
     "restricted": "This section is for instructors, administrators and owners.",
@@ -2927,6 +2928,7 @@
     "refused": {
       "cancelled": "This class was cancelled, so there is no register to take.",
       "partnership": "A partnership class has no register.",
+      "not_started": "This class has not started yet: the register opens at its start time.",
       "credited": "This attendance has already been used for a make-up lesson and cannot be changed."
     },
     "notComingCount": "{count, plural, one {# said they are not coming} other {# said they are not coming}}",
@@ -3991,6 +3993,10 @@
       "send": "{count, plural, =0 {Send} one {Send # reminder} other {Send # reminders}}",
       "open": "{count, plural, =0 {Send a reminder by email} one {Send a reminder by email (# document)} other {Send a reminder by email (# documents)}}",
       "tickAllOverdue": "Select all overdue",
+      "pageSelected": "{count, plural, one {The overdue document on this page is selected.} other {All # overdue documents on this page are selected.}}",
+      "selectEverywhere": "Select all {count} overdue",
+      "allSelected": "{count, plural, one {The overdue document is selected.} other {All # overdue documents are selected.}}",
+      "clearSelection": "Clear selection",
       "tickOne": "Choose document {no}",
       "previewFailed": "Could not prepare the reminders.",
       "nobodyChosen": "Choose at least one person.",

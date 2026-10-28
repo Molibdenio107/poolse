@@ -210,7 +210,7 @@ export function RegisterForm({ register }: { register: Register & { organization
                 )}
                 {!entry.insured && (
                   <span className="flex items-center gap-1 rounded border border-warning/40 bg-warning/10 px-2 py-0.5 text-sm font-normal text-warning">
-                    <AlertTriangle aria-hidden className="size-3.5" />
+                    <AlertTriangle aria-hidden className="attention size-3.5" />
                     {t('attendance.noInsurance')}
                   </span>
                 )}

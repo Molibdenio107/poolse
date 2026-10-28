@@ -69,7 +69,7 @@ export function UnsafeWaterNotice({
   return (
     <section className="flex flex-col gap-3 rounded border border-warning/50 bg-warning/10 p-4">
       <div className="flex items-start gap-2">
-        <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
+        <AlertTriangle aria-hidden className="attention mt-0.5 size-4 shrink-0 text-warning" />
         <div className="flex min-w-0 flex-col gap-1">
           <h3 className="text-sm font-medium">{t('facilities.waterOutOfRange')}</h3>
 
