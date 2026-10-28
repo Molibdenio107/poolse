@@ -6,6 +6,7 @@ import type { SubscriptionAlertView } from '@/lib/subscription-alert';
 import { modulesOf } from '@/lib/modules';
 import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
+import { CommandPalette } from '@/components/command-palette';
 import { SuspendedNotice } from './suspended-notice';
 import { ClubSupportStrip, SupportEndedNotice, SupportSessionBanner } from './support-strip';
 import { loadSupportStatus } from './support.actions';
@@ -251,6 +252,8 @@ export default async function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-3">
+            {/* POOLSE-118: Ctrl+K, or this button, to go anywhere the menu goes. */}
+            <CommandPalette roles={roles} kind={kind} modules={modules} />
             <PreferenceControls />
             <UserMenu canArchive={roles.includes('owner') || roles.includes('admin')} subscription={subscription} />
           </div>

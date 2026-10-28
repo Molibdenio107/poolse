@@ -3603,6 +3603,25 @@
     "tankClosed": "Esse tanque está encerrado a essa hora.",
     "closedBand": "Encerrado:"
   },
+  "palette": {
+    "open": "Procurar uma página ou ação",
+    "search": "Procurar…",
+    "shortcut": "Ctrl K",
+    "title": "Ir para…",
+    "hint": "Escreva o nome de uma página ou do que quer fazer. Enter abre; Esc fecha.",
+    "placeholder": "Por exemplo: quotas, presenças, férias",
+    "nothing": "Nada corresponde ao que escreveu.",
+    "recent": "Recente",
+    "action": {
+      "kind": "Ação",
+      "owing": "Em dívida",
+      "register": "Registar presenças",
+      "newStudent": "Nova aluna ou novo aluno",
+      "importStudents": "Importar alunos",
+      "theme": "Mudar entre tema claro e escuro",
+      "locale": "Mudar o idioma"
+    }
+  },
   "partnerDays": {
     "groupsHeading": "Grupos de parcerias",
     "whichDays": "Em que dias? À mesma hora, na mesma pista e com a mesma duração.",

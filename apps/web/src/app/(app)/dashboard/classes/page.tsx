@@ -378,7 +378,7 @@ export default async function ClassesPage({
               ...(key === 'unscheduled'
                 ? { count: unscheduled.length }
                 : key === 'partners'
-                  ? { count: partnerBookings.length }
+                  ? { count: new Set(partnerBookings.map((booking) => booking.partnerGroupId ?? booking.id)).size }
                   : {}),
             }))}
           />

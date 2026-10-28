@@ -289,3 +289,12 @@ Excel and CSV. It opens the same rows as the file, filtered the same way, as an 
 tab, and brings up the print dialog (*Guardar como PDF*). One layout, `lib/print-table.ts`, and
 no PDF library. On paper a date reads dd-MM-yyyy and a value the file writes in a form meant for
 re-import (inventory's `all`) is said in words.
+
+## The command palette — POOLSE-118
+
+**Ctrl+K / ⌘K anywhere in the backoffice, or the search button in the app bar**, opens one list: the pages the sidebar would show this reader, then a few daily actions (*Em dívida*, *Registar presenças* for an instructor, *Nova aluna ou novo aluno*, *Importar alunos*, the theme and the language). Not in app mode (`/app`).
+
+- **One list, one filter.** The sidebar's entries and `visibleSections` moved to `lib/nav-entries.ts`; the sidebar, the phone's menu and the palette (`commandsFor` in `lib/commands.ts`) read them, so the palette offers nothing the reader's API would refuse — roles, kinds, modules and `unlessRoles` alike.
+- **Matching** is accent- and case-folded, on the label and on synonyms per page in the reader's language (`SYNONYMS` in `lib/commands.ts`): *quotas* reaches Em dívida in pt-PT, *overdue* in en.
+- **An action is one declaration** in `ACTIONS`: a label key, roles, module, kinds, and an address or a handler.
+- A page opens by clicking its own `FromLink`, so `?from=` is stamped and *Voltar* comes back, and a page guarding unsaved typing still asks. The last five choices lead the empty list (`localStorage`, best effort). Escape closes and focus returns.

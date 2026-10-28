@@ -3603,6 +3603,25 @@
     "tankClosed": "That tank is closed at that time.",
     "closedBand": "Closed:"
   },
+  "palette": {
+    "open": "Search for a page or an action",
+    "search": "Search…",
+    "shortcut": "Ctrl K",
+    "title": "Go to…",
+    "hint": "Type the name of a page or of what you want to do. Enter opens; Esc closes.",
+    "placeholder": "For example: overdue, attendance, holidays",
+    "nothing": "Nothing matches what you typed.",
+    "recent": "Recent",
+    "action": {
+      "kind": "Action",
+      "owing": "Overdue",
+      "register": "Take the register",
+      "newStudent": "New student",
+      "importStudents": "Import students",
+      "theme": "Switch between light and dark theme",
+      "locale": "Change the language"
+    }
+  },
   "partnerDays": {
     "groupsHeading": "Partnership groups",
     "whichDays": "Which days? At the same time, in the same lane and for the same length.",

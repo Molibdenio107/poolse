@@ -60,6 +60,8 @@ const SAME_ON_PURPOSE = new Map([
   // A request's middle severity — POOLSE-66 slice 2b. "Normal" is the word in both.
   ['spaces.severity.normal', 'the same word in both languages'],
   ['health.api', 'an initialism'],
+  // POOLSE-118: a key combination, printed as the keyboard prints it.
+  ['palette.shortcut', 'key names are the same on both keyboards'],
   // POOLSE-116: the record's tab. "Feedback" is the word pt-PT uses ("dar feedback").
   ['feedback.tab', 'the same loanword in both languages'],
   ['account.email', '"email" is the ordinary pt-PT word too'],
