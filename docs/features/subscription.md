@@ -146,6 +146,49 @@ manual payment. It always ends on a date, and the club is told that date in writ
 **The aim for the first years is to break even, not to make a margin.** Two clubs at €49 roughly
 cover the ~€80–100/month of running costs (IVA included, `docs/deploy.md` *Paid services*).
 
+### Working prices v2 — 29-10-2026 (proposed, not yet decided)
+
+Reviewed with Claude as Monte Carlo analyst after POOLSE-124 (sports as paid modules) and the
+PT/nutrition add-on. **Proposed**; it replaces the 12-10-2026 table only when Rui says so. All
+figures exclude IVA.
+
+| | Monthly | Yearly |
+|---|---|---|
+| Facility, pool included | €99 | €990 |
+| Each extra facility | €49 | €490 |
+| Each extra sport (tennis, padel, …) | €29 | €290 |
+| Aulas particulares + Consultas de nutrição | €29 | €290 |
+| Founding price (first two clubs, 12 months) | **€69** | **€690** |
+
+**Why the founding price moves from €49 to €69.** "Two clubs at €49 cover the costs" assumes two
+paying clubs, but the pilot is comped for about a year, so year 1 has at most one club paying
+against the €80–100/month that starts the day the first club pays (Vercel Pro + Clerk Pro). Over
+20,000 simulated 36-month runs — second club arriving in month 3–12, a third with 50% chance
+(20% of those churning after a year), running costs €80–100 plus ~€5–15 per club beyond two,
+Stripe ~1.5% + €0.25 per payment — the current €49/€99 reaches cumulative break-even by month 24
+in only ~70% of runs (median trough ≈ −€280). At €69 founding it reaches it in ~100%, median
+position at month 24 ≈ +€600. Add-ons at €29 with 40% take-up add roughly €350 more by month 24.
+Every run breaks even by month 36 under any of the tables; the question is only how deep and how
+long the year-1 hole is.
+
+**Add-ons are priced on value, not cost.** A sport module or the PT/nutrition service reuses
+the calendar, classes and database and adds no Clerk tier (the app keeps its own memberships), so
+its marginal cost is close to zero. 30% of the base is the simplest number to explain, and one
+figure for every add-on keeps the subscription page and the manual invoice to a single add-on
+line kind (POOLSE-124 rule 5). The pilot gets add-ons free, as decided 28-10-2026.
+
+**Not in the numbers.** Rui's own time; the Clerk org-member add-on (~€109/month) if students
+ever become Clerk members; the certified-invoicing provider's fee once it exists. Each is a
+reason to revisit, not a reason to price lower.
+
+**Open before locking.** (1) Whether Poolse invoices clubs with IVA — activity opened, or
+below the art. 53 exemption — which moves the net kept by 23%. (2) Whether a second club is
+realistic in 2027 or the pilot stands alone a year; a lone pilot is the −€280 trough case and
+argues for ending its comped period at 10 months rather than 14.
+
+Simulation script: `docs/research/pricing-sim-2026-10-29.py` (seeded, reproducible — the rule
+in `docs/financials.md` §7 about stored assumption sets applies to this file too).
+
 ## Paying
 
 **Poolse never holds a card.** Subscrever creates a Stripe Checkout session and sends the

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poolse — demo para o clube piloto</title>
+<style>
+:root{
+  --primary:#67A6B6;--primary-ink:#46717C;--primary-fg:#11181C;--comp:#B3D49D;
+  --bg:#FAFBFC;--card:#FFFFFF;--border:#D9E0E5;--text:#11181C;--muted:#5A6770;--soft:#EEF5F7;--soft2:#CFE3E9;--deep:#356D7C;
+  --warn-bg:#FBF6EA;--warn-bd:#E8D3A8;--warn-ink:#6B4E18;--danger-ink:#A3343F;--danger-bg:#FBECEE;--ok-ink:#2E6B3E;--ok-bg:#E9F4EC;
+  --l1:#2A7C92;--l2:#268257;--l3:#4B8226;--l4:#8A7228;--l5:#AE6032;--l6:#C9455B;--l7:#C639A3;--l8:#875DD0;
+  --stage-bg:#0F1A1F;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--stage-bg);color:#E6EEF1;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.player{max-width:1180px;margin:0 auto;padding:20px 20px 28px;display:flex;flex-direction:column;gap:14px;min-height:100%}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:16px;letter-spacing:.01em}
+.brand .dot{width:12px;height:12px;border-radius:50%;background:var(--primary)}
+.brand small{font-weight:400;color:#9FB3BB}
+.mode{display:flex;gap:6px;align-items:center;font-size:13px;color:#9FB3BB;flex-wrap:wrap}
+.mode select{height:32px;border-radius:6px;border:1px solid #2A3A42;background:#15242B;color:#E6EEF1;padding:0 8px;font-size:13px}
+.stage{position:relative;aspect-ratio:16/9;background:var(--bg);color:var(--text);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.scene{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .45s ease}
+.scene.on{opacity:1;pointer-events:auto}
+.scene .a{opacity:0;transform:translateY(8px)}
+.scene.on .a{animation:rise .5s ease forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+.scene.on .a.d1{animation-delay:.4s}.scene.on .a.d2{animation-delay:.9s}.scene.on .a.d3{animation-delay:1.5s}.scene.on .a.d4{animation-delay:2.2s}.scene.on .a.d5{animation-delay:3s}.scene.on .a.d6{animation-delay:4s}.scene.on .a.d7{animation-delay:5.2s}.scene.on .a.d8{animation-delay:6.5s}
+.caption{display:flex;gap:14px;align-items:flex-start;background:#15242B;border:1px solid #2A3A42;border-radius:10px;padding:14px 16px;min-height:84px}
+.caption .n{flex:none;width:34px;height:34px;border-radius:50%;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.caption p{margin:0;font-size:15px;line-height:1.5;color:#DCE7EB}
+.caption h3{margin:0 0 4px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#9FB3BB;font-weight:600}
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+button{height:36px;padding:0 14px;border-radius:8px;border:1px solid #2A3A42;background:#15242B;color:#E6EEF1;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+button:hover{background:#1C2F37}
+button.primary{background:var(--primary);color:var(--primary-fg);border-color:var(--primary);font-weight:650}
+button.primary:hover{background:#7AB4C2}
+button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.dots{display:flex;gap:6px;margin-left:auto}
+.dots button{height:28px;padding:0 10px;font-size:12px;border-radius:999px}
+.dots button.cur{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+.bar{height:4px;background:#1C2F37;border-radius:2px;overflow:hidden}
+.bar div{height:100%;width:0;background:var(--primary);transition:width .25s linear}
+.hint{font-size:12px;color:#7F949C}
+.hint code{background:#15242B;padding:1px 5px;border-radius:4px}
+
+/* ---------- mock app chrome ---------- */
+.app{position:absolute;inset:0;display:grid;grid-template-columns:200px 1fr;font-size:12px}
+.side{background:#FFFFFF;border-right:1px solid var(--border);padding:14px 12px;display:flex;flex-direction:column;gap:2px}
+.side .logo{display:flex;align-items:center;gap:8px;font-weight:650;font-size:14px;margin-bottom:12px}
+.side .logo i{width:10px;height:10px;border-radius:50%;background:var(--primary);display:inline-block}
+.side a{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:6px;color:var(--muted);text-decoration:none}
+.side a.cur{background:var(--soft);color:var(--text);font-weight:600}
+.side a.sub{padding-left:22px;font-size:11px}
+.side .circ{width:6px;height:6px;border-radius:50%;background:var(--primary);animation:breath 2.4s ease-in-out infinite}
+@keyframes breath{0%,100%{opacity:.45}50%{opacity:1}}
+.main{padding:18px 22px;overflow:hidden;display:flex;flex-direction:column;gap:12px}
+.hdr{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.hdr h1{margin:0;font-size:20px;font-weight:600}
+.hdr p{margin:0;color:var(--muted)}
+.band h2{margin:0 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.grid{display:grid;gap:10px}
+.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;position:relative}
+.card .t{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.card .v{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.1}
+.card .s{font-size:11px;color:var(--muted)}
+.card.alert{border-color:var(--warn-bd);background:var(--warn-bg)}
+.card.alert .v{color:var(--warn-ink)}
+.chip{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 7px;border-radius:999px;font-size:10px;font-weight:600;border:1px solid}
+.chip.ok{color:var(--ok-ink);border-color:#B9DCC2;background:var(--ok-bg)}
+.chip.warn{color:var(--warn-ink);border-color:var(--warn-bd);background:var(--warn-bg)}
+.chip.bad{color:var(--danger-ink);border-color:#EBB8BE;background:var(--danger-bg)}
+.chip.neu{color:var(--muted);border-color:var(--border);background:var(--soft)}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 12px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid var(--border);background:#fff;color:var(--text)}
+.btn.p{background:var(--primary);border-color:var(--primary);color:var(--primary-fg)}
+table.tb{width:100%;border-collapse:collapse;font-size:11.5px}
+table.tb th{text-align:left;color:var(--muted);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--border)}
+table.tb td{padding:6px 8px;border-bottom:1px solid #EEF1F3;font-variant-numeric:tabular-nums}
+.toast{position:absolute;right:18px;bottom:18px;display:block;line-height:1.4;background:#fff;border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:8px;padding:10px 12px;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-width:360px}
+.toast.warn{border-left-color:#C99A3B}
+.pop{position:absolute;background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);font-size:11.5px;display:flex;flex-direction:column;gap:4px;z-index:3}
+.pop b{font-size:11px;color:var(--muted);font-weight:600;padding:2px 6px}
+.pop span{padding:5px 8px;border-radius:5px}
+.pop span.sel{background:var(--soft);font-weight:600}
+
+/* calendar */
+.cal{flex:1;display:grid;grid-template-columns:44px repeat(4,1fr);grid-template-rows:auto repeat(4,1fr);gap:4px;min-height:0;position:relative}
+.cal .lh{font-size:10px;color:var(--muted);text-align:center;font-weight:600;padding:3px 0}
+.cal .hour{font-size:10px;color:var(--muted);text-align:right;padding-right:6px;padding-top:2px}
+.cal .cell{border:1px dashed #E3E8EC;border-radius:4px;position:relative}
+.blk{position:absolute;left:2px;right:2px;border-radius:5px;color:#fff;padding:4px 6px;font-size:10.5px;line-height:1.25;overflow:hidden}
+.blk b{display:block;font-size:11px}
+.blk.ghost{outline:2px dashed var(--primary-ink);outline-offset:2px;opacity:.9}
+
+/* phone */
+.phone-wrap{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:0 40px;gap:30px}
+.phone{width:250px;height:510px;margin:0 auto;border-radius:36px;background:#0C1114;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.35);position:relative}
+.phone .scr{background:#F7FAFB;border-radius:26px;height:100%;overflow:hidden;position:relative;font-size:11.5px;display:flex;flex-direction:column}
+.phone .notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:80px;height:20px;background:#0C1114;border-radius:12px;z-index:2}
+.phone .ab{background:#0E7490;color:#fff;padding:36px 16px 14px;display:flex;flex-direction:column;gap:2px}
+.phone .ab b{font-size:16px}
+.phone .body{padding:12px;display:flex;flex-direction:column;gap:8px;flex:1}
+.phone .card{padding:10px}
+.phone .seg{display:flex;gap:6px}
+.phone .seg span{flex:1;text-align:center;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border);font-weight:600}
+.phone .seg span.on{background:#0E7490;color:#fff;border-color:#0E7490}
+.notif{position:absolute;bottom:60px;left:14px;right:14px;background:#fff;border-radius:12px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;gap:8px;z-index:4;font-size:11px}
+.notif i{width:26px;height:26px;border-radius:7px;background:#0E7490;flex:none}
+.notif b{display:block;font-size:11.5px}
+.tabbar{display:flex;justify-content:space-around;padding:8px 0 10px;border-top:1px solid var(--border);background:#fff;font-size:9.5px;color:var(--muted)}
+.tabbar span.on{color:#0E7490;font-weight:700}
+.prose{display:flex;flex-direction:column;gap:10px;color:var(--text)}
+.prose h2{margin:0;font-size:24px;font-weight:600}
+.prose p{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
+.prose li{font-size:13px;margin:4px 0}
+
+/* opening / closing */
+.hero{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:0 70px;gap:18px;background:linear-gradient(135deg,#FAFBFC 0%,#EEF5F7 60%,#E3F0F3 100%)}
+.hero h1{margin:0;font-size:46px;font-weight:650;letter-spacing:-.01em}
+.hero h1 span{color:var(--primary-ink)}
+.hero p{margin:0;font-size:18px;color:var(--muted);max-width:620px;line-height:1.45}
+.tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:8px}
+.tile{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:600}
+.tile i{width:28px;height:28px;border-radius:8px;display:block}
+.wave{position:absolute;bottom:-40px;left:0;right:0;height:140px;opacity:.5}
+.bigq{font-size:34px;font-weight:650;color:var(--primary-ink)}
+</style>
+</head>
+<body>
+<div class="player">
+  <div class="top">
+    <div class="brand"><span class="dot"></span>Poolse <small>· demo para o clube piloto</small></div>
+    <div class="mode">
+      <label for="narr">Narração</label>
+      <select id="narr">
+        <option value="mp3">Ficheiros MP3 (audio/cena-N.mp3)</option>
+        <option value="tts">Voz do browser (pt-PT)</option>
+        <option value="none">Só legendas</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+
+    <!-- ===== Cena 1 — Abertura ===== -->
+    <section class="scene" data-dur="25">
+      <div class="hero">
+        <h1 class="a"><span>Poolse</span> — a piscina num só sítio</h1>
+        <p class="a d1">Turmas, alunos e famílias. Água, manutenção e energia. Faturação. Uma base de dados, em português de Portugal, no computador e no telemóvel.</p>
+        <div class="tiles">
+          <div class="tile a d2"><i style="background:var(--l1)"></i>Turmas &amp; calendário</div>
+          <div class="tile a d3"><i style="background:var(--l2)"></i>Alunos &amp; famílias</div>
+          <div class="tile a d4"><i style="background:var(--primary)"></i>Qualidade da água</div>
+          <div class="tile a d5"><i style="background:var(--l4)"></i>Manutenção</div>
+          <div class="tile a d6"><i style="background:var(--l5)"></i>Energia</div>
+          <div class="tile a d7"><i style="background:var(--l8)"></i>Faturação</div>
+        </div>
+        <svg class="wave" viewBox="0 0 1200 140" preserveAspectRatio="none"><path d="M0 70 C150 20 250 120 400 70 S650 20 800 70 S1050 120 1200 70 V140 H0 Z" fill="#CFE3E9"/><path d="M0 95 C150 45 250 145 400 95 S650 45 800 95 S1050 145 1200 95 V140 H0 Z" fill="#8EBFCC" opacity=".6"/></svg>
+      </div>
+    </section>
+
+    <!-- ===== Cena 2 — Painel ===== -->
+    <section class="scene" data-dur="35">
+      <div class="app">
+        <nav class="side">
+          <div class="logo"><i></i>Poolse</div>
+          <a class="cur">Painel</a>
+          <a>Instalações <span class="circ"></span></a>
+          <a class="sub">Piscinas</a><a class="sub">Manutenção</a><a class="sub">Energia</a><a class="sub">Staff</a>
+          <a>Turmas</a><a class="sub">Época 2026/27</a><a class="sub">Níveis</a>
+          <a>Calendário</a>
+          <a>Alunos</a><a class="sub">Pedidos</a><a class="sub">Competição</a>
+          <a>Faturação</a><a class="sub">Em dívida</a>
+          <a>Mensagens</a>
+          <a>Receção</a>
+        </nav>
+        <div class="main">
+          <div class="hdr"><h1>Bom dia, Ana</h1><p>Piscina Municipal de Vila Real · qua, 28-10-2026</p></div>
+          <div class="band a">
+            <h2>Gestão</h2>
+            <div class="grid g4">
+              <div class="card a d1"><div class="t">Em dívida</div><div class="v">7 documentos</div><div class="s">1 240,00 € · 3 famílias em atraso +30 d</div></div>
+              <div class="card a d2"><div class="t">Energia este mês</div><div class="v">2 318 €</div><div class="s">−6 % face a outubro 2025 · tarifa igual</div></div>
+              <div class="card a d3"><div class="t">Vagas por vender</div><div class="v">38 %</div><div class="s">1 120 de 2 960 horas-pista livres</div></div>
+              <div class="card a d3"><div class="t">Nado livre agora</div><div class="v">14 / 60</div><div class="s">Tanque 25 m · 3 turmas a decorrer</div></div>
+            </div>
+          </div>
+          <div class="band a d4">
+            <h2>Operacional</h2>
+            <div class="grid g3">
+              <div class="card alert a d5"><div class="t">Água — Tanque 25 m <span class="chip warn">fora da banda</span></div><div class="v">pH 7,9</div><div class="s">Banda 6,9–7,8 (NP 4542) · lida às 07:40 · alerta enviado a 3 pessoas</div></div>
+              <div class="card a d6"><div class="t">Tarefas em atraso</div><div class="v">2</div><div class="s">Lavagem de filtros (3 d) · Kit de salvamento</div></div>
+              <div class="card a d6"><div class="t">Sem professor</div><div class="v">1 aula</div><div class="s">Golfinhos · sex 18:00 · férias do Pedro</div></div>
+            </div>
+          </div>
+          <div class="band a d7">
+            <h2>Pessoal</h2>
+            <div class="grid g3">
+              <div class="card a d7"><div class="t">As minhas aulas de hoje</div><div class="v">3</div><div class="s">Próxima: Tubarões · 17:00 · Pista 2</div></div>
+              <div class="card a d8"><div class="t">Chamada por fazer</div><div class="v">1</div><div class="s">Golfinhos · ontem 18:00</div></div>
+              <div class="card a d8"><div class="t">Férias</div><div class="v">11 dias</div><div class="s">Saldo 2026 · próximo pedido 23-12</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Cena 3 — Calendário ===== -->
+    <section class="scene" data-dur="40">
+      <div class="app">
+        <nav class="side">
+          <div class="logo"><i></i>Poolse</div>
+          <a>Painel</a><a>Instalações</a><a>Turmas</a>
+          <a class="cur">Calendário</a>
+          <a>Alunos</a><a>Faturação</a><a>Mensagens</a><a>Receção</a>
+        </nav>
+        <div class="main">
+          <div class="hdr"><h1>Calendário · Tanque 25 m</h1><p>Quarta-feira, 28-10-2026 · ‹ semana ›</p></div>
+          <div class="cal a">
+            <div></div><div class="lh">Pista 1</div><div class="lh">Pista 2</div><div class="lh">Pista 3</div><div class="lh">Pista 4</div>
+            <div class="hour">16:00</div><div class="cell"></div><div class="cell"></div><div class="cell"><div class="blk a d1" style="background:var(--l3);top:0;height:92%"><b>Peixinhos</b>Nível 3 · 8/10 · Rita</div></div><div class="cell"></div>
+            <div class="hour">17:00</div><div class="cell"><div class="blk a d2" style="background:var(--l5);top:0;height:92%"><b>Tubarões</b>Nível 5 · 10/10 · Ana</div></div><div class="cell"><div class="blk a d2" style="background:var(--l2);top:0;height:92%"><b>Golfinhos</b>Nível 2 · 7/8 · Pedro</div></div><div class="cell"></div><div class="cell"><div class="blk a d3" style="background:var(--l6);top:0;height:92%"><b>Escola EB1 Abambres</b>Parceria · 18 alunos</div></div>
+            <div class="hour">18:00</div><div class="cell"></div><div class="cell"><div class="blk ghost a d4" style="background:var(--l7);top:0;height:92%"><b>Masters</b>Nível 7 · 6/8 · Ana ↕</div></div><div class="cell"><div class="blk a d3" style="background:var(--l1);top:0;height:92%"><b>Adaptação</b>Nível 1 · 6/6 · Rita</div></div><div class="cell"></div>
+            <div class="hour">19:00</div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"><div class="blk a d3" style="background:#5A6770;top:0;height:92%"><b>Nado livre</b>Água reservada ao público</div></div>
+            <div class="pop a d5" style="left:7%;top:58%">
+              <b>Mover Masters para 18:00 — Pista 2</b>
+              <span class="sel">Só esta semana</span>
+              <span>Todas as semanas</span>
+            </div>
+          </div>
+          <div class="toast warn a d7">⚠︎ Pista 2 às 17:00 já tem <b>&nbsp;Golfinhos&nbsp;</b> (Pedro). A aula ficou onde estava.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Cena 4 — Água ===== -->
+    <section class="scene" data-dur="45">
+      <div class="app">
+        <nav class="side">
+          <div class="logo"><i></i>Poolse</div>
+          <a>Painel</a>
+          <a class="cur">Instalações</a>
+          <a class="sub cur">Piscinas · Tanque 25 m</a><a class="sub">Manutenção</a><a class="sub">Energia</a>
+          <a>Turmas</a><a>Calendário</a><a>Alunos</a><a>Faturação</a>
+        </nav>
+        <div class="main">
+          <div class="hdr"><h1>Tanque 25 m · Registo da água</h1><p>Geral · <b>Leituras</b> · Análises · Bandas · Página pública</p></div>
+          <div class="grid" style="grid-template-columns:1.5fr 1fr">
+            <div class="card a">
+              <div class="t">Leituras de hoje · a cada 4 h, a partir da abertura</div>
+              <table class="tb">
+                <tr><th>Hora</th><th>pH</th><th>Cloro livre</th><th>Temp.</th><th>Turvação</th><th></th></tr>
+                <tr class="a d1"><td>07:40</td><td style="color:var(--warn-ink);font-weight:700">7,9</td><td>1,4 mg/l</td><td>28,1 °C</td><td>0,3 NTU</td><td><span class="chip warn">pH fora da banda</span></td></tr>
+                <tr class="a d2"><td>11:30</td><td>7,6</td><td>1,3 mg/l</td><td>28,0 °C</td><td>0,3 NTU</td><td><span class="chip ok">conforme</span></td></tr>
+                <tr class="a d3"><td>15:30</td><td>7,5</td><td>1,2 mg/l</td><td>28,2 °C</td><td>0,2 NTU</td><td><span class="chip ok">conforme</span></td></tr>
+                <tr class="a d4"><td>19:30</td><td colspan="4" style="color:var(--muted)">por medir — em 1 h 10 m</td><td><span class="chip neu">a aguardar</span></td></tr>
+              </table>
+              <div class="s a d2">Bandas NP 4542:2017 · cloro livre 1,0–2,0 mg/l porque o pH está entre 7,5 e 8,0 · temperatura por uso <i>ensino</i></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div class="card a d3">
+                <div class="t">Boletim do laboratório · 21-10-2026 <span class="chip ok">conforme</span></div>
+                <div class="s">Lido do PDF do LabVida e confirmado pela Ana · coliformes &lt;1 · E. coli 0 · Pseudomonas 0 · Legionella (duche) &lt;100 ufc/l</div>
+                <div class="s">Próxima colheita: 04-11-2026 (≥ 10 dias)</div>
+              </div>
+              <div class="card a d5" style="flex-direction:row;align-items:center;gap:12px">
+                <svg width="64" height="64" viewBox="0 0 21 21" shape-rendering="crispEdges" aria-hidden="true"><rect width="21" height="21" fill="#fff"/><path fill="#11181C" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM8 1h1v2H8zM10 0h2v1h-2zM9 3h3v1H9zM8 5h2v1H8zM11 4h2v3h-2zM1 8h2v1H1zM4 8h1v2H4zM6 9h3v1H6zM0 11h3v1H0zM4 11h2v2H4zM7 11h1v3H7zM9 8h1v3H9zM11 9h2v1h-2zM14 8h2v1h-2zM17 8h1v3h-1zM19 9h2v2h-2zM12 11h2v1h-2zM15 11h1v2h-1zM17 12h3v1h-3zM9 13h2v1H9zM12 13h1v2h-1zM8 15h2v1H8zM11 16h2v1h-2zM14 14h2v2h-2zM17 14h1v1h-1zM19 14h2v1h-2zM16 17h1v2h-1zM18 16h3v1h-3zM9 18h3v1H9zM13 18h1v3h-1zM15 19h2v2h-2zM18 18h1v1h-1zM20 18h1v3h-1zM8 20h3v1H8z"/></svg>
+                <div><div class="t">Página pública do tanque</div><div class="s">Últimas leituras e o boletim, abertos pelo QR na parede. Sem login. Com o livro de reclamações e o regulamento em vigor no rodapé.</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="grid g2">
+            <div class="card a d4">
+              <div class="t">pH · últimos 30 dias · banda 6,9–7,8</div>
+              <svg viewBox="0 0 300 70" width="100%" height="70" aria-label="pH diário" preserveAspectRatio="none">
+                <rect x="0" y="14" width="300" height="38" fill="#EEF5F7"/>
+                <polyline fill="none" stroke="#356D7C" stroke-width="2" points="0,36 10,34 20,38 30,33 40,30 50,35 60,37 70,32 80,30 90,34 100,36 110,38 120,33 130,31 140,35 150,37 160,34 170,30 180,33 190,36 200,38 210,35 220,32 230,30 240,33 250,36 260,38 270,35 280,34 290,10 300,22"/>
+                <circle cx="290" cy="10" r="4" fill="#C99A3B"/>
+              </svg>
+              <div class="s">Uma leitura fora da banda em 30 dias · corrigida na leitura seguinte</div>
+            </div>
+            <div class="card a d5">
+              <div class="t">Manutenção do tanque</div>
+              <div class="s">✓ Contra-lavagem dos filtros · seg 27-10 · Carlos</div>
+              <div class="s">✓ Reposição de cloro · 25 kg · stock 3 → 2 sacos</div>
+              <div class="s" style="color:var(--warn-ink)">⚠︎ Inspeção do kit de salvamento · em atraso 4 dias</div>
+              <div class="s">Contador de água de reposição · 1 284 m³ · 28-10</div>
+            </div>
+          </div>
+          <div class="toast a d6">✉︎ Alerta da leitura das 07:40 enviado a Ana, Rui e Carlos (manutenção) às 07:41.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Cena 5 — Faturação ===== -->
+    <section class="scene" data-dur="40">
+      <div class="app">
+        <nav class="side">
+          <div class="logo"><i></i>Poolse</div>
+          <a>Painel</a><a>Instalações</a><a>Turmas</a><a>Calendário</a><a>Alunos</a>
+          <a class="cur">Faturação</a><a class="sub">Documentos</a><a class="sub cur">Em dívida</a><a class="sub">Preços</a>
+          <a>Mensagens</a>
+        </nav>
+        <div class="main">
+          <div class="hdr"><h1>Faturação · Novembro 2026</h1><p><span class="btn">Pré-visualizar</span> &nbsp; <span class="btn p">Emitir 212 documentos</span></p></div>
+          <div class="card a">
+            <div class="t">Pré-visualização · 212 documentos · 9 648,00 € · nada já faturado será repetido</div>
+            <table class="tb">
+              <tr><th>Documento</th><th>Pagador</th><th>Linhas</th><th>Total</th></tr>
+              <tr class="a d1"><td>FT 2026/1037</td><td>Marta Oliveira (mãe)</td><td>Mensalidade · <b>Inês</b> (Nível 2, 2×/sem) + Mensalidade · <b>Tomás</b> (Nível 4, 3×/sem) − 10 % irmãos</td><td>76,50 €</td></tr>
+              <tr class="a d2"><td>FT 2026/1038</td><td>João Santos (próprio)</td><td>Mensalidade · Masters · 2×/sem</td><td>42,00 €</td></tr>
+              <tr class="a d2"><td>FT 2026/1039</td><td>Câmara Municipal</td><td>Parceria · Escola EB1 Abambres · 18 alunos</td><td>396,00 €</td></tr>
+            </table>
+            <div class="s a d3">Numerada pela base de dados ao emitir · nunca editada · uma correção é uma nota de crédito · IBAN e MB WAY do clube em cada documento</div>
+          </div>
+          <div class="grid g2">
+            <div class="card a d4">
+              <div class="t">Em dívida · 7 documentos · 1 240,00 €</div>
+              <table class="tb">
+                <tr><th>Família</th><th>Vencido</th><th>Valor</th><th></th></tr>
+                <tr><td>Sofia Pereira</td><td>há 41 dias</td><td>126,00 €</td><td><span class="chip bad">+30 d</span></td></tr>
+                <tr><td>Luís Carvalho</td><td>há 33 dias</td><td>84,00 €</td><td><span class="chip bad">+30 d</span></td></tr>
+                <tr><td>Beatriz Nunes</td><td>há 12 dias</td><td>42,00 €</td><td><span class="chip warn">em atraso</span></td></tr>
+              </table>
+              <div><span class="btn p">Enviar lembrete a 3 famílias</span></div>
+            </div>
+            <div class="card a d5">
+              <div class="t">Histórico · Sofia Pereira</div>
+              <div class="s">28-10-2026 · <b>Lembrete por email</b> — Poolse · entregue 09:12</div>
+              <div class="s">14-10-2026 · Telefonema — Ana · «paga até dia 20»</div>
+              <div class="s">30-09-2026 · Documento FT 2026/0911 emitido · 126,00 €</div>
+              <div class="s" style="margin-top:6px;color:var(--primary-ink)">Pagar por: MB WAY 91x xxx xxx · IBAN PT50 ···· 4417 · ref.ª FT 2026/0911</div>
+            </div>
+          </div>
+          <div class="toast a d6">✓ Lembrete enviado a 3 famílias. O histórico de cada documento diz quando saiu.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Cena 6 — Famílias ===== -->
+    <section class="scene" data-dur="30">
+      <div class="phone-wrap">
+        <div class="prose a">
+          <h2>A app das famílias</h2>
+          <p>Horário, evolução, pagamentos. Sem ligar para a secretaria.</p>
+          <ul>
+            <li class="a d2"><b>Vou / Não vou</b> antes de cada aula — a chamada fica pré-informada, nunca pré-marcada.</li>
+            <li class="a d3"><b>Aula cancelada?</b> Notificação no telemóvel, com a opção de reposição.</li>
+            <li class="a d4"><b>O que falta pagar</b>, com IBAN, MB WAY e a referência do documento.</li>
+            <li class="a d5"><b>Como correu a aula</b> — um comentário que só o professor que a deu lê.</li>
+          </ul>
+        </div>
+        <div class="phone a d1">
+          <div class="notch"></div>
+          <div class="scr">
+            <div class="ab"><span>Olá, Marta</span><b>Inês · Nível 2</b></div>
+            <div class="body">
+              <div class="card a d2"><div class="t">Próxima aula</div><div class="v" style="font-size:16px">Qui 30-10 · 17:00</div><div class="s">Golfinhos · Pista 2 · Pedro</div>
+                <div class="seg" style="margin-top:6px"><span class="on">Vou</span><span>Não vou</span></div></div>
+              <div class="card a d3"><div class="t">Evolução</div><div class="s">Nível 2 · 7 de 9 competências ✓</div><div style="height:6px;background:var(--soft);border-radius:3px;overflow:hidden"><div style="width:78%;height:100%;background:#0E7490"></div></div></div>
+              <div class="card a d4"><div class="t">Pagamentos</div><div class="s">FT 2026/1037 · 76,50 € · vence 08-11</div><div class="s" style="color:#0E7490;font-weight:600">MB WAY · IBAN ···· 4417</div></div>
+            </div>
+            <div class="tabbar"><span class="on">Início</span><span>Horário</span><span>Pagamentos</span><span>Perfil</span></div>
+            <div class="notif a d6"><i></i><div><b>Poolse</b>Aula de Golfinhos de sáb 01-11 cancelada — tanque fechado para manutenção. Crédito de reposição atribuído.</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Cena 7 — Fecho ===== -->
+    <section class="scene" data-dur="25">
+      <div class="hero">
+        <h1 class="a">Uma plataforma. <span>Uma base de dados.</span></h1>
+        <p class="a d1">Em português de Portugal, modo claro e escuro, no computador e no telemóvel. O piloto começa com a vossa folha de alunos tal como está — importa-se, corrige-se o que não encaixa, e no primeiro dia já se faz a chamada.</p>
+        <div class="tiles">
+          <div class="tile a d2"><i style="background:var(--l1)"></i>Importar alunos</div>
+          <div class="tile a d3"><i style="background:var(--l2)"></i>Montar o horário</div>
+          <div class="tile a d4"><i style="background:var(--primary)"></i>Registar a água</div>
+          <div class="tile a d5"><i style="background:var(--l8)"></i>Emitir o 1.º mês</div>
+          <div class="tile a d6"><i style="background:var(--l5)"></i>Convidar famílias</div>
+          <div class="tile a d7"><i style="background:var(--comp)"></i>Afinar com vocês</div>
+        </div>
+        <div class="bigq a d8">Vamos começar?</div>
+        <svg class="wave" viewBox="0 0 1200 140" preserveAspectRatio="none"><path d="M0 70 C150 20 250 120 400 70 S650 20 800 70 S1050 120 1200 70 V140 H0 Z" fill="#CFE3E9"/><path d="M0 95 C150 45 250 145 400 95 S650 45 800 95 S1050 145 1200 95 V140 H0 Z" fill="#8EBFCC" opacity=".6"/></svg>
+      </div>
+    </section>
+  </div>
+
+  <div class="bar"><div id="prog"></div></div>
+
+  <div class="caption">
+    <div class="n" id="num">1</div>
+    <div><h3 id="ctitle"></h3><p id="ctext"></p></div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="play">▶ Reproduzir</button>
+    <button id="prev">‹ Anterior</button>
+    <button id="next">Seguinte ›</button>
+    <span class="hint" id="status"></span>
+    <div class="dots" id="dots"></div>
+  </div>
+  <div class="hint">Narração: coloque <code>audio/cena-1.mp3 … cena-7.mp3</code> (ElevenLabs) ao lado desta página; sem ficheiros, o player usa a voz do browser ou só as legendas. Teclas: espaço, ← →.</div>
+</div>
+
+<script>
+(function(){
+  const SCRIPT = [
+    ["Abertura","Isto é o Poolse: a gestão da piscina num só sítio. As turmas, os alunos e as famílias, a qualidade da água, a manutenção, a energia e a faturação — tudo a ler os mesmos dados, em vez de cinco folhas de Excel que nunca batem certo. Vamos ver um dia normal no clube."],
+    ["Painel","Quem entra vê só o que lhe diz respeito. O gestor vê a gestão: quem está em dívida, quanto custou a água este mês, quantas vagas ainda há para vender. O professor vê as aulas de hoje e a chamada que ficou por fazer. A manutenção vê as tarefas em atraso e a água do tanque. E quando uma leitura sai fora da norma, o cartão sobe para o topo sozinho — ninguém precisa de ir à procura."],
+    ["Calendário e turmas","O calendário é a piscina vista de cima: cada pista, cada hora, cada turma. Arrasta-se uma aula para outra pista ou outra hora, e o Poolse pergunta se é só esta semana ou todas. Se a pista já está ocupada, diz quem lá está — em vez de deixar marcar duas turmas na mesma água. Um professor falta? Escolhe-se o substituto na própria aula, e as famílias recebem a notificação. A chamada faz-se no telemóvel, à beira da piscina, com os níveis a avançarem sozinhos quando o aluno cumpre as competências."],
+    ["Qualidade da água","A água tem o seu próprio registo. As leituras de pH, cloro e temperatura entram pelo telemóvel ou por importação, e são julgadas contra a norma portuguesa — a NP 4542 — incluindo a regra em que o cloro depende do pH. Fora da banda, segue um alerta por email para quem pode agir. Os boletins do laboratório importam-se a partir do próprio PDF e ficam classificados: conforme, ou não conforme. E a parte que os utentes têm direito a ver — as últimas leituras — está numa página pública, aberta por um código QR na parede. Sem login, sem trabalho extra."],
+    ["Faturação","No fim do mês, a faturação corre com um clique: primeiro mostra o que vai emitir, depois emite. Os irmãos vão no mesmo documento, dirigido a quem paga. Cada fatura é numerada pela base de dados e nunca é editada — uma correção é uma nota de crédito, como manda a lei. A lista «Em dívida» mostra quem está em atraso, e os lembretes saem do próprio Poolse, com o histórico do que foi enviado e quando. O IBAN e o MB WAY do clube vão em cada documento."],
+    ["Famílias","Para os pais há a app. Veem o horário, a evolução do filho, o que está pago e o que falta. Dizem «vou» ou «não vou» antes da aula. Se uma aula for cancelada, chega uma notificação ao telemóvel — e no dia seguinte podem deixar um comentário sobre a aula, que só o professor que a deu lê."],
+    ["Fecho","Horário, água, manutenção, energia, faturação, famílias — uma plataforma, uma base de dados, em português de Portugal, com modo claro e escuro, a funcionar no computador e no telemóvel. O piloto começa com os vossos dados tal como estão: importa-se a folha de alunos, corrige-se o que não encaixa, e no primeiro dia já se faz a chamada. Vamos começar?"]
+  ];
+  const scenes=[...document.querySelectorAll('.scene')];
+  const $=id=>document.getElementById(id);
+  const narr=$('narr'), play=$('play'), status=$('status'), prog=$('prog'), dots=$('dots');
+  let cur=0, playing=false, timer=null, tick=null, audio=null, utter=null, t0=0, dur=0;
+
+  try{ const m=localStorage.getItem('poolse-demo-narr'); if(m) narr.value=m; }catch(e){}
+  narr.addEventListener('change',()=>{ try{localStorage.setItem('poolse-demo-narr',narr.value)}catch(e){} if(playing){stopNarration(); startNarration();} });
+
+  SCRIPT.forEach((s,i)=>{const b=document.createElement('button');b.textContent=i+1;b.title=s[0];b.addEventListener('click',()=>go(i,playing));dots.appendChild(b);});
+
+  function show(i){
+    cur=i; scenes.forEach((s,k)=>s.classList.toggle('on',k===i));
+    // restart entrance animations
+    const sc=scenes[i]; sc.querySelectorAll('.a').forEach(el=>{el.style.animation='none';void el.offsetWidth;el.style.animation='';});
+    $('num').textContent=i+1; $('ctitle').textContent=SCRIPT[i][0]; $('ctext').textContent=SCRIPT[i][1];
+    [...dots.children].forEach((b,k)=>b.classList.toggle('cur',k===i));
+    prog.style.width='0%';
+  }
+  function setProgress(){ if(!dur) return; const p=Math.min(100,(Date.now()-t0)/dur*100); prog.style.width=p+'%'; }
+  function finished(){ if(!playing) return; if(cur<scenes.length-1) go(cur+1,true); else { stop(); status.textContent='Fim da demo.'; } }
+
+  function stopNarration(){
+    clearTimeout(timer); clearInterval(tick);
+    if(audio){ audio.pause(); audio.onended=null; audio=null; }
+    if(utter && 'speechSynthesis' in window){ speechSynthesis.cancel(); utter=null; }
+  }
+  function captionsOnly(){
+    dur=(+scenes[cur].dataset.dur||30)*1000; t0=Date.now();
+    tick=setInterval(setProgress,250); timer=setTimeout(finished,dur);
+  }
+  function ttsVoice(){
+    const vs=speechSynthesis.getVoices(); return vs.find(v=>/pt[-_]PT/i.test(v.lang))||vs.find(v=>/^pt/i.test(v.lang))||null;
+  }
+  function startNarration(){
+    status.textContent='';
+    const mode=narr.value;
+    if(mode==='mp3'){
+      const a=new Audio('audio/cena-'+(cur+1)+'.mp3'); audio=a;
+      a.onloadedmetadata=()=>{ dur=a.duration*1000; t0=Date.now(); tick=setInterval(setProgress,250); };
+      a.onended=finished;
+      a.onerror=()=>{ audio=null; status.textContent='Sem audio/cena-'+(cur+1)+'.mp3 — a usar '+(('speechSynthesis' in window)?'a voz do browser.':'só legendas.'); if('speechSynthesis' in window) speak(); else captionsOnly(); };
+      a.play().catch(()=>{ a.onerror(); });
+      return;
+    }
+    if(mode==='tts' && 'speechSynthesis' in window){ speak(); return; }
+    captionsOnly();
+  }
+  function speak(){
+    const u=new SpeechSynthesisUtterance(SCRIPT[cur][1]); utter=u; u.lang='pt-PT'; u.rate=0.95;
+    const v=ttsVoice(); if(v) u.voice=v;
+    const est=SCRIPT[cur][1].split(/\s+/).length/140*60*1000/0.95; dur=est; t0=Date.now(); tick=setInterval(setProgress,250);
+    u.onend=()=>{ if(utter===u) finished(); };
+    u.onerror=()=>{ if(utter===u){ status.textContent='Voz do browser indisponível — só legendas.'; captionsOnly(); } };
+    try{ speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){ u.onerror(); }
+    if(!v) status.textContent='Sem voz pt-PT instalada — a usar a voz por omissão.';
+  }
+  function go(i,andPlay){ stopNarration(); show(i); if(andPlay){ playing=true; play.textContent='⏸ Pausa'; startNarration(); } }
+  function stop(){ stopNarration(); playing=false; play.textContent='▶ Reproduzir'; }
+
+  play.addEventListener('click',()=>{ if(playing) stop(); else go(cur,true); });
+  $('prev').addEventListener('click',()=>go(Math.max(0,cur-1),playing));
+  $('next').addEventListener('click',()=>go(Math.min(scenes.length-1,cur+1),playing));
+  document.addEventListener('keydown',e=>{
+    if(e.target.tagName==='SELECT') return;
+    if(e.code==='Space'){e.preventDefault();play.click();}
+    else if(e.key==='ArrowRight'){$('next').click();}
+    else if(e.key==='ArrowLeft'){$('prev').click();}
+  });
+  if('speechSynthesis' in window) speechSynthesis.onvoiceschanged=()=>{};
+  show(0);
+})();
+</script>
+</body>
+</html>
