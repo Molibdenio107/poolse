@@ -96,6 +96,36 @@ export async function readSubscription(
   });
 }
 
+/**
+ * One sport switched on beyond the pool — an add-on line under the plan
+ * (POOLSE-124). The amount is Poolse's platform setting per sport; null is
+ * not priced yet, which is every sport today. Nothing is charged from it.
+ */
+export interface SportAddon {
+  sport: string;
+  monthlyCents: number | null;
+  currency: string;
+}
+
+/** The club's add-on lines, in catalogue order. Empty for a pool club. */
+export async function readSportAddons(organizationId: string): Promise<SportAddon[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string; addon_monthly_cents: number | null; addon_currency: string }>(
+      `SELECT s.id, s.addon_monthly_cents, s.addon_currency
+         FROM organization o
+         JOIN sport s ON s.id = ANY (o.enabled_sports)
+        WHERE o.id = $1 AND s.id <> 'pool'
+        ORDER BY s.position, s.id`,
+      [organizationId],
+    );
+    return rows.map((row) => ({
+      sport: row.id,
+      monthlyCents: row.addon_monthly_cents,
+      currency: row.addon_currency,
+    }));
+  });
+}
+
 /** The Stripe customer for this club, if one has been made. Never sent to a client. */
 export async function readCustomerId(organizationId: string): Promise<string | null> {
   return withOrg(organizationId, async (tx) => {

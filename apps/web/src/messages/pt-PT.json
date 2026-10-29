@@ -610,7 +610,13 @@
     "currentInterval": "Pagamento atual",
     "yearlySaving": "Poupa {percent}% face ao pagamento mensal.",
     "switchInterval": "Para mudar de mensal para anual (ou o contrário), use a página de faturação do Stripe.",
-    "intervalInvalid": "Periodicidade desconhecida."
+    "intervalInvalid": "Periodicidade desconhecida.",
+    "addons": {
+      "title": "Desportos adicionais",
+      "unpriced": "Preço por definir",
+      "perMonth": "{amount} por mês",
+      "billedByHand": "Os desportos adicionais ainda não são cobrados automaticamente: o Poolse fatura-os à parte."
+    }
   },
   "transfer": {
     "title": "Transferir propriedade",
@@ -1323,6 +1329,10 @@
     "closedHalf": {
       "morning": "Encerrado esta manhã",
       "afternoon": "Encerrado esta tarde"
+    },
+    "error": {
+      "sportInvalid": "Desporto desconhecido.",
+      "poolIsAPool": "Uma piscina adiciona-se como piscina."
     }
   },
   "classes": {
@@ -4354,7 +4364,9 @@
       "billingModeFailed": "Não foi possível alterar o modo de pagamento.",
       "paymentFailed": "Não foi possível registar o pagamento.",
       "manualNeedsPayment": "Registe primeiro um pagamento: uma subscrição paga à mão tem de dizer até quando está paga.",
-      "nameMismatch": "O nome não corresponde. Escreva-o como aparece acima."
+      "nameMismatch": "O nome não corresponde. Escreva-o como aparece acima.",
+      "sportInvalid": "Desporto desconhecido.",
+      "poolAlwaysOn": "A natação não pode ser desligada."
     },
     "actions": "Ações",
     "suspended": "Suspensa",
@@ -4486,6 +4498,16 @@
       "overrideExplain": "Entra no clube sem o consentimento do proprietário, durante 4 horas. Gera um alerta e fica registado um aviso ao proprietário com o motivo, tal como o escrever.",
       "overrideReasonHint": "O proprietário vai ler isto. Diga o que está avariado e porque não pode esperar.",
       "overrideConfirm": "Abrir acesso de emergência"
+    },
+    "sports": {
+      "title": "Desportos",
+      "hint": "A natação está sempre ligada. Cada outro desporto ligado é uma linha adicional na subscrição, e o clube passa a poder criar recintos dele. Para desligar um desporto, o clube arquiva primeiro os seus recintos.",
+      "alwaysOn": "Sempre ligado — é a subscrição base",
+      "unpriced": "Adicional, preço por definir",
+      "price": "Adicional, {amount} por mês",
+      "recintos": "{count, plural, =0 {sem recintos} one {# recinto} other {# recintos}}",
+      "inUse": "{sport} tem recintos ativos: {recintos}. O clube tem de os arquivar antes de o desporto ser desligado.",
+      "failed": "Não foi possível guardar os desportos."
     }
   },
   "suspended": {
@@ -6082,5 +6104,17 @@
     "paidLate": "A subscrição estava paga até {date} e ainda não foi renovada.",
     "cancelling": "A subscrição foi cancelada e termina a {date}.",
     "ownerRenews": "Só o proprietário pode renovar."
+  },
+  "sport": {
+    "name": {
+      "pool": "Natação",
+      "tennis": "Ténis",
+      "padel": "Padel",
+      "basketball": "Basquetebol",
+      "football": "Futebol",
+      "handball": "Andebol",
+      "volleyball": "Voleibol",
+      "gym": "Ginásio"
+    }
   }
 }

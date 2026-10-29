@@ -370,6 +370,30 @@ on when the club is ready for it.
   `disabled`. A broken dependency comes back as a toast naming both modules in the reader's
   language ("Receção precisa de Faturação…"), and the boxes stay as the operator left them.
 
+## Sports per club — POOLSE-124 (29 October 2026)
+
+A sport other than the pool is a paid add-on Rui switches on per club. It rides on the modules
+path with one difference: a club stores what is **on** (`organization.enabled_sports`, default
+`{pool}`), and the pool is always on.
+
+- **Who writes it.** `POST /platform/tenants/:id/sports` with `{ enabled: [...] }`, pool
+  included, through `changeTenant` — audited as `tenant.sports.set` with both lists, and alerted.
+  One click either way, no typed name. A list without `pool` or with an unknown sport is a 400.
+- **A sport with live recintos stays on.** Switching it off is a 409 `sport_in_use` with `sport`
+  and `recintos` (their names); the club archives them first. Poolse never archives them for it.
+  The trigger `organization_sports_known` refuses the same change.
+- **A recinto only for a sport that is on.** `POST /facilities/:id/playing-areas`
+  `{ sportId, name }` — owner and admin — is a 403 `sport_not_enabled` otherwise, and a pool is
+  refused there (400): a pool is added as a pool. Restoring a court whose sport is off is refused
+  by the database. `mayCreateRecinto` in `@poolse/rules` is the rule.
+- **What the club sees.** `/me` carries `sports` (keys, pool first; the name is
+  `sport.name.<key>`). The menu reads it from POOLSE-125. The owner's *Subscrição* page lists one
+  add-on line per sport beyond the pool, with its price or *preço por definir* — a pool club sees
+  nothing new. Nothing is charged: Poolse bills add-ons by hand (`sport.addon_monthly_cents`,
+  null for every sport today).
+- **The *Desportos* card**, under *Módulos* on the tenant's Ações tab: one box per sport with its
+  add-on price and the club's live recintos of it. The pool's box is ticked and disabled.
+
 ## Support access — POOLSE-79 (12 October 2026)
 
 A club's Owner can let Poolse support in for a fixed window, and support then enters the club

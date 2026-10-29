@@ -14,6 +14,8 @@ INSERT INTO organization (id, name, slug) VALUES
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Clube A', 'clube-a'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Clube B', 'clube-b');
 UPDATE organization SET max_facilities = 20;
+-- POOLSE-124: a court needs its sport switched on; these tests are about the recinto.
+UPDATE organization SET enabled_sports = '{pool,tennis,gym}';
 
 INSERT INTO facility (id, organization_id, name) VALUES
   ('a1111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Sede A'),

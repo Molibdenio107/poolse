@@ -1,4 +1,4 @@
-import type { PoolseModule } from '@poolse/rules';
+import type { PoolseModule, PoolseSport } from '@poolse/rules';
 import { auth } from '@clerk/nextjs/server';
 import { cookies } from 'next/headers';
 import type { SkillState } from './skills';
@@ -333,6 +333,11 @@ export interface Me {
      * the site and pool tabs follow it; the API refuses the rest regardless.
      */
     modules: PoolseModule[];
+    /**
+     * The sports this club has switched on — POOLSE-124, `pool` always first.
+     * Keys; the name is `sport.name.<key>`. POOLSE-125's menu reads it.
+     */
+    sports?: PoolseSport[];
     membershipId: string;
     roles: string[];
     /**
@@ -4030,10 +4035,21 @@ export interface BillingOverview {
   renewalsWindowDays: number;
 }
 
+/** One sport on the /admin *Desportos* block — POOLSE-124. */
+export interface PlatformTenantSport {
+  sport: PoolseSport;
+  enabled: boolean;
+  recintos: number;
+  /** Null is not priced yet. */
+  addonMonthlyCents: number | null;
+}
+
 export interface PlatformTenant {
   id: string;
   /** POOLSE-87: the modules switched off; empty is the full product. */
   disabledModules: PoolseModule[];
+  /** POOLSE-124: every sport, whether it is on, its live recintos and its add-on price. */
+  sports: PlatformTenantSport[];
   name: string;
   slug: string;
   kind: OrganizationKind;
@@ -4368,6 +4384,11 @@ export interface SubscriptionView {
   configured: boolean;
   /** The owner, and nobody else. An admin reads this screen and cannot act on it. */
   canManage: boolean;
+  /**
+   * Each sport switched on beyond the pool — one add-on line under the plan
+   * (POOLSE-124). `monthlyCents` null is not priced yet. Empty for a pool club.
+   */
+  addons: { sport: PoolseSport; monthlyCents: number | null; currency: string }[];
 }
 
 /* -------------------------------------------------------------------------- */

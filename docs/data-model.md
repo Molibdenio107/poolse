@@ -328,6 +328,23 @@ go-live.
 - `GET /facilities/:id` answers `playingAreas` beside `pools` — the same rows until
   POOLSE-125 switches the menu.
 
+### Sports switched on per club — POOLSE-124
+
+- **`organization.enabled_sports text[]`**, default `{pool}`, holding `sport.id` keys. CHECK
+  `organization_pool_always_on`: the pool never leaves it. `organization_sports_known` (BEFORE
+  INSERT OR UPDATE OF it) refuses a key the catalogue lacks (`sport_unknown|x`) and a sport
+  leaving while it has live recintos (`sport_in_use|sport|names`).
+- **Written by `poolse_platform` only** (`UPDATE (enabled_sports)`); `poolse_app` holds no grant
+  on the column. The platform also reads `sport` and `playing_area` (`playing_area_platform`,
+  FOR SELECT) — for that trigger and the /admin recinto count.
+- **`playing_area_sport_enabled`** (BEFORE INSERT OR UPDATE OF archived_at) refuses a live
+  recinto of a sport that is off (`sport_not_enabled|sport`) — a new one or one restored from
+  the bin. A club the caller cannot see is left to RLS, so a cross-tenant write fails as one.
+- **`sport.addon_monthly_cents`** (+ `addon_currency`, `addon_provenance`): what a sport adds to
+  a subscription per month, gross, Poolse's own setting. Null is not priced yet — every sport
+  today. Never set for `pool` (CHECK). Nothing is charged from it.
+- `resolve_memberships` carries `o_enabled_sports`; `/me` answers `sports`.
+
 ## Module 1 — students and classes
 
 ```

@@ -610,7 +610,13 @@
     "currentInterval": "Current billing",
     "yearlySaving": "Saves {percent}% against paying monthly.",
     "switchInterval": "To move between monthly and yearly, use Stripe's billing page.",
-    "intervalInvalid": "Unknown billing interval."
+    "intervalInvalid": "Unknown billing interval.",
+    "addons": {
+      "title": "Add-on sports",
+      "unpriced": "Price to be set",
+      "perMonth": "{amount} a month",
+      "billedByHand": "Add-on sports are not charged automatically yet: Poolse invoices them separately."
+    }
   },
   "transfer": {
     "title": "Transfer ownership",
@@ -1323,6 +1329,10 @@
     "closedHalf": {
       "morning": "Closed this morning",
       "afternoon": "Closed this afternoon"
+    },
+    "error": {
+      "sportInvalid": "Unknown sport.",
+      "poolIsAPool": "A pool is added as a pool."
     }
   },
   "classes": {
@@ -4354,7 +4364,9 @@
       "billingModeFailed": "Could not change the billing mode.",
       "paymentFailed": "Could not record the payment.",
       "manualNeedsPayment": "Record a payment first: a hand-paid subscription has to say what it is paid up to.",
-      "nameMismatch": "That is not this tenant's name. Type it as shown above."
+      "nameMismatch": "That is not this tenant's name. Type it as shown above.",
+      "sportInvalid": "Unknown sport.",
+      "poolAlwaysOn": "Swimming cannot be switched off."
     },
     "actions": "Actions",
     "suspended": "Suspended",
@@ -4486,6 +4498,16 @@
       "overrideExplain": "Enters the club without the owner's consent, for 4 hours. It raises an alert and records a notice to the owner with the reason, exactly as you write it.",
       "overrideReasonHint": "The owner will read this. Say what is broken and why it cannot wait.",
       "overrideConfirm": "Open emergency access"
+    },
+    "sports": {
+      "title": "Sports",
+      "hint": "Swimming is always on. Each other sport switched on is an add-on line on the subscription, and the club can then create playing areas for it. To switch a sport off, the club archives its playing areas first.",
+      "alwaysOn": "Always on — it is the base subscription",
+      "unpriced": "Add-on, price to be set",
+      "price": "Add-on, {amount} a month",
+      "recintos": "{count, plural, =0 {no playing areas} one {# playing area} other {# playing areas}}",
+      "inUse": "{sport} has live playing areas: {recintos}. The club has to archive them before the sport can be switched off.",
+      "failed": "The sports could not be saved."
     }
   },
   "suspended": {
@@ -6082,5 +6104,17 @@
     "paidLate": "The subscription was paid until {date} and has not been renewed.",
     "cancelling": "The subscription was cancelled and ends on {date}.",
     "ownerRenews": "Only the owner can renew it."
+  },
+  "sport": {
+    "name": {
+      "pool": "Swimming",
+      "tennis": "Tennis",
+      "padel": "Padel",
+      "basketball": "Basketball",
+      "football": "Football",
+      "handball": "Handball",
+      "volleyball": "Volleyball",
+      "gym": "Gym"
+    }
   }
 }

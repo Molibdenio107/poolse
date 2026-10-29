@@ -46,8 +46,10 @@ import {
   archivePool,
   countPeople,
   createFacility,
+  createPlayingArea,
   createPool,
   DuplicateNameError,
+  SportNotEnabledError,
   FacilityLimitError,
   LanesInUseError,
   facilityHours,
@@ -70,7 +72,7 @@ import {
 } from './facilities.repository.js';
 import { SampleInFutureError, sampleMoment, type SampleMoment } from './sample-moment.js';
 import { SITE_PAGE_ROLES } from './site-access.js';
-import { POOL_USES, type PoolContext } from '@poolse/rules';
+import { BASE_SPORT, isPoolseSport, POOL_USES, type PoolContext, type PoolseSport } from '@poolse/rules';
 import { CoreRoute, moduleIsOn, PoolseModule } from '../tenant/modules.js';
 
 interface FacilityDetailResponse extends FacilityDetail {
@@ -686,6 +688,44 @@ export class FacilitiesController {
     return { id };
   }
 
+  /**
+   * Add a recinto of another sport — a court, a pitch, a gym (POOLSE-124).
+   * Owner and admin, as a pool is. A sport Rui has not switched on for the club
+   * is a 403 `sport_not_enabled`; a pool is added as a pool, through
+   * `POST :facilityId/pools`, because it is more than its recinto.
+   */
+  @Post(':facilityId/playing-areas')
+  async addPlayingArea(
+    @Param('facilityId') facilityId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ id: string }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const name = text(body['name'], 'name', { required: true });
+    const sportId = body['sportId'];
+    if (!isPoolseSport(sportId)) {
+      throw new BadRequestException({ fields: { sportId: 'facilities.error.sportInvalid' } });
+    }
+    if (sportId === BASE_SPORT) {
+      throw new BadRequestException({ fields: { sportId: 'facilities.error.poolIsAPool' } });
+    }
+
+    let id: string | null;
+    try {
+      id = await createPlayingArea({
+        organizationId,
+        facilityId,
+        sportId: sportId as Exclude<PoolseSport, 'pool'>,
+        name: name!,
+      });
+    } catch (error) {
+      throw asHttp(error);
+    }
+    if (id === null) throw new NotFoundException('No such facility');
+    return { id };
+  }
+
   @Patch('pools/:poolId')
   async editPool(
     @Param('poolId') poolId: string,
@@ -752,6 +792,9 @@ function asHttp(error: unknown): unknown {
   }
   if (error instanceof DuplicateNameError) {
     return new ConflictException(`"${error.message}" already exists here`);
+  }
+  if (error instanceof SportNotEnabledError) {
+    return new ForbiddenException({ code: 'sport_not_enabled', sport: error.sport });
   }
 
   /*

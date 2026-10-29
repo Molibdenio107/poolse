@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getTranslations } from 'next-intl/server';
-import { isPoolseModule, POOLSE_MODULES } from '@poolse/rules';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { BASE_SPORT, isPoolseModule, isPoolseSport, POOLSE_MODULES, POOLSE_SPORTS } from '@poolse/rules';
 import { ApiError, apiPost } from '@/lib/api';
 import { describeFailure } from '@/lib/form-failure';
 import { parseCents } from '@/lib/money';
@@ -134,6 +134,45 @@ export async function setModulesAction(
       }
     }
     return describeFailure(error, 'admin.modules.failed');
+  }
+
+  revalidateAdmin(tenantId);
+  return { ok: true };
+}
+
+/**
+ * Switch a club's sports — POOLSE-124. The pool is always on, so it is sent
+ * whatever the boxes say (its box is disabled). A sport with live recintos is
+ * refused by the API with the recintos named, and said so here.
+ */
+export async function setSportsAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const tenantId = String(formData.get('tenantId') ?? '');
+  const on = new Set(formData.getAll('sport').map(String));
+
+  try {
+    await apiPost(`/platform/tenants/${tenantId}/sports`, {
+      enabled: POOLSE_SPORTS.filter((sport) => sport === BASE_SPORT || on.has(sport)),
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.code === 'sport_in_use') {
+      const { sport, recintos } = (error.details ?? {}) as { sport?: unknown; recintos?: unknown };
+      if (isPoolseSport(sport) && Array.isArray(recintos)) {
+        const t = await getTranslations();
+        const locale = await getLocale();
+        return {
+          ok: false,
+          errorKey: 'admin.sports.inUse',
+          values: {
+            sport: t(`sport.name.${sport}`),
+            recintos: new Intl.ListFormat(locale, { type: 'conjunction' }).format(recintos.map(String)),
+          },
+        };
+      }
+    }
+    return describeFailure(error, 'admin.sports.failed');
   }
 
   revalidateAdmin(tenantId);

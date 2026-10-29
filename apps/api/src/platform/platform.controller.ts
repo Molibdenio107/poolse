@@ -28,6 +28,7 @@ import {
   readTenant,
   readTenantRequests,
   setModules,
+  setSports,
   setPlanLimits,
   setSubscriptionStatus,
   setSuspension,
@@ -45,6 +46,7 @@ import {
   readBillingMode,
   readConfirmName,
   readDisabledModules,
+  readEnabledSports,
   readCoversFrom,
   readCoversTo,
   readMaxFacilities,
@@ -244,6 +246,19 @@ export class PlatformController {
     @Body() body: { disabled?: unknown },
   ): Promise<TenantChangeResult> {
     return found(await setModules(id, readDisabledModules(body.disabled)));
+  }
+
+  /**
+   * Switch a club's sports — POOLSE-124. The body is the whole list of what is
+   * on, `pool` always among it. A sport leaving with live recintos is a 409
+   * `sport_in_use` naming them.
+   */
+  @Post('tenants/:id/sports')
+  async sports(
+    @Param('id') id: string,
+    @Body() body: { enabled?: unknown },
+  ): Promise<TenantChangeResult> {
+    return found(await setSports(id, readEnabledSports(body.enabled)));
   }
 
   /**

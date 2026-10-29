@@ -651,6 +651,8 @@ repo** — `test-fixtures/**/private/` is gitignored. `docs/features/energy.md`.
 
 **A pool is a recinto of sport `pool`, and the pool's own trigger makes it.** POOLSE-122. `playing_area` sits between a site and its tanks; `sport` is a platform catalogue the app only reads. Insert a pool exactly as before — `pool_area_ensure` makes its recinto, `pool_area_sync` carries its name and archive both ways, and `class_group` / `closure` / `energy_meter` get `playing_area_id` by `*_area_from_pool`. Readers still read `pool_id`; never write a recinto by hand for a pool. `docs/data-model.md`, *Recintos*.
 
+**A sport is switched on per club by Rui; the pool always is.** POOLSE-124. `organization.enabled_sports` stores what is **on** (default `{pool}`, the pool kept by CHECK), the reverse of `disabled_modules`; `POOLSE_SPORTS` in `@poolse/rules` equals the `sport` table by test. Only `poolse_platform` writes it, through `changeTenant` (`POST /platform/tenants/:id/sports`); a sport with live recintos is a 409 `sport_in_use` naming them, never archived for the club. A recinto of another sport is `POST /facilities/:id/playing-areas`, 403 `sport_not_enabled` unless `mayCreateRecinto`, and the database refuses one made or restored while its sport is off. `/me.sports` is the list POOLSE-125's menu reads. `docs/features/platform.md`.
+
 **A subscription covers one facility; the schema allows many.** These are two
 different rules and both are settled. The *schema* keeps `organization 1 —— N
 facility` — backlog story B4 proposed narrowing it and was rejected, because a

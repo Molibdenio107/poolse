@@ -1,20 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Eye, Lock, LockOpen, Pencil, Receipt, Wallet } from 'lucide-react';
 import { SelectField, TextAreaField, TextField, useSeeded } from '@/components/ui/field';
 import { Dialog } from '@/components/ui/dialog';
-import { POOLSE_MODULES, type PoolseModule } from '@poolse/rules';
+import { BASE_SPORT, POOLSE_MODULES, type PoolseModule } from '@poolse/rules';
 import { useSavedAction } from '@/lib/saved';
-import type { PlatformTenant } from '@/lib/api';
+import type { PlatformTenant, PlatformTenantSport } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
 import { formatDate } from '@/lib/date-format';
+import { formatCents } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import {
   recordPaymentAction,
   setBillingModeAction,
   setModulesAction,
+  setSportsAction,
   setPlanAction,
   setReadOnlyAction,
   setSubscriptionAction,
@@ -73,6 +75,7 @@ export function TenantActions({ tenant }: { tenant: PlatformTenant }): React.Rea
         <ReadOnlyCard tenant={tenant} />
         <SuspensionCard tenant={tenant} />
         <ModulesCard tenant={tenant} />
+        <SportsCard tenant={tenant} />
       </div>
     </section>
   );
@@ -318,6 +321,66 @@ function ModuleSwitch({ module, on }: { module: PoolseModule; on: boolean }): Re
         <span className="flex flex-col gap-1">
           <span className="text-sm font-medium">{t(`modules.name.${module}`)}</span>
           <span className="text-sm text-foreground-muted">{t(`modules.covers.${module}`)}</span>
+        </span>
+      </label>
+    </li>
+  );
+}
+
+/**
+ * Desportos — POOLSE-124. One box per sport, ticked when it is on, with the
+ * club's live recintos of it and what it adds to the subscription beside each.
+ * The pool is always on, so its box is ticked and cannot be cleared. A sport
+ * with live recintos cannot be switched off; the toast names them, and nothing
+ * here archives a club's courts on the operator's behalf.
+ */
+function SportsCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
+  const t = useTranslations();
+  const [, dispatch, pending] = useSavedAction(setSportsAction, INITIAL);
+
+  return (
+    <div className="md:col-span-2">
+      <Card title={t('admin.sports.title')} hint={t('admin.sports.hint')} action={dispatch} tenantId={tenant.id}>
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {tenant.sports.map((sport) => (
+            <SportSwitch key={sport.sport} sport={sport} />
+          ))}
+        </ul>
+        <Submit label={t('common.save')} pending={pending} />
+      </Card>
+    </div>
+  );
+}
+
+function SportSwitch({ sport }: { sport: PlatformTenantSport }): React.ReactElement {
+  const t = useTranslations();
+  const locale = useLocale();
+  const base = sport.sport === BASE_SPORT;
+  const [checked, setChecked] = useSeeded(sport.enabled || base);
+
+  return (
+    <li>
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          name="sport"
+          value={sport.sport}
+          checked={checked}
+          disabled={base}
+          onChange={(event) => setChecked(event.target.checked)}
+          className="mt-1 size-4 shrink-0 accent-primary"
+        />
+        <span className="flex flex-col gap-1">
+          <span className="text-sm font-medium">{t(`sport.name.${sport.sport}`)}</span>
+          <span className="text-sm text-foreground-muted">
+            {base
+              ? t('admin.sports.alwaysOn')
+              : sport.addonMonthlyCents === null
+                ? t('admin.sports.unpriced')
+                : t('admin.sports.price', { amount: formatCents(locale, sport.addonMonthlyCents) })}
+            {' · '}
+            {t('admin.sports.recintos', { count: sport.recintos })}
+          </span>
         </span>
       </label>
     </li>

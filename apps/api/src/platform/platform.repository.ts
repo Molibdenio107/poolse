@@ -1,5 +1,10 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { moduleDependencyBreaches, POOLSE_MODULES, type PoolseModule } from '@poolse/rules';
+import {
+  moduleDependencyBreaches,
+  POOLSE_MODULES,
+  type PoolseModule,
+  type PoolseSport,
+} from '@poolse/rules';
 import { withPlatform } from '@poolse/db';
 import { currentAuth } from '../auth/auth.context.js';
 import {
@@ -105,6 +110,12 @@ export interface TenantRow {
   poolCount: number;
   /** POOLSE-87: the modules switched off; empty is the full product. */
   disabledModules: PoolseModule[];
+  /**
+   * POOLSE-124: every sport in the catalogue, whether it is on here, how many
+   * live recintos the club has of it, and what it adds to the subscription
+   * (null: not priced yet). The /admin *Desportos* block, one row per sport.
+   */
+  sports: TenantSport[];
   /**
    * The last thing anybody in this tenant did that the product recorded.
    *
@@ -216,6 +227,7 @@ export async function listTenants(
       max_facilities: number | null;
       pool_count: number;
       disabled_modules: PoolseModule[];
+      sports: TenantSport[];
       last_activity_at: Date | null;
       archived_at: Date | null;
       suspended_at: Date | null;
@@ -250,6 +262,21 @@ export async function listTenants(
              o.max_facilities,
              -- An enum array: ::text[], never bare (the slice 4.2 lesson).
              o.disabled_modules::text[] AS disabled_modules,
+             -- POOLSE-124: the catalogue, each sport with its switch and its recintos.
+             (
+               SELECT json_agg(json_build_object(
+                        'sport', s.id,
+                        'enabled', s.id = ANY (o.enabled_sports),
+                        'recintos', (
+                          SELECT count(*) FROM playing_area a
+                           WHERE a.organization_id = o.id
+                             AND a.sport_id = s.id
+                             AND a.archived_at IS NULL
+                        ),
+                        'addonMonthlyCents', s.addon_monthly_cents
+                      ) ORDER BY s.position, s.id)
+                 FROM sport s
+             ) AS sports,
              o.archived_at,
              o.suspended_at,
              o.read_only_at,
@@ -391,6 +418,7 @@ export async function listTenants(
       maxFacilities: row.max_facilities,
       poolCount: Number(row.pool_count),
       disabledModules: row.disabled_modules,
+      sports: row.sports ?? [],
       lastActivityAt: row.last_activity_at?.toISOString() ?? null,
       archivedAt: row.archived_at?.toISOString() ?? null,
       suspendedAt: row.suspended_at?.toISOString() ?? null,
@@ -632,6 +660,8 @@ interface TenantChange {
   archived_at?: string | null;
   /** POOLSE-87: the modules switched off. One click either way — never named. */
   disabled_modules?: PoolseModule[];
+  /** POOLSE-124: the sports switched on. One click either way — never named. */
+  enabled_sports?: PoolseSport[];
 }
 
 /**
@@ -656,6 +686,7 @@ const AUDITED: Record<string, string> = {
   archived_at: 'archived_at',
   // An enum array: read as text[], never bare (the slice 4.2 lesson).
   disabled_modules: 'disabled_modules::text[]',
+  enabled_sports: 'enabled_sports',
 };
 
 const AUDITED_KEYS = Object.keys(AUDITED);
@@ -962,6 +993,55 @@ export async function setModules(
     });
   }
   return changeTenant(organizationId, 'tenant.modules.set', { disabled_modules: off });
+}
+
+/** One sport, as the /admin *Desportos* block shows it — POOLSE-124. */
+export interface TenantSport {
+  sport: PoolseSport;
+  enabled: boolean;
+  /** Live recintos of this sport in the club. */
+  recintos: number;
+  /** What it adds per month, gross; null is not priced yet. Never set for the pool. */
+  addonMonthlyCents: number | null;
+}
+
+/**
+ * Switch a club's sports — POOLSE-124.
+ *
+ * The body is the whole list of what is on, pool included, so the call is
+ * idempotent and the trail's before-and-after is the two lists — the
+ * `setModules` shape. **A sport with live recintos is refused, never
+ * resolved**: a 409 naming them, and Poolse does not archive a club's courts on
+ * the operator's behalf. `organization_sports_known` refuses the same change, so
+ * this is the sentence and that trigger is the guarantee.
+ *
+ * Reversible, so no typed name.
+ */
+export async function setSports(
+  organizationId: string,
+  enabled: readonly PoolseSport[],
+): Promise<TenantChangeResult | null> {
+  return changeTenant(organizationId, 'tenant.sports.set', async (before, tx) => {
+    const was = (before['enabled_sports'] as string[] | null) ?? [];
+    const leaving = was.filter((sport) => !enabled.includes(sport as PoolseSport));
+    if (leaving.length > 0) {
+      const { rows } = await tx.query<{ sport_id: PoolseSport; name: string }>(
+        `SELECT sport_id, name FROM playing_area
+          WHERE organization_id = $1 AND archived_at IS NULL AND sport_id = ANY ($2::text[])
+          ORDER BY sport_id, name`,
+        [organizationId, leaving],
+      );
+      if (rows.length > 0) {
+        const sport = rows[0]!.sport_id;
+        throw new ConflictException({
+          code: 'sport_in_use',
+          sport,
+          recintos: rows.filter((row) => row.sport_id === sport).map((row) => row.name),
+        });
+      }
+    }
+    return { change: { enabled_sports: [...enabled] } };
+  });
 }
 
 /**

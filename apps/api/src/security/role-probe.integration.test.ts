@@ -577,6 +577,10 @@ test('operational reads refuse non-staff (403)', async () => {
       new FacilitiesController().pool(fixture.poolId),
     );
     await refused('GET facilities/:id', 403, () => new FacilitiesController().one(fac));
+    // POOLSE-124: the role check comes before the sport is even read.
+    await refused('POST facilities/:id/playing-areas', 403, () =>
+      new FacilitiesController().addPlayingArea(fac, { sportId: 'tennis', name: 'Campo' }),
+    );
     await refused('GET maintenance/facilities/:id/tasks', 403, () =>
       new MaintenanceController().list(fac),
     );

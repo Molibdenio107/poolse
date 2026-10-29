@@ -64,6 +64,7 @@ const SAME_ON_PURPOSE = new Map([
   ['palette.shortcut', 'key names are the same on both keyboards'],
   // POOLSE-116: the record's tab. "Feedback" is the word pt-PT uses ("dar feedback").
   ['feedback.tab', 'the same loanword in both languages'],
+  ['sport.name.padel', 'the sport has one name in both languages'],
   ['account.email', '"email" is the ordinary pt-PT word too'],
   ['profile.email', 'as above'],
   ['publicWater.manage.link', '"link" is the ordinary pt-PT word too'],

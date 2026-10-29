@@ -28,6 +28,8 @@ import {
   rememberCustomer,
   type OrganizationSubscription,
   readBillingMode,
+  readSportAddons,
+  type SportAddon,
 } from './subscription.repository.js';
 import { CoreRoute } from '../tenant/modules.js';
 import { readSubscriptionAlert, type SubscriptionAlert } from './subscription-alert.js';
@@ -82,6 +84,11 @@ export interface SubscriptionView {
    * actually cheaper.
    */
   yearlySavingPercent: number | null;
+  /**
+   * The sports switched on beyond the pool, one line each under the plan —
+   * POOLSE-124. Empty for a pool club, which is every club today.
+   */
+  addons: SportAddon[];
   /** Stripe is wired up *and* at least one interval has a price. */
   configured: boolean;
   /**
@@ -124,6 +131,7 @@ export class SubscriptionController {
     if (subscription === null) throw new NotFoundException('No such organization');
 
     const intervals = await offers(this.logger);
+    const addons = await readSportAddons(organizationId);
 
     return {
       subscription,
@@ -132,6 +140,7 @@ export class SubscriptionController {
         amountOf(intervals, 'monthly'),
         amountOf(intervals, 'yearly'),
       ),
+      addons,
       configured: stripeEnabled() && anyPriceConfigured(),
       /*
        * Always true now that only the owner reaches this at all. Kept as a field

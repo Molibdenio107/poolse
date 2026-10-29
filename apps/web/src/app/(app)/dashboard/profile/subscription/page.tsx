@@ -5,6 +5,7 @@ import { ApiError, apiFetch, type SubscriptionView } from '@/lib/api';
 import { PageError, PageShell } from '@/components/page-shell';
 import { PlanPicker } from './plan-picker';
 import { formatDate } from '@/lib/date-format';
+import { formatCents } from '@/lib/money';
 
 /**
  * What the club pays Poolse — slice 2.4.
@@ -141,6 +142,33 @@ export default async function SubscriptionPage({
               </p>
             )}
           </section>
+
+          {/*
+            * POOLSE-124: each sport switched on beyond the pool is one add-on
+            * line under the plan. Nothing is charged from it yet — Poolse bills
+            * the first clubs by hand — and an unpriced sport says so rather than
+            * showing a zero. A pool club has none, and sees nothing here.
+            */}
+          {view.addons.length > 0 && (
+            <section className="rounded border border-border bg-surface p-5">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('subscription.addons.title')}
+              </h2>
+              <ul className="mt-2 divide-y divide-border text-sm">
+                {view.addons.map((addon) => (
+                  <li key={addon.sport} className="flex flex-wrap justify-between gap-x-4 py-2">
+                    <span>{t(`sport.name.${addon.sport}`)}</span>
+                    <span className={addon.monthlyCents === null ? 'text-foreground-muted' : undefined}>
+                      {addon.monthlyCents === null
+                        ? t('subscription.addons.unpriced')
+                        : t('subscription.addons.perMonth', { amount: formatCents(locale, addon.monthlyCents) })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-sm text-foreground-muted">{t('subscription.addons.billedByHand')}</p>
+            </section>
+          )}
 
           {/*
             * Said plainly rather than by hiding the buttons: an installation with

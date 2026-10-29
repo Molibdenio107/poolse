@@ -1,4 +1,4 @@
-import { enabledModules, type PoolseModule } from '@poolse/rules';
+import { enabledModules, enabledSports, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import { withoutTenantScope } from '@poolse/db';
 
 export interface AppUserSummary {
@@ -86,6 +86,11 @@ export interface MembershipSummary {
    * once here so no client works it out from the list of what is off.
    */
   modules: PoolseModule[];
+  /**
+   * The sports this club has switched on — POOLSE-124. Always starts with
+   * `pool`; keys, which the web app translates (`sport.name.*`).
+   */
+  sports: PoolseSport[];
 }
 
 /**
@@ -163,6 +168,7 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       o_pending_delete_at: Date | null;
       o_support_expires_at: Date | null;
       o_disabled_modules: string[];
+      o_enabled_sports: string[];
     }>('SELECT * FROM resolve_memberships($1)', [clerkUserId]);
 
     return rows.map((row) => ({
@@ -182,6 +188,7 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       supportExpiresAt: row.o_support_expires_at?.toISOString() ?? null,
       disabledModules: row.o_disabled_modules,
       modules: enabledModules(row.o_disabled_modules),
+      sports: enabledSports({ enabledSports: row.o_enabled_sports }),
     }));
   });
 }

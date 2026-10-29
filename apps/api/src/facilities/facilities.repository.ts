@@ -5,6 +5,7 @@ import { cascadeAt, restorableKind } from '../archive/restorable.js';
 export type PoolKind = 'indoor' | 'outdoor';
 export type { PoolUse } from '@poolse/rules';
 import type { PoolUse } from '@poolse/rules';
+import { mayCreateRecinto, type PoolseSport } from '@poolse/rules';
 
 export interface Pool {
   id: string;
@@ -793,6 +794,62 @@ export interface CreatePoolInput {
   minDepthM: number | null;
   /** Swimmers in the water at once, across every turma. Null is no ceiling — 4.2. */
   maxCapacity: number | null;
+}
+
+/** The sport is not switched on for this club — POOLSE-124. */
+export class SportNotEnabledError extends Error {
+  constructor(readonly sport: string) {
+    super(`Sport ${sport} is not enabled`);
+  }
+}
+
+/**
+ * A recinto of a sport other than the pool — POOLSE-124. A pool is added as a
+ * pool (`createPool`), whose trigger makes its recinto; this is a court, a
+ * pitch, a gym. Null when the site is not this club's. Refused with
+ * `SportNotEnabledError` unless Rui has switched the sport on, read in the same
+ * transaction as the insert; `playing_area_sport_enabled` refuses it too.
+ */
+export async function createPlayingArea(input: {
+  organizationId: string;
+  facilityId: string;
+  sportId: Exclude<PoolseSport, 'pool'>;
+  name: string;
+}): Promise<string | null> {
+  try {
+    return await withOrg(input.organizationId, async (tx) => {
+      const facility = await tx.query<{ enabled_sports: string[] }>(
+        `SELECT o.enabled_sports
+           FROM facility f JOIN organization o ON o.id = f.organization_id
+          WHERE f.id = $1 AND f.archived_at IS NULL`,
+        [input.facilityId],
+      );
+      const row = facility.rows[0];
+      if (!row) return null;
+      if (!mayCreateRecinto(input.sportId, { enabledSports: row.enabled_sports })) {
+        throw new SportNotEnabledError(input.sportId);
+      }
+
+      const { rows } = await tx.query<{ id: string }>(
+        `INSERT INTO playing_area (organization_id, facility_id, sport_id, name, position)
+         SELECT $1, $2, $3, $4, coalesce(max(position) + 1, 0)
+           FROM playing_area WHERE facility_id = $2
+         RETURNING id`,
+        [input.organizationId, input.facilityId, input.sportId, input.name],
+      );
+      const id = rows[0]!.id;
+
+      await recordAudit(tx, {
+        action: 'playing_area.created',
+        entityType: 'playing_area',
+        entityId: id,
+        data: { name: input.name, sportId: input.sportId, facilityId: input.facilityId },
+      });
+      return id;
+    });
+  } catch (error) {
+    return asDuplicate(error, input.name);
+  }
 }
 
 /**

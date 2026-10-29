@@ -1,5 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
-import { isPoolseModule, type PoolseModule } from '@poolse/rules';
+import {
+  BASE_SPORT,
+  enabledSports,
+  isPoolseModule,
+  isPoolseSport,
+  type PoolseModule,
+  type PoolseSport,
+} from '@poolse/rules';
 import type {
   BillingMode,
   PaymentMethod,
@@ -280,4 +287,20 @@ export function readDisabledModules(raw: unknown): PoolseModule[] {
     refuse('disabled', 'admin.error.moduleInvalid');
   }
   return [...new Set(raw as PoolseModule[])];
+}
+
+/**
+ * The sports to have on — POOLSE-124. The whole list, pool included: the pool
+ * cannot be switched off (the column's CHECK), so a list without it is refused
+ * by name rather than quietly given it back. Catalogue order, so the same set is
+ * always the same array.
+ */
+export function readEnabledSports(raw: unknown): PoolseSport[] {
+  if (!Array.isArray(raw) || !raw.every(isPoolseSport)) {
+    refuse('enabled', 'admin.error.sportInvalid');
+  }
+  if (!(raw as PoolseSport[]).includes(BASE_SPORT)) {
+    refuse('enabled', 'admin.error.poolAlwaysOn');
+  }
+  return enabledSports({ enabledSports: raw as PoolseSport[] });
 }
