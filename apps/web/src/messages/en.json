@@ -6175,5 +6175,23 @@
       "volleyball": "Volleyball",
       "gym": "Gym"
     }
+  },
+  "recintos": {
+    "title": "Playing areas",
+    "hint": "This site's courts and pitches for other sports. Pools stay under Pools. The sports offered are the ones Poolse has switched on for the club.",
+    "none": "No playing area of this sport here yet.",
+    "add": "Add playing area",
+    "sport": "Sport",
+    "name": "Name",
+    "nameHint": "For example: Court 1, Centre court.",
+    "added": "Playing area added",
+    "archive": "Archive",
+    "archiveTitle": "Archive {name}?",
+    "archiveConfirm": "It no longer shows at this site. Its history is kept, but for now it cannot be restored from the archive.",
+    "archived": "Playing area archived",
+    "nameTaken": "A playing area or pool with this name already exists at this site.",
+    "sportOff": "This sport is not switched on for the club.",
+    "addFailed": "The playing area could not be added.",
+    "archiveFailed": "The playing area could not be archived."
   }
 }

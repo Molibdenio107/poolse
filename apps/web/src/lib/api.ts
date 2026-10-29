@@ -738,6 +738,17 @@ export interface FacilityDetail extends Facility, Place {
    * dashboard calls it due. Null is not measured and flags nothing.
    */
   waterAnalysisMaxAgeHours: number | null;
+  /** Recintos — POOLSE-122. A pool is one (sport `pool`); courts and pitches the others. */
+  playingAreas: PlayingArea[];
+}
+
+export interface PlayingArea {
+  id: string;
+  sportId: string;
+  name: string;
+  position: number;
+  /** The pool this recinto is, for sport `pool`; null for any other sport. */
+  poolId: string | null;
 }
 
 /**

@@ -1,6 +1,6 @@
 import 'server-only';
 import { cache } from 'react';
-import { POOLSE_MODULES, type PoolseModule } from '@poolse/rules';
+import { BASE_SPORT, POOLSE_MODULES, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import { apiFetch, type Me } from './api';
 
 /**
@@ -20,6 +20,20 @@ export const enabledModules = cache(async (): Promise<readonly PoolseModule[] | 
     return modulesOf(membership);
   } catch {
     return null;
+  }
+});
+
+/**
+ * The active club's switched-on sports beyond the pool — POOLSE-124. Empty for a
+ * pool club, and when it cannot be told: a tab that adds courts is offered only on
+ * an answer, never on a guess. Read from the same `/me` (one request, cached).
+ */
+export const clubAddonSports = cache(async (): Promise<PoolseSport[]> => {
+  try {
+    const me = await apiFetch<Me>('/me');
+    return (me.memberships[0]?.sports ?? []).filter((sport) => sport !== BASE_SPORT);
+  } catch {
+    return [];
   }
 });
 

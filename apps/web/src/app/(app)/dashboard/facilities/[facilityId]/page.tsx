@@ -47,6 +47,8 @@ import { WaterThresholdForm } from './water-threshold-form';
 import { moduleIsOn } from '@/lib/modules';
 import { backLabelKey, readFrom } from '@/lib/back';
 import { storageConfigured } from '@/lib/storage-status';
+import { clubAddonSports } from '@/lib/modules';
+import { RecintosPanel } from './recintos-panel';
 
 /**
  * One site, in detail — backlog round 3, stories 2 and 3.
@@ -192,6 +194,9 @@ export default async function FacilityPage({
 
   // POOLSE-120: what needs doing in this site's tanks and spaces.
   const attention = await readAttention();
+  // POOLSE-125's first piece: courts and pitches, once a sport besides swimming is on.
+  const addonSports = await clubAddonSports();
+  const courts = (loaded.playingAreas ?? []).filter((area) => area.sportId !== 'pool');
 
   return (
     <DetailPage
@@ -405,6 +410,19 @@ export default async function FacilityPage({
               )}
             </section>
           ),
+        },
+        {
+          /*
+            Recintos — courts and pitches (Rui, 29-10-2026). After Piscinas, and
+            only when the club has a sport besides swimming switched on in /admin
+            (or a court left from one switched off since), so a pool club sees no
+            new tab.
+          */
+          slug: 'recintos',
+          visible: loaded.canManage && (addonSports.length > 0 || courts.length > 0),
+          labelKey: 'recintos.title',
+          badge: { kind: 'count', value: courts.length },
+          content: () => <RecintosPanel facilityId={facilityId} areas={courts} sports={addonSports} />,
         },
         {
           /*

@@ -6175,5 +6175,23 @@
       "volleyball": "Voleibol",
       "gym": "Ginásio"
     }
+  },
+  "recintos": {
+    "title": "Recintos",
+    "hint": "Os campos e espaços de outros desportos neste local. As piscinas continuam em Piscinas. Os desportos disponíveis são os que o Poolse ativou para o clube.",
+    "none": "Ainda não há recintos deste desporto aqui.",
+    "add": "Adicionar recinto",
+    "sport": "Desporto",
+    "name": "Nome",
+    "nameHint": "Por exemplo: Campo 1, Court central.",
+    "added": "Recinto adicionado",
+    "archive": "Arquivar",
+    "archiveTitle": "Arquivar {name}?",
+    "archiveConfirm": "O recinto deixa de aparecer neste local. O histórico mantém-se, mas por agora não é possível repô-lo a partir dos arquivados.",
+    "archived": "Recinto arquivado",
+    "nameTaken": "Já existe um recinto ou uma piscina com este nome neste local.",
+    "sportOff": "Este desporto não está ativo para o clube.",
+    "addFailed": "Não foi possível adicionar o recinto.",
+    "archiveFailed": "Não foi possível arquivar o recinto."
   }
 }

@@ -30,6 +30,19 @@ The rows themselves are untouched: the calendar still snaps a drag to them, so 0
 06:30 rather than rounding to the quarter, and the Turmas board, the printed sheet and the
 XLSX export all still read them.
 
+## Recintos — courts and pitches (29 October 2026)
+
+The first piece of POOLSE-125 (Rui). A site's page gains a **Recintos** tab, after Piscinas, once the
+club has a sport besides swimming switched on in `/admin` (`/me.sports`), or still has a court from one
+switched off since. A pool club sees no new tab. Owner and admin, as Piscinas.
+
+- One list per switched-on sport, and *Adicionar recinto* (sport + name) —
+  `POST /facilities/:id/playing-areas`; a name already used by a recinto or a pool on the site is refused.
+- *Arquivar* asks first — `POST /facilities/playing-areas/:id/archive`. A court is not yet in the
+  bin (`RESTORABLE`), and the question says so.
+- A pool is still added and archived under Piscinas; its recinto follows by trigger.
+- Not built yet: the sports' own menu groups, calendars and turmas on a court (the rest of POOLSE-125).
+
 ## Espaços
 
 The non-pool parts of a site — balneários, sala de máquinas, arrecadação, receção, exterior —
