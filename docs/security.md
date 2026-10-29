@@ -34,6 +34,7 @@ has a mechanism, and the mechanism is what to check when something looks wrong.
 | Platform access arriving through a tenant role | It cannot. `platform_admin` is keyed on the Clerk user id and has no `organization_id`; `PlatformAdminGuard` reads `currentAuth()`, never `currentTenant()`. Being owner of a demo tenant grants nothing. |
 | An unaudited platform request | Reads are logged by `PlatformAuditInterceptor`; writes log themselves inside the transaction that performed them, so an entry cannot commit while its change rolls back. There is one write path (`changeTenant`) and it cannot skip its own entry. |
 | A suspended tenant still being served | `TenantMiddleware` refuses with `tenant_suspended` before any handler runs. `/me` and `/platform` stay open on purpose — so the club can be told why, and so an operator can undo it. |
+| The platform role reading recintos (POOLSE-124) | `poolse_platform` reads `playing_area` and `sport` (`FOR SELECT … USING (true)`), taken out loud on 29-10-2026: the trigger that refuses switching a sport off over live recintos runs as the platform, and the *Desportos* card counts them. A recinto is a court's name and sport, nothing about a person. It writes only `organization.enabled_sports`, through `changeTenant`. |
 | Poolse support inside a club | Only through a live `support_grant`: one the Owner opened or approved, or a 4-hour override that needs a reason and the club's name, raises an alert and records a notice to the Owner. The operator enters as a membership of their own via `support_session` (definer; it re-checks the platform admin and the live grant). Its role exists only while the grant is live, derived in `resolve_memberships`, so it ends with no job running. It is an Admin that **grants no roles**, so no access outlives the window, and `student_sensitive`, the Owner's salary and the subscription are refused as to any Admin. `poolse_platform` gained SELECT on `support_grant` and `support_request`, INSERT of an override and of an unanswered request, and nothing on `membership` — POOLSE-79. |
 
 ## The checks
@@ -70,7 +71,7 @@ others. The point is the gate: `audit:check` is set at `high` precisely so that 
 
 ## Still open, knowingly
 
-Six moderate advisories remain. Every one needs a **major** version bump, which
+Five moderate advisories remain (29-10-2026). Every one needs a **major** version bump, which
 is a migration with its own testing rather than a line in a lockfile, so each is
 its own slice. None is reachable from a request today; the reachability note is
 the reason each can wait, not a reason to skip it.
@@ -79,12 +80,16 @@ the reason each can wait, not a reason to skip it.
 |---|---|---|---|
 | `next-intl` 3.26.5 | direct, web | ≥4.9.2 | The i18n layer is the most load-bearing convention in the app; a 3→4 migration wants a session of its own. |
 | `@nestjs/core` 10.4 | direct, api | ≥11.1.18 | Nest 10→11 across every controller. Schedule deliberately. |
-| `file-type` 20.4.1 | via `@nestjs/common` | ≥21.3.2 | Not reachable: nothing in the API accepts a file upload. Revisit the day file storage lands. |
+| `file-type` 20.4.1 | via `@nestjs/common` | ≥21.3.2 | Not reachable: file storage landed (12-10-2026), but `POST /files` takes raw bytes and sniffs them in our own code — no Nest `FileTypeValidator`/`ParseFilePipe` is used, which is the only caller of this package. Rechecked 29-10-2026. |
+| `fast-xml-parser` 4.5.7 | via `@aws-sdk/client-s3` | ≥5.7.0 | Not reachable: the advisory is comment/CDATA injection in `XMLBuilder`, and the S3 client builds its request XML from our object keys, which are ids, never text a user typed. Waits for the AWS SDK. Added 29-10-2026. |
 | `uuid` 8.3.2 | via `exceljs` | ≥11.1.1 | Build-time of a workbook only. Forcing v11 breaks exceljs, which still calls the v8 API — this one waits for exceljs, not for us. |
 
 The `pnpm.overrides` block in the root `package.json` pins the transitive
 packages that *could* be fixed without a major: `qs`, `body-parser`, `postcss`,
-`glob`, `picomatch`, `multer`, `webpack`, `ajv`, `tmp`. Each is a patch or minor
+`glob`, `picomatch`, `multer`, `webpack`, `ajv`, `tmp`, and since the 29-10-2026
+sweep `fast-uri` and `postcss-selector-parser` — that sweep also raised
+`body-parser` to ≥2.4.0 and `multer` to ≥2.5.0 (two highs) and `@sentry/nextjs` to
+≥10.75.2 (a critical in its tunnel route, which Poolse does not configure). Each is a patch or minor
 move within the major the tree already resolved. Delete an entry when the
 dependency that pulled it in catches up.
 

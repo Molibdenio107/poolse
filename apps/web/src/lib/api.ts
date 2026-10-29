@@ -5157,8 +5157,10 @@ export interface Lead {
   requestedClassSlots: { weekday: number; startTime: string }[];
   /** Who asked from the app; null for the public form. */
   requestedByName: string | null;
-  /** Names a student the club already has — Inscrever attaches the turma to them. */
+  /** Names a student the club already has, still open — Inscrever attaches the turma to them. */
   existingStudent: boolean;
+  /** Asked for one of the club's students, whatever has happened since — the card's wording. */
+  forExistingStudent: boolean;
 }
 
 /** Asking to join a class from the app — POOLSE-121. */

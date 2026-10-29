@@ -207,8 +207,10 @@ function LeadCard({
             </span>
           )}
           <span className="text-foreground-muted">
-            {lead.existingStudent
-              ? t('leads.app.byExisting', { name: lead.requestedByName })
+            {lead.forExistingStudent
+              ? t(lead.existingStudent ? 'leads.app.byExisting' : 'leads.app.byExistingDone', {
+                  name: lead.requestedByName,
+                })
               : t('leads.app.byNew', { name: lead.requestedByName })}
           </span>
         </div>

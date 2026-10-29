@@ -585,11 +585,20 @@
   --reveal-ms: 650ms;
   --reveal-ease: cubic-bezier(0.45, 0, 0.25, 1);
 }
-details > summary svg {
-  transition: transform var(--reveal-ms) var(--reveal-ease);
+/*
+ * Specific enough to beat Tailwind's own: `.transition-transform` sets 150 ms, and
+ * `group-open:rotate-90` compiles to `.group[open] .group-open\:rotate-90`
+ * (three classes' worth), so the closing rule names the group, the attribute
+ * and the open state too. Sweep 29-10-2026.
+ */
+details > summary svg,
+details > summary svg.transition-transform {
+  transition-property: transform;
+  transition-duration: var(--reveal-ms);
+  transition-timing-function: var(--reveal-ease);
 }
-details[data-closing] > summary svg {
-  transform: none;
+details.group[open][data-closing] > summary .group-open\:rotate-90 {
+  --tw-rotate: 0deg;
 }
 
 /*

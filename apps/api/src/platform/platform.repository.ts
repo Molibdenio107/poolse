@@ -269,9 +269,11 @@ export async function listTenants(
                         'enabled', s.id = ANY (o.enabled_sports),
                         'recintos', (
                           SELECT count(*) FROM playing_area a
+                            JOIN facility f ON f.id = a.facility_id AND f.organization_id = a.organization_id
                            WHERE a.organization_id = o.id
                              AND a.sport_id = s.id
                              AND a.archived_at IS NULL
+                             AND f.archived_at IS NULL
                         ),
                         'addonMonthlyCents', s.addon_monthly_cents
                       ) ORDER BY s.position, s.id)
@@ -1026,9 +1028,12 @@ export async function setSports(
     const leaving = was.filter((sport) => !enabled.includes(sport as PoolseSport));
     if (leaving.length > 0) {
       const { rows } = await tx.query<{ sport_id: PoolseSport; name: string }>(
-        `SELECT sport_id, name FROM playing_area
-          WHERE organization_id = $1 AND archived_at IS NULL AND sport_id = ANY ($2::text[])
-          ORDER BY sport_id, name`,
+        // A court on an archived site is not in use (sweep 29-10-2026), as in the trigger.
+        `SELECT a.sport_id, a.name FROM playing_area a
+           JOIN facility f ON f.id = a.facility_id AND f.organization_id = a.organization_id
+          WHERE a.organization_id = $1 AND a.archived_at IS NULL AND f.archived_at IS NULL
+            AND a.sport_id = ANY ($2::text[])
+          ORDER BY a.sport_id, a.name`,
         [organizationId, leaving],
       );
       if (rows.length > 0) {

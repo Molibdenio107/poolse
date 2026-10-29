@@ -581,6 +581,9 @@ test('operational reads refuse non-staff (403)', async () => {
     await refused('POST facilities/:id/playing-areas', 403, () =>
       new FacilitiesController().addPlayingArea(fac, { sportId: 'tennis', name: 'Campo' }),
     );
+    await refused('POST facilities/playing-areas/:id/archive', 403, () =>
+      new FacilitiesController().archivePlayingArea(NO_SUCH_ID),
+    );
     await refused('GET maintenance/facilities/:id/tasks', 403, () =>
       new MaintenanceController().list(fac),
     );

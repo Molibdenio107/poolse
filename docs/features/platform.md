@@ -382,6 +382,9 @@ path with one difference: a club stores what is **on** (`organization.enabled_sp
 - **A sport with live recintos stays on.** Switching it off is a 409 `sport_in_use` with `sport`
   and `recintos` (their names); the club archives them first. Poolse never archives them for it.
   The trigger `organization_sports_known` refuses the same change.
+- **A court is archived by `POST /facilities/playing-areas/:id/archive`** (owner and admin; a pool
+  is archived as a pool). A recinto on an archived site is not in use: the switch, its trigger
+  and the card's count read only recintos whose site is live (sweep 29-10-2026).
 - **A recinto only for a sport that is on.** `POST /facilities/:id/playing-areas`
   `{ sportId, name }` — owner and admin — is a 403 `sport_not_enabled` otherwise, and a pool is
   refused there (400): a pool is added as a pool. Restoring a court whose sport is off is refused

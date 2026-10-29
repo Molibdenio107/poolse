@@ -219,7 +219,8 @@
         "class_unavailable": "Esta turma já não tem vagas. Escolha outra.",
         "already_enrolled": "Já está inscrito nesta turma.",
         "already_requested": "Já há um pedido para esta turma à espera de resposta.",
-        "no_email": "A sua conta não tem email, por isso o clube não lhe conseguiria responder. Fale com o clube."
+        "no_email": "A sua conta não tem email, por isso o clube não lhe conseguiria responder. Fale com o clube.",
+        "too_many": "Já tem 10 pedidos à espera de resposta. Aguarde que o clube responda antes de enviar mais."
       }
     }
   },
@@ -5395,8 +5396,10 @@
       "wants": "Pede a turma {turma}",
       "classGone": "Pede uma turma que entretanto foi arquivada",
       "byExisting": "Pedido na app por {name}, para um aluno do clube: Inscrever junta-o à turma.",
-      "byNew": "Pedido na app por {name}, para uma criança nova."
-    }
+      "byNew": "Pedido na app por {name}, para uma criança nova.",
+      "byExistingDone": "Pedido na app por {name}, para um aluno do clube."
+    },
+    "studentArchived": "O aluno deste pedido foi arquivado entretanto. Reponha-o ou dispense o pedido."
   },
   "labResults": {
     "hint": "As análises mensais feitas por um laboratório acreditado, avaliadas contra o referencial nacional (NP 4542:2017). Um resultado não conforme avisa o proprietário, os administradores e a manutenção.",

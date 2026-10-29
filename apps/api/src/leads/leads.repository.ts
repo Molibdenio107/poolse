@@ -149,8 +149,10 @@ export interface Lead {
   requestedClassSlots: { weekday: number; startTime: string }[];
   /** Who asked from the app; null for the public form. */
   requestedByName: string | null;
-  /** The request names a student the club already has (an app request). */
+  /** The request names a student the club already has, and is still open — the place path. */
   existingStudent: boolean;
+  /** It was asked for one of the club's students, whatever has happened since — the card's wording. */
+  forExistingStudent: boolean;
 }
 
 interface LeadRow {
@@ -187,6 +189,7 @@ interface LeadRow {
   requested_class_slots: { weekday: number; startTime: string }[] | null;
   requested_by_name: string | null;
   existing_student: boolean;
+  for_existing_student: boolean;
 }
 
 /*
@@ -219,10 +222,16 @@ const LEAD_SELECT = `
          nullif(btrim(coalesce(ru.cached_first_name, rm.first_name, '') || ' ' ||
                       coalesce(ru.cached_last_name, rm.last_name, '')), '') AS requested_by_name,
          (l.requested_by_membership_id IS NOT NULL AND l.student_id IS NOT NULL
-          AND l.status IN ('new', 'trial_booked')) AS existing_student
+          AND l.status IN ('new', 'trial_booked')) AS existing_student,
+         -- Whatever has happened since: a new child's request names a relationship,
+         -- an existing child's never does (submitAppRequest). Sweep 29-10-2026.
+         (l.requested_by_membership_id IS NOT NULL AND l.guardian_relationship IS NULL)
+           AS for_existing_student
     FROM lead l
+    -- An archived turma reads as gone (sweep 29-10-2026).
     LEFT JOIN class_group rg
       ON rg.id = l.requested_class_group_id AND rg.organization_id = l.organization_id
+     AND rg.archived_at IS NULL
     LEFT JOIN membership rm
       ON rm.id = l.requested_by_membership_id AND rm.organization_id = l.organization_id
     LEFT JOIN app_user ru ON ru.id = rm.app_user_id
@@ -272,6 +281,7 @@ function toLead(row: LeadRow): Lead {
     requestedClassSlots: row.requested_class_slots ?? [],
     requestedByName: row.requested_by_name,
     existingStudent: row.existing_student,
+    forExistingStudent: row.for_existing_student,
   };
 }
 
@@ -368,6 +378,8 @@ export class TrialFullError extends Error {
   }
 }
 export class TrialUnavailableError extends Error {}
+/** An app request names a student archived since it was sent. */
+export class StudentArchivedError extends Error {}
 
 /**
  * The student the lead describes, as the student form would post it.
@@ -432,7 +444,12 @@ export async function placeLead(
       let studentId: string | null = null;
       let attached = false;
       if (lead.existingStudent && lead.studentId !== null) {
-        // Asked for from the app for a child the club has: that child, never a twin.
+        // Asked for from the app for a child the club has: that child, never a twin
+        // — and only while the child is still on the club's books (security sweep).
+        const live = await tx.query('SELECT 1 FROM student WHERE id = $1 AND archived_at IS NULL', [
+          lead.studentId,
+        ]);
+        if (live.rows.length === 0) throw new StudentArchivedError();
         studentId = lead.studentId;
         attached = true;
       } else if (input === null) {

@@ -857,6 +857,31 @@ export async function createPlayingArea(input: {
 }
 
 /**
+ * Archive a recinto of another sport — a court, a pitch (sweep, 29-10-2026). A
+ * pool is archived as a pool, whose trigger carries its recinto. Null when it is
+ * not this club's, or is a pool's. Without it a sport with a court could never
+ * be switched off, because the switch refuses while a court is live.
+ */
+export async function archivePlayingArea(organizationId: string, areaId: string): Promise<string | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ name: string; sport_id: string }>(
+      `UPDATE playing_area SET archived_at = now()
+        WHERE id = $1 AND archived_at IS NULL AND sport_id <> 'pool'
+      RETURNING name, sport_id`,
+      [areaId],
+    );
+    const area = rows[0];
+    if (!area) return null;
+    return recordAudit(tx, {
+      action: 'playing_area.archived',
+      entityType: 'playing_area',
+      entityId: areaId,
+      data: { name: area.name, sportId: area.sport_id },
+    });
+  });
+}
+
+/**
  * Returns null when the facility does not exist in this organization.
  *
  * Two things could produce that: a stale page, or somebody sending another

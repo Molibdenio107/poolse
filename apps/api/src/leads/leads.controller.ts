@@ -18,6 +18,7 @@ import { DuplicateTaxNumberError, ageOfMajority } from '../students/students.rep
 import { parseStudent, taxNumberConflict } from '../students/students.controller.js';
 import {
   LeadNotOpenError,
+  StudentArchivedError,
   SlugTakenError,
   TrialFullError,
   TrialUnavailableError,
@@ -209,6 +210,13 @@ export class LeadsController {
       return { studentId: outcome.studentId, attached: outcome.attached };
     } catch (error) {
       if (error instanceof LeadNotOpenError) throw notOpen(error);
+      if (error instanceof StudentArchivedError) {
+        throw new ConflictException({
+          code: 'student_archived',
+          message: 'The student this request names has been archived',
+          fields: { classGroupId: 'leads.studentArchived' },
+        });
+      }
       if (error instanceof DuplicateTaxNumberError) throw taxNumberConflict();
       if (error instanceof FullError) {
         throw new ConflictException({

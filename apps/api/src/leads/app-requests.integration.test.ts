@@ -155,3 +155,46 @@ test('a guardian asks for a place for their child and a new one; the office enro
     });
   });
 });
+
+test('a login may leave at most ten requests waiting, and a request for an archived child cannot be enrolled', async () => {
+  await withScratchTenant(async (tenant) => {
+    const s = await setUp(tenant);
+    const ids = await actingAs(tenant, { membershipId: s.guardian, roles: ['guardian'] }, async () => {
+      const app = new AppController();
+      const first = await app.requestEnrolment({ studentId: s.childId, classGroupId: s.open, consent: true });
+      for (let i = 1; i < 10; i += 1) {
+        await app.requestEnrolment({
+          studentId: 'new',
+          classGroupId: s.open,
+          firstName: `Filho${i}`,
+          lastName: 'Silva',
+          birthDate: '2018-01-01',
+          relationship: 'Filho',
+          consent: true,
+        });
+      }
+      await assert.rejects(
+        () =>
+          app.requestEnrolment({
+            studentId: 'new',
+            classGroupId: s.open,
+            firstName: 'Onze',
+            lastName: 'Silva',
+            birthDate: '2018-01-01',
+            relationship: 'Filho',
+            consent: true,
+          }),
+        refusedWith('too_many'),
+      );
+      return first.id;
+    });
+
+    await tenant.sql('UPDATE student SET archived_at = now() WHERE id = $1', [s.childId]);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await assert.rejects(
+        () => new LeadsController().convert(ids, { classGroupId: s.open }),
+        refusedWith('student_archived'),
+      );
+    });
+  });
+});

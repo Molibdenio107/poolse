@@ -107,6 +107,9 @@ A logged-in guardian or student asks for a place from the app (*Pedir inscriçã
 - **Refusals.** Somebody else's child is a 404. A turma with no room left is 409
   `class_unavailable`, a child already in it `already_enrolled`, the same open request twice
   `already_requested` (a partial unique index), and a reader with no email `no_email`.
+- **At most ten open requests per login** (`too_many`, a sentence on the form), because a new
+  child has no unique key to stop a loop filling the office's queue. A request for a child archived
+  since cannot be enrolled (409 `student_archived`); a turma archived since reads as gone.
 - `GET/POST /app/enrolment-requests`, guardian and student only. The reader's last ten requests
   and their state show under the form. Buying a free-swim entry in the app is still parked.
 

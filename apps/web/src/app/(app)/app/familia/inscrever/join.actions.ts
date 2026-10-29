@@ -30,8 +30,8 @@ export async function requestJoinAction(_previous: FormState, formData: FormData
     if (error instanceof ApiError) {
       if (error.status === 400 && Object.keys(error.fields).length > 0) return { ok: false, fields: error.fields };
       if (error.status === 409 && error.code !== null) {
-        return error.code === 'no_email'
-          ? { ok: false, errorKey: 'app.join.refused.no_email' }
+        return error.code === 'no_email' || error.code === 'too_many'
+          ? { ok: false, errorKey: `app.join.refused.${error.code}` }
           : { ok: false, fields: { classGroupId: `app.join.refused.${error.code}` } };
       }
       if (error.status === 404) return { ok: false, fields: { studentId: 'app.join.error.person' } };

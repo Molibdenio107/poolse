@@ -219,7 +219,8 @@
         "class_unavailable": "This class has no free place left. Choose another.",
         "already_enrolled": "Already enrolled in this class.",
         "already_requested": "There is already a request for this class awaiting a reply.",
-        "no_email": "Your account has no email, so the club could not reply to you. Please contact the club."
+        "no_email": "Your account has no email, so the club could not reply to you. Please contact the club.",
+        "too_many": "You already have 10 requests awaiting a reply. Wait for the club to answer before sending more."
       }
     }
   },
@@ -5395,8 +5396,10 @@
       "wants": "Asks for the class {turma}",
       "classGone": "Asks for a class that has since been archived",
       "byExisting": "Asked in the app by {name}, for one of the club's students: Enrol adds them to the class.",
-      "byNew": "Asked in the app by {name}, for a new child."
-    }
+      "byNew": "Asked in the app by {name}, for a new child.",
+      "byExistingDone": "Asked in the app by {name}, for one of the club's students."
+    },
+    "studentArchived": "The student this request names has since been archived. Restore them or dismiss the request."
   },
   "labResults": {
     "hint": "The monthly analyses by an accredited laboratory, graded against the national reference (NP 4542:2017). A non-compliant result alerts the owner, the admins and maintenance.",

@@ -176,3 +176,46 @@ test('only the owner and admin add a court, and never on another club\'s site', 
     });
   });
 });
+
+test('a court can be archived, and then — or with its site archived — its sport can be switched off', async () => {
+  await withScratchTenant(async (tenant) => {
+    await asOperator(() => platform.sports(tenant.organizationId, { enabled: ['pool', 'tennis', 'padel'] }));
+    const ids = await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const facilities = new FacilitiesController();
+      const tennis = await facilities.addPlayingArea(tenant.facilityId, { sportId: 'tennis', name: 'Ténis 1' });
+      const padel = await facilities.addPlayingArea(tenant.facilityId, { sportId: 'padel', name: 'Padel 1' });
+      // A pool is archived as a pool, never here.
+      const site = await facilities.one(tenant.facilityId);
+      const poolArea = site.playingAreas.find((area) => area.sportId === 'pool');
+      if (poolArea) await expectStatus(() => facilities.archivePlayingArea(poolArea.id), 404);
+      await facilities.archivePlayingArea(tennis.id);
+      return { padel: padel.id };
+    });
+    await asOperator(async () => {
+      await platform.sports(tenant.organizationId, { enabled: ['pool', 'padel'] });
+    });
+
+    // Padel's court is live, but its site is archived: not in use.
+    await tenant.sql('UPDATE facility SET archived_at = now() WHERE id = $1', [tenant.facilityId]);
+    await asOperator(async () => {
+      const row = await platform.tenant(tenant.organizationId);
+      assert.equal(row.sports.find((s) => s.sport === 'padel')?.recintos, 0);
+      await platform.sports(tenant.organizationId, { enabled: ['pool'] });
+    });
+    assert.ok(ids.padel);
+  });
+});
+
+test('another club cannot archive a court', async () => {
+  await withScratchTenant(async (other) => {
+    await asOperator(() => platform.sports(other.organizationId, { enabled: ['pool', 'gym'] }));
+    const { id } = await actingAs(other, { roles: ['owner'] }, () =>
+      new FacilitiesController().addPlayingArea(other.facilityId, { sportId: 'gym', name: 'Ginásio' }),
+    );
+    await withScratchTenant(async (tenant) => {
+      await actingAs(tenant, { roles: ['admin'] }, async () => {
+        await expectStatus(() => new FacilitiesController().archivePlayingArea(id), 404);
+      });
+    });
+  });
+});

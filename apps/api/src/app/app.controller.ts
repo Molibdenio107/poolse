@@ -277,7 +277,11 @@ export class AppController {
         throw new ConflictException({
           code: error.code,
           message: `app.join.refused.${error.code}`,
-          fields: error.code === 'no_email' ? {} : { classGroupId: `app.join.refused.${error.code}` },
+          // About the person, not the turma: said as a sentence, not beside the picker.
+          fields:
+            error.code === 'no_email' || error.code === 'too_many'
+              ? {}
+              : { classGroupId: `app.join.refused.${error.code}` },
         });
       }
       throw error;

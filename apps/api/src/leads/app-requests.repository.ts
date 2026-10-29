@@ -131,6 +131,7 @@ export async function appRequestOptions(
          FROM lead l
          LEFT JOIN class_group cg
            ON cg.id = l.requested_class_group_id AND cg.organization_id = l.organization_id
+          AND cg.archived_at IS NULL
         WHERE l.requested_by_membership_id = $1 AND l.archived_at IS NULL
         ORDER BY l.created_at DESC
         LIMIT 10`,
@@ -160,8 +161,13 @@ export interface AppRequestInput {
   locale: 'pt-PT' | 'en';
 }
 
+/** Open requests one login may have waiting at once. A family of five asking twice each still fits. */
+export const MAX_OPEN_APP_REQUESTS = 10;
+
 export class AppRequestRefused extends Error {
-  constructor(readonly code: 'not_yours' | 'class_unavailable' | 'already_enrolled' | 'already_requested' | 'no_email') {
+  constructor(
+    readonly code: 'not_yours' | 'class_unavailable' | 'already_enrolled' | 'already_requested' | 'no_email' | 'too_many',
+  ) {
     super(code);
   }
 }
@@ -188,6 +194,21 @@ export async function submitAppRequest(
       );
       const reader = me[0];
       if (reader === undefined || reader.email === null) throw new AppRequestRefused('no_email');
+
+      /*
+       * A ceiling on what one login may leave waiting (security sweep, 29-10-2026):
+       * the public form has its per-club ceiling, and a new child asked for from
+       * the app has no unique key to stop a loop filling the office's queue.
+       * Locked on the membership so two at once count each other.
+       */
+      await tx.query('SELECT 1 FROM membership WHERE id = $1 FOR UPDATE', [membershipId]);
+      const { rows: open } = await tx.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM lead
+          WHERE requested_by_membership_id = $1 AND archived_at IS NULL
+            AND status IN ('new', 'trial_booked')`,
+        [membershipId],
+      );
+      if (open[0]!.n >= MAX_OPEN_APP_REQUESTS) throw new AppRequestRefused('too_many');
 
       let swimmer: {
         studentId: string | null;
@@ -225,7 +246,9 @@ export async function submitAppRequest(
           first: child.firstName,
           last: child.lastName,
           birth: child.birthDate,
-          guardianName: reader.name === '' ? null : reader.name,
+          // A login with no name still answers for the child: its address names it,
+          // or the student form refuses the conversion as a minor with no guardian.
+          guardianName: reader.name === '' ? reader.email : reader.name,
           relationship: child.relationship,
         };
       }

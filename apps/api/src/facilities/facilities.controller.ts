@@ -46,6 +46,7 @@ import {
   archivePool,
   countPeople,
   createFacility,
+  archivePlayingArea,
   createPlayingArea,
   createPool,
   DuplicateNameError,
@@ -724,6 +725,16 @@ export class FacilitiesController {
     }
     if (id === null) throw new NotFoundException('No such facility');
     return { id };
+  }
+
+  /** Archive a court or pitch — owner and admin (sweep, 29-10-2026). A pool is archived as a pool. */
+  @Post('playing-areas/:areaId/archive')
+  async archivePlayingArea(@Param('areaId') areaId: string): Promise<{ archived: true }> {
+    requireRole('owner', 'admin');
+    if (!/^[0-9a-f-]{36}$/i.test(areaId)) throw new NotFoundException('No such recinto');
+    const entry = await archivePlayingArea(currentTenant().organizationId, areaId);
+    if (entry === null) throw new NotFoundException('No such recinto');
+    return { archived: true };
   }
 
   @Patch('pools/:poolId')

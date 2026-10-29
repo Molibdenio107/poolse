@@ -215,7 +215,8 @@ export async function ReadingsBlock({
           canRecord ? sectionHref(`/dashboard/facilities/pools/${poolId}`, { tab: 'water', from }, 'record') : null
         }
       />
-      {unsafe.length === 0 && closure !== null && (
+      {/* Only after a reading: no analysis at all is not "back within the limits". */}
+      {latest !== undefined && unsafe.length === 0 && closure !== null && (
         <WaterBackInRangeNote
           closure={closure}
           closuresHref={`/dashboard/calendar/closures?poolId=${encodeURIComponent(poolId)}`}
