@@ -345,6 +345,30 @@ go-live.
   today. Never set for `pool` (CHECK). Nothing is charged from it.
 - `resolve_memberships` carries `o_enabled_sports`; `/me` answers `sports`.
 
+### Levels and seasons per sport — POOLSE-126 (schema half)
+
+- **`student_level.sport_id`**, NOT NULL, default `pool` — every existing level and every
+  caller that names no sport is swimming. Fixed once written (`student_level_keeps_sport`).
+  `student_level_name_uq` and the age-band check (`student_level_range_is_free`) are per sport.
+  `next_level` and `age_fit_level` stay on the current level's sport, so advancement never
+  steps onto another sport's rung.
+- **A turma's level and season share its recinto's sport** — `class_group_sport_matches`
+  (`level_sport_mismatch|level|turma`, `season_sport_mismatch|season|turma`). A turma with no
+  recinto is judged on nothing.
+- **`season.sport_id`**: null is the shared season; set, the season of one sport (never `pool`,
+  fixed once written). `season_one_published` is unique on `(organization_id,
+  coalesce(sport_id, ''))`: one published shared season plus one per sport with its own.
+- **`organization.own_season_sports`** — the *Época própria* toggle, the club's own (app-writable),
+  never holding `pool`. A sport season is refused unless its sport is on it when made or
+  published (`season_sport_not_own|sport`); one already published stays if the toggle goes off.
+- **`season_scope(season_id)`** — the sports a season reaches: its own, or (shared) every
+  enabled sport without *Época própria*. The generator, the reset and the advancement pass all
+  work from a season's turmas, and a turma can only sit in a season that reaches its sport, so
+  they are scoped by construction.
+- **Not yet**: nothing in the API writes `season.sport_id`, `own_season_sports` or a non-pool
+  level, so every "the published season" lookup still finds one row. The screens half adds
+  `sport_id IS NULL` to those lookups when it lets a club create a sport season.
+
 ## Module 1 — students and classes
 
 ```

@@ -37,3 +37,5 @@ A swimming level ladder (automatic advancement, skills, age ranges, mínimos) ha
 - [ ] `level.sport_id`, trigger on turma/level sport match.
 - [ ] Season per sport behind the toggle; `season_scope()` used by all three callers.
 - [ ] No visible change for a pool-only club.
+
+**Schema half built 29-10-2026** (migration `levels-and-seasons-per-sport`, test `levels-per-sport.sql`): criterion 1, the season columns and `season_scope()`. Left for the screens half: the levels page's `?sport=`, the *Época própria* control and *Desportos* heading, rule 5's grouping by sport, and `sport_id IS NULL` on the API's published-season lookups. The toggle is stored on `organization`, since a season is club-wide (`docs/decisions.md`).

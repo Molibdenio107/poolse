@@ -653,6 +653,8 @@ repo** — `test-fixtures/**/private/` is gitignored. `docs/features/energy.md`.
 
 **A sport is switched on per club by Rui; the pool always is.** POOLSE-124. `organization.enabled_sports` stores what is **on** (default `{pool}`, the pool kept by CHECK), the reverse of `disabled_modules`; `POOLSE_SPORTS` in `@poolse/rules` equals the `sport` table by test. Only `poolse_platform` writes it, through `changeTenant` (`POST /platform/tenants/:id/sports`); a sport with live recintos is a 409 `sport_in_use` naming them, never archived for the club. A recinto of another sport is `POST /facilities/:id/playing-areas`, 403 `sport_not_enabled` unless `mayCreateRecinto`, and the database refuses one made or restored while its sport is off. `/me.sports` is the list POOLSE-125's menu reads. `docs/features/platform.md`.
 
+**A level is on one sport's ladder, and a turma's level and season share its recinto's sport.** POOLSE-126, schema half. `student_level.sport_id` defaults to `pool` and never changes; names, age bands, `next_level` and `age_fit_level` are per sport; `class_group_sport_matches` refuses a mismatch. `season.sport_id` null is the shared season, and a sport in `organization.own_season_sports` (*Época própria*, never the pool) may publish its own; `season_scope()` says what a season reaches. No API path writes a sport season yet, so "the published season" is still one row — the screens half must add `sport_id IS NULL` to every such lookup when it opens one. `docs/data-model.md`, *Recintos*.
+
 **A subscription covers one facility; the schema allows many.** These are two
 different rules and both are settled. The *schema* keeps `organization 1 —— N
 facility` — backlog story B4 proposed narrowing it and was rejected, because a
