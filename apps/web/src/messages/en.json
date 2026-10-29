@@ -5345,7 +5345,8 @@
       "sameNif": "The guardian's NIF must differ from the swimmer's.",
       "consentRequired": "You need to agree to send the request."
     },
-    "ceilingReached": "The public form received too many requests in a short time ({when}) and turned away those over the limit without telling the sender. It may have been an attack; if you were expecting sign-ups then, reach the families another way."
+    "ceilingReached": "The public form received too many requests in a short time ({when}) and turned away those over the limit without telling the sender. It may have been an attack; if you were expecting sign-ups then, reach the families another way.",
+    "noNote": "The request came with no notes."
   },
   "labResults": {
     "hint": "The monthly analyses by an accredited laboratory, graded against the national reference (NP 4542:2017). A non-compliant result alerts the owner, the admins and maintenance.",

@@ -190,6 +190,21 @@ function LeadCard({
 
       <p className="text-sm font-medium">{t(`leads.status.${lead.status}`)}</p>
 
+      {/*
+        What the family wrote to the club, above the form's facts (Rui,
+        29-10-2026): it is the one part they chose to say, and it may change how
+        the request is handled. Always shown, so an empty one reads as "nothing
+        written" rather than as a field the form does not have.
+      */}
+      <div className="flex flex-col gap-1 rounded border border-border bg-surface-muted p-3 text-sm">
+        <span className="text-foreground-muted">{t('leads.public.note')}</span>
+        {lead.note ? (
+          <p className="whitespace-pre-wrap">{lead.note}</p>
+        ) : (
+          <p className="text-foreground-muted">{t('leads.noNote')}</p>
+        )}
+      </div>
+
       <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
         <Row label={t('leads.public.swimmerBirthDate')} value={formatDate(lead.swimmerBirthDate)} />
         {lead.swimmerTaxNumber && <Row label={t('leads.public.swimmerTaxNumber')} value={lead.swimmerTaxNumber} />}
@@ -220,13 +235,6 @@ function LeadCard({
           })}
         />
       </dl>
-
-      {lead.note && (
-        <div className="flex flex-col gap-1 text-sm">
-          <span className="text-foreground-muted">{t('leads.public.note')}</span>
-          <p className="whitespace-pre-wrap">{lead.note}</p>
-        </div>
-      )}
 
       {children}
     </article>

@@ -5345,7 +5345,8 @@
       "sameNif": "O NIF do encarregado tem de ser diferente do NIF de quem vai nadar.",
       "consentRequired": "É preciso autorizar para enviar o pedido."
     },
-    "ceilingReached": "O formulário público recebeu demasiados pedidos em pouco tempo ({when}) e recusou os que excederam o limite, sem o dizer a quem os enviou. Pode ter sido um ataque; se esperava inscrições nessa altura, contacte as famílias por outro meio."
+    "ceilingReached": "O formulário público recebeu demasiados pedidos em pouco tempo ({when}) e recusou os que excederam o limite, sem o dizer a quem os enviou. Pode ter sido um ataque; se esperava inscrições nessa altura, contacte as famílias por outro meio.",
+    "noNote": "O pedido não traz observações."
   },
   "labResults": {
     "hint": "As análises mensais feitas por um laboratório acreditado, avaliadas contra o referencial nacional (NP 4542:2017). Um resultado não conforme avisa o proprietário, os administradores e a manutenção.",
