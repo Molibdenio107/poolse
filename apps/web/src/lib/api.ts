@@ -546,6 +546,8 @@ export interface PoolAnalysis {
   takenAt: string;
   notes: string | null;
   recordedByName: string | null;
+  /** Filed from a laboratory report's chemistry (29-10-2026), not typed. */
+  fromLab: boolean;
   values: AnalysisValue[];
 }
 

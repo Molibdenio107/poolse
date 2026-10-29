@@ -1381,7 +1381,8 @@
     "waterClearsWhen": "The warning clears by itself once the latest analysis is within the limits: after correcting the water, record a new analysis.",
     "waterBackInRange": "The water is back within the limits",
     "reopenHint": "The latest analysis is within the limits, but the pool is still closed. If it was closed because of the water, lift the closure in Closures to reopen it before that date.",
-    "openClosures": "Open Closures"
+    "openClosures": "Open Closures",
+    "fromLab": "From the laboratory"
   },
   "classes": {
     "colour": "Class colour",

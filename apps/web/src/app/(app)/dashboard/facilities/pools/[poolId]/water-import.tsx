@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, Check, Info, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
+import { takeFile } from '@/lib/pending-file';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import type { NamedSheet } from '@/lib/sheet';
 import { REPORT_MEDIA_TYPES } from '@/lib/analysis-report';
@@ -71,6 +72,10 @@ function isAccepted(file: File): boolean {
   return ACCEPTED.some((extension) => name.endsWith(extension));
 }
 
+/** For `WaterDropCatcher`: what this importer reads, and where a dropped file waits for it. */
+export const isAcceptedWaterFile = isAccepted;
+export const waterFileKey = (poolId: string): string => `water-import:${poolId}`;
+
 type Step = 'closed' | 'reading' | 'mapping' | 'preview' | 'done';
 
 export function WaterImport({
@@ -119,7 +124,7 @@ export function WaterImport({
    * render it, losing the page — so the overlay and this handler exist as much
    * to prevent that as to offer the feature.
    */
-  const { dragging } = useFileDrop((file) => {
+  const start = (file: File): void => {
     if (!canManage || !isAccepted(file)) return;
 
     const transfer = new DataTransfer();
@@ -129,7 +134,16 @@ export function WaterImport({
       setStep('reading');
       startTransition(() => formRef.current?.requestSubmit());
     }
-  });
+  };
+  const { dragging } = useFileDrop(start);
+
+  // A report dropped on another water section, waiting for this one (29-10-2026).
+  useEffect(() => {
+    const waiting = takeFile(waterFileKey(poolId));
+    if (waiting !== null) start(waiting);
+    // Once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // A freshly read file proposes its mapping, and a freshly chosen sheet re-proposes it.
   useEffect(() => {

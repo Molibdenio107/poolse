@@ -1381,7 +1381,8 @@
     "waterClearsWhen": "O aviso desaparece sozinho quando a análise mais recente estiver dentro dos limites: depois de corrigir a água, registe uma nova análise.",
     "waterBackInRange": "A água voltou aos limites",
     "reopenHint": "A última análise está dentro dos limites, mas a piscina continua encerrada. Se foi encerrada por causa da água, levante o encerramento em Encerramentos para a reabrir antes da data.",
-    "openClosures": "Abrir Encerramentos"
+    "openClosures": "Abrir Encerramentos",
+    "fromLab": "Do laboratório"
   },
   "classes": {
     "colour": "Cor da turma",

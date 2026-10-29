@@ -69,6 +69,8 @@ export interface PoolAnalysis {
   takenAt: string;
   notes: string | null;
   recordedByName: string | null;
+  /** Taken from a laboratory report's chemistry (29-10-2026), not typed. */
+  fromLab: boolean;
   values: AnalysisValue[];
 }
 
@@ -93,12 +95,14 @@ export async function listAnalyses(
       taken_at: string;
       notes: string | null;
       recorded_by_name: string | null;
+      from_lab: boolean;
       values: AnalysisValue[] | null;
     }>(
       `
       SELECT a.id,
              a.taken_at,
              a.notes,
+             a.lab_result_id IS NOT NULL AS from_lab,
              nullif(btrim(coalesce(u.cached_first_name, '') || ' ' ||
                           coalesce(u.cached_last_name, '')), '') AS recorded_by_name,
              (
@@ -134,6 +138,7 @@ export async function listAnalyses(
       takenAt: row.taken_at,
       notes: row.notes,
       recordedByName: row.recorded_by_name,
+      fromLab: row.from_lab,
       values: row.values ?? [],
     }));
   });

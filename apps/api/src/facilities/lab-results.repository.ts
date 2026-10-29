@@ -210,11 +210,45 @@ export async function createLabResultIn(
     ],
   );
 
+  /*
+   * Its chemistry is also a reading (Rui, 29-10-2026), so Última análise,
+   * Tendências, Histórico and the warning see a report the way they see a typed
+   * reading — a good report clears the warning. Linked by `lab_result_id`, and
+   * archived with it by trigger. A reading the club already has at that moment
+   * stands. No water alert: the lab result raises its own, below.
+   */
+  const chemistry = values.filter((v) => (POOL_METRICS as readonly string[]).includes(v.parameter));
+  let readingId: string | null = null;
+  if (chemistry.length > 0) {
+    const { rows: reading } = await tx.query<{ id: string }>(
+      `INSERT INTO pool_analysis (organization_id, pool_id, taken_at, recorded_by, lab_result_id)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (organization_id, pool_id, taken_at) WHERE archived_at IS NULL DO NOTHING
+       RETURNING id`,
+      [organizationId, poolId, sampledAt, recordedBy, id],
+    );
+    readingId = reading[0]?.id ?? null;
+    if (readingId !== null) {
+      await tx.query(
+        `INSERT INTO pool_analysis_value (organization_id, analysis_id, metric, value, unit)
+         SELECT $1, $2, m::pool_metric, v, u
+           FROM unnest($3::text[], $4::numeric[], $5::text[]) AS t(m, v, u)`,
+        [
+          organizationId,
+          readingId,
+          chemistry.map((v) => v.parameter),
+          chemistry.map((v) => v.value),
+          chemistry.map((v) => METRIC_UNITS[v.parameter as PoolMetric]),
+        ],
+      );
+    }
+  }
+
   await recordAudit(tx, {
     action: 'lab_result.recorded',
     entityType: 'pool',
     entityId: poolId,
-    data: { labResultId: id, parameters: values.map((v) => v.parameter) },
+    data: { labResultId: id, parameters: values.map((v) => v.parameter), readingId },
   });
 
   const alertId = await raiseLabAlert(tx, organizationId, poolId, id, values);

@@ -321,11 +321,12 @@ const TENANT_TABLES = [
   // POOLSE-72. The alert names the report, the values belong to it.
   'lab_result_alert',
   'lab_result_value',
-  'lab_result',
   'pool_analysis_alert',
   // POOLSE-71. Points at a pool and its creator's membership.
   'pool_public_link',
+  // A reading may name the lab report it came from (29-10-2026), so it goes first.
   'pool_analysis',
+  'lab_result',
   // Readings before their meter, and meters before the pool one may serve —
   // slice 5.1. A meter can also point at the meter it replaced, which is a
   // same-table key the DELETE-by-organization does not care about.

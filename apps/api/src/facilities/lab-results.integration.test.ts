@@ -245,3 +245,64 @@ test('QA 11: the public page carries the latest grade and its date, and nothing 
     assert.ok(!JSON.stringify(page).includes('Segredo'), 'no laboratory detail leaves');
   });
 });
+
+test('a report with chemistry is also a reading: it clears the warning, and archives and restores with the report', async () => {
+  await withScratchTenant(async (tenant) => {
+    const poolId = await aTank(tenant);
+    // A bad typed reading this morning, which raised the warning.
+    const [bad] = await tenant.sql<{ id: string }>(
+      `INSERT INTO pool_analysis (organization_id, pool_id, taken_at) VALUES ($1, $2, now() - interval '5 hours') RETURNING id`,
+      [tenant.organizationId, poolId],
+    );
+    await tenant.sql(
+      `INSERT INTO pool_analysis_value (organization_id, analysis_id, metric, value, unit) VALUES ($1, $2, 'ph', 8.9, 'pH')`,
+      [tenant.organizationId, bad!.id],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const { id } = await new LabResultsController().record(poolId, {
+        sampledAt: recently(),
+        values: [...CLEAN, { parameter: 'ph', value: 7.4 }, { parameter: 'free_chlorine', value: 1.1 }],
+      });
+
+      const page = await new FacilitiesController().pool(poolId);
+      const latest = page.analyses[page.analyses.length - 1]!;
+      assert.equal(latest.fromLab, true, 'the report is now the latest reading');
+      assert.deepEqual(
+        latest.values.map((v) => [v.metric, v.value]),
+        [['ph', 7.4], ['free_chlorine', 1.1]],
+        'its chemistry only — no organism is a reading',
+      );
+
+      await new LabResultsController().archive(poolId, id);
+      const archived = await new FacilitiesController().pool(poolId);
+      assert.equal(archived.analyses.some((a) => a.fromLab), false, 'archived with its report');
+
+      await tenant.sql('UPDATE lab_result SET archived_at = NULL WHERE id = $1', [id]);
+      const restored = await new FacilitiesController().pool(poolId);
+      assert.equal(restored.analyses.filter((a) => a.fromLab).length, 1, 'and back with it');
+
+      // A report with no chemistry is no reading.
+      await new LabResultsController().record(poolId, { sampledAt: longAgo(), values: CLEAN });
+      const after = await new FacilitiesController().pool(poolId);
+      assert.equal(after.analyses.filter((a) => a.fromLab).length, 1);
+    });
+  });
+});
+
+test("a reading the club already has at the report's moment stands, and none is added", async () => {
+  await withScratchTenant(async (tenant) => {
+    const poolId = await aTank(tenant);
+    const at = recently();
+    await tenant.sql(
+      `INSERT INTO pool_analysis (organization_id, pool_id, taken_at) VALUES ($1, $2, $3)`,
+      [tenant.organizationId, poolId, at],
+    );
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await new LabResultsController().record(poolId, { sampledAt: at, values: [...CLEAN, { parameter: 'ph', value: 7.4 }] });
+      const page = await new FacilitiesController().pool(poolId);
+      assert.equal(page.analyses.length, 1);
+      assert.equal(page.analyses[0]!.fromLab, false);
+    });
+  });
+});

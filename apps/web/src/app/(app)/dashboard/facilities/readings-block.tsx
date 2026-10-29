@@ -14,6 +14,7 @@ import { TrendChart } from '@/components/trend-chart';
 import { excursions } from '@/lib/water';
 import { ExportAnalyses, UnsafeWaterNotice, WaterBackInRangeNote } from './water-actions';
 import { WaterImport } from './pools/[poolId]/water-import';
+import { WaterDropCatcher } from './pools/[poolId]/water-drop';
 import { AnalysisForm, ArchiveAnalysisButton, SafeRangesForm } from './analysis-forms';
 import { LabResultsSection } from './lab-results';
 import { PageError } from '@/components/page-shell';
@@ -221,6 +222,14 @@ export async function ReadingsBlock({
         />
       )}
 
+      {/*
+        A report dropped on any other section jumps to Laboratório and is read
+        there (Rui, 29-10-2026). Laboratório mounts the importer itself.
+      */}
+      {canManage && current !== 'lab' && offered.includes('lab') && (
+        <WaterDropCatcher poolId={poolId} labHref={sectionHref(basePath, { tab: 'water', from }, 'lab')} />
+      )}
+
       <SectionPills
         label={t('facilities.waterSection.nav')}
         current={current}
@@ -354,8 +363,14 @@ export async function ReadingsBlock({
             {history.items.map((analysis) => (
               <li key={analysis.id} className="flex flex-col gap-1 p-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <span className="font-medium">
+                  <span className="flex flex-wrap items-baseline gap-x-2 font-medium">
                     {formatStamp(new Date(analysis.takenAt))}
+                    {/* Filed from a laboratory report, not typed (29-10-2026). */}
+                    {analysis.fromLab && (
+                      <span className="rounded border border-border px-1.5 text-sm font-normal text-foreground-muted">
+                        {t('facilities.fromLab')}
+                      </span>
+                    )}
                   </span>
                   <span className="flex items-center gap-3 text-sm text-foreground-muted">
                     {analysis.recordedByName}
