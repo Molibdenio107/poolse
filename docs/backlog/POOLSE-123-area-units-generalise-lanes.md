@@ -2,8 +2,26 @@
 
 > Part of the Poolse backlog. Conventions in [CONVENTIONS.md](./CONVENTIONS.md) apply to this ticket and are not repeated here.
 
-**Type:** Architecture · **Area:** Calendar / Schema · **Priority:** High (before first go-live, *one full session*; re-confirm with Rui before starting) · **Depends on** [POOLSE-122](./POOLSE-122-recintos-typed-playing-areas.md)
+**Type:** Architecture · **Area:** Calendar / Schema · **Priority:** Deferred — **option (b) taken 29-10-2026 (Rui)**: build this with the first club that pays for a non-pool sport, not before go-live · **Depends on** [POOLSE-122](./POOLSE-122-recintos-typed-playing-areas.md), [POOLSE-124](./POOLSE-124-sport-modules-and-billing.md)
 
+### Decision, 29-10-2026
+
+Asked again as the ticket required, Rui chose **option (b)**: lanes stay the pool's unit for first go-live, and this ticket is the retrofit plan for the day a club switches on a sport with units (POOLSE-124). Reason: it is a full session in the calendar's hardest code, just before the design pass, for a capability no paying club needs yet. Until then a non-pool recinto exists (POOLSE-122, 124) but has no bookable units, so nothing can double-book it.
+
+### The retrofit plan (option b)
+
+1. **Add, do not rename.** A new `area_unit` table (`organization_id`, `playing_area_id`, `name`, `position`, `archived_at`, composite keys as `lane` has) for recintos of a sport with `has_units`. `lane` stays exactly as it is for `pool`.
+2. **`booking_lane` and `class_session_lane` gain a nullable `unit_id`**, with a CHECK that exactly one of `lane_id` / `unit_id` is set, and composite FKs to `area_unit`. Their window columns (copied for the exclusion, synced like `cancelled`) stay shared.
+3. **Exclusions.** The lane exclusions stay untouched and gain `WHERE lane_id IS NOT NULL`. A second, strict GiST exclusion covers `unit_id` (`unit_id WITH =`, window `&&`) for non-shareable sports — `sport.units_shareable` is `false` for every non-pool sport today, so strict is the only rule needed. Copy `shareable` onto the row only if a shareable non-pool sport ever appears.
+4. **Whole-area booking** (Decided 5) is a booking on every live unit of the recinto, written by the same path; a sport with `has_units = false` (gym) books the recinto itself — a booking row with no unit rows, and an exclusion on `(playing_area_id, window)` for those.
+5. **Readers.** `syncBookingLanes`, the generator, the `@poolse/rules` conflict module, occupancy and the grid read model each get a unit branch beside the lane one; nothing pool-shaped changes. Labels read `sport.unit_label_*` for non-pool units only.
+6. **Slots.** `facility_time_slot` stays per site; a recinto with its own step (`sport.default_slot_minutes`) is decided then (Open 4 below).
+
+The rename-in-place design below (option a) is kept as the record of what was weighed, and as the shape to converge on if the two branches ever cost more than one.
+
+---
+
+## Option (a) as written on 28-10-2026 — not taken
 ### PO — why this exists
 
 A turma books lanes of a pool. A tennis class books a court, a football match books both halves of a pitch. The conflict rule — nothing sits on the same unit at the same time — is the same in every sport, and `lane` is where it lives today (`booking_lane`, `class_session_lane`, the GiST exclusion, the grid, `lane_level_capacity`).
@@ -46,4 +64,4 @@ Rui, 28-10-2026, option (a) — generalise now rather than retrofit when the sec
 - [ ] Shareable and strict exclusion both proven in SQL tests.
 - [ ] Whole-area booking proven.
 - [ ] No visible change for a pool-only club.
-- [ ] If option (b) is taken instead, this file is rewritten as the retrofit plan and dated.
+- [x] If option (b) is taken instead, this file is rewritten as the retrofit plan and dated — 29-10-2026.
