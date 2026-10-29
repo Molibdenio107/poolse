@@ -576,7 +576,21 @@
  * native `<details>` is animated by `DetailsAnimator` (components/), which works
  * in Safari too — the `::details-content` transition that lived here moved only in
  * Chromium. The hand-built ones use `Reveal`, with the same duration and curve.
+ *
+ * A summary's chevron turns over the same time and curve as its section moves,
+ * and back as soon as it starts closing (`data-closing`, set by the animator) —
+ * not after. Keep these two equal to REVEAL_MS / REVEAL_EASING in reveal.tsx.
  */
+:root {
+  --reveal-ms: 650ms;
+  --reveal-ease: cubic-bezier(0.45, 0, 0.25, 1);
+}
+details > summary svg {
+  transition: transform var(--reveal-ms) var(--reveal-ease);
+}
+details[data-closing] > summary svg {
+  transform: none;
+}
 
 /*
  * A warning that needs attention pulses three times as it appears and then keeps
@@ -626,6 +640,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  details > summary svg {
+    transition: none;
+  }
   .attention {
     animation: none;
   }

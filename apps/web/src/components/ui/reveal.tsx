@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * One timing for every disclosure in the app — this and `DetailsAnimator`, which
- * moves every native `<details>`. 29-10-2026 (Rui): 220 ms ease-out still read as
- * a snap, so it is slower, and decelerates hard at the end so it settles rather
- * than stops.
+ * One timing for every disclosure in the app — this, `DetailsAnimator` (every
+ * native `<details>`) and the summary chevrons in globals.css (`--reveal-ms`,
+ * `--reveal-ease`, kept equal to these). Rui, 29-10-2026, twice: 220 ms and then
+ * 380 ms still read as a snap, so 650 ms with an ease at both ends — it starts
+ * gently, moves, and settles, rather than jumping and braking.
  */
-export const REVEAL_MS = 380;
-export const REVEAL_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
+export const REVEAL_MS = 650;
+export const REVEAL_EASING = "cubic-bezier(0.45, 0, 0.25, 1)";
+const TIMING = { transitionDuration: `${REVEAL_MS}ms`, transitionTimingFunction: REVEAL_EASING };
 const DURATION_MS = REVEAL_MS;
 
 /**
@@ -80,18 +82,20 @@ export function Reveal({
   return (
     <div
       className={cn(
-        "grid transition-[grid-template-rows] duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+        "grid transition-[grid-template-rows] motion-reduce:transition-none",
         expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
       )}
+      style={TIMING}
       // While it closes it is still in the DOM; nothing in it should take focus.
       inert={!open}
     >
       <div
         className={cn(
-          "min-h-0 transition-opacity duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          "min-h-0 transition-opacity motion-reduce:transition-none",
           expanded ? "opacity-100" : "opacity-0",
           settled ? "overflow-visible" : "overflow-hidden",
         )}
+        style={TIMING}
       >
         <div id={id} className={className}>
           {children}

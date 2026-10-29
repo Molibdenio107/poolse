@@ -54,6 +54,10 @@ export function DetailsAnimator(): null {
       current?.animation.cancel();
 
       details.style.overflow = 'hidden';
+      // The summary's chevron turns back with the closing, not after it (globals.css).
+      if (opening) delete details.dataset.closing;
+      else details.dataset.closing = '';
+
       let end: number;
       if (opening) {
         details.style.height = '';
@@ -82,6 +86,7 @@ export function DetailsAnimator(): null {
       animation.onfinish = () => {
         running.delete(details);
         if (!opening) details.open = false;
+        delete details.dataset.closing;
         animation.cancel();
         details.style.overflow = '';
       };
