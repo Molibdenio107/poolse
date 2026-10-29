@@ -73,7 +73,7 @@ test.describe('the office', () => {
 
   test('QA 2 — reception files a PDF atestado on the leave, and the office opens it', async ({ page }) => {
     await visit(page, `/dashboard/students/${ids.anaId}/sensitive?tab=leave`);
-    await page.locator('summary').filter({ hasText: /baixa médica|medical leave/i }).click();
+    // The leave is no longer folded (28-10-2026): nothing to open first.
     const row = page.locator('li').filter({ hasText: 'E2E · Lesão no pulso' });
     await expect(row.getByText(/cifrado|encrypted/i)).toBeVisible();
     await row.locator('input[type=file]').setInputFiles({ name: 'Atestado Ana.pdf', mimeType: 'application/pdf', buffer: PDF });
@@ -97,7 +97,7 @@ test.describe('the coach', () => {
 
   test('QA 2 — sees "atestado anexado" and the dates, never the file; the saved contact reads with its phone', async ({ page }) => {
     await visit(page, `/dashboard/students/${ids.anaId}/sensitive?tab=leave`);
-    await page.locator('summary').filter({ hasText: /baixa médica|medical leave/i }).click();
+    // The leave is no longer folded (28-10-2026): nothing to open first.
     const row = page.locator('li').filter({ hasText: 'E2E · Lesão no pulso' });
     await expect(row.getByText(/atestado anexado em \d{2}-\d{2}-\d{4}|certificate attached on \d{2}-\d{2}-\d{4}/i)).toBeVisible();
     await expect(row.getByText(/^\d{2}-\d{2}-\d{4} (a|to) \d{2}-\d{2}-\d{4}$/)).toBeVisible();

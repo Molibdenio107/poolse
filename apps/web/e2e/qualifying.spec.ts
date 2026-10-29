@@ -110,9 +110,12 @@ test('QA 3 — the import says it reads LENEX and links to where to get it', asy
   await visit(page, `/dashboard/students/provas?season=${ids.seasonId}`);
   const line = page.locator('#meet-import-format');
   await expect(line).toContainText(/ficheiro lenex \(\.lef\/\.lxf\), o formato que a fpn e o ranking nacional exportam|a lenex file/i);
-  const link = line.getByRole('link', { name: /como obter o ficheiro|how to get the file/i });
+  // Where to get it lives in *Como obter os resultados* since POOLSE-114.
+  await page.getByRole('button', { name: /como obter os resultados|how to get the results/i }).click();
+  const link = page.getByRole('dialog').getByRole('link', { name: /abrir o site da fpn|open the fpn's site/i });
   await expect(link).toHaveAttribute('href', /fpnatacao\.pt/);
   await expect(link).toHaveAttribute('target', '_blank');
+  await page.keyboard.press('Escape');
   // Described to the button it explains.
   // The visible button — the file input behind it carries the same name.
   await expect(page.locator('button', { hasText: /importar resultados|import results/i })).toHaveAttribute(

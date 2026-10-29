@@ -104,8 +104,8 @@ test.describe('an owner', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/sign-in', { waitUntil: 'domcontentloaded' });
     await page.getByLabel(/e-?mail/i).fill(email!);
-    await page.getByLabel(/palavra-passe|password/i).fill(password!);
-    await page.getByRole('button', { name: /continuar|continue|entrar|sign in/i }).click();
+    await page.getByLabel(/palavra-passe|password/i).first().fill(password!); // Clerk's Show password shares the word
+    await page.getByRole('button', { name: /^(continuar|continue)$/i }).click(); // exact: not "Continuar com Google"
     await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
   });
 

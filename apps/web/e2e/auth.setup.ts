@@ -69,7 +69,8 @@ async function signIn(
     await code.waitFor();
     await code.click();
     await page.keyboard.type('424242', { delay: 50 });
-    await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
+    // Clerk can take a while to redirect after "Success" on a cold dev server.
+    await page.waitForURL(/\/dashboard/, { timeout: 60_000 });
   }
 
   await page.context().storageState({ path });
