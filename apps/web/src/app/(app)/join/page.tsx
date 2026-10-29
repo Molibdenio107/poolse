@@ -1,7 +1,9 @@
 import { UserButton } from '@clerk/nextjs';
+import { auth } from '@clerk/nextjs/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type InvitationPreview, type Me } from '../../../lib/api';
+import { apiFetch, type InvitationPreview, type Me } from '../../../lib/api';
+import { fetchInvitationPreview } from '../../../lib/public-invitation';
 import { PreferenceControls } from '../preference-controls';
 import { AcceptForm } from './accept-form';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -10,14 +12,18 @@ import { formatDate } from '@/lib/date-format';
 /**
  * The invitee's side of slice 0.5.
  *
- * Not a public route: the Clerk middleware requires a session, which means
- * someone arriving with a link and no account is sent to sign up and returned
- * here afterwards. That order is deliberate — an invitation binds an
- * organization to an `app_user`, so the account has to exist first.
+ * A public route since 29-10-2026 (Rui): somebody arriving with a link and no
+ * account reads what they are being offered first, and the sign-in wall sits on
+ * the accept button. Accepting still binds an organization to an `app_user`, so
+ * the account has to exist by then — the button sends them to make one and
+ * brings them back here.
  *
  * The screen shows what is being offered before it is accepted. An invitation
  * carries roles, and "you are about to become an instructor at Clube A" is
  * information the person should have before the button, not after it.
+ *
+ * No Voltar: the person may belong to nothing yet, and the dashboard would
+ * refuse them. The page's only exits are the button and the browser.
  */
 export default async function JoinPage({
   searchParams,
@@ -34,18 +40,21 @@ export default async function JoinPage({
   // what actually grants membership — so if somebody is signed in as one person
   // and opens a link meant for another, it is that first account that joins.
   // Silently. Saying whose account this is turns a trap into a choice.
+  const { userId } = await auth();
+  const signedIn = userId !== null;
+
   let me: Me | null = null;
-  try {
-    me = await apiFetch<Me>('/me');
-  } catch {
-    // The invitation still renders; the accept button will report the problem.
+  if (signedIn) {
+    try {
+      me = await apiFetch<Me>('/me');
+    } catch {
+      // The invitation still renders; the accept button will report the problem.
+    }
   }
 
   if (token) {
     try {
-      preview = await apiFetch<InvitationPreview>(
-        `/join/preview?token=${encodeURIComponent(token)}`,
-      );
+      preview = await fetchInvitationPreview(token);
     } catch (error) {
       failure = describeLoad(error);
     }
@@ -55,11 +64,10 @@ export default async function JoinPage({
     <PageShell
       title={t('join.title')}
       subtitle={t('app.tagline')}
-      back={{ href: "/dashboard", label: t('common.backToDashboard') }}
       actions={
         <>
           <PreferenceControls />
-          <UserButton />
+          {signedIn && <UserButton />}
         </>
       }
     >
@@ -121,15 +129,16 @@ export default async function JoinPage({
               <p className="text-sm">
                 {t('join.acceptingAs', { email: me.user.email ?? t('account.noEmail') })}
               </p>
-              {preview.email !== null &&
-                me.user.email !== null &&
-                preview.email.toLowerCase() !== me.user.email.toLowerCase() && (
-                  <p className="text-sm text-warning">{t('join.differentAccount')}</p>
-                )}
             </div>
           )}
 
-          <AcceptForm token={token} organizationName={preview.organizationName ?? ''} />
+          <AcceptForm
+            token={token}
+            organizationName={preview.organizationName ?? ''}
+            signedIn={signedIn}
+            invitedEmail={preview.email}
+            signedInAs={me?.user.email ?? null}
+          />
         </section>
       )}
 

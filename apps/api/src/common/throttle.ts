@@ -150,6 +150,10 @@ export class UserThrottlerGuard extends ThrottlerGuard {
     const email = publicEmailTracker(request.path);
     if (email !== null) return email;
 
+    // An invitation's preview counts per token too — 29-10-2026.
+    const invitation = publicInvitationTracker(request);
+    if (invitation !== null) return invitation;
+
     // The public sign-up form — per club and per visitor, 13-10-2026 sweep. It
     // arrives from the Next server, and an address bucket would be one bucket
     // for every parent of every club in September.
@@ -174,6 +178,16 @@ export class UserThrottlerGuard extends ThrottlerGuard {
     const request = context.switchToHttp().getRequest<Request>();
     return request.path === '/health' || request.path === '/health/';
   }
+}
+
+/**
+ * `invitation:<token>` for the invitation preview, null for any other path.
+ * The token travels in the query, not the path, so this reads `?token=`.
+ */
+export function publicInvitationTracker(request: Pick<Request, 'path' | 'query'>): string | null {
+  if (!/^\/join\/preview\/?$/.test(request.path)) return null;
+  const token = request.query['token'];
+  return `invitation:${typeof token === 'string' ? token : 'none'}`;
 }
 
 /** `registration:<slug>:<visitor>` for the public sign-up form, null for any other path. */

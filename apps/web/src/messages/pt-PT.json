@@ -2530,6 +2530,8 @@
     "invitedAddress": "Convite dirigido a {email}.",
     "rolesOffered": "Funções propostas",
     "accept": "Aceitar convite",
+    "enter": "Entrar",
+    "accountNeeded": "Para aceitar precisa de uma conta Poolse. Crie uma com o email do convite, ou entre se já a tem.",
     "accepted": "Já faz parte de {organization}.",
     "statusHint": "Peça um novo convite a quem gere a organização.",
     "failed": "Não foi possível aceitar o convite.",
@@ -2542,7 +2544,9 @@
       "unknown_account": "A sua conta ainda não está pronta. Atualize a página e tente novamente."
     },
     "acceptingAs": "Vai aceitar com a conta {email}.",
-    "differentAccount": "O convite foi dirigido a outro email. Se continuar, é esta conta que entra na organização."
+    "mismatch": "Este convite foi enviado para {invited}, mas tem sessão iniciada como {current}. Se aceitar assim, é a conta {current} que recebe estes papéis.",
+    "signOutAndContinue": "Terminar sessão e continuar",
+    "acceptAnyway": "Aceitar com {current}"
   },
   "vacations": {
     "mine": "As minhas férias",

@@ -447,15 +447,23 @@ export async function seedActivity(
       LIMIT 2`,
     [org],
   );
+  /*
+   * Found through her invitation, and made as the API makes an invitee: a bare
+   * placeholder. A club-held name or address on it is refused the moment a login
+   * binds (`membership_identity_belongs_to_one_owner` — Clerk owns both), so a
+   * placeholder that carried them turned *Aceitar* into a 500 (29-10-2026).
+   */
   let paula = (await q<{ id: string }>(
-    `SELECT id FROM membership WHERE organization_id = $1 AND email = $2::citext AND archived_at IS NULL`,
+    `SELECT m.id FROM invitation i
+       JOIN membership m ON m.id = i.membership_id AND m.organization_id = i.organization_id
+      WHERE i.organization_id = $1 AND i.email = $2::citext AND m.archived_at IS NULL
+      ORDER BY i.created_at DESC LIMIT 1`,
     [org, FAMILY_EMAIL],
   ))[0]?.id;
   if (paula === undefined && children.length > 0) {
     paula = (await q<{ id: string }>(
-      `INSERT INTO membership (organization_id, status, first_name, last_name, email)
-       VALUES ($1, 'invited', 'Paula', $2, $3::citext) RETURNING id`,
-      [org, children[0]!.last_name, FAMILY_EMAIL],
+      `INSERT INTO membership (organization_id, status) VALUES ($1, 'invited') RETURNING id`,
+      [org],
     ))[0]!.id;
     await client.query(
       `INSERT INTO membership_role (organization_id, membership_id, role) VALUES ($1, $2, 'guardian')`,

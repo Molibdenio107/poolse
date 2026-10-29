@@ -26,6 +26,9 @@ const isPublicRoute = createRouteMatcher([
   // POOLSE-86's opt-out link, opened from a club message by people who have no
   // account. It reads and writes one token's choice through the API and nothing else.
   '/email/(.*)',
+  // An invitation's page (29-10-2026): what is being offered is shown before
+  // the person has an account. Accepting still needs one — the button asks.
+  '/join(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

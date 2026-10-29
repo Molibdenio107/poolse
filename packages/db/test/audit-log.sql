@@ -185,7 +185,7 @@ BEGIN
   );
 
   SELECT action, entity_type, actor_membership_id, data INTO r
-    FROM audit_log WHERE action = 'invitation.accepted';
+    FROM audit_log WHERE action = 'invitation.accepted' AND organization_id = v_org;
 
   IF r.action IS NULL THEN
     RAISE EXCEPTION 'FAIL test 5a: acceptance was not recorded';

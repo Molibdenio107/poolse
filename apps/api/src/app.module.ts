@@ -125,8 +125,13 @@ import { SubscriptionController } from './billing/subscription.controller.js';
  * Public: no session token expected. Health is for the platform, webhooks
  * authenticate by signature, and `public/(.*)` is POOLSE-71's water page, which
  * reads through one SECURITY DEFINER function and nothing else.
+ *
+ * `join/preview` joined them on 29-10-2026 (Rui): what an invitation offers is
+ * shown before the person has an account, so the sign-in wall moved from the
+ * page to the accept button. It reads through `find_invitation_by_token`, a
+ * definer function keyed on the hashed token, and is throttled per token.
  */
-export const PUBLIC_ROUTES = ['health', 'webhooks/(.*)', 'public/(.*)'] as const;
+export const PUBLIC_ROUTES = ['health', 'webhooks/(.*)', 'public/(.*)', 'join/preview'] as const;
 
 /**
  * Authenticated, but with no tenant to resolve — every one of these answers a
@@ -137,6 +142,7 @@ export const PUBLIC_ROUTES = ['health', 'webhooks/(.*)', 'public/(.*)'] as const
  *                 any organization's
  *   organizations create the first one, when you belong to none
  *   join          redeem an invitation into an organization you are not in yet
+ *                 (its preview is public, above)
  *
  * This list should stay short and each addition should be arguable in one
  * sentence. Everything else in the API runs tenant-scoped.

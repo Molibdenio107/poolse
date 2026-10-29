@@ -18,7 +18,10 @@ interface AcceptBody {
 /**
  * Redeeming an invitation, from outside any tenant.
  *
- * Authenticated — you must have an account before you can be a member of
+ * The preview is public (29-10-2026): what is being offered is shown before the
+ * person has an account, the way every invitation flow people already know does
+ * it, and the sign-in wall sits on the accept button instead. Accepting stays
+ * authenticated — you must have an account before you can be a member of
  * anything — but excluded from TenantMiddleware, because the whole point is that
  * the caller has no membership in this organization yet. It is the third and last
  * route in that position, alongside `/me` and `POST /organizations`.
@@ -34,6 +37,9 @@ export class JoinController {
    * What the acceptance screen shows before the person commits. Every failure
    * mode comes back as a status, not an error: "this link expired" is an ordinary
    * thing to be told, and it needs to be told in the reader's language.
+   *
+   * No session: `join/preview` is in `PUBLIC_ROUTES`. The token is the only key,
+   * hashed before it reaches the database, and the bucket is per token.
    */
   @Throttle(STRICT)
   @Get('preview')

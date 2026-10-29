@@ -2530,6 +2530,8 @@
     "invitedAddress": "Invitation addressed to {email}.",
     "rolesOffered": "Roles offered",
     "accept": "Accept invitation",
+    "enter": "Enter",
+    "accountNeeded": "Accepting needs a Poolse account. Create one with the invited email, or sign in if you already have it.",
     "accepted": "You are now part of {organization}.",
     "statusHint": "Ask whoever runs the organization for a fresh invitation.",
     "failed": "Could not accept the invitation.",
@@ -2542,7 +2544,9 @@
       "unknown_account": "Your account is not ready yet. Refresh the page and try again."
     },
     "acceptingAs": "You will accept as {email}.",
-    "differentAccount": "This invitation was addressed to a different email. If you continue, it is this account that joins the organization."
+    "mismatch": "This invitation was sent to {invited}, but you're signed in as {current}. If you accept now, the account {current} receives these roles.",
+    "signOutAndContinue": "Sign out and continue",
+    "acceptAnyway": "Accept as {current}"
   },
   "vacations": {
     "mine": "My leave",

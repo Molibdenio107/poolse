@@ -1132,6 +1132,12 @@ one schema is how somebody joins the wrong table at midnight.
 in the same commit as its migration. A forgotten one fails every integration test at teardown
 with a foreign-key violation that looks nothing like the change that caused it.
 
+**An invitation is read with no account, and accepted only with one.** 29-10-2026. `/join` and
+`GET /join/preview` are public (per-token throttle, `find_invitation_by_token` and nothing else);
+`POST /join` stays in `IDENTITY_ONLY_ROUTES`. Signed out, the accept control is *Criar conta* /
+*Entrar* returning to the same link with the invited address seeded; the page has no Voltar, and
+after accepting the way in is `/app`. `docs/features/staff.md`.
+
 **Management seats are capped per tenant by a soft quota**
 (`organization.max_management_users`, nullable = unlimited), checked when an invitation is
 *created* and counting pending, unexpired ones — a 24-hour window otherwise lets a tenant

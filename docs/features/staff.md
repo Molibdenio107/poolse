@@ -4,6 +4,17 @@
 roles, the staff record, Férias, Salários) is described in `navigation.md`, `salaries.md` and the
 tickets that built it.
 
+## Invitations: the page is public, the button is not (29-10-2026)
+
+`/join?token=…` is a public route on the web and `GET /join/preview` is in `PUBLIC_ROUTES` on the
+API. A person opening the link with no account reads the club, the roles offered, the address it
+was sent to and the expiry first; the accept control is then *Criar conta* / *Entrar*, both of
+which return to the same link, with the invited address seeded into sign-up. `POST /join` stays
+authenticated: accepting binds an `app_user`, so the account must exist by then. The preview is
+throttled per token (`publicInvitationTracker`), reads through `find_invitation_by_token` and
+nothing else, and answers every miss as a status. The page has no Voltar — an invitee may belong
+to nothing yet — and after accepting the way in is `/app`, which routes by role.
+
 ## What nobody does to themselves, and what only the person does
 
 Sweep of 15 October 2026:

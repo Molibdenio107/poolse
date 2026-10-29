@@ -480,4 +480,64 @@ END $$;
 
 RESET ROLE;
 
+-- ---------------------------------------------------------------------------
+-- Test 10 — a family member can be invited, and accepting binds them clean
+--
+-- 29-10-2026. A bare placeholder offering `guardian` was refused at commit (no
+-- NIF, no email), so no family invitation could ever be sent; and a placeholder
+-- carrying a club-typed name or address could not be bound to a login. Both are
+-- deferred or checked at commit, which a ROLLBACK test never reaches — hence
+-- SET CONSTRAINTS ALL IMMEDIATE here.
+-- ---------------------------------------------------------------------------
+
+SELECT provision_app_user('user_dora', 'dora@familia.pt', 'Dora', 'Reis', NULL, '2026-08-26 09:00:00+00');
+
+DO $$
+DECLARE v_org uuid; v_inviter uuid; v_membership uuid; r record; got record; n int;
+BEGIN
+  SET CONSTRAINTS ALL IMMEDIATE;
+  SELECT id INTO v_org FROM organization WHERE name = 'Clube A';
+  SELECT m.id INTO v_inviter FROM membership m
+    JOIN app_user u ON u.id = m.app_user_id
+   WHERE m.organization_id = v_org AND u.clerk_user_id = 'user_rui';
+
+  -- As createInvitation does it: the placeholder, its role, then the invitation.
+  -- Here with a club-typed name and address too, the case a seed or a prepared
+  -- record brings.
+  INSERT INTO membership (organization_id, status, first_name, last_name, email)
+  VALUES (v_org, 'invited', 'Dora', 'Reis', 'dora@familia.pt')
+  RETURNING id INTO v_membership;
+  INSERT INTO invitation (
+    organization_id, email, roles, token_hash, expires_at, membership_id, invited_by_membership_id
+  ) VALUES (
+    v_org, 'dora@familia.pt', ARRAY['guardian']::member_role[],
+    encode(sha256(convert_to('token-dora', 'utf8')), 'hex'),
+    '2026-09-02 09:00:00+00', v_membership, v_inviter
+  );
+  -- And a bare one, as the API makes it: the pending invitation is its key.
+  UPDATE membership SET first_name = NULL, last_name = NULL, email = NULL WHERE id = v_membership;
+  INSERT INTO membership_role (organization_id, membership_id, role) VALUES (v_org, v_membership, 'guardian');
+  UPDATE membership SET first_name = 'Dora', last_name = 'Reis', email = 'dora@familia.pt' WHERE id = v_membership;
+
+  SELECT o_status AS status INTO r
+    FROM accept_invitation(encode(sha256(convert_to('token-dora', 'utf8')), 'hex'), 'user_dora', '2026-08-26 10:00:00+00');
+  IF r.status <> 'accepted' THEN
+    RAISE EXCEPTION 'FAIL test 10a: acceptance returned %', r.status;
+  END IF;
+
+  SELECT count(*) INTO n FROM membership
+   WHERE id = v_membership AND app_user_id IS NOT NULL
+     AND first_name IS NULL AND last_name IS NULL AND email IS NULL;
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 10b: the bound membership kept a club-held name or address';
+  END IF;
+
+  SELECT o_roles AS roles INTO got FROM resolve_memberships('user_dora');
+  IF got.roles <> ARRAY['guardian']::text[] THEN
+    RAISE EXCEPTION 'FAIL test 10c: Dora holds % instead of guardian', got.roles;
+  END IF;
+
+  RAISE NOTICE 'PASS test 10: a family member is invited and bound, Clerk owning the name';
+END $$;
+
 ROLLBACK;
