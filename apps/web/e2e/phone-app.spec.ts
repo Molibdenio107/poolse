@@ -144,6 +144,22 @@ test.describe('as a guardian, before a lesson', () => {
   });
 });
 
+test.describe('asking for a place, as a guardian', () => {
+  test.use({ storageState: GUARDIAN_SESSION });
+
+  test('POOLSE-121 — the agenda opens Pedir inscrição; her children, a new child and the turmas with room, on a phone', async ({ page }) => {
+    await visit(page, '/app/familia');
+    await page.getByRole('link', { name: /pedir inscrição numa turma|ask for a place in a class/i }).tap();
+    await expect(page.getByRole('heading', { name: /pedir inscrição numa turma|ask for a place in a class/i })).toBeVisible();
+    await expect(page.getByRole('radio', { name: /ana poolside/i })).toBeVisible();
+    await page.getByRole('radio', { name: /outra criança|another child/i }).check();
+    await expect(page.getByLabel(/data de nascimento|date of birth/i)).toBeVisible();
+    // Nothing is sent until a person and a turma are chosen.
+    await expect(page.getByRole('button', { name: /^(enviar pedido|send request)$/i })).toBeDisabled();
+    await noSidewaysScroll(page);
+  });
+});
+
 test.describe('push, as a guardian', () => {
   test.use({ storageState: GUARDIAN_SESSION });
 
