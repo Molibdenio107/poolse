@@ -344,6 +344,8 @@ const TENANT_TABLES = [
   'pool_metric_range',
   'lane',
   'pool',
+  // POOLSE-122. After the pool and the turmas, closures and meters that name it.
+  'playing_area',
   'booking_category',
   /*
    * After `inventory_item`, which points at it since the locations became

@@ -110,6 +110,21 @@ export interface FacilityDetail extends Facility, Place {
    * dashboard calls it due. Null is not measured and enforces nothing.
    */
   waterAnalysisMaxAgeHours: number | null;
+  /**
+   * The site's recintos — POOLSE-122. Today every one is a pool's, the same rows
+   * as `pools`; the menu switches to these with POOLSE-125.
+   */
+  playingAreas: PlayingArea[];
+}
+
+/** A recinto: where sport happens on a site. A pool is one of sport `pool`. */
+export interface PlayingArea {
+  id: string;
+  sportId: string;
+  name: string;
+  position: number;
+  /** The pool this recinto is, for sport `pool`; null for any other sport. */
+  poolId: string | null;
 }
 
 /**
@@ -123,7 +138,7 @@ export interface FacilityDetail extends Facility, Place {
 export class DuplicateNameError extends Error {}
 
 function asDuplicate<T>(error: unknown, name: string): T {
-  // 23505 is facility_name_uq or pool_name_uq — the partial unique indexes.
+  // 23505 is facility_name_uq, pool_name_uq or playing_area_name_uq (POOLSE-122).
   if (error instanceof Error && (error as { code?: string }).code === '23505') {
     throw new DuplicateNameError(name);
   }
@@ -346,6 +361,7 @@ export async function findFacility(
       water_analysis_max_age_hours: number | null;
       pools: Pool[] | null;
       photos: Photo[] | null;
+      playing_areas: PlayingArea[] | null;
     }>(
       `
       SELECT f.id,
@@ -401,7 +417,24 @@ export async function findFacility(
                 WHERE fp.organization_id = f.organization_id
                   AND fp.facility_id = f.id
                   AND fp.archived_at IS NULL
-             ) AS photos
+             ) AS photos,
+             (
+               SELECT coalesce(
+                        json_agg(
+                          json_build_object('id', a.id, 'sportId', a.sport_id, 'name', a.name,
+                                            'position', a.position,
+                                            'poolId', (SELECT p.id FROM pool p
+                                                        WHERE p.organization_id = a.organization_id
+                                                          AND p.playing_area_id = a.id))
+                          ORDER BY a.position, a.name
+                        ),
+                        '[]'::json
+                      )
+                 FROM playing_area a
+                WHERE a.organization_id = f.organization_id
+                  AND a.facility_id = f.id
+                  AND a.archived_at IS NULL
+             ) AS playing_areas
         FROM facility f
        WHERE f.id = $1 AND f.archived_at IS NULL
       `,
@@ -425,6 +458,7 @@ export async function findFacility(
       waterAnalysisMaxAgeHours: row.water_analysis_max_age_hours,
       pools: row.pools ?? [],
       photos: row.photos ?? [],
+      playingAreas: row.playing_areas ?? [],
     };
   });
 }

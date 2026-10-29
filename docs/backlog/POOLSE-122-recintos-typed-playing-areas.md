@@ -22,7 +22,7 @@ The research in `claude/poolse-competitor-feature-gaps.md` and the 28-10 search 
 4. Name is unique per site, case- and accent-insensitive, among live recintos — the same rule `pool` has today, lifted one level so a tennis court and a pool cannot share a name either.
 5. `class_group`, `closure` and `energy_meter` gain `playing_area_id`, filled from their `pool_id` by migration and kept in step by trigger while both columns exist. Readers keep reading `pool_id` for now. Decided 15: `energy_meter.pool_id` becomes `playing_area_id` *now*; the allocation rule is POOLSE-128.
 6. Archiving a recinto archives its pool child and vice versa — one soft delete, both directions, so neither can be found live without the other.
-7. Excel import: the *Instalações* import maps a sheet's tank rows onto recintos of sport `pool`; a sport column is accepted and defaults to `pool`. Any other sport is refused with the reason until POOLSE-124 switches that sport on for the club.
+7. ~~Excel import~~ — **dropped 29-10-2026 (Rui)**: no *Instalações* importer exists. When one is built, its sheet maps tank rows onto recintos of sport `pool`, accepts a sport column defaulting to `pool`, and refuses any sport the club has not switched on.
 
 ### Dev notes
 
@@ -39,7 +39,7 @@ The research in `claude/poolse-competitor-feature-gaps.md` and the 28-10 search 
 2. Given a recinto of sport `pool` with no `pool` child, when inserted, then the deferred constraint refuses the commit.
 3. Given a pool archived from its page, then its recinto is archived in the same statement, and the reverse.
 4. Given a new turma on a pool, then `class_group.playing_area_id` equals the pool's recinto without the API setting it.
-5. Given a sheet with a `Desporto` column reading `Ténis`, when imported before POOLSE-124, then the row is refused naming the sport and the rest import.
+5. ~~Given a sheet with a `Desporto` column~~ — dropped with rule 7 (29-10-2026).
 6. Given a signup of a personal tenant, then `facility`, `playing_area` and `pool` are created in one transaction.
 7. Cross-tenant: a recinto id from another club in any new endpoint is a 404.
 8. Nothing the pilot sees changes: the *Instalações* page, the pool page, the calendar and the water tab render byte-for-byte as before (snapshot the three).

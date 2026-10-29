@@ -295,6 +295,39 @@ placeholder is retired — binding it instead would collide with
 a partial unique index; without a revoked state, a mistyped address is blocked until the
 invitation expires.
 
+## Recintos — POOLSE-122
+
+A site holds typed **recintos** (`playing_area`): where sport happens. A pool is a recinto of
+sport `pool`. Espaços (`space`) stay apart — a recinto is where sport happens, a space is where
+it does not. Decided 28-10-2026 (Rui, `docs/decisions.md`); the pool is untouched for first
+go-live.
+
+- **`sport`** is the catalogue, a platform table with no tenant key: `pool`, `tennis`,
+  `padel`, `basketball`, `football`, `handball`, `volleyball`, `gym`. Per sport: the unit's
+  name in both languages (null for a sport booked whole), `default_slot_minutes`,
+  `has_units`, `has_metrics`, `has_inventory`, `units_shareable`, `position`. `poolse_app`
+  may only read it; a new sport is a row Rui adds.
+- **`playing_area`** — site, sport, name, position, `archived_at`. A name is unique per site
+  among live recintos, case- and accent-blind (`playing_area_name_uq`), so a court and a pool
+  cannot share one. Sport and site are fixed once written. The app holds no DELETE.
+- **A pool always has its recinto, and a pool recinto its pool.** `pool.playing_area_id` is
+  NOT NULL, with a composite key `(organization_id, facility_id, playing_area_id)` so both
+  sit on one site. `pool_area_ensure` (BEFORE INSERT) makes the recinto when the caller names
+  none, so every existing `INSERT INTO pool` gets one without knowing. A pool may hang only
+  off a recinto of sport `pool`, and never changes recinto or site. A recinto of sport `pool`
+  inserted directly with no pool is refused at commit (`playing_area_pool_has_child`,
+  deferred; skipped for the one `pool_area_ensure` makes, which is judged at trigger depth
+  so `SET CONSTRAINTS ALL IMMEDIATE` cannot refuse every new pool).
+- **One soft delete, one name.** `pool_area_sync` copies `name` and `archived_at` from either
+  side to the other, so archiving or restoring a tank does the same to its recinto.
+- **`class_group`, `closure`, `energy_meter` carry `playing_area_id`**, backfilled and kept
+  in step by `*_area_from_pool`: with a pool, the pool's recinto (a forged value is
+  overwritten); a pool taken off clears it; with no pool, whatever recinto the row was given
+  (how a court's turma will arrive). **Readers still read `pool_id`.** `pool.name` and
+  `pool.facility_id` stay until a later ticket finds no reader left.
+- `GET /facilities/:id` answers `playingAreas` beside `pools` — the same rows until
+  POOLSE-125 switches the menu.
+
 ## Module 1 — students and classes
 
 ```

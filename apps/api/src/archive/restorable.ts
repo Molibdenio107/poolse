@@ -227,6 +227,8 @@ export const UNIQUE_FIELDS: Record<string, { field: string; column: string }> = 
   class_group_name_uq: { field: 'name', column: 'name' },
   facility_name_uq: { field: 'name', column: 'name' },
   pool_name_uq: { field: 'name', column: 'name' },
+  // POOLSE-122: a tank's recinto is restored with it, and is accent-blind.
+  playing_area_name_uq: { field: 'name', column: 'name' },
   space_name_uq: { field: 'name', column: 'name' },
   inventory_item_name_uq: { field: 'name', column: 'name' },
   partner_name_uq: { field: 'name', column: 'name' },

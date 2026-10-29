@@ -73,6 +73,16 @@ BEGIN
     RAISE EXCEPTION 'FAIL test 1: the pool was created without an audit entry';
   END IF;
 
+  -- POOLSE-122: the site, the recinto and the pool, in this one transaction.
+  IF NOT EXISTS (
+    SELECT 1 FROM pool p
+      JOIN playing_area a ON a.organization_id = p.organization_id AND a.id = p.playing_area_id
+     WHERE p.id = v_pool AND a.sport_id = 'pool' AND a.facility_id = v_facility
+       AND a.name = 'Piscina de casa' AND a.archived_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'FAIL test 1: the pool was provisioned without its recinto';
+  END IF;
+
   RAISE NOTICE 'PASS test 1: a personal tenant opens with a pool and no season';
 END $$;
 

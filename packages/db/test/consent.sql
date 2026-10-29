@@ -320,7 +320,7 @@ RESET ROLE;
 -- João, and one live decision per kind is exactly the rule test 2 proves.
 -- ---------------------------------------------------------------------------
 
-CREATE FUNCTION pg_temp.visible_photo_key(p_student uuid) RETURNS text
+CREATE FUNCTION pg_temp.visible_photo_key(p_student uuid) RETURNS uuid
 LANGUAGE sql STABLE AS $fn$
   SELECT CASE WHEN EXISTS (
            SELECT 1 FROM consent c
@@ -329,19 +329,26 @@ LANGUAGE sql STABLE AS $fn$
               AND c.kind = 'photo'
               AND c.granted
               AND c.withdrawn_at IS NULL
-         ) THEN s.photo_storage_key ELSE NULL END
+         ) THEN s.photo_file_id ELSE NULL END
     FROM student s WHERE s.id = p_student;
 $fn$;
 
 DO $$
 DECLARE
-  v_org uuid; v_student uuid; v_membership uuid; v_consent uuid; v_key text;
+  v_org uuid; v_student uuid; v_membership uuid; v_consent uuid; v_key uuid; v_file uuid;
 BEGIN
   SELECT id INTO v_org FROM organization WHERE name = 'Clube A';
   SELECT id INTO v_membership FROM membership WHERE organization_id = v_org LIMIT 1;
 
-  INSERT INTO student (organization_id, first_name, last_name, photo_storage_key)
-  VALUES (v_org, 'Marta', 'Fotografia', 'students/marta.jpg')
+  -- The photograph is a stored file since the photos migration (1793181600000).
+  INSERT INTO stored_file (organization_id, purpose, storage_key, content_type, byte_size,
+                           original_name, uploaded_by)
+  VALUES (v_org, 'student_photo', v_org::text || '/marta.jpg', 'image/jpeg', 1024,
+          'marta.jpg', v_membership)
+  RETURNING id INTO v_file;
+
+  INSERT INTO student (organization_id, first_name, last_name, photo_file_id)
+  VALUES (v_org, 'Marta', 'Fotografia', v_file)
   RETURNING id INTO v_student;
 
   -- No consent record at all. The key exists; nothing may read it.
@@ -366,7 +373,7 @@ BEGIN
   RETURNING id INTO v_consent;
 
   v_key := pg_temp.visible_photo_key(v_student);
-  IF v_key IS DISTINCT FROM 'students/marta.jpg' THEN
+  IF v_key IS DISTINCT FROM v_file THEN
     RAISE EXCEPTION 'FAIL test 8c: granted consent did not release the photograph (%)', v_key;
   END IF;
 
@@ -380,8 +387,8 @@ BEGIN
 
   -- And the stored key is untouched: withdrawal hides the picture, it does not
   -- destroy it. Deleting the file is an erasure request, which is its own path.
-  SELECT photo_storage_key INTO v_key FROM student WHERE id = v_student;
-  IF v_key IS DISTINCT FROM 'students/marta.jpg' THEN
+  SELECT photo_file_id INTO v_key FROM student WHERE id = v_student;
+  IF v_key IS DISTINCT FROM v_file THEN
     RAISE EXCEPTION 'FAIL test 8e: withdrawal destroyed the stored key';
   END IF;
 

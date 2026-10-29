@@ -649,6 +649,8 @@ by preview and commit alike. The parser (`energy-invoice-agent.ts`) is flag-gate
 supplier-agnostic: its prompt names concepts, never a layout. **Real bills never enter the
 repo** — `test-fixtures/**/private/` is gitignored. `docs/features/energy.md`.
 
+**A pool is a recinto of sport `pool`, and the pool's own trigger makes it.** POOLSE-122. `playing_area` sits between a site and its tanks; `sport` is a platform catalogue the app only reads. Insert a pool exactly as before — `pool_area_ensure` makes its recinto, `pool_area_sync` carries its name and archive both ways, and `class_group` / `closure` / `energy_meter` get `playing_area_id` by `*_area_from_pool`. Readers still read `pool_id`; never write a recinto by hand for a pool. `docs/data-model.md`, *Recintos*.
+
 **A subscription covers one facility; the schema allows many.** These are two
 different rules and both are settled. The *schema* keeps `organization 1 —— N
 facility` — backlog story B4 proposed narrowing it and was rejected, because a
