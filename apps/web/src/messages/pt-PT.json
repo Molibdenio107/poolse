@@ -178,6 +178,49 @@
       "unsupported": "Este navegador não recebe avisos. Os avisos continuam a chegar por email.",
       "install": "Adicione a Poolse ao ecrã principal para receber avisos: no Safari, toque em Partilhar e depois em Adicionar ao ecrã principal.",
       "blocked": "Os avisos estão bloqueados nas definições do navegador para a Poolse."
+    },
+    "join": {
+      "open": "Pedir inscrição numa turma",
+      "title": "Pedir inscrição numa turma",
+      "intro": "Escolha quem e a turma. O pedido segue para o clube, que confirma o nível e responde; ninguém fica inscrito até o clube aceitar.",
+      "who": "Para quem é?",
+      "me": "{name} (eu)",
+      "newChild": "Outra criança, ainda não inscrita",
+      "newChildTitle": "A criança",
+      "firstName": "Nome próprio",
+      "lastName": "Apelido",
+      "birthDate": "Data de nascimento",
+      "relationship": "O que é seu?",
+      "relationshipHint": "Por exemplo: filho, filha, neto.",
+      "class": "Turma",
+      "noClasses": "De momento não há turmas com vagas. Pode deixar uma mensagem ao clube pelo formulário público.",
+      "note": "Observações para o clube",
+      "noteHint": "Opcional. Não escreva aqui informação de saúde: o clube pede-a de forma segura depois da inscrição.",
+      "submit": "Enviar pedido",
+      "sent": "Pedido enviado ao clube",
+      "failed": "Não foi possível enviar o pedido.",
+      "sentTitle": "Pedidos enviados",
+      "state": {
+        "new": "À espera de resposta",
+        "trial_booked": "Aula experimental marcada",
+        "waitlisted": "Em lista de espera",
+        "converted": "Inscrito",
+        "dismissed": "Não aceite"
+      },
+      "error": {
+        "required": "Preencha este campo.",
+        "tooLong": "Texto demasiado longo.",
+        "class": "Escolha uma turma.",
+        "person": "Escolha para quem é o pedido.",
+        "birthDate": "Data inválida.",
+        "consent": "É preciso aceitar para enviar o pedido."
+      },
+      "refused": {
+        "class_unavailable": "Esta turma já não tem vagas. Escolha outra.",
+        "already_enrolled": "Já está inscrito nesta turma.",
+        "already_requested": "Já há um pedido para esta turma à espera de resposta.",
+        "no_email": "A sua conta não tem email, por isso o clube não lhe conseguiria responder. Fale com o clube."
+      }
     }
   },
   "common": {
@@ -5346,7 +5389,13 @@
       "consentRequired": "É preciso autorizar para enviar o pedido."
     },
     "ceilingReached": "O formulário público recebeu demasiados pedidos em pouco tempo ({when}) e recusou os que excederam o limite, sem o dizer a quem os enviou. Pode ter sido um ataque; se esperava inscrições nessa altura, contacte as famílias por outro meio.",
-    "noNote": "O pedido não traz observações."
+    "noNote": "O pedido não traz observações.",
+    "app": {
+      "wants": "Pede a turma {turma}",
+      "classGone": "Pede uma turma que entretanto foi arquivada",
+      "byExisting": "Pedido na app por {name}, para um aluno do clube: Inscrever junta-o à turma.",
+      "byNew": "Pedido na app por {name}, para uma criança nova."
+    }
   },
   "labResults": {
     "hint": "As análises mensais feitas por um laboratório acreditado, avaliadas contra o referencial nacional (NP 4542:2017). Um resultado não conforme avisa o proprietário, os administradores e a manutenção.",

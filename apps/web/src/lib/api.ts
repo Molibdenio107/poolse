@@ -5125,7 +5125,8 @@ export interface Lead {
   createdAt: string;
   swimmerFirstName: string;
   swimmerLastName: string;
-  swimmerBirthDate: string;
+  /** Null only on an app request naming a student the club already has. */
+  swimmerBirthDate: string | null;
   swimmerTaxNumber: string | null;
   guardianName: string | null;
   guardianRelationship: string | null;
@@ -5148,6 +5149,34 @@ export interface Lead {
   trialGroupName: string | null;
   trialTimezone: string | null;
   decidedAt: string | null;
+  /** POOLSE-121: the turma asked for from the app. */
+  requestedClassGroupId: string | null;
+  requestedClassName: string | null;
+  requestedClassSlots: { weekday: number; startTime: string }[];
+  /** Who asked from the app; null for the public form. */
+  requestedByName: string | null;
+  /** Names a student the club already has — Inscrever attaches the turma to them. */
+  existingStudent: boolean;
+}
+
+/** Asking to join a class from the app — POOLSE-121. */
+export interface AppJoinOptions {
+  clubName: string;
+  retentionMonths: number;
+  people: { id: string; name: string; self: boolean; levelId: string | null }[];
+  classes: {
+    id: string;
+    name: string;
+    levelId: string | null;
+    levelName: string | null;
+    levelOrder: number | null;
+    capacity: number | null;
+    active: number;
+    slots: { weekday: number; startTime: string }[];
+    instructorName: string | null;
+    facilityName: string;
+  }[];
+  sent: { id: string; swimmerName: string; className: string | null; createdAt: string; status: LeadStatus }[];
 }
 
 export interface Leads {

@@ -170,7 +170,12 @@ function PlaceForm({
   const formRef = useRef<HTMLFormElement>(null);
   useFocusFirstError(formRef, state.fields, state);
   const turmaKey = state.fields?.['classGroupId'];
-  const [picked, setPicked] = useState('');
+  // The turma the family asked for from the app, when it is still on offer (POOLSE-121).
+  const requested =
+    lead.requestedClassGroupId !== null && turmas.some((turma) => turma.id === lead.requestedClassGroupId)
+      ? lead.requestedClassGroupId
+      : '';
+  const [picked, setPicked] = useState(requested);
 
   return (
     <form ref={formRef} action={dispatch} className="flex flex-col gap-4">
@@ -183,6 +188,7 @@ function PlaceForm({
         // A full turma is a waiting list's answer and nobody else's.
         allowFull={kind === 'waitlist'}
         onChange={setPicked}
+        initialValue={requested === '' ? undefined : requested}
         error={turmaKey === undefined ? undefined : t(turmaKey, state.values ?? {})}
       />
       {/*

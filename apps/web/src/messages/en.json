@@ -178,6 +178,49 @@
       "unsupported": "This browser cannot receive notifications. Notices still arrive by email.",
       "install": "Add Poolse to your home screen to receive notifications: in Safari, tap Share, then Add to Home Screen.",
       "blocked": "Notifications for Poolse are blocked in the browser settings."
+    },
+    "join": {
+      "open": "Ask for a place in a class",
+      "title": "Ask for a place in a class",
+      "intro": "Choose who and the class. The request goes to the club, which checks the level and replies; nobody is enrolled until the club accepts.",
+      "who": "Who is it for?",
+      "me": "{name} (me)",
+      "newChild": "Another child, not yet enrolled",
+      "newChildTitle": "The child",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "birthDate": "Date of birth",
+      "relationship": "Your relationship",
+      "relationshipHint": "For example: son, daughter, grandson.",
+      "class": "Class",
+      "noClasses": "No class has a free place right now. You can leave the club a message through its public form.",
+      "note": "Notes for the club",
+      "noteHint": "Optional. Do not write health information here: the club asks for it securely after enrolment.",
+      "submit": "Send request",
+      "sent": "Request sent to the club",
+      "failed": "The request could not be sent.",
+      "sentTitle": "Requests sent",
+      "state": {
+        "new": "Awaiting a reply",
+        "trial_booked": "Trial lesson booked",
+        "waitlisted": "On the waiting list",
+        "converted": "Enrolled",
+        "dismissed": "Not accepted"
+      },
+      "error": {
+        "required": "Fill in this field.",
+        "tooLong": "Text too long.",
+        "class": "Choose a class.",
+        "person": "Choose who the request is for.",
+        "birthDate": "Invalid date.",
+        "consent": "You need to agree to send the request."
+      },
+      "refused": {
+        "class_unavailable": "This class has no free place left. Choose another.",
+        "already_enrolled": "Already enrolled in this class.",
+        "already_requested": "There is already a request for this class awaiting a reply.",
+        "no_email": "Your account has no email, so the club could not reply to you. Please contact the club."
+      }
     }
   },
   "common": {
@@ -5346,7 +5389,13 @@
       "consentRequired": "You need to agree to send the request."
     },
     "ceilingReached": "The public form received too many requests in a short time ({when}) and turned away those over the limit without telling the sender. It may have been an attack; if you were expecting sign-ups then, reach the families another way.",
-    "noNote": "The request came with no notes."
+    "noNote": "The request came with no notes.",
+    "app": {
+      "wants": "Asks for the class {turma}",
+      "classGone": "Asks for a class that has since been archived",
+      "byExisting": "Asked in the app by {name}, for one of the club's students: Enrol adds them to the class.",
+      "byNew": "Asked in the app by {name}, for a new child."
+    }
   },
   "labResults": {
     "hint": "The monthly analyses by an accredited laboratory, graded against the national reference (NP 4542:2017). A non-compliant result alerts the owner, the admins and maintenance.",

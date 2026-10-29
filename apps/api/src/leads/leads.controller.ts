@@ -189,7 +189,10 @@ export class LeadsController {
     const lead = await readLead(organizationId, id);
     if (lead === null) throw new NotFoundException();
 
-    const input = parseStudent(studentBodyFor(lead), await ageOfMajority(organizationId));
+    // An app request for a child the club has names that child — no student form (POOLSE-121).
+    const input = lead.existingStudent
+      ? null
+      : parseStudent(studentBodyFor(lead), await ageOfMajority(organizationId));
 
     try {
       const outcome = await placeLead(organizationId, id, classGroupId, input, waiting, membershipId);

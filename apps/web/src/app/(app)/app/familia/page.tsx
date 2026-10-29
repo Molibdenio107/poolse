@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { EntryCard, FeeStatus, dayHeading } from './agenda-parts';
 import { RecentLessons } from './feedback';
 import { PushCard } from '../push-card';
+import { UserPlus } from 'lucide-react';
 
 /**
  * The family agenda — POOLSE-90 slice 1 (roadmap 3.3 and 3.6).
@@ -125,6 +126,18 @@ export default async function FamilyAgenda({
           <RecentLessons recent={agenda.recent} names={several && child === undefined ? nameOf : null} />
         </>
       )}
+
+      {/* POOLSE-121: ask the club for a place in a class, for a child or a new one. */}
+      <Link
+        href="/app/familia/inscrever"
+        className="flex min-h-control items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3 text-control font-medium hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        <span className="flex items-center gap-2">
+          <UserPlus className="size-4 text-primary" aria-hidden />
+          {t('app.join.open')}
+        </span>
+        <LinkBusy />
+      </Link>
 
       <PushCard />
     </>

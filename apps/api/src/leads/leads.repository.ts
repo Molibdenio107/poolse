@@ -119,7 +119,8 @@ export interface Lead {
   createdAt: string;
   swimmerFirstName: string;
   swimmerLastName: string;
-  swimmerBirthDate: string;
+  /** Null only on an app request naming a student the club already has. */
+  swimmerBirthDate: string | null;
   swimmerTaxNumber: string | null;
   guardianName: string | null;
   guardianRelationship: string | null;
@@ -142,6 +143,14 @@ export interface Lead {
   trialGroupName: string | null;
   trialTimezone: string | null;
   decidedAt: string | null;
+  /** POOLSE-121: the turma asked for from the app, with its slots for the card. */
+  requestedClassGroupId: string | null;
+  requestedClassName: string | null;
+  requestedClassSlots: { weekday: number; startTime: string }[];
+  /** Who asked from the app; null for the public form. */
+  requestedByName: string | null;
+  /** The request names a student the club already has (an app request). */
+  existingStudent: boolean;
 }
 
 interface LeadRow {
@@ -150,7 +159,7 @@ interface LeadRow {
   created_at: Date;
   swimmer_first_name: string;
   swimmer_last_name: string;
-  swimmer_birth_date: string;
+  swimmer_birth_date: string | null;
   swimmer_tax_number: string | null;
   guardian_name: string | null;
   guardian_relationship: string | null;
@@ -173,6 +182,11 @@ interface LeadRow {
   trial_group_name: string | null;
   trial_timezone: string | null;
   decided_at: Date | null;
+  requested_class_group_id: string | null;
+  requested_class_name: string | null;
+  requested_class_slots: { weekday: number; startTime: string }[] | null;
+  requested_by_name: string | null;
+  existing_student: boolean;
 }
 
 /*
@@ -193,8 +207,25 @@ const LEAD_SELECT = `
          l.student_id, l.trial_session_id,
          cs.starts_at AS trial_starts_at, cg.name AS trial_group_name,
          tf.timezone AS trial_timezone,
-         l.decided_at
+         l.decided_at,
+         l.requested_class_group_id, rg.name AS requested_class_name,
+         (SELECT json_agg(json_build_object('weekday', rs.weekday,
+                                            'startTime', to_char(rs.start_time, 'HH24:MI'))
+                          ORDER BY rs.weekday, rs.start_time)
+            FROM class_schedule rs
+           WHERE rs.organization_id = l.organization_id
+             AND rs.class_group_id = l.requested_class_group_id
+             AND rs.archived_at IS NULL) AS requested_class_slots,
+         nullif(btrim(coalesce(ru.cached_first_name, rm.first_name, '') || ' ' ||
+                      coalesce(ru.cached_last_name, rm.last_name, '')), '') AS requested_by_name,
+         (l.requested_by_membership_id IS NOT NULL AND l.student_id IS NOT NULL
+          AND l.status IN ('new', 'trial_booked')) AS existing_student
     FROM lead l
+    LEFT JOIN class_group rg
+      ON rg.id = l.requested_class_group_id AND rg.organization_id = l.organization_id
+    LEFT JOIN membership rm
+      ON rm.id = l.requested_by_membership_id AND rm.organization_id = l.organization_id
+    LEFT JOIN app_user ru ON ru.id = rm.app_user_id
     LEFT JOIN facility f
       ON f.id = l.facility_id AND f.organization_id = l.organization_id
     LEFT JOIN student_level sl
@@ -236,6 +267,11 @@ function toLead(row: LeadRow): Lead {
     trialGroupName: row.trial_group_name,
     trialTimezone: row.trial_timezone,
     decidedAt: row.decided_at?.toISOString() ?? null,
+    requestedClassGroupId: row.requested_class_group_id,
+    requestedClassName: row.requested_class_name,
+    requestedClassSlots: row.requested_class_slots ?? [],
+    requestedByName: row.requested_by_name,
+    existingStudent: row.existing_student,
   };
 }
 
@@ -382,7 +418,8 @@ export async function placeLead(
   organizationId: string,
   leadId: string,
   groupId: string,
-  input: StudentInput,
+  /** Null when the lead already names its student — an app request (POOLSE-121). */
+  input: StudentInput | null,
   waiting: boolean,
   actorMembershipId: string,
 ): Promise<PlaceOutcome> {
@@ -394,7 +431,13 @@ export async function placeLead(
 
       let studentId: string | null = null;
       let attached = false;
-      if (input.taxNumber !== null) {
+      if (lead.existingStudent && lead.studentId !== null) {
+        // Asked for from the app for a child the club has: that child, never a twin.
+        studentId = lead.studentId;
+        attached = true;
+      } else if (input === null) {
+        throw new Error('A lead with no student needs the student form');
+      } else if (input.taxNumber !== null) {
         const { rows } = await tx.query<{ id: string }>(
           `SELECT id FROM student
             WHERE tax_number = $1 AND archived_at IS NULL`,
@@ -405,7 +448,7 @@ export async function placeLead(
           attached = true;
         }
       }
-      if (studentId === null) {
+      if (studentId === null && input !== null) {
         // A level archived since the form was filled is no preference, not a refusal.
         const level = input.levelId === null ? null : await tx.query(
           'SELECT 1 FROM student_level WHERE id = $1 AND archived_at IS NULL',
@@ -413,8 +456,8 @@ export async function placeLead(
         );
         const levelId = level !== null && level.rows.length > 0 ? input.levelId : null;
         studentId = await insertStudent(tx, organizationId, { ...input, levelId });
-        if (studentId === null) return { ok: false, reason: 'not_found' } as const;
       }
+      if (studentId === null) return { ok: false, reason: 'not_found' } as const;
 
       const placed = await insertEnrollment(tx, organizationId, groupId, studentId, waiting);
       if (placed === 'not_found') {

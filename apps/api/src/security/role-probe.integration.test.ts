@@ -1081,6 +1081,21 @@ test("app mode: a family reads its own agenda and lessons, and nobody else's (PO
     assert.deepEqual((await new AppController().medicalLeave()).leaves, []);
     await refused('GET app/lessons/:id as a stranger', 404, () => new AppController().lesson(fixture.sessionId));
     await refused('GET app/lessons/not-a-uuid', 404, () => new AppController().lesson('not-a-uuid'));
+    // POOLSE-121: nobody to ask for but a new child, and never somebody else's.
+    assert.deepEqual((await new AppController().enrolmentOptions()).people, []);
+    await refused('POST app/enrolment-requests for a stranger', 404, () =>
+      new AppController().requestEnrolment({
+        studentId: fixture.aliceId,
+        classGroupId: NO_SUCH_ID,
+        consent: true,
+      }),
+    );
+  });
+  await as(fixture.instructorId, ['instructor'], async () => {
+    await refused('GET app/enrolment-requests as staff', 403, () => new AppController().enrolmentOptions());
+    await refused('POST app/enrolment-requests as staff', 403, () =>
+      new AppController().requestEnrolment({ studentId: fixture.aliceId, classGroupId: NO_SUCH_ID, consent: true }),
+    );
   });
 
   // A student reads themselves.

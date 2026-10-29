@@ -191,6 +191,30 @@ function LeadCard({
       <p className="text-sm font-medium">{t(`leads.status.${lead.status}`)}</p>
 
       {/*
+        Asked for from the app (POOLSE-121): which turma, and by whom — the
+        reason the request exists. Inscrever starts on that turma.
+      */}
+      {lead.requestedByName !== null && (
+        <div className="flex flex-col gap-1 rounded border border-primary/40 bg-primary/5 p-3 text-sm">
+          <span className="font-medium">
+            {lead.requestedClassName === null
+              ? t('leads.app.classGone')
+              : t('leads.app.wants', { turma: lead.requestedClassName })}
+          </span>
+          {lead.requestedClassSlots.length > 0 && (
+            <span className="text-foreground-muted">
+              {lead.requestedClassSlots.map((slot) => `${t(`weekShort.${slot.weekday}`)} ${slot.startTime}`).join(' · ')}
+            </span>
+          )}
+          <span className="text-foreground-muted">
+            {lead.existingStudent
+              ? t('leads.app.byExisting', { name: lead.requestedByName })
+              : t('leads.app.byNew', { name: lead.requestedByName })}
+          </span>
+        </div>
+      )}
+
+      {/*
         What the family wrote to the club, above the form's facts (Rui,
         29-10-2026): it is the one part they chose to say, and it may change how
         the request is handled. Always shown, so an empty one reads as "nothing
@@ -206,7 +230,9 @@ function LeadCard({
       </div>
 
       <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-        <Row label={t('leads.public.swimmerBirthDate')} value={formatDate(lead.swimmerBirthDate)} />
+        {lead.swimmerBirthDate !== null && (
+          <Row label={t('leads.public.swimmerBirthDate')} value={formatDate(lead.swimmerBirthDate)} />
+        )}
         {lead.swimmerTaxNumber && <Row label={t('leads.public.swimmerTaxNumber')} value={lead.swimmerTaxNumber} />}
         {lead.guardianName && (
           <Row

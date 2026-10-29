@@ -79,6 +79,7 @@ export function TurmaPicker({
   allowFull,
   error,
   onChange,
+  initialValue,
 }: {
   /** The form field the chosen id is posted as. */
   name: string;
@@ -90,11 +91,14 @@ export function TurmaPicker({
   allowFull: boolean;
   error?: string | undefined;
   onChange?: ((id: string) => void) | undefined;
+  /** A turma to start on — the one a family asked for (POOLSE-121). */
+  initialValue?: string | undefined;
 }): React.ReactElement {
   const t = useTranslations();
   const id = useId();
-  const [value, setValue] = useState('');
-  const [open, setOpen] = useState(true);
+  const start = initialValue !== undefined && turmas.some((turma) => turma.id === initialValue) ? initialValue : '';
+  const [value, setValue] = useState(start);
+  const [open, setOpen] = useState(start === '');
   const [query, setQuery] = useState('');
   const [active, setActive] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');

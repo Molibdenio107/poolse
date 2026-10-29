@@ -91,6 +91,25 @@ than creating a second one. The free-text note is never copied onto the student.
 **On the dashboard**, `mgmt.leads` (Owner and Admin) counts the requests waiting and the trials
 booked, and says how long the oldest has waited. It moves up once a family has waited 3 days.
 
+## From the app — POOLSE-121 (29 October 2026)
+
+A logged-in guardian or student asks for a place from the app (*Pedir inscrição numa turma*,
+`/app/familia/inscrever`). It is a `lead` like the public form's, in the same queue.
+
+- **For whom.** One of the reader's own people (themselves on the adult path, or a child they
+  answer for), or a new child — name, birth date and relationship; the reader is the guardian.
+- **Which turma.** Every live turma of the published shared season with a free place (a null
+  ceiling counts as free), grouped by level with the child's own level first. Nobody is enrolled.
+- **What the office sees.** The turma asked for and who asked, at the top of the card. Inscrever
+  starts on that turma. For a child the club has, the lead carries `student_id` from the start and
+  conversion attaches the turma to that student, never a twin; a new child goes through the
+  student form, and the guardian sync links the reader by email.
+- **Refusals.** Somebody else's child is a 404. A turma with no room left is 409
+  `class_unavailable`, a child already in it `already_enrolled`, the same open request twice
+  `already_requested` (a partial unique index), and a reader with no email `no_email`.
+- `GET/POST /app/enrolment-requests`, guardian and student only. The reader's last ten requests
+  and their state show under the form. Buying a free-swim entry in the app is still parked.
+
 ## The address
 
 The address is `organization.slug`, the same one the club has had since signup. **Only the

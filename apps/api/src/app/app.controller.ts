@@ -8,6 +8,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Post,
   Put,
   Query,
 } from '@nestjs/common';
@@ -36,6 +37,14 @@ import { listMedicalLeave, type CertificateFile } from '../students/medical-leav
 import { clubToday } from '../common/club-day.js';
 import { readMyWeek, type WeekClass } from '../dashboard/instructor.repository.js';
 import { readMaintenanceHome, type MaintenanceHome } from './maintenance-home.repository.js';
+import {
+  appRequestOptions,
+  AppRequestRefused,
+  submitAppRequest,
+  type AppRequestInput,
+  type AppRequestOptions,
+} from '../leads/app-requests.repository.js';
+import { LEAD_CONSENT_VERSION } from '../leads/public-leads.controller.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -242,6 +251,97 @@ export class AppController {
       throw error;
     }
   }
+
+  /**
+   * Asking to join a class — POOLSE-121 (Rui, 29-10-2026). The reader's own
+   * people, every turma of the season with a free place, and the requests they
+   * have sent. Nobody is enrolled: the request goes to Pedidos de inscrição.
+   */
+  @Get('enrolment-requests')
+  async enrolmentOptions(): Promise<AppRequestOptions> {
+    requireRole('guardian', 'student');
+    const { organizationId, membershipId } = currentTenant();
+    return appRequestOptions(organizationId, membershipId);
+  }
+
+  @Post('enrolment-requests')
+  async requestEnrolment(@Body() body: Record<string, unknown>): Promise<{ id: string }> {
+    requireRole('guardian', 'student');
+    const { organizationId, membershipId } = currentTenant();
+    const input = parseAppRequest(body);
+    try {
+      return { id: await submitAppRequest(organizationId, membershipId, input) };
+    } catch (error) {
+      if (error instanceof AppRequestRefused) {
+        if (error.code === 'not_yours') throw new NotFoundException('No such student');
+        throw new ConflictException({
+          code: error.code,
+          message: `app.join.refused.${error.code}`,
+          fields: error.code === 'no_email' ? {} : { classGroupId: `app.join.refused.${error.code}` },
+        });
+      }
+      throw error;
+    }
+  }
+}
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The request as sent, or a 400 naming every field that is wrong. */
+export function parseAppRequest(body: Record<string, unknown>, today: string = clubToday()): AppRequestInput {
+  const fields: Record<string, string> = {};
+  const text = (key: string, max: number, required: boolean): string | null => {
+    const raw = body[key];
+    const value = typeof raw === 'string' ? raw.trim() : '';
+    if (value === '') {
+      if (required) fields[key] = 'app.join.error.required';
+      return null;
+    }
+    if (value.length > max) fields[key] = 'app.join.error.tooLong';
+    return value;
+  };
+
+  const classGroupId = body['classGroupId'];
+  if (typeof classGroupId !== 'string' || !UUID.test(classGroupId)) fields['classGroupId'] = 'app.join.error.class';
+
+  const who = body['studentId'];
+  let studentId: string | null = null;
+  let newChild: AppRequestInput['newChild'] = null;
+  if (who === 'new') {
+    const firstName = text('firstName', 100, true);
+    const lastName = text('lastName', 100, true);
+    const relationship = text('relationship', 80, true);
+    const birthDate = text('birthDate', 10, true);
+    if (birthDate !== null) {
+      const parsed = new Date(`${birthDate}T12:00:00Z`);
+      if (!ISO_DAY.test(birthDate) || Number.isNaN(parsed.getTime())
+          || parsed.toISOString().slice(0, 10) !== birthDate || birthDate > today) {
+        fields['birthDate'] = 'app.join.error.birthDate';
+      }
+    }
+    if (firstName && lastName && relationship && birthDate) {
+      newChild = { firstName, lastName, birthDate, relationship };
+    }
+  } else if (typeof who === 'string' && UUID.test(who)) {
+    studentId = who;
+  } else {
+    fields['studentId'] = 'app.join.error.person';
+  }
+
+  const note = text('note', 2000, false);
+  if (body['consent'] !== true) fields['consent'] = 'app.join.error.consent';
+
+  if (Object.keys(fields).length > 0) {
+    throw new BadRequestException({ code: 'invalid', message: 'Check the request', fields });
+  }
+  return {
+    classGroupId: classGroupId as string,
+    studentId,
+    newChild,
+    note,
+    consentTextVersion: LEAD_CONSENT_VERSION,
+    locale: body['locale'] === 'en' ? 'en' : 'pt-PT',
+  };
 }
 
 function parseFeedback(body: Record<string, unknown>): { studentId: string; mood: number; comment: string | null } {
