@@ -9,8 +9,14 @@ schema in `docs/data-model.md`, sequencing in `docs/roadmap.md`.
 A multi-tenant SaaS for managing swimming pools — the businesses that run them (schools,
 municipal pools, hotels, condominiums) and, in a smaller way, individuals who own one.
 
-Scope is pool management specifically. This was briefly widened to a generic
-facility-management product and deliberately narrowed back. Do not re-open it.
+Scope is pool management first, structured for other sports second. A site holds typed
+*recintos* (playing areas): a pool is one kind, a tennis or padel court, a pitch or a gym are
+others, each sold as a paid add-on module (POOLSE-122 to 128, decided 28 October 2026 —
+this reverses the earlier narrowing to pools only, and the reversal is recorded in
+`docs/decisions.md`). Two rules come with it: **the pool is untouched for first go-live**, and
+sports share one calendar, bookings, fees and energy engine filtered by recinto — never a copy
+per sport. Energy costs and the AI dashboards roll up at site level. No non-pool metric or
+screen is built until a paying club asks.
 
 ## Working context
 
