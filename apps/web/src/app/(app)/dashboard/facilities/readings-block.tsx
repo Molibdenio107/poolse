@@ -1,10 +1,18 @@
 import { ChevronRight } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
-import type { BandMap, BandOverride, LabResult, PoolAlert, PoolAnalysis, PoolMetric } from '@/lib/api';
+import type {
+  BandMap,
+  BandOverride,
+  LabResult,
+  PoolAlert,
+  PoolAnalysis,
+  PoolClosure,
+  PoolMetric,
+} from '@/lib/api';
 import { POOL_METRICS } from '@/lib/pool-metrics';
 import { TrendChart } from '@/components/trend-chart';
 import { excursions } from '@/lib/water';
-import { ExportAnalyses, UnsafeWaterNotice } from './water-actions';
+import { ExportAnalyses, UnsafeWaterNotice, WaterBackInRangeNote } from './water-actions';
 import { WaterImport } from './pools/[poolId]/water-import';
 import { AnalysisForm, ArchiveAnalysisButton, SafeRangesForm } from './analysis-forms';
 import { LabResultsSection } from './lab-results';
@@ -12,6 +20,8 @@ import { PageError } from '@/components/page-shell';
 import { formatStamp } from '@/lib/date-format';
 import { formatReading } from '@/lib/pool-metrics';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
+import { Pagination } from '@/components/pagination';
+import { lastPage, PAGE_SIZE, readPage, type Paginated } from '@/lib/pagination';
 
 /**
  * Water quality — round 4, built.
@@ -64,6 +74,8 @@ export async function ReadingsBlock({
   canRecord,
   section,
   from,
+  page,
+  closure,
 }: {
   organizationId: string;
   poolId: string;
@@ -101,6 +113,10 @@ export async function ReadingsBlock({
   section?: string | string[] | undefined;
   /** The page's own `?from=`, kept on every pill so "Voltar" still knows the way. */
   from?: string | undefined;
+  /** `?page=` for Histórico and Laboratório, ten a page like every list (POOLSE-29). */
+  page?: string | undefined;
+  /** What shuts the tank now, so the warning and its aftermath can say so. */
+  closure: PoolClosure | null;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
@@ -151,6 +167,30 @@ export async function ReadingsBlock({
     .filter(([, on]) => on)
     .map(([key]): WaterSection => key);
   const current = pickSection(offered, section, 'latest');
+  const unsafe = latest === undefined ? [] : excursions(latest.values, bands);
+
+  /*
+   * Ten a page, like every list that grows (POOLSE-29; Rui, 29-10-2026). Both
+   * lists arrive whole — the charts need every analysis — so the page is a slice,
+   * and a page past the end shows the last one rather than an empty list.
+   */
+  const windowOf = <T,>(items: T[]): Paginated<T> => {
+    const at = Math.min(readPage(page), lastPage(items.length, PAGE_SIZE));
+    return {
+      items: items.slice((at - 1) * PAGE_SIZE, at * PAGE_SIZE),
+      total: items.length,
+      page: at,
+      limit: PAGE_SIZE,
+    };
+  };
+  const basePath = `/dashboard/facilities/pools/${poolId}`;
+  const pageQuery = (key: WaterSection): Record<string, string | undefined> => ({
+    tab: 'water',
+    section: key,
+    from,
+  });
+  const history = windowOf([...analyses].reverse());
+  const lab = labResults === null ? null : windowOf(labResults);
   const counts: Partial<Record<WaterSection, number>> = {
     history: analyses.length,
     alerts: alerts.length,
@@ -168,8 +208,18 @@ export async function ReadingsBlock({
       */}
       <UnsafeWaterNotice
         poolId={poolId}
-        excursions={latest === undefined ? [] : excursions(latest.values, bands)}
+        excursions={unsafe}
+        closure={closure}
+        recordHref={
+          canRecord ? sectionHref(`/dashboard/facilities/pools/${poolId}`, { tab: 'water', from }, 'record') : null
+        }
       />
+      {unsafe.length === 0 && closure !== null && (
+        <WaterBackInRangeNote
+          closure={closure}
+          closuresHref={`/dashboard/calendar/closures?poolId=${encodeURIComponent(poolId)}`}
+        />
+      )}
 
       <SectionPills
         label={t('facilities.waterSection.nav')}
@@ -263,42 +313,6 @@ export async function ReadingsBlock({
 
       {current === 'history' && (
         <>
-          {/* The record itself. Newest first here — a list is read from the top. */}
-          <ul className="flex flex-col divide-y divide-border rounded border border-border">
-            {[...analyses].reverse().map((analysis) => (
-              <li key={analysis.id} className="flex flex-col gap-1 p-3">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <span className="font-medium">
-                    {formatStamp(new Date(analysis.takenAt))}
-                  </span>
-                  <span className="flex items-center gap-3 text-sm text-foreground-muted">
-                    {analysis.recordedByName}
-                    {canManage && (
-                      <ArchiveAnalysisButton
-                        organizationId={organizationId}
-                        poolId={poolId}
-                        analysisId={analysis.id}
-                      />
-                    )}
-                  </span>
-                </div>
-
-                <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                  {analysis.values.map((value) => (
-                    <span key={value.metric}>
-                      <span className="text-foreground-muted">{labelFor(value.metric)}: </span>
-                      {formatReading(value.value, locale)} {value.unit}
-                    </span>
-                  ))}
-                </span>
-
-                {analysis.notes !== null && analysis.notes !== '' && (
-                  <span className="text-sm text-foreground-muted">{analysis.notes}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-
           {/*
             The report opens in its own tab and prints. Not a link styled as a
             button on the page it reports on — an operator sending a lab report
@@ -334,6 +348,44 @@ export async function ReadingsBlock({
               }}
             />
           </div>
+
+          {/* The record itself. Newest first here — a list is read from the top. */}
+          <ul className="flex flex-col divide-y divide-border rounded border border-border">
+            {history.items.map((analysis) => (
+              <li key={analysis.id} className="flex flex-col gap-1 p-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <span className="font-medium">
+                    {formatStamp(new Date(analysis.takenAt))}
+                  </span>
+                  <span className="flex items-center gap-3 text-sm text-foreground-muted">
+                    {analysis.recordedByName}
+                    {canManage && (
+                      <ArchiveAnalysisButton
+                        organizationId={organizationId}
+                        poolId={poolId}
+                        analysisId={analysis.id}
+                      />
+                    )}
+                  </span>
+                </div>
+
+                <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  {analysis.values.map((value) => (
+                    <span key={value.metric}>
+                      <span className="text-foreground-muted">{labelFor(value.metric)}: </span>
+                      {formatReading(value.value, locale)} {value.unit}
+                    </span>
+                  ))}
+                </span>
+
+                {analysis.notes !== null && analysis.notes !== '' && (
+                  <span className="text-sm text-foreground-muted">{analysis.notes}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          <Pagination page={history} basePath={basePath} query={pageQuery('history')} />
         </>
       )}
 
@@ -421,13 +473,20 @@ export async function ReadingsBlock({
 
       {current === 'lab' && labFailed && <PageError message={t('detailTabs.loadFailed')} />}
 
-      {current === 'lab' && labResults !== null && (
+      {current === 'lab' && lab !== null && (
         <LabResultsSection
           poolId={poolId}
-          results={labResults}
+          results={lab.items}
+          total={lab.total}
           canRecord={canRecord || canManage}
           canArchive={canManage}
           emailConfigured={emailConfigured}
+          /*
+            On top since 29-10-2026 (Rui), as Histórico's buttons are: the way in
+            comes before the list it adds to.
+          */
+          importer={canManage ? <WaterImport poolId={poolId} canManage={canManage} /> : null}
+          pagination={<Pagination page={lab} basePath={basePath} query={pageQuery('lab')} />}
         />
       )}
 
@@ -441,7 +500,6 @@ export async function ReadingsBlock({
         The wizard renders nothing for somebody who may not write, so a
         read-only visitor sees the results and no control the API would refuse.
       */}
-      {current === 'lab' && canManage && <WaterImport poolId={poolId} canManage={canManage} />}
 
       {/*
         What this tank's water is supposed to look like — slice 4.2, second half.

@@ -3,8 +3,15 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
-/** Matches `details::details-content` in globals.css, so both kinds open alike. */
-const DURATION_MS = 220;
+/**
+ * One timing for every disclosure in the app — this and `DetailsAnimator`, which
+ * moves every native `<details>`. 29-10-2026 (Rui): 220 ms ease-out still read as
+ * a snap, so it is slower, and decelerates hard at the end so it settles rather
+ * than stops.
+ */
+export const REVEAL_MS = 380;
+export const REVEAL_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
+const DURATION_MS = REVEAL_MS;
 
 /**
  * A section that opens and closes smoothly — Rui, 28-10-2026.
@@ -73,7 +80,7 @@ export function Reveal({
   return (
     <div
       className={cn(
-        "grid transition-[grid-template-rows] duration-[220ms] ease-out motion-reduce:transition-none",
+        "grid transition-[grid-template-rows] duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
         expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
       )}
       // While it closes it is still in the DOM; nothing in it should take focus.
@@ -81,7 +88,8 @@ export function Reveal({
     >
       <div
         className={cn(
-          "min-h-0",
+          "min-h-0 transition-opacity duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          expanded ? "opacity-100" : "opacity-0",
           settled ? "overflow-visible" : "overflow-hidden",
         )}
       >

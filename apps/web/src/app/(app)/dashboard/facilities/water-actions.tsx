@@ -2,8 +2,9 @@
 
 import { FromLink } from '@/components/from-link';
 import { useLocale, useTranslations } from 'next-intl';
-import { AlertTriangle } from 'lucide-react';
-import type { PoolAnalysis } from '@/lib/api';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+import type { PoolAnalysis, PoolClosure } from '@/lib/api';
+import { PoolClosureNote } from '@/components/pool-closure-note';
 import type { Excursion } from '@/lib/water';
 import { excursionText } from '@/lib/excursion-text';
 import { toCsv } from '@/lib/csv';
@@ -43,9 +44,15 @@ import { today } from '@/lib/dates';
 export function UnsafeWaterNotice({
   poolId,
   excursions,
+  closure,
+  recordHref,
 }: {
   poolId: string;
   excursions: Excursion[];
+  /** What shuts the tank now — once it is closed, the notice says so instead of offering to. */
+  closure: PoolClosure | null;
+  /** Registar's address, for the roles that may type a reading; null hides the link. */
+  recordHref: string | null;
 }): React.ReactElement | null {
   const t = useTranslations();
   const locale = useLocale();
@@ -95,23 +102,81 @@ export function UnsafeWaterNotice({
         </div>
       </div>
 
-      <FromLink
-        href={target}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-warning/60 transition-colors hover:bg-warning/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-      >
-        {t('facilities.closePool')}
-      </FromLink>
+      {/*
+        Already shut (29-10-2026): say until when, rather than offering to close
+        a pool that is closed.
+      */}
+      {closure !== null && <PoolClosureNote closure={closure} />}
+
+      <div className="flex flex-wrap gap-2">
+        {recordHref !== null && (
+          <FromLink
+            href={recordHref}
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-warning/60 transition-colors hover:bg-warning/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('facilities.recordNewAnalysis')}
+          </FromLink>
+        )}
+        {closure === null && (
+          <FromLink
+            href={target}
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-warning/60 transition-colors hover:bg-warning/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('facilities.closePool')}
+          </FromLink>
+        )}
+      </div>
 
       {/*
-        What the link is about to do, as visible text. "Fechar temporariamente"
-        on its own reads as a button that shuts the pool now; this says it opens
-        a calendar and that the days are still the operator's to pick.
+        How the warning ends, as visible text (Rui, 29-10-2026): it is derived
+        from the latest analysis, so a new one inside the limits clears it —
+        nothing is "marked as fixed". And what the close link does: it opens a
+        calendar, and the days are still the operator's to pick.
       */}
-      <p className="text-sm text-foreground-muted">{t('facilities.closePoolHint')}</p>
+      <p className="text-sm text-foreground-muted">
+        {t('facilities.waterClearsWhen')}
+        {closure === null && <> {t('facilities.closePoolHint')}</>}
+      </p>
     </section>
   );
 }
 
+
+/**
+ * The water is back in range and the tank is still shut — 29-10-2026.
+ *
+ * The warning has gone (a good analysis cleared it), so this is the other half of
+ * the procedure: a closure ends on its own last day, and opening earlier is
+ * lifting it in Encerramentos. Shown for any closure, since only the operator
+ * knows whether it was the water that shut it.
+ */
+export function WaterBackInRangeNote({
+  closure,
+  closuresHref,
+}: {
+  closure: PoolClosure;
+  closuresHref: string;
+}): React.ReactElement {
+  const t = useTranslations();
+  return (
+    <section className="flex flex-col gap-3 rounded border border-border bg-surface-muted p-4">
+      <div className="flex items-start gap-2">
+        <CheckCircle2 aria-hidden className="mt-0.5 size-4 shrink-0 text-success" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <h3 className="text-sm font-medium">{t('facilities.waterBackInRange')}</h3>
+          <PoolClosureNote closure={closure} />
+          <p className="text-sm text-foreground-muted">{t('facilities.reopenHint')}</p>
+        </div>
+      </div>
+      <FromLink
+        href={closuresHref}
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        {t('facilities.openClosures')}
+      </FromLink>
+    </section>
+  );
+}
 
 /**
  * The analyses as a spreadsheet, built in the browser from what is on the page.

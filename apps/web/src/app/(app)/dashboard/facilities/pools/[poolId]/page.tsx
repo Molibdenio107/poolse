@@ -38,12 +38,17 @@ export default async function PoolPage({
   searchParams,
 }: {
   params: Promise<{ poolId: string }>;
-  searchParams: Promise<{ from?: string; tab?: string | string[]; section?: string | string[] }>;
+  searchParams: Promise<{
+    from?: string;
+    tab?: string | string[];
+    section?: string | string[];
+    page?: string;
+  }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const format = await getFormatter();
   const { poolId } = await params;
-  const { from, tab, section } = await searchParams;
+  const { from, tab, section, page } = await searchParams;
 
   /*
    * A pool is reached from the site list and from the site itself, and those are
@@ -240,6 +245,8 @@ export default async function PoolPage({
                 canRecord={loaded.canRecordAnalysis}
                 section={section}
                 from={from}
+                page={page}
+                closure={loaded.closure ?? null}
               />
             </section>
             );

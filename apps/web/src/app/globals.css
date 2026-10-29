@@ -572,24 +572,11 @@
 }
 
 /*
- * A disclosure opens smoothly — Rui, 28-10-2026: a card that springs open shoves
- * everything under it at once. A native `<details>` animates its content's height
- * here; the hand-built ones use `Reveal` (components/ui/reveal.tsx) for the same
- * curve. Where a browser cannot animate to `auto` it opens instantly, as before.
+ * A disclosure opens smoothly — Rui, 28-10-2026, slower since 29-10-2026. A
+ * native `<details>` is animated by `DetailsAnimator` (components/), which works
+ * in Safari too — the `::details-content` transition that lived here moved only in
+ * Chromium. The hand-built ones use `Reveal`, with the same duration and curve.
  */
-:root {
-  interpolate-size: allow-keywords;
-}
-details::details-content {
-  block-size: 0;
-  overflow-y: clip;
-  transition:
-    block-size 220ms ease-out,
-    content-visibility 220ms allow-discrete;
-}
-details[open]::details-content {
-  block-size: auto;
-}
 
 /*
  * A warning that needs attention pulses three times as it appears and then keeps
@@ -639,9 +626,6 @@ details[open]::details-content {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  details::details-content {
-    transition: none;
-  }
   .attention {
     animation: none;
   }

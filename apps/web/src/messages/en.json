@@ -1333,7 +1333,12 @@
     "error": {
       "sportInvalid": "Unknown sport.",
       "poolIsAPool": "A pool is added as a pool."
-    }
+    },
+    "recordNewAnalysis": "Record a new analysis",
+    "waterClearsWhen": "The warning clears by itself once the latest analysis is within the limits: after correcting the water, record a new analysis.",
+    "waterBackInRange": "The water is back within the limits",
+    "reopenHint": "The latest analysis is within the limits, but the pool is still closed. If it was closed because of the water, lift the closure in Closures to reopen it before that date.",
+    "openClosures": "Open Closures"
   },
   "classes": {
     "colour": "Class colour",

@@ -274,11 +274,14 @@ export async function findPool(
       min_depth_m: number | null;
       max_capacity: number | null;
       photos: Photo[] | null;
+      closure: PoolClosure | null;
     }>(
       `
       SELECT p.id,
              p.facility_id,
              f.name AS facility_name,
+             -- What shuts it now: the water tab says so beside an out-of-range warning.
+             ${POOL_CLOSURE_TODAY} AS closure,
              p.name,
              p.kind,
              p.use::text AS use,
@@ -335,6 +338,7 @@ export async function findPool(
       minDepthM: row.min_depth_m,
       maxCapacity: row.max_capacity,
       photos: row.photos ?? [],
+      closure: row.closure,
     };
   });
 }

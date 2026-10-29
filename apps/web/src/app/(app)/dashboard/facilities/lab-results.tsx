@@ -18,15 +18,24 @@ import { ArchiveLabResultButton, LabResultForm } from './lab-result-form';
 export async function LabResultsSection({
   poolId,
   results,
+  total,
   canRecord,
   canArchive,
   emailConfigured,
+  importer,
+  pagination,
 }: {
   poolId: string;
+  /** This page's results — ten at a time since 29-10-2026. */
   results: LabResult[];
+  /** Every result, across the pages, so "none yet" is about the pool. */
+  total: number;
   canRecord: boolean;
   canArchive: boolean;
   emailConfigured: boolean;
+  /** The report import, on top of the list (Rui, 29-10-2026). */
+  importer: React.ReactNode;
+  pagination: React.ReactNode;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
@@ -36,7 +45,11 @@ export async function LabResultsSection({
     <div className="flex flex-col gap-5">
       <p className="text-sm text-foreground-muted">{t('labResults.hint')}</p>
 
-      {results.length === 0 ? (
+      {/* The ways in come first, the record after (Rui, 29-10-2026). */}
+      {importer}
+      {canRecord && <LabResultForm poolId={poolId} />}
+
+      {total === 0 ? (
         <p className="rounded border border-dashed border-border p-4 text-sm text-foreground-muted">
           {t('labResults.empty')}
         </p>
@@ -123,7 +136,7 @@ export async function LabResultsSection({
         </ul>
       )}
 
-      {canRecord && <LabResultForm poolId={poolId} />}
+      {pagination}
     </div>
   );
 }

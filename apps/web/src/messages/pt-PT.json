@@ -1333,7 +1333,12 @@
     "error": {
       "sportInvalid": "Desporto desconhecido.",
       "poolIsAPool": "Uma piscina adiciona-se como piscina."
-    }
+    },
+    "recordNewAnalysis": "Registar nova análise",
+    "waterClearsWhen": "O aviso desaparece sozinho quando a análise mais recente estiver dentro dos limites: depois de corrigir a água, registe uma nova análise.",
+    "waterBackInRange": "A água voltou aos limites",
+    "reopenHint": "A última análise está dentro dos limites, mas a piscina continua encerrada. Se foi encerrada por causa da água, levante o encerramento em Encerramentos para a reabrir antes da data.",
+    "openClosures": "Abrir Encerramentos"
   },
   "classes": {
     "colour": "Cor da turma",

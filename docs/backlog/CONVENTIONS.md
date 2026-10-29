@@ -15,7 +15,7 @@ them as acceptance criteria on all work, and as the first thing to check in a QA
 - **Audit.** Anything destructive, permission-sensitive or GDPR-relevant records actor, subject and timestamp.
 - **Soft delete.** History is never destroyed. Removals hide; they do not erase.
 - **Excel import parity.** Any field added to a form is considered for the import/export mapping in the same ticket, not later.
-- **Lists are paginated at 15, and the exemptions are written down** — POOLSE-29. See below.
+- **Lists are paginated at 10, and the exemptions are written down** — POOLSE-29. See below.
 
 ## Which lists paginate, and which do not
 
@@ -24,7 +24,7 @@ One rule, so a new list answers this without a meeting:
 > **A list is exempt only if its length is fixed by the data model or by a fixed window.
 > Anything whose length grows as the club takes on more people is paginated.**
 
-Page size is `PAGE_SIZE` — 15 — in `apps/api/src/common/pagination.ts` and
+Page size is `PAGE_SIZE` — 10 since the 28-10-2026 feedback round — in `apps/api/src/common/pagination.ts` and
 `apps/web/src/lib/pagination.ts`. The control hides itself when everything fits, so an
 exempt list and a short list look identical to a reader; the difference is whether the
 query carries a window.
