@@ -1636,7 +1636,12 @@ export type ImportProblemCode =
   | 'tooLong'
   | 'badDate'
   | 'futureDate'
-  | 'ancientDate';
+  | 'ancientDate'
+  /** POOLSE-131: a value the identity column cannot hold. */
+  | 'badPostalCode'
+  | 'badSnsNumber'
+  | 'badNationality'
+  | 'badMaritalStatus';
 
 /** What is said out loud and imported anyway. */
 export type ImportWarningCode =
@@ -1647,7 +1652,15 @@ export type ImportWarningCode =
 
 /** A blank on an existing student that this row would fill in. */
 export interface ImportUpdate {
-  field: 'birthDate' | 'levelId' | 'contactEmail' | 'contactPhone' | 'taxNumber' | 'notes';
+  field:
+    | 'birthDate'
+    | 'levelId'
+    | 'contactEmail'
+    | 'contactPhone'
+    | 'taxNumber'
+    | 'notes'
+    | 'federationLicence'
+    | Exclude<keyof StudentIdentity, 'snsRecorded'>;
   value: string;
 }
 
@@ -2825,6 +2838,8 @@ export interface RegisterEntry {
    * swam" is the question that matters.
    */
   insured: boolean;
+  /** POOLSE-133: the exame médico on the class's day — a warning, never a gate. */
+  examState?: 'valid' | 'expired' | 'none';
   /** Null until somebody marks them — not the same as `absent`. */
   status: AttendanceStatus | null;
   note: string | null;

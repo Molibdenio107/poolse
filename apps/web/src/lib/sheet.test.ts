@@ -379,3 +379,25 @@ test('looksNumeric is the one predicate four importers were each writing', () =>
   assert.equal(looksNumeric(['email']), false);
   assert.equal(looksNumeric([]), false);
 });
+
+/**
+ * POOLSE-131 — the identity columns claim their own headers and nobody else's.
+ */
+test('identity headers map, and never take the name or a phone', () => {
+  const { mapping } = matchColumns({
+    headers: ['Nome', 'Telefone', 'Nome do pai', 'Nome da mãe', 'Telefone da mãe', 'Morada', 'Cód. postal', 'Nº utente', 'Naturalidade'],
+    rows: [
+      ['Rita Nunes', '912345678', 'Rui Nunes', 'Ana Nunes', '934567890', 'Rua A, 1', '4000-123', '123456789', 'Porto'],
+    ],
+  });
+
+  assert.equal(mapping.fullName, 0);
+  assert.equal(mapping.contactPhone, 1);
+  assert.equal(mapping.parentOneName, 2);
+  assert.equal(mapping.parentTwoName, 3);
+  assert.notEqual(mapping.parentTwoName, 4, 'a column of phone numbers is not a name');
+  assert.equal(mapping.addressLine, 5);
+  assert.equal(mapping.postalCode, 6);
+  assert.equal(mapping.snsNumber, 7);
+  assert.equal(mapping.birthplace, 8);
+});

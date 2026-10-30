@@ -49,6 +49,18 @@ export const IMPORT_FIELDS = [
   'federationLicence',
   'gender',
   'isPaid',
+  // Address and identity — POOLSE-131, all optional.
+  'addressLine',
+  'locality',
+  'postalCode',
+  'parentOneName',
+  'parentTwoName',
+  'maritalStatus',
+  'profession',
+  'education',
+  'birthplace',
+  'nationality',
+  'snsNumber',
 ] as const;
 
 export type ImportField = (typeof IMPORT_FIELDS)[number];
@@ -95,6 +107,17 @@ export const EMPTY_MAPPING: Mapping = {
   federationLicence: null,
   gender: null,
   isPaid: null,
+  addressLine: null,
+  locality: null,
+  postalCode: null,
+  parentOneName: null,
+  parentTwoName: null,
+  maritalStatus: null,
+  profession: null,
+  education: null,
+  birthplace: null,
+  nationality: null,
+  snsNumber: null,
 };
 
 /**
@@ -314,6 +337,37 @@ const SYNONYMS: [ImportField, string[]][] = [
   ['firstName', ['primeiro nome', 'nome proprio', 'first name', 'given name', 'forename']],
   ['lastName', ['apelido', 'apelidos', 'ultimo nome', 'last name', 'surname', 'family name']],
   ['fullName', ['nome completo', 'nome do aluno', 'nome', 'aluno', 'atleta', 'full name', 'name', 'student']],
+  /*
+   * Address and identity — POOLSE-131.
+   *
+   * Last, so that on a tie (an abbreviation scores alike for two fields) the
+   * fields above keep their column: the scores are sorted stably. None of these
+   * carries a bare "nome" or "telefone", and the filiação ones name the parent
+   * outright ("nome do pai") so the exact match outscores `fullName`'s 'nome'.
+   */
+  ['addressLine', ['morada', 'morada do aluno', 'endereco', 'residencia', 'address', 'street address']],
+  ['locality', ['localidade', 'cidade', 'concelho', 'town', 'city', 'locality']],
+  ['postalCode', ['codigo postal', 'cod postal', 'cp', 'postal code', 'postcode', 'zip code', 'zip']],
+  [
+    'parentOneName',
+    ['filiacao 1', 'filiacao', 'filho a de', 'filho de', 'nome do pai', 'pai', 'parent 1', 'father', 'father s name'],
+  ],
+  [
+    'parentTwoName',
+    ['filiacao 2', 'e de', 'nome da mae', 'mae', 'parent 2', 'mother', 'mother s name'],
+  ],
+  ['maritalStatus', ['estado civil', 'marital status', 'civil status']],
+  ['profession', ['profissao', 'ocupacao', 'profession', 'occupation', 'job']],
+  [
+    'education',
+    ['habilitacoes literarias', 'habilitacoes', 'escolaridade', 'education', 'qualifications'],
+  ],
+  ['birthplace', ['naturalidade', 'local de nascimento', 'terra natal', 'place of birth', 'birthplace']],
+  ['nationality', ['nacionalidade', 'nationality', 'citizenship']],
+  [
+    'snsNumber',
+    ['n de utente sns', 'n de utente', 'numero de utente', 'n utente', 'utente', 'sns', 'sns number', 'nhs number'],
+  ],
 ];
 
 /**
@@ -508,7 +562,23 @@ const EXPECTED_SHAPE: Partial<Record<ImportField, (looks: string[]) => boolean>>
   guardianPhone: (looks) => looks.some((shape) => /^(9|10|11|12|13) digits$/.test(shape)),
   taxNumber: (looks) => looks.includes('9 digits'),
   guardianTaxNumber: (looks) => looks.includes('9 digits'),
+  /*
+   * POOLSE-131. Words, never a phone, an email or a date: "Telefone da mãe"
+   * contains 'mae' and must not become the mother's name.
+   */
+  addressLine: (looks) => looksLikeWords(looks),
+  locality: (looks) => looksLikeWords(looks),
+  parentOneName: (looks) => looksLikeWords(looks),
+  parentTwoName: (looks) => looksLikeWords(looks),
+  profession: (looks) => looksLikeWords(looks),
+  education: (looks) => looksLikeWords(looks),
+  birthplace: (looks) => looksLikeWords(looks),
+  snsNumber: (looks) => looks.includes('9 digits'),
 };
+
+function looksLikeWords(looks: string[]): boolean {
+  return !looks.some((shape) => shape === 'email' || shape === 'date' || /^\d+ digits$/.test(shape));
+}
 
 const tokens = (value: string): string[] => key(value).split(' ').filter(Boolean);
 
@@ -770,7 +840,36 @@ export const EXPORT_FIELDS: ImportField[] = [
   'federationLicence',
   'gender',
   'isPaid',
+  'addressLine',
+  'locality',
+  'postalCode',
+  'parentOneName',
+  'parentTwoName',
+  'maritalStatus',
+  'profession',
+  'education',
+  'birthplace',
+  'nationality',
+  'snsNumber',
 ];
+
+/**
+ * Estado civil as the export writes it — POOLSE-131.
+ *
+ * The Portuguese word in both locales, the gender column's precedent
+ * ("Masculino"): the importer reads it back whichever language the file was
+ * exported in, and `import.test.ts` on the API pins these exact words.
+ */
+export const MARITAL_EXPORT_WORD: Record<
+  'single' | 'married' | 'civil_union' | 'divorced' | 'widowed',
+  string
+> = {
+  single: 'Solteiro/a',
+  married: 'Casado/a',
+  civil_union: 'União de facto',
+  divorced: 'Divorciado/a',
+  widowed: 'Viúvo/a',
+};
 
 /** Whether enough is mapped to mean anything: a name, in one form or the other. */
 export function hasName(mapping: Mapping): boolean {

@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Student } from '@/lib/api';
 import { EXPORT_FIELDS, type ImportField } from '@/lib/sheet';
 import { formatDate } from '@/lib/date-format';
+import { countryName } from '@/lib/countries';
 import { printableResponse } from '@/lib/print-table';
 import { rowFor, studentsCsv, studentsWorkbook } from './write-sheet';
 import { today as clubToday } from '@/lib/dates';
@@ -138,6 +139,11 @@ export async function GET(request: Request): Promise<Response> {
             : t(student.gender === 'male' ? 'students.genderMale' : 'students.genderFemale'),
         );
         set('isSocio', student.isSocio ? t('export.pdf.yes') : '');
+        // POOLSE-131: on paper the estado civil and the country in words.
+        const marital = student.identity?.maritalStatus ?? null;
+        set('maritalStatus', marital === null ? '' : t(`students.identity.marital.${marital}`));
+        const country = student.identity?.nationality ?? null;
+        set('nationality', country === null ? '' : countryName(country, locale));
         set(
           'isPaid',
           student.paymentState === 'paid'

@@ -21,6 +21,7 @@ import {
   identityChanges,
   readIdentity,
   writeIdentity,
+  IDENTITY_COLUMNS,
   type StudentIdentity,
 } from './identity.js';
 import { HAS_UNINVITED } from './family-invitations.repository.js';
@@ -1166,6 +1167,8 @@ export interface StudentBlanks {
   taxNumber: string | null;
   notes: string | null;
   federationLicence: string | null;
+  /** POOLSE-131: identity fields to fill where empty. Named in the audit, never valued. */
+  identity?: Partial<Record<keyof StudentIdentity, string | null>>;
 }
 
 export async function fillStudentBlanks(
@@ -1176,6 +1179,19 @@ export async function fillStudentBlanks(
   // The level is the one filled field an entry may value — POOLSE-80.
   const levelBefore = (await lockStudentFields(tx, studentId))?.levelId ?? null;
 
+  // POOLSE-131: each identity column given a value, coalesced like the rest.
+  const identityFills = IDENTITY_COLUMNS.filter(([field]) => {
+    const value = blanks.identity?.[field];
+    return typeof value === 'string' && value.trim() !== '';
+  }).map(([field, column], at) => {
+    const param = `$${9 + at}${column === 'marital_status' ? '::marital_status' : ''}`;
+    return { field, value: blanks.identity![field]!, set: `${column} = coalesce(${column}, ${param})`, when: `(${column} IS NULL)` };
+  });
+  const identitySets = identityFills.map((fill) => `,
+            ${fill.set}`).join('');
+  const identityWhen = identityFills.map((fill) => `
+          OR ${fill.when}`).join('');
+
   const { rows } = await tx.query<{ id: string; level_id: string | null }>(
     `UPDATE student
         SET birth_date    = coalesce(birth_date, $2::date),
@@ -1184,7 +1200,7 @@ export async function fillStudentBlanks(
             contact_phone = coalesce(contact_phone, nullif(btrim($5), '')),
             tax_number    = coalesce(tax_number, nullif(btrim($6), '')),
             notes         = coalesce(notes, nullif(btrim($7), '')),
-            federation_licence = coalesce(federation_licence, nullif(btrim($8), ''))
+            federation_licence = coalesce(federation_licence, nullif(btrim($8), ''))${identitySets}
       WHERE id = $1 AND archived_at IS NULL
         /*
          * Nothing to do is not a write. Without this an import of an unchanged
@@ -1198,7 +1214,7 @@ export async function fillStudentBlanks(
           OR (contact_phone IS NULL AND nullif(btrim($5), '') IS NOT NULL)
           OR (tax_number IS NULL AND nullif(btrim($6), '') IS NOT NULL)
           OR (notes IS NULL AND nullif(btrim($7), '') IS NOT NULL)
-          OR (federation_licence IS NULL AND nullif(btrim($8), '') IS NOT NULL)
+          OR (federation_licence IS NULL AND nullif(btrim($8), '') IS NOT NULL)${identityWhen}
         )
     RETURNING id, level_id`,
     [
@@ -1210,6 +1226,7 @@ export async function fillStudentBlanks(
       blanks.taxNumber,
       blanks.notes,
       blanks.federationLicence,
+      ...identityFills.map((fill) => fill.value),
     ],
   );
 
@@ -1222,9 +1239,12 @@ export async function fillStudentBlanks(
       // Which fields, not what was in them: an audit entry is readable by every
       // admin and a child's telephone number does not belong in it twice.
       data: {
-        fields: Object.entries(blanks)
-          .filter(([, value]) => value !== null && String(value).trim() !== '')
-          .map(([field]) => field),
+        fields: [
+          ...Object.entries(blanks)
+            .filter(([field, value]) => field !== 'identity' && value !== null && String(value).trim() !== '')
+            .map(([field]) => field),
+          ...identityFills.map((fill) => fill.field),
+        ],
         ...(rows[0]!.level_id !== levelBefore
           ? { before: { levelId: levelBefore }, after: { levelId: rows[0]!.level_id }, withheld: [] }
           : {}),

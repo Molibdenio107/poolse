@@ -83,6 +83,17 @@ const FIELD_ORDER: ImportField[] = [
   'federationLicence',
   'gender',
   'isPaid',
+  'addressLine',
+  'locality',
+  'postalCode',
+  'parentOneName',
+  'parentTwoName',
+  'maritalStatus',
+  'profession',
+  'education',
+  'birthplace',
+  'nationality',
+  'snsNumber',
 ];
 
 function Problem({ errorKey, detail }: { errorKey?: string; detail?: string }): React.ReactElement | null {

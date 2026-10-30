@@ -47,6 +47,9 @@ const COLUMNS = [
 
 export const IDENTITY_FIELDS = COLUMNS.map(([field]) => field);
 
+/** The same pairs, for a statement that writes some of them (the import's blanks). */
+export const IDENTITY_COLUMNS: readonly (readonly [Exclude<keyof StudentIdentity, 'snsRecorded'>, string])[] = COLUMNS;
+
 /** The group as one jsonb column, for a SELECT over `student` aliased `s`. */
 export const IDENTITY_SELECT = (s: string): string =>
   `jsonb_build_object(${COLUMNS.map(([field, column]) =>

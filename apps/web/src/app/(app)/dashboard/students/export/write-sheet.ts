@@ -1,7 +1,7 @@
 import 'server-only';
 import ExcelJS from 'exceljs';
 import type { Student } from '@/lib/api';
-import { EXPORT_FIELDS, type ImportField } from '@/lib/sheet';
+import { EXPORT_FIELDS, MARITAL_EXPORT_WORD, type ImportField } from '@/lib/sheet';
 import { toCsv } from '@/lib/csv';
 
 /**
@@ -39,6 +39,7 @@ export function rowFor(student: Student): string[] {
    * remains the place where a student's other guardians live.
    */
   const guardian = student.guardians[0];
+  const identity = student.identity;
 
   const values: Record<ImportField, string> = {
     // Never written: the parts are exported instead, so nothing is guessed on
@@ -75,6 +76,25 @@ export function rowFor(student: Student): string[] {
       student.gender === null ? '' : student.gender === 'male' ? 'Masculino' : 'Feminino',
     isPaid:
       student.paymentState === 'paid' ? 'Sim' : student.paymentState === 'none' ? '' : 'Não',
+    /*
+     * Address and identity — POOLSE-131.
+     *
+     * The nationality is its ISO code ("PT") and the estado civil the
+     * Portuguese word: both read back the same whichever language the file was
+     * exported in. The SNS number reaches only owner and admin, who are the
+     * only ones this export answers.
+     */
+    addressLine: identity?.addressLine ?? '',
+    locality: identity?.locality ?? '',
+    postalCode: identity?.postalCode ?? '',
+    parentOneName: identity?.parentOneName ?? '',
+    parentTwoName: identity?.parentTwoName ?? '',
+    maritalStatus: identity?.maritalStatus ? MARITAL_EXPORT_WORD[identity.maritalStatus] : '',
+    profession: identity?.profession ?? '',
+    education: identity?.education ?? '',
+    birthplace: identity?.birthplace ?? '',
+    nationality: identity?.nationality ?? '',
+    snsNumber: identity?.snsNumber ?? '',
   };
 
   return EXPORT_FIELDS.map((field) => values[field]);

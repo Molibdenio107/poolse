@@ -2,7 +2,9 @@ import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { displayName } from '../people/names.js';
 import { fillStudentBlanks, insertStudent } from './students.repository.js';
+import { IDENTITY_SELECT, type StudentIdentity } from './identity.js';
 import {
+  IDENTITY_IMPORT_FIELDS,
   normaliseKey,
   validateImportRows,
   type ExistingStudent,
@@ -104,12 +106,14 @@ async function existingStudents(tx: Tx): Promise<ExistingStudent[]> {
     contact_phone: string | null;
     notes: string | null;
     federation_licence: string | null;
+    identity: StudentIdentity;
   }>(
     `SELECT s.id, s.first_name, s.last_name,
             to_char(s.birth_date, 'YYYY-MM-DD') AS birth_date,
             s.tax_number, s.level_id,
             s.contact_email::text AS contact_email, s.contact_phone, s.notes,
             s.federation_licence,
+            ${IDENTITY_SELECT('s')} AS identity,
             ${displayName('s')} AS display_name
        FROM student s
       WHERE s.archived_at IS NULL`,
@@ -128,6 +132,7 @@ async function existingStudents(tx: Tx): Promise<ExistingStudent[]> {
     contactPhone: row.contact_phone,
     notes: row.notes,
     federationLicence: row.federation_licence,
+    identity: row.identity,
   }));
 }
 
@@ -281,6 +286,8 @@ export async function runImport(
         // Whatever the sheet said, and null when it said nothing. Never guessed
         // from a first name — that is a guess with a person's identity in it.
         gender: row.gender,
+        // POOLSE-131: undefined when the row carried none of it.
+        ...(row.identity === null ? {} : { identity: row.identity }),
         guardians:
           row.guardian === null
             ? []
@@ -414,6 +421,12 @@ export async function runImport(
         notes: row.updates.find((update) => update.field === 'notes')?.value ?? null,
         federationLicence:
           row.updates.find((update) => update.field === 'federationLicence')?.value ?? null,
+        // POOLSE-131: only the identity fields the preview found empty on file.
+        identity: Object.fromEntries(
+          row.updates
+            .filter((update) => (IDENTITY_IMPORT_FIELDS as readonly string[]).includes(update.field))
+            .map((update) => [update.field, update.value]),
+        ),
       });
       if (filled) updated += 1;
     }

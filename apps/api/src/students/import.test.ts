@@ -59,6 +59,7 @@ function existing(overrides: Partial<ExistingStudent> & { id: string }): Existin
     contactPhone: null,
     notes: null,
     federationLicence: null,
+    identity: null,
     ...overrides,
   };
 }
@@ -548,4 +549,130 @@ test('a student NIF has no age rule — a minor may carry one', () => {
 
   assert.equal(rows[0]?.importable, true);
   assert.equal(rows[0]?.taxNumber, '234567891');
+});
+
+/**
+ * POOLSE-131 — the address and identity columns.
+ *
+ * What the export writes (an ISO country code, the Portuguese marital word) and
+ * what a club's own file says ("Portugal", "Casada", "4000 123 Porto") must all
+ * resolve to the one stored value; anything the column cannot hold refuses the
+ * row and quotes the cell back.
+ */
+test('identity cells are read the way a club writes them', () => {
+  const { rows } = validate([
+    {
+      ...ADULT,
+      addressLine: '  Rua  das Flores, 12 ',
+      postalCode: '4000 123 Porto',
+      maritalStatus: 'Casada',
+      nationality: 'Portugal',
+      snsNumber: '123 456 789',
+      parentOneName: 'Ana Nunes',
+    },
+  ]);
+
+  assert.equal(rows[0]?.importable, true);
+  assert.deepEqual(rows[0]?.identity, {
+    addressLine: 'Rua das Flores, 12',
+    // Taken from after the code, because the Localidade column was empty.
+    locality: 'Porto',
+    postalCode: '4000-123',
+    parentOneName: 'Ana Nunes',
+    parentTwoName: null,
+    maritalStatus: 'married',
+    profession: null,
+    education: null,
+    birthplace: null,
+    nationality: 'PT',
+    snsNumber: '123456789',
+  });
+});
+
+test('a nationality is a code or a name in either language', () => {
+  for (const cell of ['PT', 'pt', 'Portugal', 'Portuguesa']) {
+    assert.equal(validate([{ ...ADULT, nationality: cell }]).rows[0]?.identity?.nationality, 'PT', cell);
+  }
+  for (const cell of ['Reino Unido', 'United Kingdom', 'GB']) {
+    assert.equal(validate([{ ...ADULT, nationality: cell }]).rows[0]?.identity?.nationality, 'GB', cell);
+  }
+  assert.equal(validate([{ ...ADULT, nationality: 'Alemanha' }]).rows[0]?.identity?.nationality, 'DE');
+});
+
+test('the marital word the export writes reads back, in either language', () => {
+  const said: [string, string][] = [
+    ['Solteiro/a', 'single'],
+    ['Casado/a', 'married'],
+    ['União de facto', 'civil_union'],
+    ['Divorciado/a', 'divorced'],
+    ['Viúvo/a', 'widowed'],
+    ['Civil partnership', 'civil_union'],
+    ['widowed', 'widowed'],
+    ['civil_union', 'civil_union'],
+  ];
+  for (const [cell, status] of said) {
+    assert.equal(validate([{ ...ADULT, maritalStatus: cell }]).rows[0]?.identity?.maritalStatus, status, cell);
+  }
+});
+
+test('a postal code, an SNS number or a country the column cannot hold refuses the row', () => {
+  const { rows, summary } = validate([
+    { ...ADULT, postalCode: '40001' },
+    { firstName: 'Tiago', lastName: 'Sousa', snsNumber: '12345' },
+    { firstName: 'Duarte', lastName: 'Melo', nationality: 'Atlântida' },
+    { firstName: 'Sofia', lastName: 'Melo', maritalStatus: 'talvez' },
+    { firstName: 'Rui', lastName: 'Melo', nationality: 'ZZ' },
+  ]);
+
+  assert.deepEqual(rows[0]?.problems, [{ field: 'postalCode', code: 'badPostalCode', value: '40001' }]);
+  assert.deepEqual(rows[1]?.problems, [{ field: 'snsNumber', code: 'badSnsNumber', value: '12345' }]);
+  assert.deepEqual(rows[2]?.problems, [{ field: 'nationality', code: 'badNationality', value: 'Atlântida' }]);
+  assert.deepEqual(rows[3]?.problems, [{ field: 'maritalStatus', code: 'badMaritalStatus', value: 'talvez' }]);
+  assert.equal(rows[4]?.problems[0]?.code, 'badNationality', 'a code that is no country');
+  assert.equal(summary.refused, 5);
+});
+
+test('a row with no identity cells carries none', () => {
+  assert.equal(validate([ADULT]).rows[0]?.identity, null);
+});
+
+test('identity fills a blank on a matched student and never overwrites one', () => {
+  const { rows } = validate(
+    [
+      {
+        fullName: 'Rita Nunes',
+        birthDate: '12/04/1988',
+        addressLine: 'Rua Nova, 1',
+        locality: 'Braga',
+        nationality: 'BR',
+      },
+    ],
+    {
+      existing: [
+        existing({
+          id: 'student-1',
+          firstName: 'Rita',
+          lastName: 'Nunes',
+          birthDate: '1988-04-12',
+          displayName: 'Rita Nunes',
+          identity: {
+            addressLine: 'Rua Velha, 9',
+            locality: null,
+            postalCode: null,
+            parentOneName: null,
+            parentTwoName: null,
+            maritalStatus: null,
+            profession: null,
+            education: null,
+            birthplace: null,
+            nationality: 'PT',
+            snsNumber: null,
+          },
+        }),
+      ],
+    },
+  );
+
+  // The address and the nationality on file stay; only the empty town is filled.
+  assert.deepEqual(rows[0]?.updates, [{ field: 'locality', value: 'Braga' }]);
 });

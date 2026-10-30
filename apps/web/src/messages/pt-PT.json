@@ -2096,7 +2096,18 @@
         "socioNumber": "Número de sócio",
         "gender": "Género",
         "isPaid": "Pago",
-        "federationLicence": "Licença FPN"
+        "federationLicence": "Licença FPN",
+        "addressLine": "Morada",
+        "locality": "Localidade",
+        "postalCode": "Código postal",
+        "parentOneName": "Filiação 1",
+        "parentTwoName": "Filiação 2",
+        "maritalStatus": "Estado civil",
+        "profession": "Profissão",
+        "education": "Habilitações literárias",
+        "birthplace": "Naturalidade",
+        "nationality": "Nacionalidade",
+        "snsNumber": "Nº de utente (SNS)"
       },
       "sheetLabel": "Folha a importar",
       "sheetOption": "{name} — {rows} linhas",
@@ -2140,7 +2151,11 @@
         "tooLong": "Valor demasiado longo.",
         "badDate": "Data que não se percebe: {value}.",
         "futureDate": "Data de nascimento no futuro: {value}.",
-        "ancientDate": "Data de nascimento demasiado antiga: {value}."
+        "ancientDate": "Data de nascimento demasiado antiga: {value}.",
+        "badPostalCode": "Código postal que não se percebe: {value}. Use o formato 0000-000.",
+        "badSnsNumber": "Nº de utente que não se percebe: {value}. Tem nove algarismos.",
+        "badNationality": "Nacionalidade que não se reconhece: {value}.",
+        "badMaritalStatus": "Estado civil que não se reconhece: {value}."
       },
       "warning": {
         "noGuardian": "Menor sem encarregado de educação.",
@@ -2158,7 +2173,19 @@
         "contactEmail": "email",
         "contactPhone": "telefone",
         "taxNumber": "NIF",
-        "notes": "notas"
+        "notes": "notas",
+        "federationLicence": "licença FPN",
+        "addressLine": "morada",
+        "locality": "localidade",
+        "postalCode": "código postal",
+        "parentOneName": "filiação 1",
+        "parentTwoName": "filiação 2",
+        "maritalStatus": "estado civil",
+        "profession": "profissão",
+        "education": "habilitações literárias",
+        "birthplace": "naturalidade",
+        "nationality": "nacionalidade",
+        "snsNumber": "nº de utente"
       },
       "duplicateFile": "Repete a linha {line}. Fica só um registo.",
       "importCount": "{count, plural, =0 {Nenhuma linha escolhida} one {Importar # aluno} other {Importar # alunos}}",
@@ -3034,7 +3061,9 @@
     },
     "notComingCount": "{count, plural, one {# avisou que não vem} other {# avisaram que não vêm}}",
     "noticeGoing": "Confirmou",
-    "noticeNotGoing": "Avisou que não vem"
+    "noticeNotGoing": "Avisou que não vem",
+    "examExpired": "Exame médico expirado",
+    "examNone": "Sem exame médico"
   },
   "calendar": {
     "resizeLanes": "Arraste para alterar as pistas ocupadas",
@@ -6276,7 +6305,9 @@
       "invited": "Convite enviado em {date}",
       "linked": "Link criado em {date}",
       "expired": "Convite expirado em {date}",
-      "inApp": "Usa a app"
+      "inApp": "Usa a app",
+      "inAppSeen": "Usa a app · último acesso {ago}",
+      "inAppJoined": "Entrou a {date}, sem acessos depois"
     },
     "toast": {
       "emailed": "Convite enviado para {email}",

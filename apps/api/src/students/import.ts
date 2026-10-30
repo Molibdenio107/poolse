@@ -16,6 +16,8 @@
  * transport detail and this is the rule. The API never sees a spreadsheet.
  */
 
+import type { MaritalStatus, StudentIdentity } from './identity.js';
+
 /** The Poolse fields a spreadsheet column can be pointed at. */
 export const IMPORT_FIELDS = [
   /**
@@ -93,7 +95,39 @@ export const IMPORT_FIELDS = [
    * is one, the import settles the occurrence properly as well.
    */
   'isPaid',
+  /**
+   * Address and identity — POOLSE-131. All optional, all the student's own.
+   * A matched student has only its blanks filled, like every field here.
+   */
+  'addressLine',
+  'locality',
+  'postalCode',
+  'parentOneName',
+  'parentTwoName',
+  'maritalStatus',
+  'profession',
+  'education',
+  'birthplace',
+  'nationality',
+  'snsNumber',
 ] as const;
+
+/** The identity fields, as one group — POOLSE-131. */
+export const IDENTITY_IMPORT_FIELDS = [
+  'addressLine',
+  'locality',
+  'postalCode',
+  'parentOneName',
+  'parentTwoName',
+  'maritalStatus',
+  'profession',
+  'education',
+  'birthplace',
+  'nationality',
+  'snsNumber',
+] as const satisfies readonly ImportField[];
+
+export type IdentityImportField = (typeof IDENTITY_IMPORT_FIELDS)[number];
 
 export type ImportField = (typeof IMPORT_FIELDS)[number];
 
@@ -123,7 +157,12 @@ export type ImportProblemCode =
   | 'tooLong'
   | 'badDate'
   | 'futureDate'
-  | 'ancientDate';
+  | 'ancientDate'
+  /** POOLSE-131: a value the column cannot hold, quoted back. */
+  | 'badPostalCode'
+  | 'badSnsNumber'
+  | 'badNationality'
+  | 'badMaritalStatus';
 
 /**
  * What is worth saying but never worth refusing over.
@@ -176,7 +215,8 @@ export interface ImportUpdate {
     | 'contactPhone'
     | 'taxNumber'
     | 'notes'
-    | 'federationLicence';
+    | 'federationLicence'
+    | IdentityImportField;
   /** What would be written. `levelId` carries the level's name, for the screen. */
   value: string;
 }
@@ -235,6 +275,8 @@ export interface ImportRow {
   gender: 'male' | 'female' | null;
   /** True when the file says this student is paid up. */
   isPaid: boolean;
+  /** Address and identity — POOLSE-131. Null when the row carries none of it. */
+  identity: StudentIdentity | null;
   guardian: ImportGuardian | null;
   problems: ImportProblem[];
   warnings: ImportWarning[];
@@ -280,6 +322,8 @@ export interface ExistingStudent {
   contactPhone: string | null;
   notes: string | null;
   federationLicence: string | null;
+  /** What is on file of the identity group — POOLSE-131. */
+  identity: StudentIdentity | null;
 }
 
 export interface ImportContext {
@@ -462,6 +506,119 @@ export function readsAsGender(value: string): 'male' | 'female' | null {
   return null;
 }
 
+/**
+ * Estado civil as a spreadsheet writes it — POOLSE-131.
+ *
+ * The export writes the Portuguese word ("Casado/a"), the gender column's
+ * precedent, so a file exported in either language re-imports; the English word
+ * and the enum's own spelling are read too. Undefined is "not a marital status".
+ */
+export function readsAsMaritalStatus(value: string): MaritalStatus | null | undefined {
+  const word = normaliseKey(value).replace(/ /g, '');
+  if (word === '') return null;
+  if (/^(solteir|single)/.test(word)) return 'single';
+  if (/^(casad|married)/.test(word)) return 'married';
+  if (/^(uniaodefacto|uniaodefato|uniaodefacto|civilunion|civilpartner|domesticpartner)/.test(word)) {
+    return 'civil_union';
+  }
+  if (/^(divorciad|divorced|separad|separated)/.test(word)) return 'divorced';
+  if (/^(viuv|widow)/.test(word)) return 'widowed';
+  return undefined;
+}
+
+/**
+ * A nationality as a spreadsheet writes it — POOLSE-131.
+ *
+ * The export writes the ISO code ("PT"), which is the same in both languages;
+ * a club's own file says "Portugal" or "Portuguesa". The country's name in
+ * pt-PT or en comes back through `Intl.DisplayNames`, so no list of countries is
+ * kept here; the commonest demonyms are. Undefined is "not a country".
+ */
+const DEMONYMS: [string, string[]][] = [
+  ['PT', ['portuguesa', 'portugues', 'portuguese']],
+  ['BR', ['brasileira', 'brasileiro', 'brazilian']],
+  ['ES', ['espanhola', 'espanhol', 'spanish']],
+  ['FR', ['francesa', 'frances', 'french']],
+  ['GB', ['britanica', 'britanico', 'inglesa', 'ingles', 'british', 'english']],
+  ['DE', ['alema', 'alemao', 'german']],
+  ['IT', ['italiana', 'italiano', 'italian']],
+  ['UA', ['ucraniana', 'ucraniano', 'ukrainian']],
+  ['RO', ['romena', 'romeno', 'romanian']],
+  ['AO', ['angolana', 'angolano', 'angolan']],
+  ['CV', ['cabo verdiana', 'cabo verdiano', 'cape verdean']],
+  ['MZ', ['mocambicana', 'mocambicano', 'mozambican']],
+  ['US', ['americana', 'americano', 'american']],
+];
+
+/**
+ * Codes `Intl` names that are not a country to write on a form: retired ones it
+ * aliases to a living country (DD is "Germany"), and the groupings and
+ * reserved territories (EU, UN, ZZ). Kosovo's XK stays, as clubs write it.
+ */
+const NOT_COUNTRIES = new Set(
+  (
+    'AN BU CS DD DY FX HV NH RH SU TP UK VD YD YU ZR ' +
+    'AC CP CQ DG EA EU EZ IC QO TA UN XA XB ZZ'
+  ).split(' '),
+);
+
+let countriesByName: Map<string, string> | null = null;
+
+function countryNames(): Map<string, string> {
+  if (countriesByName !== null) return countriesByName;
+  const names = new Map<string, string>();
+  const readers = ['pt-PT', 'pt', 'en'].map(
+    (locale) => new Intl.DisplayNames([locale], { type: 'region', fallback: 'none' }),
+  );
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  for (const first of letters) {
+    for (const second of letters) {
+      const code = `${first}${second}`;
+      if (NOT_COUNTRIES.has(code)) continue;
+      for (const reader of readers) {
+        const name = reader.of(code);
+        if (name === undefined || name === code) continue;
+        const named = normaliseKey(name);
+        if (!names.has(named)) names.set(named, code);
+      }
+    }
+  }
+  for (const [code, words] of DEMONYMS) for (const word of words) names.set(word, code);
+  countriesByName = names;
+  return names;
+}
+
+export function readsAsNationality(value: string): string | null | undefined {
+  const said = value.trim();
+  if (said === '') return null;
+  if (/^[A-Za-z]{2}$/.test(said)) {
+    const code = said.toUpperCase();
+    // A real country: DisplayNames answers undefined for a code that is not one.
+    if (NOT_COUNTRIES.has(code)) return undefined;
+    const known = new Intl.DisplayNames(['en'], { type: 'region', fallback: 'none' }).of(code);
+    return known === undefined || known === code ? undefined : code;
+  }
+  return countryNames().get(normaliseKey(said));
+}
+
+/**
+ * A código postal out of a cell — POOLSE-131.
+ *
+ * "4000-123", "4000 123" and "4000123" are one code. A Portuguese sheet very
+ * often writes the locality after it ("4000-123 Porto"), so the words that
+ * follow are handed back to fill an empty Localidade. Undefined is "not a code".
+ */
+export function readsAsPostalCode(
+  value: string,
+): { code: string; locality: string | null } | null | undefined {
+  const said = value.trim();
+  if (said === '') return null;
+  const found = /^(\d{4})\s*-?\s*(\d{3})(?:\s+(\D.*))?$/.exec(said);
+  if (found === null) return undefined;
+  const rest = (found[3] ?? '').trim();
+  return { code: `${found[1]}-${found[2]}`, locality: rest === '' ? null : rest };
+}
+
 export function readsAsYes(value: string): boolean {
   return YES.has(normaliseKey(value));
 }
@@ -482,6 +639,76 @@ function capped(
     return null;
   }
   return value;
+}
+
+const IDENTITY_LIMITS: Partial<Record<IdentityImportField, number>> = {
+  addressLine: 200,
+  locality: 100,
+  parentOneName: 160,
+  parentTwoName: 160,
+  profession: 120,
+  education: 120,
+  birthplace: 120,
+};
+
+/**
+ * The identity group out of one row — POOLSE-131. Null when the row carries
+ * none of it; a value the column cannot hold refuses the row and is quoted back.
+ * The limits and shapes are `identity.ts`'s, the form's own.
+ */
+function readIdentity(raw: RawImportRow, problems: ImportProblem[]): StudentIdentity | null {
+  if (!IDENTITY_IMPORT_FIELDS.some((field) => text(raw, field) !== '')) return null;
+
+  const plain = (field: IdentityImportField): string | null =>
+    capped(text(raw, field), field, IDENTITY_LIMITS[field] ?? MAX_NIF, problems);
+
+  let locality = plain('locality');
+
+  let postalCode: string | null = null;
+  const postal = text(raw, 'postalCode');
+  const readPostal = readsAsPostalCode(postal);
+  if (readPostal === undefined) {
+    problems.push({ field: 'postalCode', code: 'badPostalCode', value: postal });
+  } else if (readPostal !== null) {
+    postalCode = readPostal.code;
+    if (locality === null && readPostal.locality !== null) {
+      locality = capped(readPostal.locality, 'locality', IDENTITY_LIMITS.locality ?? MAX_NIF, problems);
+    }
+  }
+
+  const maritalCell = text(raw, 'maritalStatus');
+  const maritalStatus = readsAsMaritalStatus(maritalCell);
+  if (maritalStatus === undefined) {
+    problems.push({ field: 'maritalStatus', code: 'badMaritalStatus', value: maritalCell });
+  }
+
+  const countryCell = text(raw, 'nationality');
+  const nationality = readsAsNationality(countryCell);
+  if (nationality === undefined) {
+    problems.push({ field: 'nationality', code: 'badNationality', value: countryCell });
+  }
+
+  const snsCell = text(raw, 'snsNumber');
+  const snsDigits = snsCell.replace(/[\s.\-]/g, '');
+  let snsNumber: string | null = null;
+  if (snsCell !== '') {
+    if (/^\d{9}$/.test(snsDigits)) snsNumber = snsDigits;
+    else problems.push({ field: 'snsNumber', code: 'badSnsNumber', value: snsCell });
+  }
+
+  return {
+    addressLine: plain('addressLine'),
+    locality,
+    postalCode,
+    parentOneName: plain('parentOneName'),
+    parentTwoName: plain('parentTwoName'),
+    maritalStatus: maritalStatus ?? null,
+    profession: plain('profession'),
+    education: plain('education'),
+    birthplace: plain('birthplace'),
+    nationality: nationality ?? null,
+    snsNumber,
+  };
 }
 
 /**
@@ -585,6 +812,9 @@ function validateRow(
   const isSocio = readsAsYes(text(raw, 'isSocio')) || socioNumber !== null;
   const gender = readsAsGender(text(raw, 'gender'));
   const isPaid = readsAsYes(text(raw, 'isPaid'));
+
+  // ---- address and identity — POOLSE-131 ---------------------------------
+  const identity = readIdentity(raw, problems);
 
   // ---- guardian ---------------------------------------------------------
   const guardianName = text(raw, 'guardianName');
@@ -723,6 +953,12 @@ function validateRow(
     fill('contactEmail', matched.contactEmail, contactEmail);
     fill('contactPhone', matched.contactPhone, contactPhone);
     fill('notes', matched.notes, notes);
+    // Identity fills only what is empty on file, field by field — POOLSE-131.
+    if (identity !== null) {
+      for (const field of IDENTITY_IMPORT_FIELDS) {
+        fill(field, matched.identity?.[field] ?? null, identity[field]);
+      }
+    }
     // A licence only when nobody else in the club holds it — two swimmers cannot
     // share one, and a commit refused at the unique index would take the whole
     // file down (the NIF's reasoning below).
@@ -777,6 +1013,7 @@ function validateRow(
     federationLicence,
     gender,
     isPaid,
+    identity,
     guardian,
     problems,
     warnings,

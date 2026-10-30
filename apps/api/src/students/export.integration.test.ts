@@ -226,3 +226,102 @@ test('what the importer put in, the exporter gives back', async () => {
     });
   });
 });
+
+/**
+ * POOLSE-131 — the address and identity columns make the same round trip.
+ *
+ * The cells are written as `write-sheet.ts` writes them: the ISO code for the
+ * nationality and the Portuguese marital word, so a file exported under either
+ * locale reads back. Importing the export again finds the student, has nothing
+ * to fill, and writes nothing.
+ */
+test('the identity columns survive export and re-import unchanged', async () => {
+  await withScratchTenant(async (tenant) => {
+    const importer = new StudentImportController();
+    const exporter = new ExportsController();
+
+    const identityCells = {
+      addressLine: 'Rua das Flores, 12, 2.º Esq.',
+      locality: 'Porto',
+      postalCode: '4000-123',
+      parentOneName: 'Sofia Melo',
+      parentTwoName: 'Rui Melo',
+      maritalStatus: 'Casado/a',
+      profession: 'Engenheira',
+      education: 'Licenciatura',
+      birthplace: 'Braga',
+      nationality: 'PT',
+      snsNumber: '123456789',
+    };
+    const marital: Record<string, string> = {
+      single: 'Solteiro/a',
+      married: 'Casado/a',
+      civil_union: 'União de facto',
+      divorced: 'Divorciado/a',
+      widowed: 'Viúvo/a',
+    };
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const first = await importer.run({
+        rows: [{ firstName: 'Marta', lastName: 'Melo', birthDate: '1980-03-15', ...identityCells }],
+        commit: true,
+        include: [0],
+      });
+      assert.equal(first.created, 1);
+
+      const { students } = await exporter.students();
+      const identity = students[0]?.identity;
+      assert.deepEqual(
+        { ...identity, snsRecorded: undefined },
+        {
+          addressLine: 'Rua das Flores, 12, 2.º Esq.',
+          locality: 'Porto',
+          postalCode: '4000-123',
+          parentOneName: 'Sofia Melo',
+          parentTwoName: 'Rui Melo',
+          maritalStatus: 'married',
+          profession: 'Engenheira',
+          education: 'Licenciatura',
+          birthplace: 'Braga',
+          nationality: 'PT',
+          snsNumber: '123456789',
+          snsRecorded: undefined,
+        },
+        'the export carries every identity field, the SNS number included for an owner',
+      );
+
+      // The exported student, as the file writes the row.
+      const marta = students[0]!;
+      const again = await importer.run({
+        rows: [
+          {
+            firstName: marta.firstName,
+            lastName: marta.lastName,
+            birthDate: marta.birthDate ?? '',
+            addressLine: identity?.addressLine ?? '',
+            locality: identity?.locality ?? '',
+            postalCode: identity?.postalCode ?? '',
+            parentOneName: identity?.parentOneName ?? '',
+            parentTwoName: identity?.parentTwoName ?? '',
+            maritalStatus: identity?.maritalStatus ? marital[identity.maritalStatus] : '',
+            profession: identity?.profession ?? '',
+            education: identity?.education ?? '',
+            birthplace: identity?.birthplace ?? '',
+            nationality: identity?.nationality ?? '',
+            snsNumber: identity?.snsNumber ?? '',
+          },
+        ],
+        commit: true,
+        include: [0],
+      });
+
+      assert.equal(again.rows[0]?.importable, true);
+      assert.deepEqual(again.rows[0]?.updates, [], 'nothing to fill');
+      assert.equal(again.created, 0);
+      assert.equal(again.updated, 0, 'a round trip changes nothing');
+
+      const { students: after } = await exporter.students();
+      assert.deepEqual(after[0]?.identity, identity);
+    });
+  });
+});

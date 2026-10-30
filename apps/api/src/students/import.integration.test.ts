@@ -474,3 +474,97 @@ test('a student NIF survives the round trip through the export', async () => {
     assert.equal(row?.tax_number, '123456789');
   });
 });
+
+/**
+ * POOLSE-131 — the identity columns fill blanks, and a bad cell refuses its row.
+ */
+test('identity from a file fills what is empty and never overwrites what is on file', async () => {
+  await withScratchTenant(async (tenant) => {
+    const controller = new StudentImportController();
+
+    await tenant.sql(
+      `INSERT INTO student (organization_id, first_name, last_name, tax_number,
+                            address_line, nationality, sns_number, marital_status)
+       VALUES ($1, 'Marta', 'Vaz', '123456789', 'Rua Velha, 9', 'PT', '111111111', 'single')`,
+      [tenant.organizationId],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const result = await controller.run({
+        rows: [
+          {
+            fullName: 'Marta Vaz',
+            taxNumber: '123456789',
+            addressLine: 'Rua Nova, 1',
+            postalCode: '4700-001 Braga',
+            nationality: 'Brasil',
+            snsNumber: '222222222',
+            maritalStatus: 'Casada',
+            profession: 'Professora',
+          },
+        ],
+        commit: true,
+        include: [0],
+      });
+
+      assert.equal(result.updated, 1);
+      assert.deepEqual(
+        result.rows[0]?.updates.map((update) => update.field).sort(),
+        ['locality', 'postalCode', 'profession'],
+      );
+    });
+
+    const [marta] = await tenant.sql<{
+      address_line: string;
+      locality: string | null;
+      postal_code: string | null;
+      nationality: string;
+      sns_number: string;
+      marital_status: string;
+      profession: string | null;
+    }>(
+      `SELECT address_line, locality, postal_code, nationality, sns_number,
+              marital_status::text AS marital_status, profession
+         FROM student WHERE tax_number = '123456789'`,
+    );
+
+    assert.equal(marta?.address_line, 'Rua Velha, 9', 'what was there is untouched');
+    assert.equal(marta?.nationality, 'PT');
+    assert.equal(marta?.sns_number, '111111111');
+    assert.equal(marta?.marital_status, 'single');
+    assert.equal(marta?.postal_code, '4700-001', 'the blanks are filled');
+    assert.equal(marta?.locality, 'Braga');
+    assert.equal(marta?.profession, 'Professora');
+
+    // The audit names the fields it filled and never their values.
+    const [entry] = await tenant.sql<{ data: { fields: string[] } }>(
+      `SELECT data FROM audit_log WHERE action = 'student.filled' ORDER BY created_at DESC LIMIT 1`,
+    );
+    assert.ok(entry?.data.fields.includes('postalCode'));
+    assert.ok(!JSON.stringify(entry?.data).includes('4700-001'));
+  });
+});
+
+test('a bad postal code is refused in the preview, and nothing is written', async () => {
+  await withScratchTenant(async (tenant) => {
+    const controller = new StudentImportController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const result = await controller.run({
+        rows: [
+          { fullName: 'Rita Nunes', postalCode: '400-12' },
+          { fullName: 'Tiago Sousa', postalCode: '4000-123', snsNumber: '12' },
+        ],
+      });
+
+      assert.deepEqual(result.rows[0]?.problems, [
+        { field: 'postalCode', code: 'badPostalCode', value: '400-12' },
+      ]);
+      assert.equal(result.rows[0]?.importable, false);
+      assert.equal(result.rows[1]?.problems[0]?.code, 'badSnsNumber');
+      assert.equal(result.summary.refused, 2);
+    });
+
+    assert.equal(await countStudents(tenant), 0);
+  });
+});

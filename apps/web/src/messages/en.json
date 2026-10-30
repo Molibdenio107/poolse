@@ -2096,7 +2096,18 @@
         "socioNumber": "Membership number",
         "gender": "Gender",
         "isPaid": "Paid",
-        "federationLicence": "FPN licence"
+        "federationLicence": "FPN licence",
+        "addressLine": "Address",
+        "locality": "Town",
+        "postalCode": "Postal code",
+        "parentOneName": "Parent 1",
+        "parentTwoName": "Parent 2",
+        "maritalStatus": "Marital status",
+        "profession": "Occupation",
+        "education": "Education",
+        "birthplace": "Place of birth",
+        "nationality": "Nationality",
+        "snsNumber": "SNS number"
       },
       "sheetLabel": "Sheet to import",
       "sheetOption": "{name} — {rows} rows",
@@ -2140,7 +2151,11 @@
         "tooLong": "That value is too long.",
         "badDate": "Unreadable date: {value}.",
         "futureDate": "Date of birth in the future: {value}.",
-        "ancientDate": "Date of birth too far back: {value}."
+        "ancientDate": "Date of birth too far back: {value}.",
+        "badPostalCode": "Postal code not understood: {value}. Use the format 0000-000.",
+        "badSnsNumber": "SNS number not understood: {value}. It has nine digits.",
+        "badNationality": "Nationality not recognised: {value}.",
+        "badMaritalStatus": "Marital status not recognised: {value}."
       },
       "warning": {
         "noGuardian": "A minor with no guardian.",
@@ -2158,7 +2173,19 @@
         "contactEmail": "email",
         "contactPhone": "phone",
         "taxNumber": "NIF",
-        "notes": "notes"
+        "notes": "notes",
+        "federationLicence": "FPN licence",
+        "addressLine": "address",
+        "locality": "town",
+        "postalCode": "postal code",
+        "parentOneName": "parent 1",
+        "parentTwoName": "parent 2",
+        "maritalStatus": "marital status",
+        "profession": "occupation",
+        "education": "education",
+        "birthplace": "place of birth",
+        "nationality": "nationality",
+        "snsNumber": "SNS number"
       },
       "duplicateFile": "Repeats row {line}. Only one record is kept.",
       "importCount": "{count, plural, =0 {No rows chosen} one {Import # student} other {Import # students}}",
@@ -3034,7 +3061,9 @@
     },
     "notComingCount": "{count, plural, one {# said they are not coming} other {# said they are not coming}}",
     "noticeGoing": "Confirmed",
-    "noticeNotGoing": "Said not coming"
+    "noticeNotGoing": "Said not coming",
+    "examExpired": "Medical exam expired",
+    "examNone": "No medical exam"
   },
   "calendar": {
     "resizeLanes": "Drag to change how many lanes it uses",
@@ -6276,7 +6305,9 @@
       "invited": "Invitation sent on {date}",
       "linked": "Link created on {date}",
       "expired": "Invitation expired on {date}",
-      "inApp": "Uses the app"
+      "inApp": "Uses the app",
+      "inAppSeen": "Uses the app · last access {ago}",
+      "inAppJoined": "Joined on {date}, not back since"
     },
     "toast": {
       "emailed": "Invitation sent to {email}",
