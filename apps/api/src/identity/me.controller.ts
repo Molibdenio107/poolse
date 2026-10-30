@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, Get, Headers, Patch, Put } from '@nestjs/common';
 import { currentAuth } from '../auth/auth.context.js';
-import {
+import { touchLastSeen,
   listMemberships,
   setPreferences,
   setProfile,
@@ -97,6 +97,8 @@ export class MeController {
 
     const user = await ensureAppUser(clerkUserId);
     const memberships = await listMemberships(clerkUserId);
+    // POOLSE-130: the "último acesso" the club's App access row reads.
+    await touchLastSeen(clerkUserId);
 
     return { user, ...activeFirst(memberships, requested) };
   }

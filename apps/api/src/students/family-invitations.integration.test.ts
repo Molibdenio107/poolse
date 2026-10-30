@@ -9,11 +9,13 @@ import {
   StudentInvitationsController,
 } from './family-invitations.controller.js';
 import { FAMILY_INVITATION_DAILY_CEILING } from './family-invitations.repository.js';
+import { withoutTenantScope } from '@poolse/db';
 import {
   actingAs,
   addMember,
   closeHarness,
   expectStatus,
+  removeAppUser,
   withScratchTenant,
   type ScratchTenant,
 } from '../test/harness.js';
@@ -448,5 +450,51 @@ test('staff invitations — by email or mobile, to the person the club already h
 
     // Neither contact: refused before anything is written.
     await asAdmin(tenant, f, () => expectStatus(() => invitations.create({ roles: ['instructor'] }), 400));
+  });
+});
+
+test('POOLSE-130 — the row says when the login last opened Poolse, stamped at most every 15 minutes', async () => {
+  await withScratchTenant(async (tenant) => {
+    const f = await seed(tenant);
+    const clerk = `user_seen_${tenant.organizationId.slice(0, 8)}`;
+    const appUserId = await withoutTenantScope(async (tx) => {
+      const { rows } = await tx.query<{ id: string }>(
+        `SELECT provision_app_user($1, $2, 'Eva', 'Lopes', NULL, now()) AS id`,
+        [clerk, `${clerk}@example.test`],
+      );
+      return rows[0]!.id;
+    });
+    try {
+      await tenant.sql(
+        `UPDATE membership SET app_user_id = $2, first_name = NULL, last_name = NULL, email = NULL WHERE id = $1`,
+        [f.motherId, appUserId],
+      );
+      const routes = new StudentInvitationsController();
+      const mother = async () =>
+        (await asAdmin(tenant, f, () => routes.list(f.childId))).invitees.find((i) => i.membershipId === f.motherId)!;
+
+      // Joined, never back: nothing stamped yet.
+      assert.equal((await mother()).lastSeenAt, null);
+
+      // QA 1: stamped by the function /me calls.
+      await withoutTenantScope((tx) => tx.query('SELECT touch_app_user_seen($1)', [clerk]));
+      const first = (await mother()).lastSeenAt;
+      assert.notEqual(first, null);
+
+      // QA 2: a second call inside fifteen minutes writes nothing.
+      await withoutTenantScope((tx) => tx.query('SELECT touch_app_user_seen($1)', [clerk]));
+      assert.equal((await mother()).lastSeenAt, first);
+
+      // Past the window it moves.
+      await tenant.sql(`UPDATE app_user SET last_seen_at = now() - interval '16 minutes' WHERE id = $1`, [appUserId]);
+      await withoutTenantScope((tx) => tx.query('SELECT touch_app_user_seen($1)', [clerk]));
+      assert.ok(new Date((await mother()).lastSeenAt!).getTime() > Date.now() - 60_000);
+    } finally {
+      await tenant.sql(
+        `UPDATE membership SET app_user_id = NULL, first_name = 'Eva', last_name = 'Lopes', email = 'eva@familia.test' WHERE id = $1`,
+        [f.motherId],
+      );
+      await removeAppUser(clerk);
+    }
   });
 });

@@ -30,6 +30,9 @@ export interface Invitee {
   email: string | null;
   phone: string | null;
   state: InviteeState;
+  /** POOLSE-130: when their login last opened Poolse, and when they joined. */
+  lastSeenAt: string | null;
+  joinedAt: string | null;
   invitation: {
     id: string;
     /** Null for a link shared by hand. */
@@ -89,6 +92,8 @@ interface InviteeRow {
   email: string | null;
   phone: string | null;
   has_login: boolean;
+  last_seen_at: Date | null;
+  joined_at: Date | null;
   invitation_id: string | null;
   invitation_email: string | null;
   invitation_created_at: Date | null;
@@ -122,6 +127,9 @@ const INVITEES_SQL = `
          CASE WHEN p.kind = 'self' THEN coalesce(m.phone, s.contact_phone)
               ELSE coalesce(m.phone, u.contact_phone) END AS phone,
          (m.app_user_id IS NOT NULL) AS has_login,
+         u.last_seen_at,
+         (SELECT max(ia.accepted_at) FROM invitation ia
+           WHERE ia.accepted_membership_id = p.membership_id) AS joined_at,
          i.id AS invitation_id,
          i.email::text AS invitation_email,
          i.created_at AS invitation_created_at,
@@ -163,6 +171,8 @@ function toInvitee(row: InviteeRow, now: Date): Invitee {
     email: row.email,
     phone: row.phone,
     state,
+    lastSeenAt: row.last_seen_at?.toISOString() ?? null,
+    joinedAt: row.joined_at?.toISOString() ?? null,
     invitation,
   };
 }

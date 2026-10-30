@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { timeAgo } from '@/lib/relative-time';
 import { CheckCircle2, Clock, Mail, Share2, Smartphone, UserX } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { Reveal } from '@/components/ui/reveal';
@@ -32,6 +33,9 @@ export interface Invitee {
   email: string | null;
   phone: string | null;
   state: 'none' | 'invited' | 'expired' | 'in_app';
+  /** POOLSE-130: when their login last opened Poolse, and when they joined. */
+  lastSeenAt?: string | null;
+  joinedAt?: string | null;
   invitation: {
     id: string;
     email: string | null;
@@ -212,13 +216,19 @@ function InviteeRow({
 
 function StateLine({ invitee }: { invitee: Invitee }): React.ReactElement {
   const t = useTranslations();
+  const locale = useLocale();
   const base = 'inline-flex items-center gap-1.5 text-sm';
   switch (invitee.state) {
     case 'in_app':
       return (
         <span className={`${base} text-success`}>
           <CheckCircle2 className="size-4" aria-hidden />
-          {t('familyAccess.state.inApp')}
+          {/* POOLSE-130: when they last opened it, in words. */}
+          {invitee.lastSeenAt != null
+            ? t('familyAccess.state.inAppSeen', { ago: timeAgo(invitee.lastSeenAt, locale) ?? '' })
+            : invitee.joinedAt != null
+              ? t('familyAccess.state.inAppJoined', { date: formatDate(invitee.joinedAt) })
+              : t('familyAccess.state.inApp')}
         </span>
       );
     case 'invited':

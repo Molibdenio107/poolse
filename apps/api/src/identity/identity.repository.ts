@@ -270,6 +270,20 @@ export async function setPreferences(
   });
 }
 
+/**
+ * When this login last opened Poolse — POOLSE-130. At most one write every
+ * fifteen minutes (the function decides), and never allowed to fail the read
+ * that carries it: a missed stamp is a stale "há 20 minutos", a thrown one is
+ * a person who cannot open the app.
+ */
+export async function touchLastSeen(clerkUserId: string): Promise<void> {
+  try {
+    await withoutTenantScope((tx) => tx.query('SELECT touch_app_user_seen($1)', [clerkUserId]));
+  } catch {
+    // Deliberately silent; see above.
+  }
+}
+
 export interface ProfileFields {
   locale: string;
   theme: string;
