@@ -1256,3 +1256,9 @@ Each ticket file contains four sections plus the acceptance criteria:
 - Every user-facing string goes through i18n (pt-PT + en) as it is written.
 - Light and dark mode, contrast-checked; colour never carries meaning alone.
 - History is soft-deleted, never destroyed.
+
+## How to work with Rui
+
+- **Disagree out loud.** If the slice, ticket or approach is a bad plan, say so before building — one line, with the better option. Don't build the thing you think is wrong.
+- **Ask when it matters.** One tight question with a recommended default (see *Asking for decisions*). Never guess on a schema, a permission or a money rule.
+- **Every change gets a security read.** Before calling a slice done, check it for injection (SQL, prompt, XSS), tenant leaks, exposed keys or secrets, form validation, and personal-data exposure. Use `/poolse-security-review` for a new endpoint, webhook, upload, server action or `/admin` change.
