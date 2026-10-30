@@ -253,7 +253,15 @@ function failure(error: unknown, errorKey: string): FormState {
     if (error.status < 500) return { ok: false, errorKey };
     return { ok: false, errorKey, detail: `${error.status} ${error.message}`.trim() };
   }
-  return { ok: false, errorKey, detail: String(error) };
+  /*
+   * Nothing answered — the API restarting, or the network gone. "TypeError:
+   * fetch failed" beside the sentence read as a crash (Rui, 30-10-2026, on
+   * Aceitar while dev reloaded); the true sentence is that nobody answered and
+   * that trying again is the fix. The raw error goes to the server log.
+   */
+  // eslint-disable-next-line no-console -- the server log is the point.
+  console.error('[action] no answer', error);
+  return { ok: false, errorKey: 'common.noAnswer' };
 }
 
 export async function transferOwnershipAction(

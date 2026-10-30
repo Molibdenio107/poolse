@@ -49,7 +49,8 @@ function refusal(error: unknown): FamilyInviteState {
     if (error.status < 500) return { ok: false, errorKey: 'familyAccess.error.failed' };
     return { ok: false, errorKey: 'familyAccess.error.failed', detail: `${error.status} ${error.message}`.trim() };
   }
-  return { ok: false, errorKey: 'familyAccess.error.failed', detail: String(error) };
+  // Nothing answered: say so, rather than print the network error.
+  return { ok: false, errorKey: 'common.noAnswer' };
 }
 
 function done(studentId: string, rowKey: string, issued: Issued): FamilyInviteState {

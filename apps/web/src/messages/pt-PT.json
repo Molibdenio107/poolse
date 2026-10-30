@@ -256,7 +256,8 @@
     "remove": "Remover",
     "pageFailed": "Esta página não carregou.",
     "pageFailedHint": "Pode ser uma falha momentânea do servidor. Tente de novo; se continuar a acontecer, avise-nos.",
-    "tryAgain": "Tentar de novo"
+    "tryAgain": "Tentar de novo",
+    "noAnswer": "O Poolse não respondeu. Tente de novo dentro de momentos."
   },
   "pagination": {
     "label": "Paginação",

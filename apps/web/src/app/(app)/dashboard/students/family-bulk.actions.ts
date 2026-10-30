@@ -73,7 +73,7 @@ function failed(error: unknown): BulkState {
     };
   }
   if (error instanceof ApiError && error.status < 500) return { ok: false, errorKey: 'familyBulk.failed' };
-  return { ok: false, errorKey: 'familyBulk.failed', detail: String(error) };
+  return { ok: false, errorKey: 'common.noAnswer' };
 }
 
 /**
@@ -122,6 +122,7 @@ export async function inviteNewStudentAction(
         ...(fields === undefined ? {} : { fields }),
       };
     }
-    return { ok: false, errorKey: 'inviteStudent.failed', detail: String(error) };
+    if (error instanceof ApiError) return { ok: false, errorKey: 'inviteStudent.failed' };
+    return { ok: false, errorKey: 'common.noAnswer' };
   }
 }
