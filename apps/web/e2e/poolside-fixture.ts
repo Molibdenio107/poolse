@@ -129,7 +129,13 @@ export async function poolsideLesson(): Promise<PoolsideLesson> {
       ]);
     }
 
-    // Today in the club's own day, at 18:00 Lisbon — never `current_date`.
+    /*
+     * Today in the club's own day — never `current_date` — and running now: it
+     * started five minutes ago. Since 28-10-2026 the register opens only once a
+     * lesson has started, while the family agenda lists one until it ends, so a
+     * fixed hour (18:00, then 00:05) left one of the two red for half the day.
+     * Re-stamped on every call, below.
+     */
     let sessionId = (
       await db.query<{ id: string }>(
         `SELECT id FROM class_session
@@ -143,7 +149,7 @@ export async function poolsideLesson(): Promise<PoolsideLesson> {
         await db.query<{ id: string }>(
           `INSERT INTO class_session
              (organization_id, class_group_id, pool_id, instructor_membership_id, occurs_on, starts_at, duration_minutes)
-           SELECT $1, $2, $3, $4, d, (d + TIME '18:00') AT TIME ZONE 'Europe/Lisbon', 45
+           SELECT $1, $2, $3, $4, d, now() - interval '5 minutes', 45
              FROM (SELECT (now() AT TIME ZONE 'Europe/Lisbon')::date AS d) today
            RETURNING id`,
           [org, groupId, at.pool_id, who.membership_id],
@@ -194,6 +200,14 @@ export async function poolsideLesson(): Promise<PoolsideLesson> {
     }
 
     await db.query(`DELETE FROM attendance WHERE organization_id = $1 AND class_session_id = $2`, [org, sessionId]);
+    // Running now — see the note where the session is found.
+    await db.query(
+      `UPDATE class_session
+          SET starts_at = greatest(now() - interval '5 minutes', (occurs_on + TIME '00:00') AT TIME ZONE 'Europe/Lisbon'),
+              duration_minutes = 45
+        WHERE organization_id = $1 AND id = $2`,
+      [org, sessionId],
+    );
     await db.query(
       `UPDATE class_session
           SET status = 'scheduled', cancellation_reason = NULL,

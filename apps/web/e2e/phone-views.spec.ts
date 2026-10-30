@@ -50,6 +50,7 @@ test.describe('on a phone', () => {
   test.use({ viewport: PHONE });
 
   test('the calendar is a day agenda, and a lesson opens its own page', async ({ page }) => {
+    test.setTimeout(75_000);
     const lesson = await poolsideLesson();
     await visit(page, '/dashboard/calendar');
 
@@ -65,8 +66,12 @@ test.describe('on a phone', () => {
     await expect(card).toBeVisible();
     const box = await card.boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(44);
-    await card.tap();
-    await expect(page).toHaveURL(new RegExp(`/sessions/${lesson.sessionId}`));
+    // A first visit compiles the lesson's route on the dev server; tap again until it lands.
+    const url = new RegExp(`/sessions/${lesson.sessionId}`);
+    await expect(async () => {
+      if (!url.test(page.url())) await card.tap({ timeout: 5_000 });
+      await expect(page).toHaveURL(url, { timeout: 10_000 });
+    }).toPass({ timeout: 45_000 });
   });
 
   test('the Turmas board reads a day at a time, no card squeezed', async ({ page }) => {

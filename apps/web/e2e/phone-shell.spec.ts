@@ -343,7 +343,7 @@ test('the phone menu: no sidebar, a sheet with the same sections, closed by goin
   const sheet = page.getByRole('dialog');
   await expect(sheet.getByRole('navigation')).toBeVisible();
 
-  await sheet.getByRole('link', { name: /^Alunos$/ }).tap();
+  await sheet.getByRole('link', { name: /^Alunos\b/ }).tap();
   await page.waitForURL(/\/dashboard\/students/);
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
