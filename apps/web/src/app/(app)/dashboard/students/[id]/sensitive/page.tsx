@@ -9,6 +9,8 @@ import {
 } from '../../../../../../lib/api';
 import { DetailPage } from '@/components/detail-page';
 import { MedicalLeavePanel } from './medical-leave';
+import { ExamPanel } from './exam-panel';
+import type { StudentMedicalExams } from '@/lib/medical-exams';
 import { storageConfigured } from '@/lib/storage-status';
 import { PageError, PageShell } from '@/components/page-shell';
 import { formatDate, formatStamp } from '@/lib/date-format';
@@ -94,6 +96,15 @@ export default async function SensitivePage({
 
   const loaded = record;
   const storageReady = await storageConfigured();
+
+  // The exame médico — POOLSE-133. Its own read: a failure costs this tab a
+  // sentence, never the page, and is said rather than shown as "no exam".
+  let exams: StudentMedicalExams | null = null;
+  try {
+    exams = await apiFetch<StudentMedicalExams>(`/students/${id}/medical-exams`);
+  } catch {
+    exams = null;
+  }
 
   return (
     <DetailPage
@@ -304,6 +315,36 @@ export default async function SensitivePage({
                   storageReady={storageReady}
                 />
               </div>
+            </section>
+          ),
+        },
+        {
+          /*
+            The exame médico — POOLSE-133. Its own tab, beside the leave: a
+            date that runs out, read by everyone who opens this page, the file
+            and the note by the office only. A dot when it has run out.
+          */
+          slug: 'exam',
+          labelKey: 'exams.title',
+          badge:
+            exams?.state === 'expired'
+              ? { kind: 'dot', labelKey: 'exams.needsAttention' }
+              : undefined,
+          content: () => (
+            <section className="rounded border border-border bg-surface p-5">
+              <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('exams.title')}
+              </h2>
+              {exams === null ? (
+                <PageError message={t('exams.loadFailed')} />
+              ) : (
+                <ExamPanel
+                  studentId={id}
+                  exams={exams}
+                  canManage={loaded.canManage}
+                  storageReady={storageReady}
+                />
+              )}
             </section>
           ),
         },

@@ -6477,6 +6477,97 @@
       "relationship": "Relationship",
       "socioNumber": "Member number",
       "socioSince": "Member since"
+    },
+    "sociosLabel": "Members:",
+    "exportSocios": "Export members",
+    "importSociosHint": "To import, use the student import: the same file goes back in."
+  },
+  "exams": {
+    "title": "Medical exam",
+    "needsAttention": "Medical exam expired",
+    "loadFailed": "The medical exam could not be loaded.",
+    "notPermitted": "You do not have permission for medical exams.",
+    "readOnly": "The result, the note and the certificate are seen by the office only.",
+    "state": {
+      "valid": "Valid until {date}",
+      "expired": "Expired on {date}",
+      "expiredUnknown": "Exam with no validity given",
+      "unfit": "Unfit since {date}",
+      "none": "No exam recorded"
+    },
+    "assumed": "estimated validity: one year",
+    "line": "Exam on {date} · {result}",
+    "lineUntil": "valid until {date}",
+    "lineUntilAssumed": "valid until {date} (estimated)",
+    "result": {
+      "fit": "Fit",
+      "fit_with_conditions": "Fit with conditions",
+      "unfit": "Unfit"
+    },
+    "history": "Earlier exams",
+    "certificate": "Certificate",
+    "attachCertificate": "Attach certificate",
+    "certificateSaved": "Certificate attached",
+    "record": "Record an exam",
+    "chooseResult": "Choose the result",
+    "validUntilHint": "With no validity given, it counts one year from the exam and is marked as estimated.",
+    "note": "Note",
+    "noteHint": "Optional. Seen by the office only.",
+    "correctionHint": "An exam is not edited: to correct one, archive it and record the right one.",
+    "save": "Save exam",
+    "saved": "Exam recorded",
+    "failed": "The exam could not be saved.",
+    "archive": "Archive",
+    "archived": "Exam archived",
+    "archiveFailed": "The exam could not be archived.",
+    "fileActionsLabel": "Medical exams",
+    "field": {
+      "studentName": "Student name",
+      "taxNumber": "Tax number (NIF)",
+      "birthDate": "Date of birth",
+      "examinedOn": "Exam date",
+      "result": "Result",
+      "validUntil": "Valid until"
+    },
+    "error": {
+      "required": "Enter the exam date.",
+      "date": "Choose a valid date.",
+      "result": "Choose the result.",
+      "order": "The validity cannot end before the exam.",
+      "tooLong": "Too long (500 characters at most)."
+    },
+    "export": {
+      "action": "Export exams",
+      "failed": "The medical exams could not be exported.",
+      "sheetName": "Medical exams"
+    },
+    "import": {
+      "open": "Import exams",
+      "title": "Import medical exams",
+      "matchedBy": "Each row is matched to a student by NIF. Without one, by name and date of birth, and those rows go in only once you confirm them. No student is created.",
+      "fileHint": "Excel (.xlsx), CSV or PDF. One row per student: NIF or date of birth, exam date, result and validity.",
+      "keyRequired": "Choose the NIF column (or the name and date of birth columns), the exam date column and the result column.",
+      "summary": "{total} rows: {fresh} to record, {confirm} to confirm, {unchanged} unchanged, {refused} refused, {blank} with no exam.",
+      "confirmHint": "Rows found by name and date of birth are recorded only if you tick them.",
+      "confirm": "Confirm",
+      "confirmLine": "Confirm row {line}",
+      "inFile": "In the file",
+      "matchedTo": "Student",
+      "state": "Status",
+      "status": {
+        "new": "New exam",
+        "unchanged": "Unchanged",
+        "needsConfirmation": "Found by name and date of birth: confirm",
+        "blank": "No exam on this row"
+      },
+      "reason": {
+        "incomplete": "The exam date or the result is missing, or could not be read.",
+        "order": "The validity ends before the exam.",
+        "noMatch": "No student with this NIF, or with this name and date of birth."
+      },
+      "commit": "{count, plural, =0 {Nothing to record} one {Record # exam} other {Record # exams}}",
+      "doneCount": "{count, plural, =0 {No exams recorded.} one {# exam recorded.} other {# exams recorded.}}",
+      "failed": "The medical exams could not be imported."
     }
   }
 }

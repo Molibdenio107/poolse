@@ -14,11 +14,13 @@ import { BirthdayFlag } from '@/components/birthday-flag';
 import { photoUrlFor } from '@/lib/photo';
 import { ArchiveStudentButton } from './student-forms';
 import { StudentActions } from './import-panel';
+import { ExamFileActions } from './exames/exam-file-actions';
+import { DownloadLink } from '@/components/download-link';
 import { PaymentMark } from './payment-mark';
 import { PageError, PageShell } from '@/components/page-shell';
 import { FamilyBulkInvite } from './family-bulk';
 import { InviteStudent } from './invite-student';
-import { Check } from 'lucide-react';
+import { Check, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -272,6 +274,26 @@ export default async function StudentsPage({
               exportHref={`/dashboard/students/export${exportQuery.size > 0 ? `?${exportQuery}` : ''}`}
               filtering={filtering}
             />
+          )}
+
+          {/* The exames médicos as a spreadsheet — POOLSE-133. */}
+          {data.canManage && <ExamFileActions />}
+          {/*
+            POOLSE-134: the sócios list as a file — the student sheet, sócios
+            only. It comes back in through the ordinary student import.
+          */}
+          {data.canManage && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-foreground-muted">{t('boletim.sociosLabel')}</span>
+              <DownloadLink
+                href="/dashboard/students/export?socios=1"
+                className="inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control hover:bg-surface-muted"
+              >
+                <Download aria-hidden className="size-4" />
+                {t('boletim.exportSocios')}
+              </DownloadLink>
+              <span className="text-sm text-foreground-muted">{t('boletim.importSociosHint')}</span>
+            </div>
           )}
 
           {!data.canManage && (

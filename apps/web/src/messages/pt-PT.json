@@ -6477,6 +6477,97 @@
       "relationship": "Parentesco",
       "socioNumber": "Nº de sócio",
       "socioSince": "Sócio desde"
+    },
+    "sociosLabel": "Sócios:",
+    "exportSocios": "Exportar sócios",
+    "importSociosHint": "Para importar, use Importar alunos: o mesmo ficheiro volta a entrar."
+  },
+  "exams": {
+    "title": "Exame médico",
+    "needsAttention": "Exame médico expirado",
+    "loadFailed": "Não foi possível carregar o exame médico.",
+    "notPermitted": "Não tem permissão para os exames médicos.",
+    "readOnly": "O resultado, a nota e o certificado são vistos apenas pela direção.",
+    "state": {
+      "valid": "Válido até {date}",
+      "expired": "Expirou a {date}",
+      "expiredUnknown": "Exame sem validade indicada",
+      "unfit": "Não apto desde {date}",
+      "none": "Sem exame registado"
+    },
+    "assumed": "validade estimada: um ano",
+    "line": "Exame de {date} · {result}",
+    "lineUntil": "válido até {date}",
+    "lineUntilAssumed": "válido até {date} (estimado)",
+    "result": {
+      "fit": "Apto",
+      "fit_with_conditions": "Apto condicionalmente",
+      "unfit": "Não apto"
+    },
+    "history": "Exames anteriores",
+    "certificate": "Certificado",
+    "attachCertificate": "Anexar certificado",
+    "certificateSaved": "Certificado anexado",
+    "record": "Registar exame",
+    "chooseResult": "Escolha o resultado",
+    "validUntilHint": "Se não indicar a validade, conta um ano a partir do exame e fica marcada como estimada.",
+    "note": "Nota",
+    "noteHint": "Opcional. Vista apenas pela direção.",
+    "correctionHint": "Um exame não se edita: para o corrigir, arquive-o e registe o certo.",
+    "save": "Guardar exame",
+    "saved": "Exame registado",
+    "failed": "Não foi possível guardar o exame.",
+    "archive": "Arquivar",
+    "archived": "Exame arquivado",
+    "archiveFailed": "Não foi possível arquivar o exame.",
+    "fileActionsLabel": "Exames médicos",
+    "field": {
+      "studentName": "Nome do aluno",
+      "taxNumber": "NIF",
+      "birthDate": "Data de nascimento",
+      "examinedOn": "Data do exame",
+      "result": "Resultado",
+      "validUntil": "Válido até"
+    },
+    "error": {
+      "required": "Indique a data do exame.",
+      "date": "Escolha uma data válida.",
+      "result": "Escolha o resultado.",
+      "order": "A validade não pode ser anterior ao exame.",
+      "tooLong": "Demasiado longo (máximo 500 caracteres)."
+    },
+    "export": {
+      "action": "Exportar exames",
+      "failed": "Não foi possível exportar os exames médicos.",
+      "sheetName": "Exames médicos"
+    },
+    "import": {
+      "open": "Importar exames",
+      "title": "Importar exames médicos",
+      "matchedBy": "Cada linha é ligada a um aluno pelo NIF. Sem NIF, pelo nome e pela data de nascimento, e essas linhas só entram se as confirmar. Nenhum aluno é criado.",
+      "fileHint": "Excel (.xlsx), CSV ou PDF. Uma linha por aluno: NIF ou data de nascimento, data do exame, resultado e validade.",
+      "keyRequired": "Indique a coluna do NIF (ou as do nome e da data de nascimento), a da data do exame e a do resultado.",
+      "summary": "{total} linhas: {fresh} a registar, {confirm} por confirmar, {unchanged} sem alterações, {refused} recusadas, {blank} sem exame.",
+      "confirmHint": "As linhas encontradas pelo nome e pela data de nascimento só são registadas se as marcar.",
+      "confirm": "Confirmar",
+      "confirmLine": "Confirmar a linha {line}",
+      "inFile": "No ficheiro",
+      "matchedTo": "Aluno",
+      "state": "Estado",
+      "status": {
+        "new": "Novo exame",
+        "unchanged": "Sem alterações",
+        "needsConfirmation": "Encontrado pelo nome e data de nascimento: confirme",
+        "blank": "Sem exame nesta linha"
+      },
+      "reason": {
+        "incomplete": "Falta a data do exame ou o resultado, ou não foi possível lê-los.",
+        "order": "A validade é anterior ao exame.",
+        "noMatch": "Nenhum aluno com este NIF, ou com este nome e data de nascimento."
+      },
+      "commit": "{count, plural, =0 {Nada a registar} one {Registar # exame} other {Registar # exames}}",
+      "doneCount": "{count, plural, =0 {Nenhum exame registado.} one {# exame registado.} other {# exames registados.}}",
+      "failed": "Não foi possível importar os exames médicos."
     }
   }
 }
