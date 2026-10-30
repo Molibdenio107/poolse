@@ -2107,7 +2107,8 @@
         "education": "Habilitações literárias",
         "birthplace": "Naturalidade",
         "nationality": "Nacionalidade",
-        "snsNumber": "Nº de utente (SNS)"
+        "snsNumber": "Nº de utente (SNS)",
+        "socioSince": "Sócio desde"
       },
       "sheetLabel": "Folha a importar",
       "sheetOption": "{name} — {rows} linhas",
@@ -2155,7 +2156,8 @@
         "badPostalCode": "Código postal que não se percebe: {value}. Use o formato 0000-000.",
         "badSnsNumber": "Nº de utente que não se percebe: {value}. Tem nove algarismos.",
         "badNationality": "Nacionalidade que não se reconhece: {value}.",
-        "badMaritalStatus": "Estado civil que não se reconhece: {value}."
+        "badMaritalStatus": "Estado civil que não se reconhece: {value}.",
+        "socioNumberTaken": "O número de sócio {value} já é de outro aluno."
       },
       "warning": {
         "noGuardian": "Menor sem encarregado de educação.",
@@ -2185,7 +2187,10 @@
         "education": "habilitações literárias",
         "birthplace": "naturalidade",
         "nationality": "nacionalidade",
-        "snsNumber": "nº de utente"
+        "snsNumber": "nº de utente",
+        "isSocio": "sócio",
+        "socioNumber": "número de sócio",
+        "socioSince": "sócio desde"
       },
       "duplicateFile": "Repete a linha {line}. Fica só um registo.",
       "importCount": "{count, plural, =0 {Nenhuma linha escolhida} one {Importar # aluno} other {Importar # alunos}}",
@@ -2235,7 +2240,7 @@
     "flagTooOld": "Acima da idade do nível",
     "guardian": "Encarregado de educação",
     "optionalHint": "Opcional.",
-    "document": "Documento de identificação",
+    "document": "Documentos",
     "documentUpload": "Carregar cartão de cidadão",
     "documentNoStorage": "Disponível em breve — o armazenamento de ficheiros ainda não está configurado.",
     "documentPurpose": "O cartão de cidadão é pedido apenas para confirmar a identidade e a idade do aluno na inscrição. É guardado em privado, visível apenas para a direção e os instrutores, e é apagado quando a inscrição termina. Cada consulta fica registada.",
@@ -6358,5 +6363,120 @@
     "exists": "Já existe alguém com este contacto: {name}.",
     "existsLong": "{name} já está registado com este email ou telemóvel. Convide-o a partir da ficha, com Convidar para a app.",
     "openExisting": "Abrir a ficha"
+  },
+  "documents": {
+    "sectionsLabel": "Secções dos documentos",
+    "section": {
+      "identificacao": "Identificação",
+      "fpn": "Declaração FPN",
+      "fpn-menores": "Declaração FPN – Menores"
+    },
+    "error": {
+      "date": "Escolha uma data válida.",
+      "tooLong": "Demasiado longo.",
+      "type": "Tipo de documento desconhecido.",
+      "typeRequired": "Escolha o tipo de documento.",
+      "cc": "Não é um número de Cartão de Cidadão válido.",
+      "order": "A validade não pode ser anterior à data de emissão."
+    },
+    "toast": {
+      "filed": "Documento assinado arquivado."
+    },
+    "idDocument": {
+      "title": "Documento de identificação",
+      "type": "Tipo",
+      "typeNone": "—",
+      "types": {
+        "cc": "Cartão de Cidadão",
+        "bi": "Bilhete de Identidade",
+        "passport": "Passaporte",
+        "other": "Outro"
+      },
+      "number": "Número",
+      "numberOnFile": "Número registado. Deixe em branco para o manter; escrever outro substitui-o.",
+      "numberOnFilePlaceholder": "Registado",
+      "numberNone": "Sem número registado.",
+      "issuedOn": "Emitido em",
+      "issuedOnHint": "O Cartão de Cidadão não tem data de emissão: deixe em branco.",
+      "validUntil": "Válido até"
+    },
+    "fpn": {
+      "title": "Declaração FPN",
+      "titleMinor": "Declaração FPN – Menores",
+      "intro": "O Anexo 2 da FPN (Declaração de Consentimento Informado), impresso já preenchido a partir da ficha. O aluno assina-o e o clube arquiva aqui a cópia assinada.",
+      "introMinor": "O Anexo 2 da FPN para um aluno menor: quem assina é o encarregado de educação principal, em nome do aluno.",
+      "noSeasons": "O clube ainda não tem épocas. Crie uma em Turmas → Épocas para imprimir e arquivar a declaração.",
+      "season": "Época",
+      "seasonPublished": "{name} (publicada)",
+      "seasonUnknown": "Época sem nome",
+      "stateMissing": "Época {season}: por arquivar.",
+      "stateFiled": "Época {season}: assinada, arquivada a {date}.",
+      "printTitle": "Imprimir",
+      "nothingMissing": "A ficha tem tudo o que a declaração pede.",
+      "missingIntro": "Falta na ficha (sai em branco, para preencher à mão):",
+      "signerMinor": "Assina o encarregado de educação principal, na qualidade de encarregado de educação do aluno.",
+      "print": "Imprimir preenchida",
+      "signedTitle": "Documento assinado",
+      "upload": "Arquivar assinada – {season}",
+      "noneFiled": "Ainda não há nenhuma cópia assinada arquivada.",
+      "seasonHeading": "Época {season}",
+      "filedLine": "Arquivada a {date} por {name}",
+      "someone": "alguém",
+      "current": "em vigor",
+      "replaced": "substituída a {date}",
+      "disciplines": "Disciplinas FPN",
+      "disciplinesHint": "As disciplinas assinaladas na declaração. Ficam guardadas na ficha do aluno.",
+      "birthDateMissing": "Data de nascimento em falta: não é possível saber se o aluno é menor, por isso esta declaração não é escolhida por si.",
+      "birthDateLink": "Registar a data de nascimento"
+    },
+    "missing": {
+      "addressLine": "Sem morada",
+      "locality": "Sem localidade",
+      "postalCode": "Sem código postal",
+      "idDocumentNumber": "Sem nº de documento",
+      "idDocumentValidUntil": "Sem data de validade do documento",
+      "disciplines": "Sem disciplinas FPN assinaladas",
+      "fpnAssociation": "Sem Associação regional do clube",
+      "fpnClubCode": "Sem Sigla FPN do clube"
+    },
+    "discipline": {
+      "pura": "Natação Pura",
+      "open_water": "Águas Abertas",
+      "water_polo": "Polo Aquático",
+      "artistic": "Natação Artística",
+      "adapted": "Natação Adaptada",
+      "masters": "Masters",
+      "diving": "Saltos"
+    },
+    "club": {
+      "title": "Dados do clube na FPN",
+      "hint": "São do clube, não do aluno: saem em todas as declarações. Por exemplo, ANNP e GCST.",
+      "association": "Associação regional",
+      "clubCode": "Sigla FPN do clube"
+    }
+  },
+  "boletim": {
+    "title": "Boletim de sócio",
+    "notFiled": "Boletim assinado por arquivar.",
+    "filed": "Boletim assinado, arquivado a {date}.",
+    "print": "Imprimir preenchido",
+    "upload": "Arquivar o boletim assinado",
+    "copy": "Boletim arquivado a {date}",
+    "replaced": "substituído a {date}",
+    "guardianTitle": "Encarregado de educação",
+    "declaration": "Declaro que os dados acima são verdadeiros e peço a admissão como sócio de {club}, aceitando os seus estatutos e regulamentos.",
+    "date": "Data",
+    "signature": "Assinatura do sócio",
+    "signatureGuardian": "Assinatura do encarregado de educação",
+    "field": {
+      "name": "Nome",
+      "birthDate": "Data de nascimento",
+      "taxNumber": "NIF",
+      "phone": "Telefone",
+      "email": "Email",
+      "relationship": "Parentesco",
+      "socioNumber": "Nº de sócio",
+      "socioSince": "Sócio desde"
+    }
   }
 }

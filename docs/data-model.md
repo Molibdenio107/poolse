@@ -303,6 +303,19 @@ and address onto a survivor with a login (refused by `membership_identity_belong
 it copied a NIF or email while the absorbed record still held it live. It also tests the club login's
 privileges by name (`poolse_app`), so a definer caller does not rewrite insert-only history.
 
+**Student documents — POOLSE-131 to 134.** `student` gains the identity group (address_line,
+locality, postal_code `0000-000`, parent_one_name, parent_two_name, marital_status enum, profession,
+education, birthplace, nationality ISO alpha-2, sns_number nine digits), the ID document
+(id_document_type cc|bi|passport|other, id_document_number_encrypted — ciphertext by CHECK —,
+id_document_issued_on, id_document_valid_until) and `fpn_disciplines fpn_discipline[]`; all cleared on
+anonymisation by `student_anonymised_clears_licence`. `organization.fpn_association` and
+`fpn_club_code` (column-granted). `student_document` (student, kind fpn_declaration |
+fpn_declaration_minor | socio_form, season_id null only for socio_form, file_id, filed_by, replaced_at /
+replaced_by; one current per student, kind and season). `medical_exam` (examined_on, result enum,
+valid_until, valid_until_assumed, note, file_id set once by trigger, archived_at; the latest live row is
+the standing), with `medical_exam_health_erased` on `student.health_erased_at`. `app_user.last_seen_at`,
+written by `touch_app_user_seen(clerk_user_id)`.
+
 **`revoked_at` exists so a typo is recoverable.** The one-live-invite-per-address rule is
 a partial unique index; without a revoked state, a mistyped address is blocked until the
 invitation expires.

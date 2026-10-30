@@ -28,8 +28,11 @@ import { StudentWeek } from './student-week';
 import { CoverBadge, FeesBlock, type FeesSection } from './fees-block';
 import { ContactsCard } from './contacts-card';
 import { FamilyFees } from './family-fees';
+import { BoletimPanel } from './boletim-panel';
 import { AppInviteButton, FamilyAccess, type Invitee } from './family-access';
-import { pickSection } from '@/components/section-pills';
+import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
+import type { StudentDocuments } from '@/lib/fpn-forms';
+import { FpnSection, IdDocumentForm } from './documents';
 import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -523,6 +526,10 @@ export default async function StudentPage({
                     {...feesSections(billing.data.fees.seasonCharges.length > 0, section)}
                     path={`/dashboard/students/${id}`}
                   />
+                  {/* POOLSE-134: the boletim, beside the sócio it is about. */}
+                  {reg.canManage && loaded.isSocio && (
+                    <BoletimPanel studentId={loaded.id} storageReady={storageReady} />
+                  )}
                 </>
               )
             ),
@@ -531,23 +538,82 @@ export default async function StudentPage({
           slug: 'document',
           labelKey: 'students.document',
           visible: reg.canManage,
-          content: () => (
-            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('students.document')}
-              </h2>
-              {/*
-                Its own slot beside the photograph, never mixed with it —
-                POOLSE-11. A Cartão de Cidadão rendered as an avatar would put a
-                government identity document on every list that shows a face.
-              */}
-              <DocumentUpload
-                label={t('students.documentUpload')}
-                reason={t('students.documentNoStorage')}
-                purpose={t('students.documentPurpose')}
-              />
-            </section>
-          ),
+          /*
+            *Documentos* — POOLSE-132. Three sections behind pills: the ID
+            document, the FPN's Anexo 2, and its minors' form only for a minor
+            (offered with a sentence when the birth date is missing — never
+            guessed). The slug stays `document` so old links still land here.
+          */
+          content: async () => {
+            const documents = await outcome(apiFetch<StudentDocuments>(`/students/${id}/documents`));
+            if (documents.state === 'refused') return <PageError message={t('common.notAllowed')} />;
+            if (documents.state === 'failed') return <PageError message={t(documents.failure.key)} />;
+            const docs = documents.data;
+            const offered: DocumentsSection[] =
+              docs.minor === false ? ['identificacao', 'fpn'] : ['identificacao', 'fpn', 'fpn-menores'];
+            const current = pickSection(offered, section, 'identificacao');
+            const path = `/dashboard/students/${id}`;
+            return (
+              <div className="flex flex-col gap-4">
+                <SectionPills
+                  label={t('documents.sectionsLabel')}
+                  current={current}
+                  items={offered.map((key) => ({
+                    key,
+                    label: t(`documents.section.${key}`),
+                    href: sectionHref(path, { tab: 'document', from }, key),
+                  }))}
+                />
+                {current === 'identificacao' && (
+                  <>
+                    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+                      <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                        {t('documents.section.identificacao')}
+                      </h2>
+                      {/*
+                        Its own slot beside the photograph, never mixed with it —
+                        POOLSE-11. A Cartão de Cidadão rendered as an avatar would put a
+                        government identity document on every list that shows a face.
+                      */}
+                      <DocumentUpload
+                        label={t('students.documentUpload')}
+                        reason={t('students.documentNoStorage')}
+                        purpose={t('students.documentPurpose')}
+                      />
+                    </section>
+                    <IdDocumentForm studentId={loaded.id} idDocument={docs.idDocument} />
+                  </>
+                )}
+                {current === 'fpn' && (
+                  <FpnSection studentId={loaded.id} kind="fpn_declaration" documents={docs} storageReady={storageReady} />
+                )}
+                {current === 'fpn-menores' &&
+                  (docs.minor === null ? (
+                    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+                      <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                        {t('documents.fpn.titleMinor')}
+                      </h2>
+                      <p className="text-sm">{t('documents.fpn.birthDateMissing')}</p>
+                      <p>
+                        <FromLink
+                          href={`${path}?tab=general`}
+                          className="text-primary underline-offset-2 hover:underline"
+                        >
+                          {t('documents.fpn.birthDateLink')}
+                        </FromLink>
+                      </p>
+                    </section>
+                  ) : (
+                    <FpnSection
+                      studentId={loaded.id}
+                      kind="fpn_declaration_minor"
+                      documents={docs}
+                      storageReady={storageReady}
+                    />
+                  ))}
+              </div>
+            );
+          },
         },
         {
           /*
@@ -754,6 +820,9 @@ function Row({ label, value }: { label: string; value: string | null }): React.R
     </div>
   );
 }
+
+/** The *Documentos* tab's sections — POOLSE-132. */
+type DocumentsSection = 'identificacao' | 'fpn' | 'fpn-menores';
 
 /** Which fee sections are offered, and which of them is open. */
 function feesSections(

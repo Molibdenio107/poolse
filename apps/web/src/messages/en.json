@@ -2107,7 +2107,8 @@
         "education": "Education",
         "birthplace": "Place of birth",
         "nationality": "Nationality",
-        "snsNumber": "SNS number"
+        "snsNumber": "SNS number",
+        "socioSince": "Member since"
       },
       "sheetLabel": "Sheet to import",
       "sheetOption": "{name} — {rows} rows",
@@ -2155,7 +2156,8 @@
         "badPostalCode": "Postal code not understood: {value}. Use the format 0000-000.",
         "badSnsNumber": "SNS number not understood: {value}. It has nine digits.",
         "badNationality": "Nationality not recognised: {value}.",
-        "badMaritalStatus": "Marital status not recognised: {value}."
+        "badMaritalStatus": "Marital status not recognised: {value}.",
+        "socioNumberTaken": "Membership number {value} already belongs to another student."
       },
       "warning": {
         "noGuardian": "A minor with no guardian.",
@@ -2185,7 +2187,10 @@
         "education": "education",
         "birthplace": "place of birth",
         "nationality": "nationality",
-        "snsNumber": "SNS number"
+        "snsNumber": "SNS number",
+        "isSocio": "member",
+        "socioNumber": "membership number",
+        "socioSince": "member since"
       },
       "duplicateFile": "Repeats row {line}. Only one record is kept.",
       "importCount": "{count, plural, =0 {No rows chosen} one {Import # student} other {Import # students}}",
@@ -2235,7 +2240,7 @@
     "flagTooOld": "Above the level's age",
     "guardian": "Guardian",
     "optionalHint": "Optional.",
-    "document": "Identification document",
+    "document": "Documents",
     "documentUpload": "Upload identity card",
     "documentNoStorage": "Available soon — file storage is not configured yet.",
     "documentPurpose": "The identity card is asked for only to confirm the student's identity and age at enrolment. It is stored privately, visible only to owners, administrators and instructors, and is deleted when the enrolment ends. Every access is logged.",
@@ -6358,5 +6363,120 @@
     "exists": "Somebody already has this contact: {name}.",
     "existsLong": "{name} is already registered with this email or mobile. Invite them from their record, with Invite to the app.",
     "openExisting": "Open the record"
+  },
+  "documents": {
+    "sectionsLabel": "Document sections",
+    "section": {
+      "identificacao": "Identification",
+      "fpn": "FPN declaration",
+      "fpn-menores": "FPN declaration – minors"
+    },
+    "error": {
+      "date": "Choose a valid date.",
+      "tooLong": "Too long.",
+      "type": "Unknown document type.",
+      "typeRequired": "Choose the document type.",
+      "cc": "Not a valid Cartão de Cidadão number.",
+      "order": "The expiry date cannot be before the issue date."
+    },
+    "toast": {
+      "filed": "Signed document filed."
+    },
+    "idDocument": {
+      "title": "Identity document",
+      "type": "Type",
+      "typeNone": "—",
+      "types": {
+        "cc": "Citizen card (Cartão de Cidadão)",
+        "bi": "Identity card (Bilhete de Identidade)",
+        "passport": "Passport",
+        "other": "Other"
+      },
+      "number": "Number",
+      "numberOnFile": "A number is on file. Leave this empty to keep it; typing another replaces it.",
+      "numberOnFilePlaceholder": "On file",
+      "numberNone": "No number on file.",
+      "issuedOn": "Issued on",
+      "issuedOnHint": "The Cartão de Cidadão carries no issue date: leave it empty.",
+      "validUntil": "Valid until"
+    },
+    "fpn": {
+      "title": "FPN declaration",
+      "titleMinor": "FPN declaration – minors",
+      "intro": "The FPN's Anexo 2 (informed consent declaration), printed already filled in from the record. The swimmer signs it and the club files the signed copy here.",
+      "introMinor": "The FPN's Anexo 2 for a minor: the primary guardian signs it on the swimmer's behalf.",
+      "noSeasons": "The club has no seasons yet. Create one under Classes → Seasons to print and file the declaration.",
+      "season": "Season",
+      "seasonPublished": "{name} (published)",
+      "seasonUnknown": "Unnamed season",
+      "stateMissing": "Season {season}: not filed yet.",
+      "stateFiled": "Season {season}: signed, filed on {date}.",
+      "printTitle": "Print",
+      "nothingMissing": "The record holds everything the declaration asks for.",
+      "missingIntro": "Missing from the record (printed blank, to fill in by hand):",
+      "signerMinor": "The primary guardian signs, as the swimmer's guardian.",
+      "print": "Print filled in",
+      "signedTitle": "Signed document",
+      "upload": "File signed copy – {season}",
+      "noneFiled": "No signed copy has been filed yet.",
+      "seasonHeading": "Season {season}",
+      "filedLine": "Filed on {date} by {name}",
+      "someone": "someone",
+      "current": "current",
+      "replaced": "replaced on {date}",
+      "disciplines": "FPN disciplines",
+      "disciplinesHint": "The disciplines ticked on the declaration. They are saved on the swimmer's record.",
+      "birthDateMissing": "Birth date missing: there is no way to tell whether the swimmer is a minor, so this declaration is not chosen for them.",
+      "birthDateLink": "Record the birth date"
+    },
+    "missing": {
+      "addressLine": "No address",
+      "locality": "No locality",
+      "postalCode": "No postal code",
+      "idDocumentNumber": "No document number",
+      "idDocumentValidUntil": "No document expiry date",
+      "disciplines": "No FPN disciplines ticked",
+      "fpnAssociation": "No regional association for the club",
+      "fpnClubCode": "No FPN club abbreviation"
+    },
+    "discipline": {
+      "pura": "Swimming",
+      "open_water": "Open water",
+      "water_polo": "Water polo",
+      "artistic": "Artistic swimming",
+      "adapted": "Para swimming",
+      "masters": "Masters swimming",
+      "diving": "Diving"
+    },
+    "club": {
+      "title": "The club at the FPN",
+      "hint": "These belong to the club, not the swimmer: they print on every declaration. For example, ANNP and GCST.",
+      "association": "Regional association",
+      "clubCode": "Club's FPN abbreviation"
+    }
+  },
+  "boletim": {
+    "title": "Membership form",
+    "notFiled": "Signed membership form not on file yet.",
+    "filed": "Signed membership form, filed on {date}.",
+    "print": "Print filled in",
+    "upload": "File the signed membership form",
+    "copy": "Form filed on {date}",
+    "replaced": "replaced on {date}",
+    "guardianTitle": "Guardian",
+    "declaration": "I declare the details above are true and apply to become a member of {club}, accepting its statutes and rules.",
+    "date": "Date",
+    "signature": "Member's signature",
+    "signatureGuardian": "Guardian's signature",
+    "field": {
+      "name": "Name",
+      "birthDate": "Date of birth",
+      "taxNumber": "Tax number (NIF)",
+      "phone": "Phone",
+      "email": "Email address",
+      "relationship": "Relationship",
+      "socioNumber": "Member number",
+      "socioSince": "Member since"
+    }
   }
 }

@@ -59,6 +59,11 @@ const EXEMPT = [
   'incidents/[id]/print',
   // A meet's results, printed — POOLSE-115. A document too.
   'provas/[id]/print',
+  // The FPN's Anexo 2, filled from a student's record — POOLSE-132. A document
+  // too: the FPN's form on A4, always in Portuguese.
+  'documentos/fpn',
+  // POOLSE-134: the boletim de sócio, a print page.
+  'boletim',
   // App mode — POOLSE-90. A second front door for families, instructors and
   // maintenance, with its own shell (`(app)/app/layout.tsx`): no sidebar, the
   // mobile palette, a column a phone wide. Its layout is the shell its pages share.

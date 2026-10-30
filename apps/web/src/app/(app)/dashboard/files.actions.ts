@@ -40,6 +40,19 @@ export async function uploadFileAction(_previous: FormState, formData: FormData)
     return { ok: true, toastKey: 'files.photoSaved' };
   }
 
+  // A signed FPN declaration is filed under its kind and season — POOLSE-132.
+  const copy = studentDocumentCopy(target);
+  if (copy !== null) {
+    try {
+      const query = new URLSearchParams({ purpose: 'student_document', name: file.name });
+      const stored = await apiUpload<{ id: string }>(`/files?${query.toString()}`, await file.arrayBuffer());
+      await apiPost(copy.path, { kind: copy.kind, seasonId: copy.seasonId, fileId: stored.id });
+    } catch (error) {
+      return refusal(error);
+    }
+    return { ok: true, toastKey: 'documents.toast.filed' };
+  }
+
   const route = attachRoute(target);
   if (route === null) return { ok: false, errorKey: 'files.uploadFailed' };
 
@@ -111,6 +124,21 @@ function certificatePath(target: FileTarget): string | null {
   const [kind, student = '', leave = ''] = target.split(':');
   if (kind !== 'medical-certificate' || !ID.test(student) || !ID.test(leave)) return null;
   return `/students/${student}/medical-leave/${leave}/certificate`;
+}
+
+/** `student-document:<student>:<kind>:<season>` → the copies route and its body. */
+function studentDocumentCopy(
+  target: FileTarget,
+): { path: string; kind: string; seasonId: string | null } | null {
+  const [name, student = '', kind = '', season = ''] = target.split(':');
+  if (name !== 'student-document' || !ID.test(student)) return null;
+  // The boletim de sócio (POOLSE-134) is filed with no season: `…:socio_form:none`.
+  if (kind === 'socio_form' && season === 'none') {
+    return { path: `/students/${student}/documents/copies`, kind, seasonId: null };
+  }
+  if (!ID.test(season)) return null;
+  if (kind !== 'fpn_declaration' && kind !== 'fpn_declaration_minor') return null;
+  return { path: `/students/${student}/documents/copies`, kind, seasonId: season };
 }
 
 function attachRoute(target: FileTarget): { method: 'POST' | 'PUT'; path: string } | null {

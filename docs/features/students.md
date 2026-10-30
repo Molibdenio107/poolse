@@ -262,6 +262,50 @@ convite*, *Convite enviado em dd-MM-yyyy* (or *Link criado em*), *Convite expira
 - Invitations still expire after 24 hours (`INVITATION_TTL_HOURS`). Family invitations sent from
   Pessoas before this change still accept, and do not show on the record.
 
+## Identity and address — POOLSE-131
+
+On the General tab, a folded *Identificação e morada* section: morada, localidade, código postal
+(`0000-000`), filho/a de / e de, estado civil, profissão, habilitações, naturalidade, nacionalidade (a
+country select, `Intl.DisplayNames`, Portugal first, ISO stored) and nº de utente (nine digits). All
+optional, the student's own. `students/identity.ts` carries them as one group through every read and
+write; a body without the group leaves them alone. Named and never valued in the change log; cleared on
+anonymisation by the licence trigger. **The SNS number reaches owner and admin only** — everybody else
+reads `snsRecorded`. The student import and export carry all eleven (a round trip changes nothing; an
+existing student only has blanks filled).
+
+## Last access — POOLSE-130
+
+`app_user.last_seen_at`, stamped by `/me` (`touch_app_user_seen`, at most every 15 minutes, never failing
+the read). *Acesso à app* reads *Usa a app · último acesso há 3 dias*, or *Entrou a …, sem acessos depois*.
+
+## Documentos — POOLSE-132
+
+The tab formerly *Documento de identificação*. Three sections: **Identificação** (the ID upload, and the ID
+document's type, number, issue and expiry — the number encrypted, shown as *registado*, decrypted only
+for the print and audited as `student.id_document_read`), **Declaração FPN** and **Declaração FPN –
+Menores** (only for a minor). Each FPN section keeps the student's FPN disciplines (seven checkboxes on
+the record), picks the season from the club's seasons, lists what the form would print blank, prints the
+FPN's *Anexo 2* filled from the record (`documentos/fpn`, always Portuguese, `lib/fpn-forms.ts`), and
+files the signed scan per season in `student_document`, older copies kept. The club's *Associação* and
+*Sigla FPN* are set in the same section (`PATCH /fpn-settings`). Owner and admin.
+
+## Exame médico — POOLSE-133
+
+`medical_exam`: date, result (apto / apto condicionalmente / não apto), valid until (a missing one is a
+year, labelled *estimada*), a note and an optional sealed certificate (a `medical_certificate` file,
+attached once). The latest live row is the standing — *válido até*, *expirou a*, *sem exame* — judged
+against `club_today()`. A warning, never a gate: shown on *Saúde e consentimentos* and in the register
+beside the seguro. An instructor sees the state, never the note or the file. A spreadsheet import (match
+by NIF, else name and birth date confirmed; never creates a student) and export, on one route with
+`commit`. Erasing a student's health data clears the notes and shreds the certificates' keys (trigger).
+
+## Boletim de sócio — POOLSE-134
+
+Under Mensalidades, for a sócio: *Imprimir preenchido* (`/boletim`, the record's fields and the sócio
+columns, never the SNS number; a minor names the primary guardian) and the signed copy filed in
+`student_document` (kind `socio_form`, no season), older ones kept. The sócios list exports and imports
+through the student sheet (`socios=1`), no second pipeline.
+
 ## Levels
 
 Senior levels sit in the **same ladder** as everything else, ordered by the same `sort_order`

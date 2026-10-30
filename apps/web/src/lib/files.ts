@@ -25,6 +25,8 @@ export type FileTarget =
   /** A person's photograph — Rui, 28-10-2026. `own-photo` is yours, through Clerk. */
   | `student-photo:${string}`
   | `staff-photo:${string}`
+  /** `student-document:<student>:<kind>:<season>` — a signed FPN declaration (POOLSE-132). */
+  | `student-document:${string}:${string}:${string}`
   | 'own-photo'
   | 'logo';
 
@@ -38,7 +40,8 @@ export type FilePurpose =
   | 'medical_certificate'
   | 'student_photo'
   | 'staff_photo'
-  | 'own_photo';
+  | 'own_photo'
+  | 'student_document';
 
 export function purposeOf(target: FileTarget): FilePurpose {
   if (target === 'logo') return 'logo';
@@ -59,6 +62,8 @@ export function purposeOf(target: FileTarget): FilePurpose {
       return 'student_photo';
     case 'staff-photo':
       return 'staff_photo';
+    case 'student-document':
+      return 'student_document';
     default:
       return 'qualification_document';
   }
