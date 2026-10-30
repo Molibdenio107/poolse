@@ -30,8 +30,8 @@ Rui supplied the FPN's form the same day: **ANEXO 2 — DECLARAÇÃO DE CONSENTI
 | *Documento de Identificação … nº* | The ID document number (rule 4) |
 | *emitido em* | The ID document's issue date, if known (the Cartão de Cidadão carries none; left blank) |
 | *válido até* | The ID document's expiry date |
-| *época 2026-2027* (twice in the text) | The published season's name |
-| *Assinalar em conformidade:* N. Pura · Águas Abertas · Polo-Aquático · N. Artística · N. Adaptada · Masters · Saltos | Ticked on the print options (rule 5) |
+| *época 2026-2027* (twice in the text) | The season chosen in the section's *Época* list (rule 5) |
+| *Assinalar em conformidade:* N. Pura · Águas Abertas · Polo-Aquático · N. Artística · N. Adaptada · Masters · Saltos | The student's own *Disciplinas FPN* checkboxes (rule 5) |
 | *Associação* | The club's regional association, e.g. **ANNP** (rule 6) |
 | *Clube* | The club's FPN abbreviation, e.g. **GCST** (rule 6) |
 | *Individual* | Left empty for a club's swimmer |
@@ -54,7 +54,10 @@ The body text (the consent to processing, the *Política de Privacidade* and the
    - it is readable by owner and admin, and every read writes `student.id_document_read` to the audit log;
    - it is erased by `apply_retention()` with the student's identity;
    - an instructor never sees it.
-5. **Disciplines.** The print opens on an options step with the seven boxes. The default ticks *N. Pura* for a student in a `competitive` level and *Masters* for one aged 25 or over by the FPN's rule. The person printing may change them; nothing is stored but the filed copy.
+5. **Disciplines and season, kept in Poolse** (Rui, 30-10-2026):
+   - **Disciplinas FPN.** Seven checkboxes in the *Declaração FPN* section: N. Pura, Águas Abertas, Polo-Aquático, N. Artística, N. Adaptada, Masters, Saltos. They are saved on the student and are what the print ticks. Nothing is pre-ticked by Poolse.
+   - **Época.** A list of the club's seasons (`season`, published and draft, archived left out), with the published one chosen by default. It picks the season the print names and the signed copy is filed under.
+   - A student may have a filed copy per season. The section lists each season with its state (*assinada, arquivada a dd-MM-yyyy* / *por arquivar*).
 6. **Club settings, under the club's Faturação/Clube settings:**
    - *Associação regional* is a free short text, e.g. ANNP.
    - *Sigla FPN do clube* is a free short text, e.g. GCST.
@@ -68,17 +71,16 @@ The body text (the consent to processing, the *Política de Privacidade* and the
 
 **Open:**
 - **The minors' form.** Rui to supply *Declaração FPN – Menores*, which is expected to be the same Anexo with a guardian block. Default until then: the adult text with the guardian as signer and the line *na qualidade de encarregado de educação de {student}*.
-- **The Masters age.** The age from which *Masters* is pre-ticked. Default: 25, to be confirmed against the FPN's current regulation; it is only a default the person printing can change.
 - **Next season's text.** The FPN's wording for 2027-2028. Default: the text is held per season in code (`lib/fpn-forms.ts`), and a new season with no text of its own prints the latest with its season substituted. Changing it is a one-line change, flagged at season publication.
 
 ### Dev notes
 
 - **Schema (use `write-migration`):**
-  - On `student`: `id_document_type` enum, `id_document_number_ciphertext` (CHECK the cipher shape), `id_document_issued_on`, `id_document_valid_until`.
+  - On `student`: `id_document_type` enum, `id_document_number_ciphertext` (CHECK the cipher shape), `id_document_issued_on`, `id_document_valid_until`, and `fpn_disciplines fpn_discipline[]` (enum `pura | open_water | water_polo | artistic | adapted | masters | diving`; English snake_case, the Portuguese is an i18n key). Read it `::text[]`, never bare (the custom-enum-array rule).
   - On `organization`: `fpn_association`, `fpn_club_code`, with a `GRANT UPDATE (col)` and the paired REVOKE plus a SQL test.
   - `student_document` (organization_id, student_id, kind enum `fpn_declaration | fpn_declaration_minor | socio_form`, season_id null, file_id, filed_at, archived_at): insert-only bar archiving.
 - **Retention.** A line in `apply_retention()` and in `retention.integration.test.ts` for the ID fields.
-- **Print route.** `/dashboard/students/[id]/documentos/fpn?minor=1&d=pura,masters`: its own A4 components (black on white, `@page`, `PrintButton`), the dialog only on `?print=1`, and an entry in `check-layout.mjs`.
+- **Print route.** `/dashboard/students/[id]/documentos/fpn?minor=1&season=<id>`, reading the disciplines from the record: its own A4 components (black on white, `@page`, `PrintButton`), the dialog only on `?print=1`, and an entry in `check-layout.mjs`.
 - **The form's text.** `lib/fpn-forms.ts` holds it as message keys with `{season}`. The pt-PT text is the FPN's; the `en` value is a faithful translation for a reader, marked as such, and the print is always in Portuguese.
 - **Files.** A `stored_file` purpose with its `RULES` line: owner, admin, and the family for their own child. It is not sealed (it holds no health data).
 - **Tests.** A `role-probe` line per route, and a family-view check that the ID number never leaves the API for an instructor or a guardian.
@@ -86,7 +88,8 @@ The body text (the consent to processing, the *Política de Privacidade* and the
 ### QA
 
 1. **Rename.** Given the record, then the tab reads *Documentos*, and *Identificação* still uploads as before.
-2. **Filled print.** Given a student with address, ID document and the club's ANNP/GCST set, when *Imprimir preenchida* is pressed with *Masters* ticked, then the A4 page matches the form above field by field, with *época 2026-2027* in the text.
+2. **Filled print.** Given a student with address, ID document, *Masters* ticked and saved, and the club's ANNP/GCST set, when *Imprimir preenchida* is pressed with *Época 2026-2027* chosen, then the A4 page matches the form above field by field, with *época 2026-2027* in the text and only Masters ticked.
+2b. **Seasons.** Given 2026-2027 filed and 2027-2028 chosen, then the section reads *por arquivar* for 2027-2028 and keeps 2026-2027's filed copy listed.
 3. **Missing data.** Given no postal code, then the options step lists it, and the print shows the blank line.
 4. **Minors only.** For an adult, *Declaração FPN – Menores* is not offered. For a 15-year-old it names the primary guardian as signer.
 5. **ID number protected.** An instructor's `GET /students/:id` carries no ID number. An admin's read writes `student.id_document_read`. Retention erases it.
@@ -100,6 +103,7 @@ The body text (the consent to processing, the *Política de Privacidade* and the
 - [ ] The tab is *Documentos*, with three sections, the minors' one only where it applies.
 - [ ] The ID document's details are stored encrypted, audited on read and erased by retention.
 - [ ] The club's Associação and Sigla FPN can be set.
-- [ ] The Anexo 2 prints filled per the table, with the disciplines chosen at print time.
+- [ ] The FPN disciplines are a checkbox list saved on the student, and the season is picked from the club's seasons.
+- [ ] The Anexo 2 prints filled per the table, from them.
 - [ ] The signed copy is filed per season, with history, and the competition warning shows.
 - [ ] QA 1–9 pass. The docs are updated.

@@ -153,6 +153,6 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-129](./POOLSE-129-families-invited-from-the-student.md) | Families are invited from the student's record, by email or a link shared from the phone; Pessoas invites staff only — **built 30-10-2026** | Students / Staff | High (pre go-live) | POOLSE-90 | 1 |
 | [POOLSE-130](./POOLSE-130-app-access-last-seen.md) | App access shows when each person last used Poolse | Students / Invitations | Medium (pilot) | POOLSE-129 | 1 |
 | [POOLSE-131](./POOLSE-131-student-identity-and-address.md) | A student's record holds their address and identity: morada, filiação, nacionalidade and the rest | Students | High (pre go-live) | — | 1 |
-| [POOLSE-132](./POOLSE-132-student-documents-fpn-declarations.md) | Documentos on the record: the ID and the FPN declarations, printed filled-in and filed signed | Students / Competition | Medium (pilot) | POOLSE-131 | 3 |
+| [POOLSE-132](./POOLSE-132-student-documents-fpn-declarations.md) | Documentos on the record: the ID and the FPN declarations, printed filled-in and filed signed | Students / Competition | Medium (pilot) | POOLSE-131 | 2 |
 | [POOLSE-133](./POOLSE-133-exame-medico.md) | Exame médico: each student's current exam, filed as a document and imported/exported for the club | Students / Health | Medium (pilot) | POOLSE-109 | 1 |
 | [POOLSE-134](./POOLSE-134-boletim-de-socio.md) | Boletim de sócio: printed from the record, filed signed, sócios imported/exported | Students / Fees | Medium (pilot) | POOLSE-131, 132 | 2 |
