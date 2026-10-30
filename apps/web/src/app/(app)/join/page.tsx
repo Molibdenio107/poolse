@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
@@ -60,6 +61,13 @@ export default async function JoinPage({
     }
   }
 
+  // The organization's name is what the public preview carries; a reader who
+  // holds a membership by that name in a used link's club is its acceptor.
+  const joined =
+    preview?.status === 'already_accepted' &&
+    me !== null &&
+    me.memberships.some((membership) => membership.organizationName === preview?.organizationName);
+
   return (
     <PageShell
       title={t('join.title')}
@@ -85,7 +93,23 @@ export default async function JoinPage({
         />
       )}
 
-      {preview !== null && preview.status !== 'pending' && (
+      {/*
+        Used, and the reader is in that club — they accepted it, a moment ago
+        or before (Rui, 30-10-2026: the page reloaded straight after a
+        successful accept and called it an error). Say they are in, and how.
+      */}
+      {joined && (
+        <section className="flex flex-col gap-3 rounded border border-success/40 bg-success/10 p-5">
+          <p className="font-medium text-success">
+            {t('join.accepted', { organization: preview?.organizationName ?? '' })}
+          </p>
+          <Link href="/app" className="text-primary hover:underline coarse:-my-3 coarse:py-3">
+            {t('join.enter')}
+          </Link>
+        </section>
+      )}
+
+      {preview !== null && preview.status !== 'pending' && !joined && (
         <section className="rounded border border-border bg-surface p-5">
           <p className="font-medium">{t(`join.status.${preview.status}`)}</p>
           <p className="mt-1 text-sm text-foreground-muted">{t('join.statusHint')}</p>
