@@ -562,15 +562,6 @@ BEGIN
     JOIN app_user u ON u.id = m.app_user_id
    WHERE m.organization_id = v_org AND u.clerk_user_id = 'user_rui';
 
-  -- A staff invitation with no address is refused.
-  BEGIN
-    INSERT INTO invitation (organization_id, email, roles, token_hash, expires_at,
-                            membership_id, invited_by_membership_id)
-    VALUES (v_org, NULL, ARRAY['instructor']::member_role[], 'h-staff-null',
-            '2026-09-02 09:00:00+00', v_inviter, v_inviter);
-  EXCEPTION WHEN check_violation THEN refused := true;
-  END;
-  IF NOT refused THEN RAISE EXCEPTION 'FAIL test 11a: a staff invitation went out with no address'; END IF;
 
   -- The guardian as the student form makes one: active, a name, a NIF, no login.
   INSERT INTO membership (organization_id, status, first_name, last_name, tax_number, phone)
@@ -647,7 +638,31 @@ BEGIN
    WHERE membership_id = v_ana AND role = 'guardian' AND archived_at IS NULL;
   IF n <> 1 THEN RAISE EXCEPTION 'FAIL test 11i: Ana is not a guardian after accepting'; END IF;
 
-  RAISE NOTICE 'PASS test 11: a family invitation binds to the guardian the club has, or merges it into the login';
+  -- 30-10-2026: a staff invitation by phone names Eva's own record, with no
+  -- address. She holds no instructor role until she accepts — and she already
+  -- has a login here, so a fresh guardian record stands in for "no login yet".
+  INSERT INTO membership (organization_id, status, first_name, last_name, tax_number, phone)
+  VALUES (v_org, 'active', 'Zé', 'Pais', '345678902', '+351917000111') RETURNING id INTO v_guardian;
+  INSERT INTO membership_role (organization_id, membership_id, role) VALUES (v_org, v_guardian, 'guardian');
+  INSERT INTO invitation (organization_id, email, roles, token_hash, expires_at,
+                          membership_id, invited_by_membership_id)
+  VALUES (v_org, NULL, ARRAY['instructor']::member_role[],
+          encode(sha256(convert_to('token-ze', 'utf8')), 'hex'),
+          '2026-09-02 09:00:00+00', v_guardian, v_inviter);
+  SELECT count(*) INTO n FROM membership_role
+   WHERE membership_id = v_guardian AND role = 'instructor' AND archived_at IS NULL;
+  IF n <> 0 THEN RAISE EXCEPTION 'FAIL test 11j: the role arrived before the login'; END IF;
+  PERFORM provision_app_user('user_ze', 'ze@familia.pt', 'Zé', 'Pais', NULL, '2026-08-26 09:00:00+00');
+  SELECT o_status AS status, o_membership_id AS bound INTO r
+    FROM accept_invitation(encode(sha256(convert_to('token-ze', 'utf8')), 'hex'), 'user_ze', '2026-08-26 10:00:00+00');
+  IF r.status <> 'accepted' OR r.bound <> v_guardian THEN
+    RAISE EXCEPTION 'FAIL test 11k: accepted % onto % rather than Zé''s record', r.status, r.bound;
+  END IF;
+  SELECT count(*) INTO n FROM membership_role
+   WHERE membership_id = v_guardian AND role IN ('instructor', 'guardian') AND archived_at IS NULL;
+  IF n <> 2 THEN RAISE EXCEPTION 'FAIL test 11l: Zé is not instructor and guardian on one record'; END IF;
+
+  RAISE NOTICE 'PASS test 11: an invitation binds to the person the club has, or merges it into the login, roles arriving with it';
 END $$;
 
 ROLLBACK;

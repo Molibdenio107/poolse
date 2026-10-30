@@ -73,6 +73,8 @@ export interface InviteState extends FormState {
   /** Increments on every submission, so repeated failures re-focus. */
   attempt?: number;
   invitation?: CreatedInvitation;
+  /** The person who already uses Poolse here, for a link to their record. */
+  existingMembershipId?: string;
 }
 
 export async function createOrganizationAction(
@@ -141,6 +143,8 @@ export async function inviteAction(
 ): Promise<InviteState> {
   const organizationId = String(formData.get('organizationId') ?? '');
   const email = String(formData.get('email') ?? '').trim();
+  // Rui, 30-10-2026: a mobile is enough — the link is then shared from the phone.
+  const phone = String(formData.get('phone') ?? '').trim();
   const roles = formData.getAll('roles').map(String).filter(Boolean);
 
   // Counted so the form can re-focus the first bad field on a second failed
@@ -154,8 +158,8 @@ export async function inviteAction(
    * and a single message at the top makes them hunt for which box it meant.
    */
   const fields: Record<string, string> = {};
-  if (!email) fields['email'] = 'invite.emailRequired';
-  else if (!EMAIL_SHAPE.test(email)) fields['email'] = 'invite.emailInvalid';
+  if (!email && phone.replace(/[^0-9]/g, '').length < 9) fields['email'] = 'invite.contactRequired';
+  else if (email && !EMAIL_SHAPE.test(email)) fields['email'] = 'invite.emailInvalid';
   if (roles.length === 0) fields['roles'] = 'invite.rolesRequired';
 
   if (Object.keys(fields).length > 0) return { ok: false, attempt, fields };
@@ -164,12 +168,26 @@ export async function inviteAction(
   try {
     invitation = await apiPost<CreatedInvitation>(
       '/invitations',
-      { email, roles },
+      { email, phone, roles },
       { organizationId },
     );
   } catch (error) {
+    // Somebody who already signs in here: their record, where roles change.
+    if (error instanceof ApiError && error.code === 'person_in_app') {
+      const record = (error.details ?? {}) as Record<string, unknown>;
+      return {
+        ok: false,
+        attempt,
+        fields: { email: 'invite.personInApp' },
+        values: { name: typeof record['name'] === 'string' ? record['name'] : '' },
+        ...(typeof record['membershipId'] === 'string' ? { existingMembershipId: record['membershipId'] } : {}),
+      };
+    }
     if (error instanceof ApiError && error.status === 409) {
       return { ok: false, attempt, fields: { email: 'invite.duplicate' } };
+    }
+    if (error instanceof ApiError && error.status === 400 && Object.keys(error.fields).length > 0) {
+      return { ok: false, attempt, fields: error.fields };
     }
     return { ...failure(error, 'invite.failed'), attempt };
   }

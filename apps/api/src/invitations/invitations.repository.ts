@@ -460,7 +460,12 @@ export async function listPendingInvitations(
       invited_by_last_name: string | null;
     }>(`
       SELECT i.id,
-             i.email::text AS email,
+             -- A link shared by phone has no address: the person's name or number
+             -- stands in, so the pending list never shows an empty row.
+             coalesce(
+               i.email::text,
+               (SELECT coalesce(person_name(m.id), m.phone) FROM membership m WHERE m.id = i.membership_id)
+             ) AS email,
              (SELECT array_agg(r::text ORDER BY r::text) FROM unnest(i.roles) AS r) AS roles,
              i.expires_at,
              i.created_at,
@@ -580,10 +585,113 @@ export async function transferOwnership(
   });
 }
 
+/**
+ * Mobile numbers compared as the last nine digits, so "+351 912 345 678",
+ * "912345678" and "912 345 678" are one number — Rui, 30-10-2026: an email or a
+ * phone identifies a person.
+ */
+export const PHONE_KEY = (column: string): string =>
+  `right(regexp_replace(coalesce(${column}, ''), '[^0-9]', '', 'g'), 9)`;
+
+export function phoneKey(phone: string): string {
+  return phone.replace(/[^0-9]/g, '').slice(-9);
+}
+
+export interface KnownPerson {
+  membershipId: string;
+  name: string;
+  hasLogin: boolean;
+  /** Somebody invited before and not yet answered: the invitation is the person. */
+  pending: boolean;
+}
+
+/**
+ * Somebody in the club already holding this email or mobile — the person a staff
+ * invitation must name instead of a new placeholder. Pending placeholders and
+ * Poolse support are not people of the club.
+ */
+export async function findPersonByContact(
+  organizationId: string,
+  email: string | null,
+  phone: string,
+): Promise<KnownPerson | null> {
+  const key = phoneKey(phone);
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string; name: string; has_login: boolean; pending: boolean }>(
+      `SELECT m.id, coalesce(person_name(m.id), '') AS name, m.app_user_id IS NOT NULL AS has_login,
+              m.status = 'invited' AS pending
+         FROM membership m
+         LEFT JOIN app_user u ON u.id = m.app_user_id
+        WHERE m.archived_at IS NULL
+          AND m.support_grant_id IS NULL
+          -- A placeholder counts only while its invitation is live.
+          AND (m.status <> 'invited' OR EXISTS (
+                SELECT 1 FROM invitation i
+                 WHERE i.membership_id = m.id AND i.accepted_at IS NULL AND i.revoked_at IS NULL))
+          AND (($1::citext IS NOT NULL AND person_email(m.id) = $1::citext)
+               OR (length($2) = 9 AND ${PHONE_KEY('coalesce(m.phone, u.contact_phone)')} = $2))
+        ORDER BY (m.app_user_id IS NOT NULL) DESC
+        LIMIT 1`,
+      [email, key],
+    );
+    const row = rows[0];
+    return row === undefined
+      ? null
+      : { membershipId: row.id, name: row.name, hasLogin: row.has_login, pending: row.pending };
+  });
+}
+
+/**
+ * An invitation naming a person the club already has, who has no login yet
+ * (30-10-2026). No placeholder: the roles arrive with the login, added by
+ * `accept_invitation`, so nobody is staff before they answer.
+ */
+export async function createInvitationFor(
+  input: Omit<CreateInvitationInput, 'phone'> & { membershipId: string },
+): Promise<string> {
+  try {
+    return await withOrg(input.organizationId, async (tx) => {
+      const { rows } = await tx.query<{ id: string }>(
+        `INSERT INTO invitation (
+           organization_id, email, roles, token_hash, expires_at,
+           membership_id, invited_by_membership_id
+         )
+         VALUES ($1, $2::citext, $3::member_role[], $4, $5, $6, $7)
+         RETURNING id`,
+        [
+          input.organizationId,
+          input.email,
+          input.roles,
+          input.tokenHash,
+          input.expiresAt,
+          input.membershipId,
+          input.invitedByMembershipId,
+        ],
+      );
+      const id = rows[0]!.id;
+      await recordAudit(tx, {
+        action: 'invitation.created',
+        entityType: 'invitation',
+        entityId: id,
+        data: { email: input.email, roles: input.roles, membershipId: input.membershipId, existing: true },
+      });
+      return id;
+    });
+  } catch (error) {
+    if (error instanceof Error && (error as { code?: string }).code === '23505') {
+      throw new DuplicateInvitationError(input.email ?? input.membershipId);
+    }
+    throw error;
+  }
+}
+
 export interface CreateInvitationInput {
   organizationId: string;
   invitedByMembershipId: string;
-  email: string;
+  /** Null for a link shared from the club's phone (30-10-2026). */
+  email: string | null;
+  /** Kept on the placeholder, so the next invitation by this number finds them. */
+  phone?: string | null;
   roles: readonly MemberRole[];
   tokenHash: string;
   expiresAt: Date;
@@ -599,8 +707,8 @@ export async function createInvitation(input: CreateInvitationInput): Promise<st
       // person exists in the organization before they have an account, which is
       // what makes them appear in the people list and what the roles hang off.
       const membership = await tx.query<{ id: string }>(
-        `INSERT INTO membership (organization_id, status) VALUES ($1, 'invited') RETURNING id`,
-        [input.organizationId],
+        `INSERT INTO membership (organization_id, status, phone) VALUES ($1, 'invited', $2) RETURNING id`,
+        [input.organizationId, input.phone ?? null],
       );
       const membershipId = membership.rows[0]?.id;
       if (!membershipId) throw new Error('Could not create the pending membership');
@@ -649,7 +757,7 @@ export async function createInvitation(input: CreateInvitationInput): Promise<st
     // organization. The whole transaction rolled back, so no orphan membership
     // is left behind.
     if (error instanceof Error && (error as { code?: string }).code === '23505') {
-      throw new DuplicateInvitationError(input.email);
+      throw new DuplicateInvitationError(input.email ?? 'link');
     }
     throw error;
   }
@@ -717,8 +825,10 @@ export async function reissueInvitation(
           AND i.revoked_at IS NULL
           AND m.id = i.membership_id
       RETURNING i.email::text AS email, i.roles::text[] AS roles, i.membership_id,
-                (m.status = 'invited'
-                 OR NOT i.roles <@ ARRAY['guardian', 'student']::member_role[]) AS placeholder`,
+                -- A record the club already had, with no login, stays the target
+                -- (POOLSE-129, and staff by phone 30-10-2026). A live login's
+                -- re-invite (POOLSE-39) keeps its old path.
+                (m.status = 'invited' OR m.app_user_id IS NOT NULL) AS placeholder`,
       [invitationId],
     );
 

@@ -29,7 +29,18 @@ export function InvitationLink({
   if (typeof window === 'undefined') return null;
   const link = `${window.location.origin}/join?token=${encodeURIComponent(invitation.token)}`;
 
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
   async function copy(): Promise<void> {
+    // On a phone, the share menu (WhatsApp, SMS) — 30-10-2026.
+    if (canShare) {
+      try {
+        await navigator.share({ text: `${t('invite.shareText')} ${link}` });
+        return;
+      } catch (error) {
+        if ((error as { name?: string }).name === 'AbortError') return;
+      }
+    }
     try {
       await navigator.clipboard.writeText(link);
       setCopied(true);
@@ -48,9 +59,11 @@ export function InvitationLink({
   return (
     <div className={`flex flex-col gap-2 rounded border p-4 ${frame}`}>
       <p className="font-medium">
-        {invitation.emailed
-          ? t('invite.emailed', { email: invitation.email })
-          : t('invite.created', { email: invitation.email })}
+        {invitation.email === null
+          ? t('invite.createdLink')
+          : invitation.emailed
+            ? t('invite.emailed', { email: invitation.email })
+            : t('invite.created', { email: invitation.email })}
       </p>
       <p className="text-sm text-foreground-muted">
         {invitation.emailed ? t('invite.emailedHint') : t('invite.linkHint')}
@@ -64,7 +77,7 @@ export function InvitationLink({
           onClick={() => void copy()}
           className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border bg-surface hover:bg-surface-muted"
         >
-          {copied ? t('common.copied') : t('common.copy')}
+          {canShare ? t('familyAccess.share') : copied ? t('common.copied') : t('common.copy')}
         </button>
       </div>
     </div>

@@ -452,7 +452,8 @@ export interface People {
 
 export interface CreatedInvitation {
   id: string;
-  email: string;
+  /** Null for a link to share from the phone (30-10-2026). */
+  email: string | null;
   roles: string[];
   expiresAt: string;
   /** Shown once and never retrievable again: the API stores only its hash. */

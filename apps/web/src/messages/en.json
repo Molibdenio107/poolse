@@ -2512,7 +2512,7 @@
     "expiresOn": "Expires on {date}",
     "revoke": "Revoke",
     "revokeFailed": "Could not revoke the invitation.",
-    "duplicate": "That address already has a pending invitation.",
+    "duplicate": "This person already has a pending invitation. Use New link in the invitations list.",
     "failed": "Could not create the invitation.",
     "emailInvalid": "That is not a valid email address. Check it and try again.",
     "emailRequired": "An email address is required.",
@@ -2522,7 +2522,14 @@
     "reissueFailed": "Could not generate a new link.",
     "emailed": "Invitation emailed to {email}.",
     "emailedHint": "The link is here too, in case the email is slow. It is shown only once.",
-    "expired": "Invitation expired"
+    "expired": "Invitation expired",
+    "phoneLabel": "Mobile",
+    "phoneHint": "Without an email, the invitation is a link you send from your phone (WhatsApp, SMS).",
+    "contactRequired": "Give an email or a mobile number.",
+    "personInApp": "{name} already uses Poolse in this club. Change their roles on their record.",
+    "openPerson": "Open the record",
+    "createdLink": "Link created. Send it from your phone now.",
+    "shareText": "You have been invited to the team on Poolse. Open this link:"
   },
   "join": {
     "title": "Invitation",

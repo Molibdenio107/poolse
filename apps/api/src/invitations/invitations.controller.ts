@@ -21,6 +21,9 @@ import {
 import { recordRefusedAttempt } from '../audit/audit.js';
 import {
   createInvitation,
+  createInvitationFor,
+  findPersonByContact,
+  phoneKey,
   DuplicateInvitationError,
   organizationVoice,
   pendingInvitationRoles,
@@ -35,12 +38,15 @@ import { CoreRoute } from '../tenant/modules.js';
 
 interface CreateInvitationBody {
   email?: unknown;
+  /** Rui, 30-10-2026: a staff member may be invited by mobile, the link shared by hand. */
+  phone?: unknown;
   roles?: unknown;
 }
 
 interface CreateInvitationResponse {
   id: string;
-  email: string;
+  /** Null for a link to share from the club's phone. */
+  email: string | null;
   roles: string[];
   expiresAt: string;
   /**
@@ -134,8 +140,23 @@ export class InvitationsController {
     requireCanInvite();
     const { organizationId, membershipId } = currentTenant();
 
-    const email = typeof body.email === 'string' ? normaliseEmail(body.email) : null;
-    if (!email) throw new BadRequestException('A valid email address is required');
+    const rawEmail = typeof body.email === 'string' ? body.email.trim() : '';
+    const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+    const email = rawEmail === '' ? null : normaliseEmail(rawEmail);
+    if (rawEmail !== '' && email === null) {
+      throw new BadRequestException({
+        code: 'invalid_email',
+        message: 'Not an email address',
+        fields: { email: 'invite.emailInvalid' },
+      });
+    }
+    if (email === null && phoneKey(phone).length < 9) {
+      throw new BadRequestException({
+        code: 'contact_required',
+        message: 'An email or a mobile number is required',
+        fields: { email: 'invite.contactRequired' },
+      });
+    }
 
     const roles = parseRoles(body.roles);
     if (roles.length === 0) throw new BadRequestException('At least one role is required');
@@ -170,27 +191,67 @@ export class InvitationsController {
       throw new BadRequestException(`Not allowed to grant: ${refused.join(', ')}`);
     }
 
+    /*
+     * An email or a mobile identifies a person (Rui, 30-10-2026). Somebody the
+     * club already has is invited as themself — a guardian who will teach stays
+     * one person — and somebody who already signs in needs no invitation: their
+     * roles are changed on their own record.
+     */
+    const known = await findPersonByContact(organizationId, email, phone);
+    if (known?.hasLogin === true) {
+      throw new ConflictException({
+        code: 'person_in_app',
+        message: 'This person already uses Poolse in this club',
+        membershipId: known.membershipId,
+        name: known.name,
+        fields: { email: 'invite.personInApp' },
+      });
+    }
+
+    if (known?.pending === true) {
+      throw new ConflictException({
+        code: 'already_invited',
+        message: 'This person already has a pending invitation',
+        fields: { email: 'invite.duplicate' },
+      });
+    }
+
     const { token, tokenHash } = issueToken();
     const expiresAt = invitationExpiry();
 
     let id: string;
     try {
-      id = await createInvitation({
-        organizationId,
-        invitedByMembershipId: membershipId,
-        email,
-        roles,
-        tokenHash,
-        expiresAt,
-      });
+      id = known === null
+        ? await createInvitation({
+            organizationId,
+            invitedByMembershipId: membershipId,
+            email,
+            phone: phone === '' ? null : phone,
+            roles,
+            tokenHash,
+            expiresAt,
+          })
+        : await createInvitationFor({
+            organizationId,
+            invitedByMembershipId: membershipId,
+            membershipId: known.membershipId,
+            email,
+            roles,
+            tokenHash,
+            expiresAt,
+          });
     } catch (error) {
       if (error instanceof DuplicateInvitationError) {
-        throw new ConflictException(`${email} already has a pending invitation`);
+        throw new ConflictException({
+          code: 'already_invited',
+          message: 'This person already has a pending invitation',
+          fields: { email: 'invite.duplicate' },
+        });
       }
       throw error;
     }
 
-    const emailed = await deliver(organizationId, id, email, roles, token, expiresAt);
+    const emailed = email === null ? false : await deliver(organizationId, id, email, roles, token, expiresAt);
 
     return { id, email, roles, expiresAt: expiresAt.toISOString(), token, emailed };
   }

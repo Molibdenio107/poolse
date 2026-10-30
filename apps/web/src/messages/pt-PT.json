@@ -2512,7 +2512,7 @@
     "expiresOn": "Expira a {date}",
     "revoke": "Anular",
     "revokeFailed": "Não foi possível anular o convite.",
-    "duplicate": "Já existe um convite pendente para este email.",
+    "duplicate": "Já existe um convite pendente para esta pessoa. Use Novo link na lista de convites.",
     "failed": "Não foi possível criar o convite.",
     "emailInvalid": "Email inválido. Verifique o endereço e tente de novo.",
     "emailRequired": "Indique um email.",
@@ -2522,7 +2522,14 @@
     "reissueFailed": "Não foi possível gerar uma nova ligação.",
     "emailed": "Convite enviado por email para {email}.",
     "emailedHint": "A ligação também está aqui, caso o email demore. Só é mostrada uma vez.",
-    "expired": "Convite expirado"
+    "expired": "Convite expirado",
+    "phoneLabel": "Telemóvel",
+    "phoneHint": "Sem email, o convite é um link que envia do seu telemóvel (WhatsApp, SMS).",
+    "contactRequired": "Indique um email ou um telemóvel.",
+    "personInApp": "{name} já usa o Poolse neste clube. Altere as funções na ficha.",
+    "openPerson": "Abrir a ficha",
+    "createdLink": "Link criado. Envie-o já do seu telemóvel.",
+    "shareText": "Foi convidado para a equipa no Poolse. Abra este link:"
   },
   "join": {
     "title": "Convite",

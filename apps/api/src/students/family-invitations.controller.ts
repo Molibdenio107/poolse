@@ -16,7 +16,12 @@ import { hasRole, requireRole } from '../tenant/roles.js';
 import { CoreRoute } from '../tenant/modules.js';
 import { readSearch } from '../common/search.js';
 import { deliver, joinLink } from '../invitations/invitations.controller.js';
-import { reissueInvitation, revokeInvitation } from '../invitations/invitations.repository.js';
+import {
+  PHONE_KEY,
+  phoneKey,
+  reissueInvitation,
+  revokeInvitation,
+} from '../invitations/invitations.repository.js';
 import { invitationExpiry, issueToken, normaliseEmail } from '../invitations/invitations.service.js';
 import { insertStudent } from './students.repository.js';
 import { parseStudent } from './students.controller.js';
@@ -253,18 +258,22 @@ export class FamilyInvitationsBulkController {
        * holds the email, is refused with the student's id, so the screen sends
        * the operator to that record's own *Convidar para a app*.
        */
-      const digits = phone.replace(/\D/g, '');
+      const digits = phoneKey(phone);
       const { rows: existing } = await tx.query<{ id: string | null; name: string }>(
         `SELECT s.id, s.first_name || ' ' || s.last_name AS name
            FROM student s
           WHERE s.archived_at IS NULL
             AND (($1::citext IS NOT NULL AND (s.contact_email = $1::citext
                                               OR person_email(s.membership_id) = $1::citext))
-                 OR ($2 <> '' AND regexp_replace(coalesce(s.contact_phone, ''), '[^0-9]', '', 'g') = $2))
+                 OR (length($2) = 9 AND (${PHONE_KEY('s.contact_phone')} = $2
+                                         OR ${PHONE_KEY('(SELECT m.phone FROM membership m WHERE m.id = s.membership_id)')} = $2)))
          UNION ALL
          SELECT NULL, coalesce(person_name(m.id), '')
            FROM membership m
-          WHERE m.archived_at IS NULL AND $1::citext IS NOT NULL AND person_email(m.id) = $1::citext
+          LEFT JOIN app_user u ON u.id = m.app_user_id
+          WHERE m.archived_at IS NULL AND m.status <> 'invited' AND m.support_grant_id IS NULL
+            AND (($1::citext IS NOT NULL AND person_email(m.id) = $1::citext)
+                 OR (length($2) = 9 AND ${PHONE_KEY('coalesce(m.phone, u.contact_phone)')} = $2))
           LIMIT 1`,
         [email, digits],
       );

@@ -7,6 +7,7 @@ import { TextField, useFocusFirstError } from '@/components/ui/field';
 import { inviteAction, type InviteState } from '../../actions';
 import { InvitationLink } from './invitation-link';
 import { RoleBadge } from '@/components/role-badge';
+import { FromLink } from '@/components/from-link';
 
 const INITIAL: InviteState = { ok: false };
 
@@ -43,7 +44,7 @@ export function InviteForm({
 
   const errorFor = (field: string): string | undefined => {
     const key = state.fields?.[field];
-    return key === undefined ? undefined : t(key);
+    return key === undefined ? undefined : t(key, state.values);
   };
 
   return (
@@ -59,6 +60,24 @@ export function InviteForm({
           error={errorFor('email')}
           autoComplete="email"
           maxLength={200}
+        />
+        {state.existingMembershipId !== undefined && (
+          <FromLink
+            href={`/dashboard/facilities/staff/${state.existingMembershipId}`}
+            className="-mt-2 self-start text-sm text-primary underline underline-offset-2"
+          >
+            {t('invite.openPerson')}
+          </FromLink>
+        )}
+        <TextField
+          name="phone"
+          type="tel"
+          inputMode="tel"
+          label={t('invite.phoneLabel')}
+          hint={t('invite.phoneHint')}
+          error={errorFor('phone')}
+          autoComplete="off"
+          maxLength={40}
         />
 
         <fieldset className="flex flex-col gap-2">

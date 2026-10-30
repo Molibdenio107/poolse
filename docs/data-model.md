@@ -192,7 +192,7 @@ invitation
   invited_by_membership_id
   unique (organization_id, email) where accepted_at is null and revoked_at is null
   unique (organization_id, membership_id) where accepted_at is null and revoked_at is null
-  check (email is not null or roles <@ '{guardian,student}')
+  -- email null: a link shared by hand, for any role since 30-10-2026
 
 facility                        -- a site; a personal org has exactly one
   id, organization_id, name, address, timezone, archived_at,

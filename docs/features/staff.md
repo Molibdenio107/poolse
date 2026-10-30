@@ -22,6 +22,22 @@ The invite form on Pessoas offers admin, instructor and maintenance; `POST /invi
 invitations out. A family is invited from the student's record — `students.md`, *Inviting a family into
 the app*. Pessoas already listed staff only (`scope=staff`).
 
+## An email or a mobile identifies a person (30-10-2026, Rui)
+
+The staff invite takes an email and/or a mobile. With no email it is a link, shared from the club's
+phone (WhatsApp, SMS). The contact is looked up first (`findPersonByContact`: the email, or the last nine
+digits of the mobile, so "+351 912 345 678" is "912345678"):
+
+- **Somebody the club already has, with no login** (a guardian who will teach) — the invitation names
+  their own record; no placeholder. The roles arrive with the login: `accept_invitation` adds them on
+  binding, so nobody shows as staff before they answer.
+- **Somebody who already signs in here** — 409 `person_in_app`, naming them; their roles change on
+  their record.
+- **A pending invitation to that email or mobile** — 409 `already_invited`; use *Novo link*.
+- **Nobody** — a placeholder as before, carrying the mobile so the next lookup finds it.
+
+*Convidar aluno* applies the same rule (409 `person_exists`).
+
 ## What nobody does to themselves, and what only the person does
 
 Sweep of 15 October 2026:
