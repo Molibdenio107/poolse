@@ -6180,6 +6180,12 @@
       "gym": "Gym"
     }
   },
+  "sportPage": {
+    "title": "{page} · {sport}",
+    "pending": "Classes and the calendar for {sport} are not available yet: they arrive with the court grid. For now, this sport's recintos are added and archived on each site's Recintos tab.",
+    "recintos": "{sport} recintos",
+    "manage": "Manage on the site"
+  },
   "recintos": {
     "title": "Playing areas",
     "hint": "This site's courts and pitches for other sports. Pools stay under Pools. The sports offered are the ones Poolse has switched on for the club.",

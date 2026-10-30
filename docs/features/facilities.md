@@ -41,7 +41,7 @@ switched off since. A pool club sees no new tab. Owner and admin, as Piscinas.
 - *Arquivar* asks first — `POST /facilities/playing-areas/:id/archive`. A court is not yet in the
   bin (`RESTORABLE`), and the question says so.
 - A pool is still added and archived under Piscinas; its recinto follows by trigger.
-- Not built yet: the sports' own menu groups, calendars and turmas on a court (the rest of POOLSE-125).
+- The menu groups per sport are built (`navigation.md`). Not built yet: calendars and turmas on a court.
 
 ## Espaços
 

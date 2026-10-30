@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
-import type { PoolseModule } from '@poolse/rules';
+import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import { AppSidebar, MobileMenu, type Badges } from '../app-sidebar';
 import type { SubscriptionAlertView } from '@/lib/subscription-alert';
 import { modulesOf } from '@/lib/modules';
@@ -55,6 +55,8 @@ interface Viewer {
   kind: OrganizationKind;
   /** POOLSE-87: what this club has on. Empty when `/me` failed — closed, like roles. */
   modules: readonly PoolseModule[];
+  /** POOLSE-124: the sports this club has on, `pool` first. */
+  sports: readonly PoolseSport[];
   /** The club's name, for the brand slot. Null when there is no membership. */
   organizationName: string | null;
   /**
@@ -101,6 +103,8 @@ async function currentViewer(): Promise<Viewer> {
       // No membership: nothing to show. A membership from an API that predates
       // the field: everything on (`modulesOf`).
       modules: membership === undefined ? [] : modulesOf(membership),
+      // POOLSE-125: one menu group per sport once a second is on.
+      sports: membership?.sports ?? [BASE_SPORT],
       organizationName: membership?.organizationName ?? null,
       suspended:
         membership?.suspendedAt != null
@@ -127,6 +131,7 @@ async function currentViewer(): Promise<Viewer> {
       clubGone: false,
       kind: 'business',
       modules: [],
+      sports: [BASE_SPORT],
       organizationName: null,
       suspended: null,
     };
@@ -184,7 +189,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }): Promise<React.ReactElement> {
-  const [{ roles, support, clubGone, kind, modules, organizationName, suspended }, logoFileId] =
+  const [{ roles, support, clubGone, kind, modules, sports, organizationName, suspended }, logoFileId] =
     await Promise.all([currentViewer(), brandLogo()]);
 
   // A support window that ended, with this browser still pointed at its club.
@@ -224,7 +229,7 @@ export default async function DashboardLayout({
         printed today; when something is, it inherits this for free.
       */}
       <div className="contents print:hidden">
-        <AppSidebar roles={roles} kind={kind} modules={modules} badges={badges} />
+        <AppSidebar roles={roles} kind={kind} modules={modules} sports={sports} badges={badges} />
       </div>
 
       {/*
@@ -244,7 +249,7 @@ export default async function DashboardLayout({
             Faturação → Definições (12 October 2026).
           */}
           <div className="flex min-w-0 items-center gap-2">
-            <MobileMenu roles={roles} kind={kind} modules={modules} badges={badges} />
+            <MobileMenu roles={roles} kind={kind} modules={modules} sports={sports} badges={badges} />
             {logoFileId !== null && (
               // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id
               <img src={`/files/${logoFileId}`} alt="" className="h-8 w-auto max-w-32 object-contain" />
@@ -256,7 +261,7 @@ export default async function DashboardLayout({
 
           <div className="flex items-center gap-3">
             {/* POOLSE-118: Ctrl+K, or this button, to go anywhere the menu goes. */}
-            <CommandPalette roles={roles} kind={kind} modules={modules} />
+            <CommandPalette roles={roles} kind={kind} modules={modules} sports={sports} />
             <PreferenceControls />
             <UserMenu canArchive={roles.includes('owner') || roles.includes('admin')} subscription={subscription} />
           </div>

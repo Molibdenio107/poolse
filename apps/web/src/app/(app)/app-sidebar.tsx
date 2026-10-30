@@ -3,15 +3,16 @@
 import { Fragment, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { EntityIcon, type EntityKind } from '@/components/entity-icon';
-import type { PoolseModule } from '@poolse/rules';
+import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import type { OrganizationKind } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import {
+  pathOf,
   visibleSections,
   type Badges,
   type Item,
@@ -64,15 +65,18 @@ export function AppSidebar({
   roles,
   kind,
   modules,
+  sports = [BASE_SPORT],
   badges = {},
 }: {
   roles: readonly string[];
   kind: OrganizationKind;
   modules: readonly PoolseModule[];
+  sports?: readonly PoolseSport[];
   badges?: Badges;
 }): React.ReactElement {
   const t = useTranslations();
   const pathname = usePathname();
+  const sport = useCurrentSport(sports);
 
   /*
    * Pruned by role and by kind of tenant, at every depth — POOLSE-38 AC5, 4.5.
@@ -80,7 +84,7 @@ export function AppSidebar({
    * A hidden parent takes its children with it; a hidden child leaves its parent
    * standing. Never inherited: Instalações and Staff have different audiences.
    */
-  const sections = visibleSections({ roles, kind, modules });
+  const sections = visibleSections({ roles, kind, modules, sports });
 
   /*
    * From `md` up only — POOLSE-88. Below it the same list lives in a sheet
@@ -95,23 +99,32 @@ export function AppSidebar({
           <LinkBusy />
         </Link>
 
-        <SidebarNav sections={sections} pathname={pathname} badges={badges} />
+        <SidebarNav sections={sections} pathname={pathname} badges={badges} sport={sport} />
       </div>
     </aside>
   );
 }
 
 
+/** `?sport=` when it names one of the club's sports, else the first — POOLSE-125 rule 3. */
+function useCurrentSport(sports: readonly PoolseSport[]): PoolseSport {
+  const asked = useSearchParams().get('sport');
+  return sports.find((sport) => sport === asked) ?? sports[0] ?? BASE_SPORT;
+}
+
 /** The one list both the sidebar and the phone's sheet draw, so they cannot drift. */
 function SidebarNav({
   sections,
   pathname,
   badges,
+  sport,
   onNavigate,
 }: {
   sections: Item[];
   pathname: string;
   badges: Badges;
+  /** The sport being read — POOLSE-125: `?sport=` when it is one of the club's, else the first. */
+  sport: PoolseSport;
   /** The phone's sheet closes on any tap of a link, the page it is on included. */
   onNavigate?: () => void;
 }): React.ReactElement {
@@ -125,6 +138,7 @@ function SidebarNav({
           pathname={pathname}
           depth={0}
           badges={badges}
+          sport={sport}
           onNavigate={onNavigate}
         />
       ))}
@@ -144,15 +158,18 @@ export function MobileMenu({
   roles,
   kind,
   modules,
+  sports = [BASE_SPORT],
   badges = {},
 }: {
   roles: readonly string[];
   kind: OrganizationKind;
   modules: readonly PoolseModule[];
+  sports?: readonly PoolseSport[];
   badges?: Badges;
 }): React.ReactElement {
   const t = useTranslations();
   const pathname = usePathname();
+  const sport = useCurrentSport(sports);
   const [open, setOpen] = useState(false);
 
   useEffect(() => setOpen(false), [pathname]);
@@ -177,9 +194,10 @@ export function MobileMenu({
         placement="start"
       >
         <SidebarNav
-          sections={visibleSections({ roles, kind, modules })}
+          sections={visibleSections({ roles, kind, modules, sports })}
           pathname={pathname}
           badges={badges}
+          sport={sport}
           onNavigate={() => setOpen(false)}
         />
       </Dialog>
@@ -215,6 +233,7 @@ function NavItem({
   pathname,
   depth,
   badges,
+  sport,
   onNavigate,
   siblings,
 }: {
@@ -222,6 +241,7 @@ function NavItem({
   pathname: string;
   depth: number;
   badges: Badges;
+  sport: PoolseSport;
   onNavigate?: (() => void) | undefined;
   /** The other entries at this depth, for "the most specific match wins". */
   siblings?: Item[] | undefined;
@@ -232,14 +252,23 @@ function NavItem({
    * shares its parent's address, and `/provas/minimos` is inside `/provas`, so
    * without this Provas would light up while Mínimos is being read.
    */
+  /*
+   * An entry of one sport's group (POOLSE-125) answers only while that sport is
+   * being read, and a group is open while any of its entries is — Turmas and
+   * Calendário sit at two different addresses under one heading.
+   */
+  const ofSport = (entry: Item): boolean => entry.sport === undefined || entry.sport === sport;
+  const here = (entry: Item): boolean => isInSection(pathname, pathOf(entry.href)) && ofSport(entry);
+  const reaches = (entry: Item): boolean => here(entry) || (entry.children ?? []).some(reaches);
+  const path = pathOf(item.href);
   const active =
-    isInSection(pathname, item.href) &&
+    reaches(item) &&
     !(siblings ?? []).some(
-      (other) => other.href.length > item.href.length && isInSection(pathname, other.href),
+      (other) => pathOf(other.href).length > path.length && here(other),
     );
   // The page is named once: by the child that shares its parent's address.
   const current =
-    pathname === item.href && !(item.children ?? []).some((child) => child.href === item.href);
+    pathname === path && ofSport(item) && !(item.children ?? []).some((child) => child.href === item.href);
   const count = item.badge === undefined ? 0 : (badges[item.badge] ?? 0);
   // A closed section says something inside it needs doing (POOLSE-120).
   const inside = count === 0 && !active ? childCount(item, badges) : 0;
@@ -291,6 +320,7 @@ function NavItem({
             pathname={pathname}
             depth={depth + 1}
             badges={badges}
+            sport={sport}
             onNavigate={onNavigate}
             siblings={item.children}
           />

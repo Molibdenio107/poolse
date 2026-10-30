@@ -31,6 +31,8 @@ import { moduleIsOn } from '@/lib/modules';
 import { formatDate, formatDateRange, formatDayMonth, formatDayMonthShort } from '@/lib/date-format';
 import { backProp, originBack } from '@/lib/back';
 import { readAttention } from '@/lib/attention';
+import { addonSportAsked } from '@/lib/modules';
+import { SportPending } from '../sport-pending';
 
 /**
  * The dated calendar — slices 1.5 and 1.6.
@@ -48,11 +50,14 @@ import { readAttention } from '@/lib/attention';
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string; plan?: string; day?: string; from?: string }>;
+  searchParams: Promise<{ week?: string; plan?: string; day?: string; from?: string; sport?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
-  const { week, plan, day, from } = await searchParams;
+  const { week, plan, day, from, sport } = await searchParams;
+  // POOLSE-125: another sport's calendar — what exists of it, in words.
+  const other = await addonSportAsked(sport);
+  if (other !== null) return <SportPending sport={other} page="calendar" from={from} />;
   const back = originBack(from);
 
   // Whatever lands in the query string, the grid gets a Monday. Someone pasting

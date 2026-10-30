@@ -16,6 +16,8 @@ import { classColourVar } from '@/lib/calendar-scale';
 import { cn } from '@/lib/utils';
 import { backProp, originBack } from '@/lib/back';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
+import { addonSportAsked } from '@/lib/modules';
+import { SportPending } from '../sport-pending';
 
 /**
  * The whole week, and who is in it.
@@ -29,7 +31,7 @@ import { SectionPills, pickSection, sectionHref } from '@/components/section-pil
 export default async function ClassesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scope?: string; section?: string; from?: string }>;
+  searchParams: Promise<{ scope?: string; section?: string; from?: string; sport?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
@@ -43,7 +45,10 @@ export default async function ClassesPage({
     roles, so an absent parameter is not "all" — it is "whichever is useful to
     you", and the answer comes back in `scope`.
   */
-  const { scope, section, from } = await searchParams;
+  const { scope, section, from, sport } = await searchParams;
+  // POOLSE-125: another sport's Turmas — what exists of it, in words.
+  const other = await addonSportAsked(sport);
+  if (other !== null) return <SportPending sport={other} page="classes" from={from} />;
   const back = originBack(from);
   const asked = scope === 'mine' || scope === 'all' ? `?scope=${scope}` : '';
 

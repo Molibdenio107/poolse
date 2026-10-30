@@ -1,6 +1,6 @@
 import type { PoolseModule } from '@poolse/rules';
 import type { OrganizationKind } from '@/lib/api';
-import { OFFICE, visibleDestinations, type Viewer } from './nav-entries.ts';
+import { OFFICE, pathOf, visibleDestinations, type Viewer } from './nav-entries.ts';
 
 /**
  * What the command palette offers — POOLSE-118.
@@ -63,6 +63,8 @@ export interface Command {
   module?: PoolseModule;
   kinds?: readonly OrganizationKind[];
   synonyms?: Synonyms;
+  /** The sport a per-sport page belongs to, named after its label — POOLSE-125. */
+  sportKey?: string;
   /** A page from the menu, or an action. */
   kind: 'page' | 'action';
 }
@@ -137,15 +139,18 @@ export function commandsFor(viewer: Viewer): Command[] {
   const seen = new Set<string>();
   const pages: Command[] = [];
   for (const item of visibleDestinations(viewer)) {
+    // A sport's group heading is not a page; its entries are, each with the sport.
+    if (item.sport !== undefined && item.key === `sport.name.${item.sport}`) continue;
     // A section and its first child may share an address; the palette lists it once.
     if (seen.has(item.href)) continue;
     seen.add(item.href);
     pages.push({
       id: `page:${item.href}`,
       labelKey: item.key,
+      ...(item.sport === undefined ? {} : { sportKey: `sport.name.${item.sport}` }),
       run: { href: item.href },
       kind: 'page',
-      ...(SYNONYMS[item.href] === undefined ? {} : { synonyms: SYNONYMS[item.href] }),
+      ...(SYNONYMS[pathOf(item.href)] === undefined ? {} : { synonyms: SYNONYMS[pathOf(item.href)] }),
     });
   }
   const actions = ACTIONS.filter((action) => allowed(action, viewer)).map(

@@ -1,4 +1,4 @@
-import type { PoolseModule } from '@poolse/rules';
+import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import type { EntityKind } from '@/components/entity-icon';
 import type { OrganizationKind } from '@/lib/api';
 
@@ -53,6 +53,14 @@ export interface Item {
    * email*. Read by the layout and passed in; absent or zero draws nothing.
    */
   badge?: BadgeKey;
+  /**
+   * One copy per enabled sport — POOLSE-125. With swimming alone the entry
+   * stands where it is; with a second sport on it moves into each sport's
+   * group, its address carrying `?sport=`.
+   */
+  perSport?: true;
+  /** The sport a generated entry belongs to, set by `visibleSections`, never by hand. */
+  sport?: PoolseSport;
 }
 
 /** The counts a menu entry may carry. */
@@ -78,6 +86,8 @@ export interface Viewer {
   kind: OrganizationKind;
   /** The modules this club has on. */
   modules: readonly PoolseModule[];
+  /** The sports this club has on, `pool` first. Absent is swimming alone. */
+  sports?: readonly PoolseSport[];
 }
 
 /** Whether this person may see an item — never inherited from a parent. */
@@ -242,6 +252,7 @@ export const SECTIONS: Item[] = [
     icon: 'class',
     roles: STAFF,
     kinds: ['business'],
+    perSport: true,
     // Épocas sits under Turmas because that is what a season contains. Visible to
     // everyone — knowing which year is running is not privileged — while the
     // reset itself is owner and admin only, refused by the API rather than
@@ -264,6 +275,7 @@ export const SECTIONS: Item[] = [
     badge: 'calendar',
     roles: STAFF,
     kinds: ['business'],
+    perSport: true,
     children: [{ href: '/dashboard/calendar/closures', key: 'calendar.closures' }],
   },
   /*
@@ -398,9 +410,56 @@ export const SECTIONS: Item[] = [
 
 /** The sections this viewer may see, pruned at every depth. */
 export function visibleSections(viewer: Viewer): Item[] {
-  return SECTIONS.map((section) => prune(section, viewer)).filter(
+  const sections = SECTIONS.map((section) => prune(section, viewer)).filter(
     (section): section is Item => section !== null,
   );
+  return groupBySport(sections, viewer.sports ?? [BASE_SPORT]);
+}
+
+/** An address without its query — what a pathname is compared against. */
+export function pathOf(href: string): string {
+  const query = href.indexOf('?');
+  return query === -1 ? href : href.slice(0, query);
+}
+
+/**
+ * One group per sport — POOLSE-125, rules 1 and 2. With swimming alone the
+ * list is returned untouched, so a pool club's menu is exactly what it was.
+ * With two or more, the `perSport` entries leave the top level and each sport
+ * gets a group of its own, standing where the first of them stood, its entries
+ * addressed with `?sport=`. The pool's group keeps the entries' children
+ * (Épocas, Reposições, Encerramentos) and the calendar's circle; another
+ * sport's group has neither yet, because nothing under them reads a sport and
+ * a court's warning must not light the pool's entry (rule 4).
+ */
+function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] {
+  const scoped = sections.filter((section) => section.perSport === true);
+  if (sports.length < 2 || scoped.length === 0) return sections;
+
+  const groups = sports.map((sport): Item => {
+    const children = scoped.map((entry): Item => {
+      const { badge, children: below, ...rest } = entry;
+      return {
+        ...rest,
+        href: `${entry.href}?sport=${sport}`,
+        sport,
+        children: sport === BASE_SPORT ? (below ?? []) : [],
+        ...(sport === BASE_SPORT && badge !== undefined ? { badge } : {}),
+      };
+    });
+    const [first] = children as [Item, ...Item[]];
+    return {
+      href: first.href,
+      key: `sport.name.${sport}`,
+      icon: sport === BASE_SPORT ? 'pool' : 'facility',
+      sport,
+      children,
+    };
+  });
+
+  const at = sections.indexOf(scoped[0] as Item);
+  const rest = sections.filter((section) => section.perSport !== true);
+  return [...rest.slice(0, at), ...groups, ...rest.slice(at)];
 }
 
 /** Every destination this viewer may open, children included, in menu order — the palette's list. */

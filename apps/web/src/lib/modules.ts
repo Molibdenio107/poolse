@@ -37,6 +37,16 @@ export const clubAddonSports = cache(async (): Promise<PoolseSport[]> => {
   }
 });
 
+/**
+ * The sport a per-sport page was asked for, when it is one of the club's own
+ * besides swimming — POOLSE-125 rule 3. Null for the pool, for no `?sport=` and
+ * for a sport the club does not have, so those pages render as they always did.
+ */
+export async function addonSportAsked(asked: string | undefined): Promise<PoolseSport | null> {
+  if (asked === undefined) return null;
+  return (await clubAddonSports()).find((sport) => sport === asked) ?? null;
+}
+
 /** Whether `module` is on — true when it could not be told, for the same reason. */
 export async function moduleIsOn(module: PoolseModule): Promise<boolean> {
   const modules = await enabledModules();

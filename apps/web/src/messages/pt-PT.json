@@ -6180,6 +6180,12 @@
       "gym": "Ginásio"
     }
   },
+  "sportPage": {
+    "title": "{page} · {sport}",
+    "pending": "As turmas e o calendário de {sport} ainda não estão disponíveis: chegam com a grelha dos recintos. Por agora, os recintos deste desporto são acrescentados e arquivados no separador Recintos de cada local.",
+    "recintos": "Recintos de {sport}",
+    "manage": "Gerir no local"
+  },
   "recintos": {
     "title": "Recintos",
     "hint": "Os campos e espaços de outros desportos neste local. As piscinas continuam em Piscinas. Os desportos disponíveis são os que o Poolse ativou para o clube.",

@@ -88,6 +88,20 @@ its own. Permissions are not inherited from a parent item — Instalações and 
 different audiences, and Staff disappears for somebody who may see the site but not its
 people.
 
+## One group per sport — POOLSE-125
+
+- With swimming alone the menu is unchanged (`nav-entries.test.ts` QA 1).
+- Once Rui switches on a second sport, the entries marked `perSport` (Turmas, Calendário) leave the top level. Each enabled sport then gets a group, in `/me.sports` order, where Turmas stood: *Natação*, *Ténis*, …
+  - Each group's entries carry `?sport=`.
+  - The pool's group keeps Épocas, Reposições, Encerramentos and the calendar's circle. Another sport's group has neither, so a court never lights the pool.
+- The sidebar reads the open sport from `?sport=` (else the first sport).
+- The palette names each one: *Calendário · Ténis*.
+- `?sport=` with another of the club's sports renders `SportPending` (`dashboard/sport-pending.tsx`) on Turmas and Calendário.
+  - It says in words that a court's turmas and calendar are not built yet.
+  - It lists the sport's recintos per site, with a link to the site's Recintos tab.
+- `?sport=pool`, none, or a sport the club does not have renders the pool page as before.
+- Not built: a court's turmas, its calendar grid, and API `?sport=` filters. They come with the court grid (POOLSE-123).
+
 ## Telemóvel — what a phone is promised (POOLSE-88)
 
 The same web app runs on iPhone (Safari, and installed to the home screen) and on Android (Chrome

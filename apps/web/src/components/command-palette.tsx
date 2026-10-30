@@ -4,7 +4,7 @@ import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { CornerDownLeft, Search, Zap } from 'lucide-react';
-import type { PoolseModule } from '@poolse/rules';
+import type { PoolseModule, PoolseSport } from '@poolse/rules';
 import type { OrganizationKind } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { FromLink } from '@/components/from-link';
@@ -51,10 +51,12 @@ export function CommandPalette({
   roles,
   kind,
   modules,
+  sports,
 }: {
   roles: readonly string[];
   kind: OrganizationKind;
   modules: readonly PoolseModule[];
+  sports?: readonly PoolseSport[];
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -66,7 +68,10 @@ export function CommandPalette({
   const input = useRef<HTMLInputElement>(null);
   const links = useRef<Map<string, HTMLAnchorElement>>(new Map());
 
-  const commands = useMemo(() => commandsFor({ roles, kind, modules }), [roles, kind, modules]);
+  const commands = useMemo(
+    () => commandsFor({ roles, kind, modules, ...(sports === undefined ? {} : { sports }) }),
+    [roles, kind, modules, sports],
+  );
 
   // Ctrl+K / ⌘K, on the window — ignored while another dialog is already open,
   // so it never opens on top of a question somebody is answering.
@@ -88,7 +93,9 @@ export function CommandPalette({
     setRecent(readRecent());
   }, [open]);
 
-  const label = (command: Command): string => t(command.labelKey);
+  // POOLSE-125: *Calendário · Ténis* and *Calendário · Natação* are two entries.
+  const label = (command: Command): string =>
+    command.sportKey === undefined ? t(command.labelKey) : `${t(command.labelKey)} · ${t(command.sportKey)}`;
 
   const shown: Command[] = useMemo(() => {
     if (query.trim() === '') {
