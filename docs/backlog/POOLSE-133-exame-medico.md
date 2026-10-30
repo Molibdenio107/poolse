@@ -2,7 +2,7 @@
 
 > Part of the Poolse backlog. Conventions in [CONVENTIONS.md](./CONVENTIONS.md) apply to this ticket and are not repeated here.
 
-**Type:** Feature · **Area:** Students / Health · **Priority:** Medium (pilot) · **Depends on** [POOLSE-109](./POOLSE-109-atestado-on-medical-leave.md) (sealed health files)
+**Type:** Feature · **Area:** Students / Health · **Priority:** Medium (pilot) · **Depends on** [POOLSE-109](./POOLSE-109-emergency-contact-picker-and-atestado-upload.md) (sealed health files)
 
 ### PO — why this exists
 
