@@ -1,4 +1,4 @@
-# POOLSE-137 · The look from the Claude Design handoff lands as tokens on every page: fonts, radii, borderless cards, sport washes
+# POOLSE-138 · The look from the Claude Design handoff lands as tokens on every page: fonts, radii, borderless cards, sport washes
 
 > Part of the Poolse backlog. Conventions in [CONVENTIONS.md](./CONVENTIONS.md) apply to this ticket and are not repeated here.
 
