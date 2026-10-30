@@ -397,6 +397,22 @@ path with one difference: a club stores what is **on** (`organization.enabled_sp
 - **The *Desportos* card**, under *Módulos* on the tenant's Ações tab: one box per sport with its
   add-on price and the club's live recintos of it. The pool's box is ticked and disabled.
 
+## Platform switches (30 October 2026)
+
+Rui turns platform-wide features on and off under `/admin` → *Plataforma*. One today:
+`id_document_ai`, reading a student's ID photo for its number and dates.
+
+- **Stored** in `platform_switch`, one row per switch, named by a CHECK, off by default.
+  Rows are the migration's: no insert, no delete.
+- **Who writes it.** `POST /platform/switches/:name` with `{ enabled }`, platform admins
+  only. One click either way. The write records `platform.switch.set` in
+  `platform_audit_log` with the before and after, and raises a `platform_alert`, in one
+  transaction. `poolse_platform` holds `UPDATE (enabled, changed_at, changed_by)`.
+- **Who reads it.** Every club, through `/me.switches` (`poolse_app` holds SELECT). A
+  switch that cannot be read counts as off.
+- **The key is separate.** The panel says whether this web server holds
+  `ANTHROPIC_API_KEY`; switched on with no key, nothing is read.
+
 ## Support access — POOLSE-79 (12 October 2026)
 
 A club's Owner can let Poolse support in for a fixed window, and support then enters the club

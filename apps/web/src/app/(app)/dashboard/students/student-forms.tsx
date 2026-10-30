@@ -689,45 +689,19 @@ function IdDocumentFields({
       <input type="hidden" name="idDocumentNumberWas" value={doc.number ?? ''} />
       <input type="hidden" name="idDocumentIssuedOnWas" value={doc.issuedOn ?? ''} />
       <input type="hidden" name="idDocumentValidUntilWas" value={doc.validUntil ?? ''} />
-      <SelectField
-        name="idDocumentType"
-        label={t('documents.idDocument.type')}
-        initial={doc.type ?? ''}
-        options={[
-          { value: '', label: t('documents.idDocument.typeNone') },
-          ...(['cc', 'bi', 'passport', 'other'] as const).map((type) => ({
-            value: type,
-            label: t(`documents.idDocument.types.${type}`),
-          })),
-        ]}
-        className="max-w-none"
-        {...fieldError('idDocumentType')}
-      />
+      {/* Only the number here (Rui, 30-10-2026); the type and the dates are
+          edited on Documentos and travel unchanged. */}
+      <input type="hidden" name="idDocumentType" value={doc.type ?? ''} />
+      <input type="hidden" name="idDocumentIssuedOn" value={doc.issuedOn ?? ''} />
+      <input type="hidden" name="idDocumentValidUntil" value={doc.validUntil ?? ''} />
       <TextField
         name="idDocumentNumber"
-        label={t('documents.idDocument.number')}
+        label={t('documents.idDocument.numberOnGeneral')}
         initial={doc.number ?? ''}
         autoComplete="off"
         maxLength={30}
         className="max-w-none"
         {...fieldError('idDocumentNumber')}
-      />
-      <TextField
-        name="idDocumentIssuedOn"
-        type="date"
-        label={t('documents.idDocument.issuedOn')}
-        initial={doc.issuedOn ?? ''}
-        hint={t('documents.idDocument.issuedOnHint')}
-        className="max-w-none"
-        {...fieldError('idDocumentIssuedOn')}
-      />
-      <TextField
-        name="idDocumentValidUntil"
-        type="date"
-        label={t('documents.idDocument.validUntil')}
-        initial={doc.validUntil ?? ''}
-        className="max-w-none"
-        {...fieldError('idDocumentValidUntil')}
       />
     </>
   );
@@ -735,18 +709,17 @@ function IdDocumentFields({
 
 /**
  * *Filho/a de* and *e de* from the guardians, for fields still empty (Rui,
- * 30-10-2026): the father first, then the mother, then any other guardian, in
- * that order. Only a suggestion in the form: nothing is
- * stored until Guardar, and a name already on file is never replaced.
+ * 30-10-2026): the father, then the mother — the parents only, never an aunt
+ * or a grandmother who is a guardian (Rui, 30-10-2026). Only a suggestion in
+ * the form: nothing is stored until Guardar, and a name already on file is
+ * never replaced.
  */
 function parentageFrom(guardians: readonly Guardian[] | undefined): { one: string; two: string } {
   const list = guardians ?? [];
   const relation = (guardian: Guardian): string => (guardian.relationship ?? '').trim().toLowerCase();
   const father = list.find((g) => /^(pai|father)(\s|$)/.test(relation(g)));
   const mother = list.find((g) => /^(m[ãa]e|mother)(\s|$)/.test(relation(g)));
-  const others = list.filter((g) => g !== father && g !== mother);
-  // The father leads when there is one; otherwise whoever there is, the mother
-  // included, so a single guardian is never left in the second field alone.
-  const ordered = [father, mother, ...others].filter((g): g is Guardian => g !== undefined);
+  // A lone mother leads, so the second field is never filled with the first empty.
+  const ordered = [father, mother].filter((g): g is Guardian => g !== undefined);
   return { one: ordered[0]?.name ?? '', two: ordered[1]?.name ?? '' };
 }

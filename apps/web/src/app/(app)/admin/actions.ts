@@ -316,3 +316,23 @@ export async function recordPaymentAction(
   revalidateAdmin(tenantId);
   return { ok: true };
 }
+
+/**
+ * Flip a platform-wide switch — Rui, 30-10-2026 (the ID photo reader). The
+ * form sends the state it wants, so a double click cannot flip it twice.
+ */
+export async function setSwitchAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const name = String(formData.get('name') ?? '');
+  try {
+    await apiPost(`/platform/switches/${encodeURIComponent(name)}`, {
+      enabled: formData.get('enabled') === 'true',
+    });
+  } catch (error) {
+    return describeFailure(error, 'admin.switches.failed');
+  }
+  revalidatePath('/admin');
+  return { ok: true };
+}

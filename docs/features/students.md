@@ -291,7 +291,7 @@ files the signed scan per season in `student_document`, older copies kept. The c
 
 **The ID document's photograph** (Rui, 30-10-2026) is filed on *Identificação* as a `student_document`
 of kind `id_document` (no season, older ones kept), chosen or dropped anywhere on the page. With
-`ID_DOCUMENT_AI_ENABLED` and an API key, `lib/id-document-agent.ts` reads the type, number and dates
+the *Leitura do documento* switch on /admin → Plataforma (`platform_switch.id_document_ai`, off by default) and an API key, `lib/id-document-agent.ts` reads the type, number and dates
 from it and proposes them in the form beside it; nothing is saved until a person confirms. Every upload
 button takes a dropped file on its own area, and a photo box (`IdPhoto`) on the whole box
 (`components/drop-target.tsx`).

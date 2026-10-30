@@ -716,4 +716,51 @@ END $$;
 
 RESET ROLE;
 
+-- 18. Platform switches (Rui, 30-10-2026): every club reads them, only the
+-- platform login flips one, and nobody adds or removes a row.
+SET LOCAL ROLE poolse_app;
+
+DO $$
+DECLARE v boolean;
+BEGIN
+  SELECT enabled INTO v FROM platform_switch WHERE name = 'id_document_ai';
+  IF v IS DISTINCT FROM false THEN
+    RAISE EXCEPTION 'FAIL test 18a: the ID reader switch is not readable and off (%)', v;
+  END IF;
+  RAISE NOTICE 'PASS test 18a: a club reads the switch, off by default';
+
+  BEGIN
+    UPDATE platform_switch SET enabled = true WHERE name = 'id_document_ai';
+    RAISE EXCEPTION 'FAIL test 18b: a club flipped a platform switch';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 18b: a club cannot flip a platform switch';
+  END;
+END $$;
+
+RESET ROLE;
+SET LOCAL ROLE poolse_platform;
+
+DO $$
+BEGIN
+  UPDATE platform_switch SET enabled = true, changed_at = now(), changed_by = 'user_test'
+   WHERE name = 'id_document_ai';
+  RAISE NOTICE 'PASS test 18c: the platform role flips a switch';
+
+  BEGIN
+    INSERT INTO platform_switch (name) VALUES ('id_document_ai_2');
+    RAISE EXCEPTION 'FAIL test 18d: the platform role added a switch';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 18d: no switch is added at run time';
+  END;
+
+  BEGIN
+    DELETE FROM platform_switch WHERE name = 'id_document_ai';
+    RAISE EXCEPTION 'FAIL test 18e: the platform role deleted a switch';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 18e: no switch is deleted';
+  END;
+END $$;
+
+RESET ROLE;
+
 ROLLBACK;

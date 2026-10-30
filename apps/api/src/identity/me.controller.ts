@@ -11,6 +11,7 @@ import { touchLastSeen,
 import { ensureAppUser, removeClerkPhoto, updateClerkName, updateClerkPhoto } from './identity.service.js';
 import { MAX_FILE_BYTES, sniffType } from '../files/storage.js';
 import { clubToday } from '../common/club-day.js';
+import { readSwitchesForClubs, type PlatformSwitchName } from '../platform/platform-switch.js';
 
 interface MeResponse {
   user: AppUserSummary;
@@ -27,6 +28,8 @@ interface MeResponse {
    * than a page that stops.
    */
   requestedOrganizationMissing?: boolean;
+  /** Platform-wide switches set from /admin — Rui, 30-10-2026. */
+  switches?: Record<PlatformSwitchName, boolean>;
 }
 
 /** The requested club first; the rest in their usual order. */
@@ -100,7 +103,7 @@ export class MeController {
     // POOLSE-130: the "último acesso" the club's App access row reads.
     await touchLastSeen(clerkUserId);
 
-    return { user, ...activeFirst(memberships, requested) };
+    return { user, ...activeFirst(memberships, requested), switches: await readSwitchesForClubs() };
   }
 
   /**

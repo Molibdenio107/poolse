@@ -4605,7 +4605,8 @@
       "nav": "Administration sections",
       "tenants": "Clients",
       "billing": "Billing",
-      "support": "Support"
+      "support": "Support",
+      "platform": "Platform"
     },
     "support": {
       "tab": "Support",
@@ -4635,6 +4636,23 @@
       "recintos": "{count, plural, =0 {no playing areas} one {# playing area} other {# playing areas}}",
       "inUse": "{sport} has live playing areas: {recintos}. The club has to archive them before the sport can be switched off.",
       "failed": "The sports could not be saved."
+    },
+    "switches": {
+      "name": {
+        "id_document_ai": "Reading the ID document"
+      },
+      "covers": {
+        "id_document_ai": "When a student's ID card photo is uploaded, its number and dates are read and proposed in the form for someone to confirm. Only the image is sent. Each read has a cost."
+      },
+      "on": "On",
+      "off": "Off",
+      "changedAt": "changed {when}",
+      "keyPresent": "API key configured on this server.",
+      "keyMissing": "The API key (ANTHROPIC_API_KEY) is missing on this server: even when on, nothing is read.",
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "failed": "The setting could not be changed.",
+      "invalid": "Invalid value."
     }
   },
   "suspended": {
@@ -6400,7 +6418,8 @@
       "numberNone": "No number on file.",
       "issuedOn": "Issued on",
       "issuedOnHint": "The Cartão de Cidadão carries no issue date: leave it empty.",
-      "validUntil": "Valid until"
+      "validUntil": "Valid until",
+      "numberOnGeneral": "ID document number"
     },
     "fpn": {
       "title": "FPN declaration",
@@ -6473,7 +6492,10 @@
         "unreadable": "The photo could not be read. Fill in the details by hand.",
         "nothingFound": "No details were found on the photo. Fill them in by hand.",
         "notAllowed": "Automatic reading is not available for your role.",
-        "rateLimited": "Too many reads in a row. Fill in by hand or try again shortly."
+        "rateLimited": "Too many reads in a row. Fill in by hand or try again shortly.",
+        "off": "Automatic reading of the document is switched off. Fill in the details by hand.",
+        "noKey": "Automatic reading is switched on, but this server has no API key. Fill in the details by hand.",
+        "disabled": "Automatic reading is not available. Fill in the details by hand."
       }
     }
   },

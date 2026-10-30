@@ -357,6 +357,21 @@ export interface Me {
    * quietly acting in another club.
    */
   requestedOrganizationMissing?: boolean;
+  /**
+   * Platform-wide switches set from /admin (Rui, 30-10-2026). Absent, or a
+   * switch missing from it, is off.
+   */
+  switches?: Partial<Record<PlatformSwitchName, boolean>>;
+}
+
+/** The switches /admin flips — `PLATFORM_SWITCHES` on the API. */
+export type PlatformSwitchName = 'id_document_ai';
+
+export interface PlatformSwitch {
+  name: PlatformSwitchName;
+  enabled: boolean;
+  /** ISO instant of the last change, or null if never changed. */
+  changedAt: string | null;
 }
 
 export interface OrganizationMember {

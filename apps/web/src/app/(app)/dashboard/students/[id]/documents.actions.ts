@@ -1,9 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { ApiError, apiPatch, apiPost, apiUpload } from '@/lib/api';
+import { ApiError, apiFetch, apiPatch, apiPost, apiUpload, type Me } from '@/lib/api';
 import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
-import { idDocumentReaderAvailable, readIdDocument } from '@/lib/id-document-agent';
+import { idDocumentReaderBlocked, readIdDocument } from '@/lib/id-document-agent';
 import type { FormState } from '../../actions';
 
 /**
@@ -83,7 +83,7 @@ export async function saveFpnSettingsAction(_previous: FormState, formData: Form
 export interface IdPhotoState extends FormState {
   proposal?: { type: 'cc' | 'bi' | 'passport' | 'other' | null; number: string | null; issuedOn: string | null; validUntil: string | null };
   /** Why nothing was proposed, when a read was attempted. */
-  readNote?: 'disabled' | 'unreadable' | 'nothingFound' | 'notAllowed' | 'rateLimited';
+  readNote?: 'off' | 'noKey' | 'disabled' | 'unreadable' | 'nothingFound' | 'notAllowed' | 'rateLimited';
 }
 
 export async function uploadIdPhotoAction(_previous: IdPhotoState, formData: FormData): Promise<IdPhotoState> {
@@ -100,7 +100,9 @@ export async function uploadIdPhotoAction(_previous: IdPhotoState, formData: For
   }
   revalidatePath(`/dashboard/students/${studentId}`);
 
-  if (!idDocumentReaderAvailable()) return { ok: true, toastKey: 'documents.idPhoto.filed', readNote: 'disabled' };
+  const me = await apiFetch<Me>('/me').catch(() => null);
+  const blocked = me === null ? 'off' : idDocumentReaderBlocked(me);
+  if (blocked !== null) return { ok: true, toastKey: 'documents.idPhoto.filed', readNote: blocked };
   const refused = await guardAiCall(AI_ROLES.students);
   if (refused !== null) {
     return { ok: true, toastKey: 'documents.idPhoto.filed', readNote: refused === 'notAllowed' ? 'notAllowed' : 'rateLimited' };

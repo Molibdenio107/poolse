@@ -1,4 +1,5 @@
 import { SupportPanel } from './support-panel';
+import { SwitchesPanel } from './switches-panel';
 import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Building2, User } from 'lucide-react';
@@ -59,7 +60,7 @@ export default async function AdminPage({
    * it; Faturação is the billing panel. Only the open section is fetched, so a
    * page view is still one line in `platform_audit_log` per thing shown.
    */
-  const current = pickSection(['tenants', 'billing', 'support'] as const, section, 'tenants');
+  const current = pickSection(['tenants', 'billing', 'support', 'platform'] as const, section, 'tenants');
   const page = readPage(pageParam);
   const term = search.trim();
 
@@ -175,11 +176,15 @@ export default async function AdminPage({
           },
           { key: 'billing', label: t('admin.section.billing'), href: sectionHref('/admin', {}, 'billing') },
           { key: 'support', label: t('admin.section.support'), href: sectionHref('/admin', {}, 'support') },
+          { key: 'platform', label: t('admin.section.platform'), href: sectionHref('/admin', {}, 'platform') },
         ]}
       />
 
       {/* Where a club has let support in — POOLSE-79. */}
       {current === 'support' && <SupportPanel />}
+
+      {/* Platform-wide switches — Rui, 30-10-2026. */}
+      {current === 'platform' && <SwitchesPanel />}
 
       {/*
         What is falling due, and what pays for what — POOLSE-63. Its own section

@@ -468,7 +468,7 @@ export function IdentificationSection({
           <span className="text-sm text-foreground-muted">
             {storageReady ? t('documents.idPhoto.hint') : t('files.notConfigured')}
           </span>
-          {state.readNote !== undefined && state.readNote !== 'disabled' && (
+          {state.readNote !== undefined && (
             <span className="text-sm text-foreground-muted">{t(`documents.idPhoto.note.${state.readNote}`)}</span>
           )}
         </div>

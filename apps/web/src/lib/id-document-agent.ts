@@ -1,14 +1,15 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import type { Me } from './api';
 
 /**
  * Reads an identification document's photograph — Rui, 30-10-2026: after the
  * photo is uploaded on *Documentos*, the number and dates are filled in.
  *
- * - **Optional, off by default.** `ID_DOCUMENT_AI_ENABLED=true` and an
- *   `ANTHROPIC_API_KEY` both, as every AI reader here (CLAUDE.md: metered calls
- *   stay behind their own flag). Off, the photo is still filed and the fields
- *   wait to be typed.
+ * - **Optional, off by default.** The switch on /admin (`id_document_ai`, Rui
+ *   30-10-2026, replacing `ID_DOCUMENT_AI_ENABLED`) and an `ANTHROPIC_API_KEY`
+ *   both: metered calls stay behind their own flag (CLAUDE.md). Off, the photo
+ *   is still filed and the fields wait to be typed.
  * - **It proposes, a person confirms.** What it reads fills the form beside the
  *   photo; nothing is saved until somebody presses Guardar.
  * - **Only the image goes.** Nothing else about the student or the club.
@@ -49,17 +50,26 @@ function schema(): Record<string, unknown> {
   };
 }
 
-export function idDocumentReaderAvailable(): boolean {
-  return (
-    (process.env['ID_DOCUMENT_AI_ENABLED'] ?? '').trim().toLowerCase() === 'true' &&
-    (process.env['ANTHROPIC_API_KEY'] ?? '').trim() !== ''
-  );
+/** The key is configured on this server — what /admin shows beside the switch. */
+export function anthropicKeyConfigured(): boolean {
+  return (process.env['ANTHROPIC_API_KEY'] ?? '').trim() !== '';
+}
+
+/**
+ * Null when the reader may run: switched on in /admin (as `/me` reports it)
+ * and a key to call with. Otherwise which of the two is missing, so the screen
+ * can say why nothing was read rather than staying silent.
+ */
+export function idDocumentReaderBlocked(me: Pick<Me, 'switches'>): 'off' | 'noKey' | null {
+  if (me.switches?.id_document_ai !== true) return 'off';
+  return anthropicKeyConfigured() ? null : 'noKey';
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Call only after `idDocumentReaderBlocked` said null. */
 export async function readIdDocument(bytes: Buffer, mediaType: string): Promise<IdDocumentRead> {
-  if (!idDocumentReaderAvailable()) return { error: 'disabled' };
+  if (!anthropicKeyConfigured()) return { error: 'disabled' };
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_BYTES) return { error: 'unreadable' };
 
   try {

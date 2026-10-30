@@ -120,7 +120,7 @@ development, staging and production instances.
    | `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | `/dashboard` |
    | `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | `/dashboard` |
    | `ENERGY_INVOICE_AI_ENABLED` | `true` — energy bills are read automatically (Rui, 22-10-2026, POOLSE-106) |
-   | `ID_DOCUMENT_AI_ENABLED` | off by default — when `true`, a student's ID photo is read for its number and dates, proposed for confirmation (Rui, 30-10-2026) |
+   | *(none — /admin → Plataforma)* | the ID photo reader is a switch on /admin, off by default, and needs `ANTHROPIC_API_KEY` on the web app (Rui, 30-10-2026) |
    | `ANTHROPIC_API_KEY` | the key the bill reader calls with; without it the flag above reads nothing |
 
    **The bill reader is on by decision, and it costs per bill.** Each PDF read is one call to

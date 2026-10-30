@@ -58,6 +58,7 @@ import {
   readSuspensionReason,
   readTrialEndsAt,
 } from './platform-actions.js';
+import { isPlatformSwitch, listSwitches, setSwitch, type PlatformSwitch } from './platform-switch.js';
 
 /**
  * `GET /platform/tenants` — every tenant, one row each.
@@ -100,6 +101,24 @@ export class PlatformController {
       { search: readSearch(search), filter: named },
       readPageQuery(page, limit),
     );
+  }
+
+  /** Platform-wide switches — Rui, 30-10-2026 (the ID photo reader). */
+  @Get('switches')
+  @PlatformAction('switch.read')
+  async switches(): Promise<PlatformSwitch[]> {
+    return listSwitches();
+  }
+
+  /** Flip one. One click either way, audited and alerted. */
+  @Post('switches/:name')
+  async setSwitch(
+    @Param('name') name: string,
+    @Body() body: { enabled?: unknown },
+  ): Promise<PlatformSwitch> {
+    if (!isPlatformSwitch(name)) throw new NotFoundException('No such switch');
+    if (typeof body.enabled !== 'boolean') throw new BadRequestException({ fields: { enabled: 'admin.switches.invalid' } });
+    return setSwitch(name, body.enabled);
   }
 
   /**

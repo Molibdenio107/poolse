@@ -3016,6 +3016,16 @@ subscription_status
   + 'comped'                                  -- live, deliberately not billed
 ```
 
+**Platform switches — 30 October 2026.**
+
+```
+platform_switch
+  name text pk check (name in ('id_document_ai')), enabled boolean default false,
+  changed_at, changed_by text          -- clerk user id of the last operator
+  grants: poolse_app SELECT; poolse_platform SELECT + UPDATE (enabled, changed_at, changed_by)
+  rls: enabled; SELECT to both logins, UPDATE to poolse_platform; no insert, no delete
+```
+
 **And the third platform book — `platform_alert`, POOLSE-64 slice E1.**
 
 ```

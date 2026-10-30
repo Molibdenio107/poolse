@@ -4605,7 +4605,8 @@
       "nav": "Secções da administração",
       "tenants": "Clientes",
       "billing": "Faturação",
-      "support": "Suporte"
+      "support": "Suporte",
+      "platform": "Plataforma"
     },
     "support": {
       "tab": "Suporte",
@@ -4635,6 +4636,23 @@
       "recintos": "{count, plural, =0 {sem recintos} one {# recinto} other {# recintos}}",
       "inUse": "{sport} tem recintos ativos: {recintos}. O clube tem de os arquivar antes de o desporto ser desligado.",
       "failed": "Não foi possível guardar os desportos."
+    },
+    "switches": {
+      "name": {
+        "id_document_ai": "Leitura do documento de identificação"
+      },
+      "covers": {
+        "id_document_ai": "Ao carregar a fotografia do CC de um aluno, o número e as datas são lidos e propostos no formulário para alguém confirmar. Só a imagem é enviada. Cada leitura tem custo."
+      },
+      "on": "Ligado",
+      "off": "Desligado",
+      "changedAt": "alterado em {when}",
+      "keyPresent": "Chave da API configurada neste servidor.",
+      "keyMissing": "Falta a chave da API (ANTHROPIC_API_KEY) neste servidor: mesmo ligado, nada é lido.",
+      "turnOn": "Ligar",
+      "turnOff": "Desligar",
+      "failed": "Não foi possível alterar a definição.",
+      "invalid": "Valor inválido."
     }
   },
   "suspended": {
@@ -6400,7 +6418,8 @@
       "numberNone": "Sem número registado.",
       "issuedOn": "Emitido em",
       "issuedOnHint": "O Cartão de Cidadão não tem data de emissão: deixe em branco.",
-      "validUntil": "Válido até"
+      "validUntil": "Válido até",
+      "numberOnGeneral": "Nº do documento de identificação"
     },
     "fpn": {
       "title": "Declaração FPN",
@@ -6473,7 +6492,10 @@
         "unreadable": "Não foi possível ler a fotografia. Preencha os dados à mão.",
         "nothingFound": "Não se encontraram dados na fotografia. Preencha-os à mão.",
         "notAllowed": "A leitura automática não está disponível para a sua função.",
-        "rateLimited": "Demasiadas leituras seguidas. Preencha à mão ou tente daqui a pouco."
+        "rateLimited": "Demasiadas leituras seguidas. Preencha à mão ou tente daqui a pouco.",
+        "off": "A leitura automática do documento está desligada. Preencha os dados à mão.",
+        "noKey": "A leitura automática está ligada, mas falta a chave da API neste servidor. Preencha os dados à mão.",
+        "disabled": "A leitura automática não está disponível. Preencha os dados à mão."
       }
     }
   },
