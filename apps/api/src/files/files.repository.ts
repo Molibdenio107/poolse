@@ -27,7 +27,8 @@ export type FilePurpose =
   | 'staff_photo'
   | 'incident_attachment'
   | 'medical_certificate'
-  | 'meet_results';
+  | 'meet_results'
+  | 'student_document';
 
 /**
  * Health data, sealed at rest — POOLSE-109. The bucket holds ciphertext, the
@@ -75,6 +76,9 @@ export const RULES: Record<FilePurpose, { write: readonly MemberRole[] | null; r
   // POST /files — the inbound path stores it — and read by the people who
   // import a meet, through the inbox's own route.
   meet_results: { write: null, read: ['owner', 'admin', 'instructor'] },
+  // POOLSE-132: a signed FPN declaration or boletim de sócio — the office's
+  // file. It carries an ID number and a signature, so not a coach's.
+  student_document: { write: OFFICE, read: OFFICE },
 };
 
 export interface StoredFile {

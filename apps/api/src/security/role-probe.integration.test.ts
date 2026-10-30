@@ -37,6 +37,8 @@ import {
   FamilyInvitationsBulkController,
   StudentInvitationsController,
 } from '../students/family-invitations.controller.js';
+import { FpnSettingsController, StudentDocumentsController } from '../students/documents.controller.js';
+import { MedicalExamsController, MedicalExamsSheetController } from '../students/medical-exams.controller.js';
 import { MaintenanceController } from '../maintenance/maintenance.controller.js';
 import { FacilityIncidentsController, IncidentsController } from '../safety/incidents.controller.js';
 import {
@@ -842,6 +844,34 @@ test('family invitations refuse a guardian and a student (403), and maintenance'
   };
   await asEach(probe);
   await as(fixture.maintenanceId, ['maintenance'], probe);
+});
+
+// POOLSE-132 — a student's documents and the club's FPN settings.
+test('student documents and FPN settings refuse a guardian and a student (403)', async () => {
+  await asEach(async () => {
+    const docs = new StudentDocumentsController();
+    await refused('GET students/:id/documents', 403, () => docs.read(fixture.aliceId));
+    await refused('PATCH students/:id/documents', 403, () => docs.save(fixture.aliceId, { disciplines: ['pura'] }));
+    await refused('POST students/:id/documents/copies', 403, () =>
+      docs.file(fixture.aliceId, { kind: 'socio_form', fileId: NO_SUCH_ID }),
+    );
+    await refused('GET students/:id/documents/fpn', 403, () => docs.print(fixture.aliceId, undefined, undefined));
+    await refused('PATCH fpn-settings', 403, () => new FpnSettingsController().save({ association: 'X' }));
+  });
+});
+
+// POOLSE-133 — the exame médico.
+test('medical exams refuse a guardian and a student (403)', async () => {
+  await asEach(async () => {
+    const exams = new MedicalExamsController();
+    await refused('GET students/:id/medical-exams', 403, () => exams.list(fixture.aliceId));
+    await refused('POST students/:id/medical-exams', 403, () =>
+      exams.record(fixture.aliceId, { examinedOn: '2026-01-01', result: 'fit' }),
+    );
+    await refused('POST students/:id/medical-exams/:id/archive', 403, () => exams.archive(fixture.aliceId, NO_SUCH_ID));
+    await refused('GET medical-exams/export', 403, () => new MedicalExamsSheetController().export());
+    await refused('POST medical-exams/import', 403, () => new MedicalExamsSheetController().import({ rows: [] }));
+  });
 });
 
 // POOLSE-70 — the incident book and the lifeguard roster, added with the

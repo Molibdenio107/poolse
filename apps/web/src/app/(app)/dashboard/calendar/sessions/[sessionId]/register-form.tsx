@@ -214,6 +214,13 @@ export function RegisterForm({ register }: { register: Register & { organization
                     {t('attendance.noInsurance')}
                   </span>
                 )}
+                {/* POOLSE-133: the exame médico, the seguro's way. */}
+                {entry.examState !== undefined && entry.examState !== 'valid' && (
+                  <span className="flex items-center gap-1 rounded border border-warning/40 bg-warning/10 px-2 py-0.5 text-sm font-normal text-warning">
+                    <AlertTriangle aria-hidden className="attention size-3.5" />
+                    {entry.examState === 'expired' ? t('attendance.examExpired') : t('attendance.examNone')}
+                  </span>
+                )}
               </span>
 
               {/*

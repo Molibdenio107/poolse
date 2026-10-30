@@ -219,6 +219,10 @@ const TENANT_TABLES = [
   'student_sensitive',
   // Child of student, no cascade — missing until the sweep of 15-10-2026.
   'medical_leave_certificate',
+  // POOLSE-133: a student's exame médico; child of student and stored_file.
+  'medical_exam',
+  // POOLSE-132: signed forms on a student; child of student, season and stored_file.
+  'student_document',
   'student_medical_leave',
   'consent',
   'guardian_link',

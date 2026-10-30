@@ -44,6 +44,11 @@ export interface RegisterEntry {
    * swam" is the question that matters.
    */
   insured: boolean;
+  /**
+   * The exame médico on the class's day — POOLSE-133. A warning, never a gate,
+   * exactly as the seguro: valid, expired, or none on file.
+   */
+  examState: 'valid' | 'expired' | 'none';
 }
 
 export interface Register {
@@ -176,6 +181,7 @@ export async function findRegister(
       enrolled: boolean;
       is_guest: boolean;
       insured: boolean;
+      exam_state: 'valid' | 'expired' | 'none';
     }>(
       `
       WITH roll AS (
@@ -259,7 +265,17 @@ export async function findRegister(
                   AND sf.archived_at IS NULL
                   AND sf.kind = 'seguro'
                   AND $2::date BETWEEN sf.covers_from AND sf.covers_to
-             )) AS insured
+             )) AS insured,
+             -- POOLSE-133: the latest live exame médico, judged on the class's day.
+             max((
+               SELECT CASE WHEN e.valid_until IS NOT NULL AND e.valid_until >= $2::date AND e.result <> 'unfit'
+                           THEN 'valid' ELSE 'expired' END
+                 FROM medical_exam e
+                WHERE e.student_id = s.id AND e.organization_id = s.organization_id
+                  AND e.archived_at IS NULL AND e.examined_on <= $2::date
+                ORDER BY e.examined_on DESC, e.created_at DESC
+                LIMIT 1
+             )) AS exam_state
         FROM roll
         JOIN student s ON s.id = roll.student_id
         LEFT JOIN attendance a
@@ -316,6 +332,7 @@ export async function findRegister(
         enrolled: row.enrolled,
         isGuest: row.is_guest,
         insured: row.insured,
+        examState: row.exam_state ?? 'none',
       })),
       trialGuests: trials.map((row) => ({ leadId: row.id, name: row.name, ageYears: row.age })),
     };
