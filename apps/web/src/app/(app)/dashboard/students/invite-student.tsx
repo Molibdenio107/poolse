@@ -38,7 +38,7 @@ export function InviteStudent({ organizationName }: { organizationName: string }
 
   const field = (name: string): string | undefined => {
     const key = state.fields?.[name];
-    return key === undefined ? undefined : t(key);
+    return key === undefined ? undefined : t(key, state.values);
   };
 
   return (
@@ -88,6 +88,19 @@ export function InviteStudent({ organizationName }: { organizationName: string }
               />
             </div>
             <p className="text-sm text-foreground-muted">{t('inviteStudent.hint')}</p>
+            {state.errorKey === 'inviteStudent.exists' && (
+              <p className="text-sm text-warning">
+                {t('inviteStudent.existsLong', { name: String(state.values?.['name'] ?? '') })}{' '}
+                {state.existingStudentId != null && (
+                  <FromLink
+                    href={`/dashboard/students/${state.existingStudentId}`}
+                    className="text-primary underline underline-offset-2"
+                  >
+                    {t('inviteStudent.openExisting')}
+                  </FromLink>
+                )}
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
               <button type="submit" disabled={pending} className={`${BUTTON} bg-primary text-primary-foreground hover:bg-primary/90`}>
                 {pending ? t('common.working') : t('inviteStudent.submit')}

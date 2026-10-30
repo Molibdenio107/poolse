@@ -6276,6 +6276,9 @@
     "submit": "Convidar",
     "openRecord": "Abrir a ficha do aluno",
     "contactRequired": "Indique um telemóvel ou um email.",
-    "failed": "Não foi possível convidar o aluno."
+    "failed": "Não foi possível convidar o aluno.",
+    "exists": "Já existe alguém com este contacto: {name}.",
+    "existsLong": "{name} já está registado com este email ou telemóvel. Convide-o a partir da ficha, com Convidar para a app.",
+    "openExisting": "Abrir a ficha"
   }
 }

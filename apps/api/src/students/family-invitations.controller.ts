@@ -246,6 +246,39 @@ export class FamilyInvitationsBulkController {
     const { token, tokenHash } = issueToken();
     const expiresAt = invitationExpiry();
     const created = await withOrg(organizationId, async (tx) => {
+      /*
+       * Somebody already on the register is not a new student (Rui, 30-10-2026:
+       * three invitations to one address made three of him). A live student
+       * with this email or phone, or a person in the club whose login or record
+       * holds the email, is refused with the student's id, so the screen sends
+       * the operator to that record's own *Convidar para a app*.
+       */
+      const digits = phone.replace(/\D/g, '');
+      const { rows: existing } = await tx.query<{ id: string | null; name: string }>(
+        `SELECT s.id, s.first_name || ' ' || s.last_name AS name
+           FROM student s
+          WHERE s.archived_at IS NULL
+            AND (($1::citext IS NOT NULL AND (s.contact_email = $1::citext
+                                              OR person_email(s.membership_id) = $1::citext))
+                 OR ($2 <> '' AND regexp_replace(coalesce(s.contact_phone, ''), '[^0-9]', '', 'g') = $2))
+         UNION ALL
+         SELECT NULL, coalesce(person_name(m.id), '')
+           FROM membership m
+          WHERE m.archived_at IS NULL AND $1::citext IS NOT NULL AND person_email(m.id) = $1::citext
+          LIMIT 1`,
+        [email, digits],
+      );
+      const found = existing[0];
+      if (found !== undefined) {
+        throw new ConflictException({
+          code: 'person_exists',
+          message: 'Somebody in the club already has this email or phone',
+          studentId: found.id,
+          name: found.name,
+          fields: { email: 'inviteStudent.exists' },
+        });
+      }
+
       const studentId = await insertStudent(tx, organizationId, input);
       if (studentId === null) throw new Error('The student could not be created');
       const outcome = await createFamilyInvitationIn(tx, {

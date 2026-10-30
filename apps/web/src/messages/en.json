@@ -6276,6 +6276,9 @@
     "submit": "Invite",
     "openRecord": "Open the student's record",
     "contactRequired": "Give a mobile number or an email.",
-    "failed": "The student could not be invited."
+    "failed": "The student could not be invited.",
+    "exists": "Somebody already has this contact: {name}.",
+    "existsLong": "{name} is already registered with this email or mobile. Invite them from their record, with Invite to the app.",
+    "openExisting": "Open the record"
   }
 }

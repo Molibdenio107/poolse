@@ -83,6 +83,8 @@ function failed(error: unknown): BulkState {
 export interface InviteStudentState extends FormState {
   link?: string;
   studentId?: string;
+  /** Somebody in the club already holds this contact: their record, if a student. */
+  existingStudentId?: string | null;
   email?: string | null;
 }
 
@@ -114,6 +116,16 @@ export async function inviteNewStudentAction(
       ...(issued.email === null ? {} : { values: { email: issued.email } }),
     };
   } catch (error) {
+    if (error instanceof ApiError && error.code === 'person_exists') {
+      const record = (error.details ?? {}) as Record<string, unknown>;
+      return {
+        ok: false,
+        errorKey: 'inviteStudent.exists',
+        values: { name: typeof record['name'] === 'string' ? record['name'] : '' },
+        fields: { email: 'inviteStudent.exists' },
+        existingStudentId: typeof record['studentId'] === 'string' ? record['studentId'] : null,
+      };
+    }
     if (error instanceof ApiError && error.status < 500) {
       const fields = Object.keys(error.fields).length > 0 ? error.fields : undefined;
       return {

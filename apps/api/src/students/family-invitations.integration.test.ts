@@ -392,5 +392,10 @@ test('Convidar aluno — a new student is created and invited in one go; the log
       tenant.organizationId,
     ]);
     assert.equal(after[0]!.n, before[0]!.n);
+
+    // The same person by phone, written another way: refused, naming the record.
+    await asAdmin(tenant, f, () =>
+      expectStatus(() => routes.newStudent({ firstName: 'Lia', lastName: 'Outra', phone: '914 000 000' }), 409),
+    );
   });
 });
