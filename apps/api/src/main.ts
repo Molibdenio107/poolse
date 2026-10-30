@@ -73,7 +73,14 @@ async function bootstrap(): Promise<void> {
    * limit, checked again in the controller and by a CHECK on `stored_file`.
    */
   app.useBodyParser('raw', { type: 'application/octet-stream', limit: '10mb' });
-  app.enableCors({ origin: process.env['WEB_ORIGIN'] ?? 'http://localhost:3000' });
+  // A list, like CLERK_AUTHORIZED_PARTIES: in dev the LAN address comes first so
+  // an invitation link opens on a phone, and localhost stays allowed.
+  app.enableCors({
+    origin: (process.env['WEB_ORIGIN'] ?? 'http://localhost:3000')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter((origin) => origin.length > 0),
+  });
 
   /*
    * One proxy in front of us, and exactly one.
