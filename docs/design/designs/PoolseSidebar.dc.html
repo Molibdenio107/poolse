@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Montserrat:wght@400;500;600;700&family=Material+Symbols+Sharp:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet"></helmet>
+<div style="width:240px;box-sizing:border-box;height:100%;background:rgb(var(--card, 255 255 255));color:rgb(var(--fg, 17 24 28));font-family:Montserrat,sans-serif;display:flex;flex-direction:column;gap:2px;padding:16px 10px;box-shadow:1px 0 0 rgb(var(--fg, 17 24 28) / .06)">
+  <sc-if value="{{ isSport }}" hint-placeholder-val="{{ false }}">
+    <div data-sport="{{ section }}" style="display:flex;align-items:center;gap:10px;height:44px;padding:0 12px 0 10px;margin-bottom:10px;border-left:4px solid rgb(var(--sport-wash));background:rgb(var(--sport-wash) / var(--wash-a, .14));border-radius:0 2px 2px 0;font:600 14px Poppins,sans-serif">
+      <sc-if value="{{ isPadel }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.6;stroke-linecap:round;flex:none"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path><circle cx="12.6" cy="8" r=".8" fill="currentColor" stroke="none"></circle><circle cx="16.3" cy="8.6" r=".8" fill="currentColor" stroke="none"></circle><circle cx="14.3" cy="11.7" r=".8" fill="currentColor" stroke="none"></circle></svg></sc-if>
+      <sc-if value="{{ notPadel }}"><span style="font-family:'Material Symbols Sharp';font-size:20px;line-height:1;font-weight:normal">{{ sectionIcon }}</span></sc-if>
+      <span>{{ sectionLabel }}</span>
+    </div>
+  </sc-if>
+  <sc-if value="{{ isFacility }}" hint-placeholder-val="{{ true }}"><div style="font:600 14px Poppins,sans-serif;padding:6px 10px 12px">Instalação</div></sc-if>
+  <sc-for list="{{ rows }}" as="r" hint-placeholder-count="7">
+    <div onClick="{{ r.onClick }}" style="display:flex;align-items:center;gap:12px;height:38px;padding:0 10px;border-radius:2px;cursor:pointer;font-size:13px;font-weight:{{ r.weight }};background:{{ r.bg }};color:{{ r.color }}" style-hover="color:rgb(var(--fg, 17 24 28))"><span style="font-family:'Material Symbols Sharp';font-size:19px;line-height:1;font-weight:normal;width:20px">{{ r.icon }}</span><span style="color:rgb(var(--fg, 17 24 28))">{{ r.label }}</span></div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:240,&quot;height&quot;:560},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;multi&quot;,&quot;single&quot;],&quot;default&quot;:&quot;multi&quot;,&quot;tsType&quot;:&quot;'multi'|'single'&quot;},&quot;section&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;facility&quot;,&quot;pool&quot;,&quot;tennis&quot;,&quot;padel&quot;],&quot;default&quot;:&quot;tennis&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;active&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;cal&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onSelect&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(key: string) =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const variant = this.props.variant ?? 'multi';
+    const section = variant === 'single' ? 'facility' : (this.props.section ?? 'facility');
+    const active = this.props.active ?? (section === 'facility' ? 'dash' : 'cal');
+    const SPORT = [['cal', 'Calendário', 'calendar_month'], ['tur', 'Turmas', 'groups'], ['rec', 'Recintos', 'stadium'], ['met', 'Métricas', 'monitoring']];
+    const SHARED = [['alu', 'Alunos', 'person'], ['sta', 'Staff', 'badge'], ['men', 'Mensalidades', 'payments'], ['fat', 'Faturação', 'receipt_long'], ['ene', 'Energia', 'bolt'], ['cfg', 'Configuração', 'settings']];
+    const DASH = [['dash', 'Dashboard', 'dashboard']];
+    const META = { pool: ['Piscina', 'pool'], tennis: ['Ténis', 'sports_tennis'], padel: ['Padel', ''], basketball: ['Basquetebol', 'sports_basketball'], football: ['Futebol', 'sports_soccer'], handball: ['Andebol', 'sports_handball'], volleyball: ['Voleibol', 'sports_volleyball'], gym: ['Ginásio', 'fitness_center'] };
+    const list = variant === 'single' ? [...DASH, ...SPORT, ...SHARED] : section === 'facility' ? [...DASH, ...SHARED] : SPORT;
+    const rows = list.map(([key, label, icon]) => {
+      const a = key === active;
+      return { key, label, icon, onClick: () => this.props.onSelect && this.props.onSelect(key),
+        bg: a ? 'rgb(var(--muted, 240 243 245))' : 'transparent',
+        color: a ? 'rgb(var(--fg, 17 24 28))' : 'rgb(var(--mfg, 90 103 112))', weight: a ? '600' : '500' };
+    });
+    const isSport = variant !== 'single' && section !== 'facility';
+    return { rows, section, isSport, isFacility: variant !== 'single' && section === 'facility',
+      isPadel: section === 'padel', notPadel: section !== 'padel',
+      sectionLabel: (META[section] || [''])[0], sectionIcon: (META[section] || ['', ''])[1] };
+  }
+}
+</script>
+</body>
+</html>

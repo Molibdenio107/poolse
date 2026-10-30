@@ -1,0 +1,86 @@
+/* Poolse design tokens — RGB triples, use as rgb(var(--x)) or rgb(var(--x) / .5) */
+:root {
+  /* Backoffice light */
+  --background: 250 251 252;
+  --card: 255 255 255;
+  --muted: 240 243 245;
+  --foreground: 17 24 28;
+  --muted-foreground: 90 103 112;
+  --primary: 103 166 182;
+  --primary-foreground: 17 24 28;
+  --primary-ink: 70 113 124;   /* primary-coloured text/links on white */
+  --wash-green: 179 212 157;   /* wash only, never text */
+
+  /* Sport wash colours (light) */
+  --sport-pool: 160 205 218;
+  --sport-tennis: 205 230 80;
+  --sport-padel: 120 190 190;
+  --sport-basketball: 224 150 96;
+  --sport-football: 140 200 120;
+  --sport-handball: 230 200 150;
+  --sport-volleyball: 240 225 140;
+  --sport-gym: 170 175 180;
+  --wash-a: .14;
+
+  --radius-card: 4px;
+  --radius-control: 2px;
+  --radius-chip: 6px;
+  --shadow-card: 0 1px 3px rgb(0 0 0 / .08);
+  --shadow-chip: 0 1px 2px rgb(0 0 0 / .06);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: 13 18 21;
+  --card: 20 27 31;
+  --muted: 28 36 42;
+  --foreground: 230 236 239;
+  --muted-foreground: 148 162 172;
+  --primary: 126 186 201;
+  --primary-foreground: 13 18 21;
+  --primary-ink: 126 186 201;
+
+  --sport-pool: 110 185 208;
+  --sport-tennis: 185 215 70;
+  --sport-padel: 90 170 165;
+  --sport-basketball: 210 130 80;
+  --sport-football: 115 180 100;
+  --sport-handball: 205 175 125;
+  --sport-volleyball: 220 200 105;
+  --sport-gym: 150 158 165;
+  --wash-a: .12;
+}
+
+/* Mobile app (PWA) overrides */
+[data-app] {
+  --background: 243 247 247;
+  --foreground: 31 63 72;          /* #1f3f48 */
+  --muted-foreground: 90 112 120;
+  --app-primary: 79 163 199;       /* #4FA3C7 — fills/shapes only, never small text on white */
+  --app-primary-foreground: 17 24 28;
+  --app-accent: 245 162 92;        /* #F5A25C */
+}
+[data-app][data-theme="dark"] {
+  --background: 13 18 21;
+  --foreground: 230 236 239;
+  --muted-foreground: 148 162 172;
+  --app-primary: 56 189 248;
+  --app-primary-foreground: 8 47 73;
+  --app-accent: 245 162 92;
+}
+
+/* Sport scope — set data-sport on the page/tab shell */
+[data-sport="pool"]       { --sport-wash: var(--sport-pool); }
+[data-sport="tennis"]     { --sport-wash: var(--sport-tennis); }
+[data-sport="padel"]      { --sport-wash: var(--sport-padel); }
+[data-sport="basketball"] { --sport-wash: var(--sport-basketball); }
+[data-sport="football"]   { --sport-wash: var(--sport-football); }
+[data-sport="handball"]   { --sport-wash: var(--sport-handball); }
+[data-sport="volleyball"] { --sport-wash: var(--sport-volleyball); }
+[data-sport="gym"]        { --sport-wash: var(--sport-gym); }
+
+/* The only place the wash is painted as a surface */
+.sport-shell {
+  background-color: rgb(var(--background));
+  background-image: linear-gradient(rgb(var(--sport-wash) / var(--wash-a)) 0 0);
+}

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Montserrat:wght@400;500;600;700&family=Quicksand:wght@500;600;700&family=Geist+Mono:wght@400;500&family=Material+Symbols+Sharp:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet"><style>
+body{margin:0;background:#e4e8ea;font-family:Montserrat,sans-serif;color:rgb(17 24 28)}
+a{color:rgb(70 113 124)}a:hover{color:rgb(17 24 28)}
+:root{--bg:250 251 252;--card:255 255 255;--muted:240 243 245;--fg:17 24 28;--mfg:90 103 112;--primary:103 166 182;--pfg:17 24 28;--primary-ink:70 113 124;--app-primary:14 116 144;--app-pfg:255 255 255;--app-accent:251 146 60;--accent-ink:194 65 12;--wash-a:.14;
+--sport-pool:160 205 218;--sport-tennis:205 230 80;--sport-padel:120 190 190;--sport-basketball:224 150 96;--sport-football:140 200 120;--sport-handball:230 200 150;--sport-volleyball:240 225 140;--sport-gym:170 175 180}
+[data-theme="dark"]{color-scheme:dark;--bg:13 18 21;--card:20 27 31;--muted:28 36 42;--fg:230 236 239;--mfg:148 162 172;--primary:126 186 201;--pfg:13 18 21;--primary-ink:126 186 201;--app-primary:56 189 248;--app-pfg:8 47 73;--wash-a:.12;
+--sport-pool:110 185 208;--sport-tennis:185 215 70;--sport-padel:90 170 165;--sport-basketball:210 130 80;--sport-football:115 180 100;--sport-handball:205 175 125;--sport-volleyball:220 200 105;--sport-gym:150 158 165}
+[data-sport="pool"]{--sport-wash:var(--sport-pool)}[data-sport="tennis"]{--sport-wash:var(--sport-tennis)}[data-sport="padel"]{--sport-wash:var(--sport-padel)}[data-sport="basketball"]{--sport-wash:var(--sport-basketball)}[data-sport="football"]{--sport-wash:var(--sport-football)}[data-sport="handball"]{--sport-wash:var(--sport-handball)}[data-sport="volleyball"]{--sport-wash:var(--sport-volleyball)}[data-sport="gym"]{--sport-wash:var(--sport-gym)}
+[data-app]{--fg:31 63 72;--mfg:90 112 120;--bg:243 247 247;--app-primary:79 163 199;--app-pfg:17 24 28;--app-accent:245 162 92}
+[data-app][data-theme="dark"]{--fg:230 236 239;--mfg:148 162 172;--bg:13 18 21;--app-primary:56 189 248;--app-pfg:8 47 73;--app-accent:245 162 92}
+</style></helmet>
+
+<div style="padding:48px 56px 8px;display:flex;flex-direction:column;gap:8px;max-width:1100px">
+  <div style="font:600 34px/1.1 Poppins,sans-serif;letter-spacing:-.02em">Poolse · superfícies por modalidade</div>
+  <div style="font-size:15px;line-height:1.55;color:rgb(90 103 112);text-wrap:pretty">Cada modalidade recebe uma lavagem translúcida <span style="font-family:'Geist Mono',monospace;font-size:13px">--sport-wash</span> atrás do conteúdo das suas páginas e do seu separador na app. Paleta, botões e componentes ficam iguais.</div>
+</div>
+
+<section id="s1" style="padding:40px 56px;display:flex;flex-direction:column;gap:22px;border-bottom:1px solid rgb(0 0 0 / .08)">
+  <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 12px 'Geist Mono',monospace;padding:3px 7px;background:rgb(17 24 28);color:#fff;border-radius:2px">01</span><span style="font:600 22px Poppins,sans-serif">Tokens</span><span style="font-size:13px;color:rgb(90 103 112)">Lavagem composta sobre o fundo · AA ≥ 4,5 : 1 para texto</span></div>
+  <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+    <sc-for list="{{ themes }}" as="t" hint-placeholder-count="2">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:700">{{ t.name }} · alpha {{ t.alphaTxt }}</div>
+        <div data-theme="{{ t.id }}" style="background:rgb(var(--bg));color:rgb(var(--fg));padding:20px 24px;border-radius:4px;width:860px;box-sizing:border-box">
+          <div style="display:grid;grid-template-columns:130px 200px 56px 150px 84px 84px 84px;gap:12px;font-size:11px;font-weight:600;color:rgb(var(--mfg));padding-bottom:8px"><span>Modalidade</span><span>Token</span><span>Plena</span><span>Lavagem + cartão</span><span>Texto</span><span>Secundário</span><span>Cartão / lav.</span></div>
+          <sc-for list="{{ t.rows }}" as="r" hint-placeholder-count="8">
+            <div data-sport="{{ r.id }}" style="display:grid;grid-template-columns:130px 200px 56px 150px 84px 84px 84px;gap:12px;align-items:center;padding:8px 0;border-top:1px solid rgb(var(--fg) / .07);font-size:13px">
+              <span style="display:flex;align-items:center;gap:8px;font-weight:600">
+                <sc-if value="{{ r.isPadel }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.6;stroke-linecap:round"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path><circle cx="12.6" cy="8" r=".8" fill="currentColor" stroke="none"></circle><circle cx="16.3" cy="8.6" r=".8" fill="currentColor" stroke="none"></circle><circle cx="14.3" cy="11.7" r=".8" fill="currentColor" stroke="none"></circle></svg></sc-if>
+                <sc-if value="{{ r.notPadel }}"><span style="font-family:'Material Symbols Sharp';font-size:18px;line-height:1;font-weight:normal">{{ r.icon }}</span></sc-if>{{ r.name }}</span>
+              <span style="font:400 11px 'Geist Mono',monospace;color:rgb(var(--mfg))">--sport-{{ r.id }}: {{ r.triple }}</span>
+              <div style="height:32px;background:rgb(var(--sport-wash));border-radius:2px"></div>
+              <div style="height:44px;padding:7px 10px;box-sizing:border-box;background-color:rgb(var(--bg));background-image:linear-gradient(rgb(var(--sport-wash) / var(--wash-a)),rgb(var(--sport-wash) / var(--wash-a)));border-radius:2px;display:flex;gap:8px;align-items:center"><span style="font-weight:600">Aa</span><span style="font-size:11px;color:rgb(var(--mfg))">Aa</span><div style="flex:1;height:100%;background:rgb(var(--card));border-radius:2px;box-shadow:0 1px 3px rgb(0 0 0 / .08)"></div></div>
+              <span style="font:500 12px 'Geist Mono',monospace">{{ r.cFg }}<br><span style="font-family:Montserrat;font-weight:700;font-size:11px">{{ r.okFg }}</span></span>
+              <span style="font:500 12px 'Geist Mono',monospace">{{ r.cMfg }}<br><span style="font-family:Montserrat;font-weight:700;font-size:11px">{{ r.okMfg }}</span></span>
+              <span style="font:500 12px 'Geist Mono',monospace;color:rgb(var(--mfg))">{{ r.cCard }}<br><span style="font-family:Montserrat;font-weight:600;font-size:11px">+ sombra</span></span>
+            </div>
+          </sc-for>
+          <div style="margin-top:18px;font-size:11px;font-weight:600;color:rgb(var(--mfg))">Pares que podem confundir-se · ΔE76 (cor plena)</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px">
+            <sc-for list="{{ t.pairs }}" as="p" hint-placeholder-count="5">
+              <div style="background:rgb(var(--card));border-radius:4px;padding:10px 12px;box-shadow:0 1px 3px rgb(0 0 0 / .08);display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:600">{{ p.label }}</span><span style="font:500 16px 'Geist Mono',monospace">{{ p.de }}</span><span style="font-size:11px;font-weight:700">{{ p.ok }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+    <div style="display:flex;flex-direction:column;gap:10px;width:420px">
+      <div style="font-size:13px;font-weight:700">Uso</div>
+      <pre style="margin:0;background:rgb(17 24 28);color:rgb(230 236 239);padding:18px 20px;border-radius:4px;font:400 12px/1.7 'Geist Mono',monospace;white-space:pre-wrap">:root {
+  --sport-tennis: 205 230 80;
+  --wash-a: .14;
+}
+[data-theme="dark"] {
+  --sport-tennis: 185 215 70;
+  --wash-a: .12;
+}
+[data-sport="tennis"] {
+  --sport-wash: var(--sport-tennis);
+}
+.sport-shell {
+  background-color: rgb(var(--background));
+  background-image: linear-gradient(
+    rgb(var(--sport-wash) / var(--wash-a)) 0 0);
+}</pre>
+      <div style="font-size:12px;line-height:1.6;color:rgb(90 103 112);text-wrap:pretty">As lavagens nunca aparecem lado a lado (uma modalidade por página), por isso o ΔE é medido nas cores plenas — as que surgem juntas na barra lateral, nos indicadores e nas tiras dos filhos.</div>
+    </div>
+  </div>
+</section>
+
+<section id="s2" style="padding:40px 56px;display:flex;flex-direction:column;gap:22px;border-bottom:1px solid rgb(0 0 0 / .08)">
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font:500 12px 'Geist Mono',monospace;padding:3px 7px;background:rgb(17 24 28);color:#fff;border-radius:2px">02</span><span style="font:600 22px Poppins,sans-serif">Navegação do backoffice</span><span style="font-size:13px;color:rgb(90 103 112)">Instalação + uma entrada por modalidade na barra superior · a barra lateral mostra só a secção escolhida · clicável</span></div>
+  <div style="display:flex;flex-direction:column;gap:48px">
+    <sc-for list="{{ themes }}" as="t" hint-placeholder-count="2">
+      <div style="display:flex;flex-direction:column;gap:16px"><div style="font-size:13px;font-weight:700">{{ t.name }}</div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:600;color:rgb(90 103 112)">8 modalidades · Basquetebol · Calendário — clique nos separadores</span>
+          <div style="border-radius:4px;overflow:hidden;box-shadow:0 1px 3px rgb(0 0 0 / .1);align-self:flex-start"><dc-import name="PoolseBackoffice" embedded="{{ true }}" theme="{{ t.id }}" sports="all" initial-section="basketball" initial-page="cal" style="width:1440px;height:560px" hint-size="1440px,560px"></dc-import></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:600;color:rgb(90 103 112)">Cada modalidade ativa · separador + início da página</span>
+          <div data-theme="{{ t.id }}" style="width:1440px;display:flex;flex-direction:column;gap:12px;padding:12px;box-sizing:border-box;background:rgb(var(--muted));border-radius:4px">
+            <sc-for list="{{ t.sportRows }}" as="r" hint-placeholder-count="8">
+              <div style="border-radius:2px;overflow:hidden;box-shadow:0 1px 2px rgb(0 0 0 / .08)">
+                <dc-import name="PoolseTopBar" sports="all" section="{{ r.id }}" hint-size="100%,56px"></dc-import>
+                <div data-sport="{{ r.id }}" style="height:52px;display:flex;align-items:center;gap:8px;padding:0 24px;background-color:rgb(var(--bg));background-image:linear-gradient(rgb(var(--sport-wash) / var(--wash-a)),rgb(var(--sport-wash) / var(--wash-a)));color:rgb(var(--fg));font-size:13px">
+                  <sc-if value="{{ r.isPadel }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.6;stroke-linecap:round"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path><circle cx="12.6" cy="8" r=".8" fill="currentColor" stroke="none"></circle><circle cx="16.3" cy="8.6" r=".8" fill="currentColor" stroke="none"></circle><circle cx="14.3" cy="11.7" r=".8" fill="currentColor" stroke="none"></circle></svg></sc-if>
+                  <sc-if value="{{ r.notPadel }}"><span style="font-family:'Material Symbols Sharp';font-size:17px;line-height:1">{{ r.icon }}</span></sc-if>
+                  <span style="font-weight:600">{{ r.name }}</span><span style="color:rgb(var(--mfg))">/ Calendário</span>
+                  <button style="margin-left:auto;font:600 12px Montserrat;padding:8px 14px;border-radius:2px;border:none;background:rgb(var(--primary));color:rgb(var(--pfg));white-space:nowrap">+ Nova aula</button>
+                </div>
+              </div>
+            </sc-for>
+          </div></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:600;color:rgb(90 103 112)">Clube com 1 modalidade — sem separadores de modalidade, sem lavagem</span>
+          <div style="border-radius:4px;overflow:hidden;box-shadow:0 1px 3px rgb(0 0 0 / .1);align-self:flex-start"><dc-import name="PoolseBackoffice" embedded="{{ true }}" theme="{{ t.id }}" variant="single" initial-page="cal" style="width:960px;height:560px" hint-size="960px,560px"></dc-import></div></div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section id="s3" style="padding:40px 56px;display:flex;flex-direction:column;gap:22px;border-bottom:1px solid rgb(0 0 0 / .08)">
+  <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 12px 'Geist Mono',monospace;padding:3px 7px;background:rgb(17 24 28);color:#fff;border-radius:2px">03</span><span style="font:600 22px Poppins,sans-serif">Calendário filtrado a Ténis</span><span style="font-size:13px;color:rgb(90 103 112)">Lavagem da cabeça da página para baixo · cores das turmas inalteradas</span></div>
+  <div style="display:flex;flex-direction:column;gap:40px">
+    <sc-for list="{{ themes }}" as="t" hint-placeholder-count="2">
+      <div style="display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:700">{{ t.name }}</div>
+        <div data-theme="{{ t.id }}" style="width:1280px;height:1096px;display:grid;grid-template-columns:240px minmax(0,1fr);grid-template-rows:56px minmax(0,1fr);border-radius:4px;overflow:hidden;background:rgb(var(--bg));color:rgb(var(--fg))">
+          <div style="grid-column:1 / 3;position:relative;z-index:1"><dc-import name="PoolseTopBar" variant="multi" section="tennis" hint-size="100%,56px"></dc-import></div>
+          <dc-import name="PoolseSidebar" variant="multi" section="tennis" active="cal" hint-size="240px,1040px"></dc-import>
+          <div data-sport="tennis" style="flex:1;min-width:0;background-color:rgb(var(--bg));background-image:linear-gradient(rgb(var(--sport-wash) / var(--wash-a)),rgb(var(--sport-wash) / var(--wash-a)));padding:26px 32px;display:flex;flex-direction:column;gap:20px">
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:rgb(var(--mfg))"><span style="font-family:'Material Symbols Sharp';font-size:16px;line-height:1;font-weight:normal">sports_tennis</span>Ténis<span>/</span><span style="color:rgb(var(--fg));font-weight:600">Calendário</span></div>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px">
+              <div style="display:flex;flex-direction:column;gap:4px"><h1 style="margin:0;font:600 30px/1.1 Poppins,sans-serif;letter-spacing:-.02em">Calendário</h1><span style="font-size:13px;color:rgb(var(--mfg))">Quarta-feira, 29 de outubro · 3 campos · 7 aulas</span></div>
+              <div style="display:flex;gap:8px">
+                <button style="font:600 13px Montserrat;padding:10px 14px;border-radius:2px;border:none;background:rgb(var(--card));color:rgb(var(--fg));box-shadow:0 1px 3px rgb(0 0 0 / .08);cursor:pointer;white-space:nowrap">Exportar Excel</button>
+                <button style="font:600 13px Montserrat;padding:10px 16px;border-radius:2px;border:none;background:rgb(var(--primary));color:rgb(var(--pfg));cursor:pointer;white-space:nowrap">+ Nova aula</button>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <div style="display:flex;background:rgb(var(--card));border-radius:2px;box-shadow:0 1px 3px rgb(0 0 0 / .08);font-size:13px;font-weight:600"><span style="padding:8px 11px">‹</span><span style="padding:8px 12px">Hoje</span><span style="padding:8px 11px">›</span></div>
+              <div style="display:flex;background:rgb(var(--muted));border-radius:2px;padding:3px;font-size:12px;font-weight:600"><span style="padding:6px 12px;background:rgb(var(--card));border-radius:2px;box-shadow:0 1px 2px rgb(0 0 0 / .08)">Dia</span><span style="padding:6px 12px;color:rgb(var(--mfg))">Semana</span><span style="padding:6px 12px;color:rgb(var(--mfg))">Mês</span></div>
+              <span style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:2px;background:rgb(var(--card));box-shadow:0 1px 3px rgb(0 0 0 / .08);font-size:12px;font-weight:600"><span style="font-family:'Material Symbols Sharp';font-size:16px;line-height:1;font-weight:normal">sports_tennis</span>Modalidade: Ténis<span style="color:rgb(var(--mfg));margin-left:4px">✕</span></span>
+              <span style="padding:7px 10px;border-radius:2px;background:rgb(var(--card));box-shadow:0 1px 3px rgb(0 0 0 / .08);font-size:12px;font-weight:600">Todos os campos ▾</span>
+            </div>
+            <div style="display:grid;grid-template-columns:64px repeat(3,minmax(0,1fr));grid-template-rows:44px repeat(10,64px);font-size:12px">
+              <div style="grid-column:1 / 5;grid-row:1;background:rgb(var(--card));border-radius:2px;box-shadow:0 1px 3px rgb(0 0 0 / .08)"></div>
+              <div style="grid-column:2;grid-row:1;display:flex;align-items:center;padding:0 12px;font-weight:600;font-size:13px;position:relative">Campo 1<span style="color:rgb(var(--mfg));font-weight:500;margin-left:6px">terra batida</span></div>
+              <div style="grid-column:3;grid-row:1;display:flex;align-items:center;padding:0 12px;font-weight:600;font-size:13px;position:relative">Campo 2<span style="color:rgb(var(--mfg));font-weight:500;margin-left:6px">rápido</span></div>
+              <div style="grid-column:4;grid-row:1;display:flex;align-items:center;padding:0 12px;font-weight:600;font-size:13px;position:relative">Campo 3<span style="color:rgb(var(--mfg));font-weight:500;margin-left:6px">coberto</span></div>
+              <div style="grid-column:1 / 5;grid-row:2 / 12;background-image:repeating-linear-gradient(to bottom,rgb(var(--fg) / .08) 0 1px,transparent 1px 128px)"></div>
+              <div style="grid-column:3;grid-row:2 / 12;box-shadow:inset 1px 0 0 rgb(var(--fg) / .08)"></div>
+              <div style="grid-column:4;grid-row:2 / 12;box-shadow:inset 1px 0 0 rgb(var(--fg) / .08)"></div>
+              <div style="grid-column:2;grid-row:2 / 12;box-shadow:inset 1px 0 0 rgb(var(--fg) / .08)"></div>
+              <div style="grid-column:1;grid-row:2;padding:6px 0 0;font:500 11px 'Geist Mono',monospace;color:rgb(var(--mfg))">16:00</div>
+              <div style="grid-column:1;grid-row:4;padding:6px 0 0;font:500 11px 'Geist Mono',monospace;color:rgb(var(--mfg))">17:00</div>
+              <div style="grid-column:1;grid-row:6;padding:6px 0 0;font:500 11px 'Geist Mono',monospace;color:rgb(var(--mfg))">18:00</div>
+              <div style="grid-column:1;grid-row:8;padding:6px 0 0;font:500 11px 'Geist Mono',monospace;color:rgb(var(--mfg))">19:00</div>
+              <div style="grid-column:1;grid-row:10;padding:6px 0 0;font:500 11px 'Geist Mono',monospace;color:rgb(var(--mfg))">20:00</div>
+              <div style="grid-column:2;grid-row:4 / 6;margin:4px 6px;border-radius:6px;padding:9px 11px;background:linear-gradient(rgb(124 108 196 / .16),rgb(124 108 196 / .16)),rgb(var(--card));box-shadow:0 1px 2px rgb(0 0 0 / .06);display:flex;flex-direction:column;gap:3px;overflow:hidden"><span style="display:flex;align-items:center;gap:7px;font-weight:600;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:rgb(124 108 196);flex:none"></span>Iniciação Sub-10</span><span style="color:rgb(var(--mfg))">17:00–18:00 · Miguel Sá</span><span style="color:rgb(var(--mfg))">6/8 alunos</span></div>
+              <div style="grid-column:2;grid-row:6 / 9;margin:4px 6px;border-radius:6px;padding:9px 11px;background:linear-gradient(rgb(214 102 140 / .16),rgb(214 102 140 / .16)),rgb(var(--card));box-shadow:0 1px 2px rgb(0 0 0 / .06);display:flex;flex-direction:column;gap:3px;overflow:hidden"><span style="display:flex;align-items:center;gap:7px;font-weight:600;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:rgb(214 102 140);flex:none"></span>Competição Sub-14</span><span style="color:rgb(var(--mfg))">18:00–19:30 · Inês Lobo</span><span style="color:rgb(var(--mfg))">8/8 alunos · completa</span></div>
+              <div style="grid-column:2;grid-row:9 / 11;margin:4px 6px;border-radius:6px;padding:9px 11px;background:linear-gradient(rgb(92 110 180 / .16),rgb(92 110 180 / .16)),rgb(var(--card));box-shadow:0 1px 2px rgb(0 0 0 / .06);display:flex;flex-direction:column;gap:3px;overflow:hidden"><span style="display:flex;align-items:center;gap:7px;font-weight:600;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:rgb(92 110 180);flex:none"></span>Adultos Nível 2</span><span style="color:rgb(var(--mfg))">19:30–20:30 · Miguel Sá</span><span style="color:rgb(var(--mfg))">5/6 alunos</span></div>
+              <div style="grid-column:3;grid-row:3 / 5;margin:4px 6px;border-radius:6px;padding:9px 11px;background:linear-gradient(rgb(160 90 170 / .16),rgb(160 90 170 / .16)),rgb(var(--card));box-shadow:0 1px 2px rgb(0 0 0 / .06);display:flex;flex-direction:column;gap:3px;overflow:hidden"><span style="display:flex;align-items:center;gap:7px;font-weight:600;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:rgb(160 90 170);flex:none"></span>Mini-ténis 5–7</span><span style="color:rgb(var(--mfg))">16:30–17:30 · Inês Lobo</span><span style="color:rgb(var(--mfg))">7/8 alunos</span></div>
+              <div style="grid-column:3;grid-row:8 / 10;margin:4px 6px;border-radius:6px;padding:9px 11px;background:linear-gradient(rgb(92 110 180 / .16),rgb(92 110 180 / .16)),rgb(var(--card));box-shadow:0 1px 2px rgb(0 0 0 / .06);display:flex;flex-direction:column;gap:3px;overflow:hidden"><span style="display:flex;align-items:center;gap:7px;font-weight:600;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:rgb(92 110 180);flex:none"></span>Adultos Nível 1</span><span style="color:rgb(var(--mfg))">19:00–20:00 · Rui Faria</span><span style="color:rgb(var(--mfg))">4/6 alunos</span></div>
+              <div style="grid-column:4;grid-row:6 / 8;margin:4px 6px;border-radius:6px;padding:9px 11px;background:linear-gradient(rgb(120 130 140 / .16),rgb(120 130 140 / .16)),rgb(var(--card));box-shadow:0 1px 2px rgb(0 0 0 / .06);display:flex;flex-direction:column;gap:3px;overflow:hidden"><span style="display:flex;align-items:center;gap:7px;font-weight:600;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:rgb(120 130 140);flex:none"></span>Aula privada</span><span style="color:rgb(var(--mfg))">18:00–19:00 · Rui Faria</span><span style="color:rgb(var(--mfg))">1 aluno</span></div>
+              <div style="grid-column:4;grid-row:10 / 12;margin:4px 6px;border-radius:6px;padding:9px 11px;background:linear-gradient(rgb(214 102 140 / .16),rgb(214 102 140 / .16)),rgb(var(--card));box-shadow:0 1px 2px rgb(0 0 0 / .06);display:flex;flex-direction:column;gap:3px;overflow:hidden"><span style="display:flex;align-items:center;gap:7px;font-weight:600;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:rgb(214 102 140);flex:none"></span>Treino Competição</span><span style="color:rgb(var(--mfg))">20:00–21:00 · Inês Lobo</span><span style="color:rgb(var(--mfg))">6/8 alunos</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section id="s4" style="padding:40px 56px;display:flex;flex-direction:column;gap:22px;border-bottom:1px solid rgb(0 0 0 / .08)">
+  <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 12px 'Geist Mono',monospace;padding:3px 7px;background:rgb(17 24 28);color:#fff;border-radius:2px">04</span><span style="font:600 22px Poppins,sans-serif">App · encarregada com dois filhos</span><span style="font-size:13px;color:rgb(90 103 112)">Início neutro · separador Padel com lavagem</span></div>
+  <div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+    <sc-for list="{{ themes }}" as="t" hint-placeholder-count="2">
+      <div style="display:flex;gap:28px;align-items:flex-start">
+        <div style="display:flex;flex-direction:column;gap:12px"><div style="font-size:13px;font-weight:700">{{ t.name }} · Início</div>
+          <div data-app="" data-theme="{{ t.id }}" style="width:380px;height:820px;border-radius:36px;overflow:hidden;box-shadow:0 0 0 8px rgb(17 24 28),0 20px 40px rgb(0 0 0 / .18);font-family:Quicksand,sans-serif;color:rgb(var(--fg));background:rgb(var(--bg));display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:space-between;padding:14px 26px 6px;font-size:13px;font-weight:700"><span>9:41</span><span>●●● ▮</span></div>
+            <div style="flex:1;padding:10px 16px 16px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600;color:rgb(var(--mfg))">Boa tarde,</span><span style="font-size:28px;font-weight:700;line-height:1.1">Ana Pereira</span></div><div style="width:44px;height:44px;border-radius:4px;background:rgb(var(--card));box-shadow:0 1px 3px rgb(0 0 0 / .08);display:grid;place-items:center"><span style="font-family:'Material Symbols Sharp';font-size:22px;line-height:1;font-weight:normal">notifications</span></div></div>
+              <div style="font-size:15px;font-weight:700;margin-top:4px">Os seus filhos</div>
+              <div style="background:rgb(var(--card));border-radius:4px;box-shadow:0 1px 3px rgb(0 0 0 / .08);padding:16px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;border-radius:50%;background:rgb(var(--app-accent));display:grid;place-items:center;font-weight:700;color:rgb(17 24 28)">M</div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:700">Mariana</span><span style="font-size:12px;font-weight:600;color:rgb(var(--mfg))">13 anos · 2 modalidades</span></div><span style="font-family:'Material Symbols Sharp';font-size:22px;line-height:1;font-weight:normal;color:rgb(var(--mfg))">chevron_right</span></div>
+                <div style="display:flex;gap:3px"><div data-sport="pool" style="flex:1;height:6px;background:rgb(var(--sport-wash))"></div><div data-sport="padel" style="flex:1;height:6px;background:rgb(var(--sport-wash))"></div></div>
+                <div style="display:flex;gap:16px;font-size:12px;font-weight:700"><span style="display:flex;align-items:center;gap:6px"><span style="font-family:'Material Symbols Sharp';font-size:17px;line-height:1;font-weight:normal">pool</span>Natação</span><span style="display:flex;align-items:center;gap:6px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.6;stroke-linecap:round"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path><circle cx="12.6" cy="8" r=".8" fill="currentColor" stroke="none"></circle><circle cx="16.3" cy="8.6" r=".8" fill="currentColor" stroke="none"></circle><circle cx="14.3" cy="11.7" r=".8" fill="currentColor" stroke="none"></circle></svg>Padel</span></div>
+                <div style="font-size:13px;font-weight:600;padding-top:10px;box-shadow:0 -1px 0 rgb(var(--fg) / .07)">Próxima: <b>Natação</b> · hoje, 18:00</div>
+              </div>
+              <div style="background:rgb(var(--card));border-radius:4px;box-shadow:0 1px 3px rgb(0 0 0 / .08);padding:16px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;border-radius:50%;background:rgb(var(--muted));display:grid;place-items:center;font-weight:700">T</div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:700">Tomás</span><span style="font-size:12px;font-weight:600;color:rgb(var(--mfg))">9 anos · 1 modalidade</span></div><span style="font-family:'Material Symbols Sharp';font-size:22px;line-height:1;font-weight:normal;color:rgb(var(--mfg))">chevron_right</span></div>
+                <div style="display:flex;gap:3px"><div data-sport="pool" style="flex:1;height:6px;background:rgb(var(--sport-wash))"></div></div>
+                <div style="display:flex;gap:16px;font-size:12px;font-weight:700"><span style="display:flex;align-items:center;gap:6px"><span style="font-family:'Material Symbols Sharp';font-size:17px;line-height:1;font-weight:normal">pool</span>Natação</span></div>
+                <div style="font-size:13px;font-weight:600;padding-top:10px;box-shadow:0 -1px 0 rgb(var(--fg) / .07)">Próxima: <b>Natação</b> · sexta, 17:30</div>
+              </div>
+              <div style="font-size:15px;font-weight:700;margin-top:4px">Esta semana</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;gap:12px;align-items:center;background:rgb(var(--card));border-radius:4px;box-shadow:0 1px 3px rgb(0 0 0 / .08);padding:11px 14px"><div style="width:40px;display:flex;flex-direction:column;align-items:center"><span style="font-size:11px;font-weight:700;color:rgb(var(--mfg))">QUI</span><span style="font-size:19px;font-weight:700">30</span></div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">Padel · Iniciação</span><span style="font-size:12px;font-weight:600;color:rgb(var(--mfg))">Mariana · 19:00 · Campo de padel 2</span></div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.6;stroke-linecap:round;color:rgb(var(--mfg))"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path><circle cx="12.6" cy="8" r=".8" fill="currentColor" stroke="none"></circle><circle cx="16.3" cy="8.6" r=".8" fill="currentColor" stroke="none"></circle><circle cx="14.3" cy="11.7" r=".8" fill="currentColor" stroke="none"></circle></svg></div>
+                <div style="display:flex;gap:12px;align-items:center;background:rgb(var(--card));border-radius:4px;box-shadow:0 1px 3px rgb(0 0 0 / .08);padding:11px 14px"><div style="width:40px;display:flex;flex-direction:column;align-items:center"><span style="font-size:11px;font-weight:700;color:rgb(var(--mfg))">SEX</span><span style="font-size:19px;font-weight:700">31</span></div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">Natação · Nível 2</span><span style="font-size:12px;font-weight:600;color:rgb(var(--mfg))">Tomás · 17:30 · Piscina 25 m</span></div><span style="font-family:'Material Symbols Sharp';font-size:20px;line-height:1;font-weight:normal;color:rgb(var(--mfg))">pool</span></div>
+              </div>
+              <div style="margin-top:auto"><dc-import name="PoolseTabBar" mode="multi" sports="pool,padel" active="home" hint-size="348px,64px"></dc-import></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px"><div style="font-size:13px;font-weight:700">{{ t.name }} · Padel</div>
+          <div data-app="" data-theme="{{ t.id }}" style="width:380px;height:820px;border-radius:36px;overflow:hidden;box-shadow:0 0 0 8px rgb(17 24 28),0 20px 40px rgb(0 0 0 / .18);font-family:Quicksand,sans-serif;color:rgb(var(--fg));background:rgb(var(--bg))">
+            <div data-sport="padel" style="height:100%;display:flex;flex-direction:column;background-image:linear-gradient(rgb(var(--sport-wash) / var(--wash-a)),rgb(var(--sport-wash) / var(--wash-a)))">
+              <div style="display:flex;justify-content:space-between;padding:14px 26px 6px;font-size:13px;font-weight:700"><span>9:41</span><span>●●● ▮</span></div>
+              <div style="flex:1;padding:10px 16px 16px;display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:center;gap:10px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.6;stroke-linecap:round"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path><circle cx="12.6" cy="8" r=".8" fill="currentColor" stroke="none"></circle><circle cx="16.3" cy="8.6" r=".8" fill="currentColor" stroke="none"></circle><circle cx="14.3" cy="11.7" r=".8" fill="currentColor" stroke="none"></circle></svg><span style="font-size:28px;font-weight:700;line-height:1.1">Padel</span></div><span style="font-size:13px;font-weight:600;color:rgb(var(--mfg))">Mariana · Iniciação Sub-14</span></div>
+                <div style="background:rgb(var(--card));border-radius:4px;box-shadow:0 1px 3px rgb(0 0 0 / .08);padding:18px;display:flex;flex-direction:column;gap:12px">
+                  <span style="font-size:12px;font-weight:700;color:rgb(var(--mfg))">Próxima aula</span>
+                  <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:700">Quinta, 30 de outubro</span><span style="font-size:34px;font-weight:700;line-height:1.1">19:00 – 20:00</span></div>
+                  <div style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:rgb(var(--mfg))"><span>Campo de padel 2 · coberto</span><span>Prof.ª Joana Reis</span></div>
+                  <div style="display:flex;gap:8px;margin-top:4px">
+                    <button style="flex:1.4;font:700 15px Quicksand;padding:14px;border-radius:4px;border:none;background:rgb(var(--app-primary));color:rgb(var(--app-pfg));min-height:48px;cursor:pointer;white-space:nowrap">Confirmar presença</button>
+                    <button style="flex:1;font:700 15px Quicksand;padding:14px;border-radius:4px;border:none;background:rgb(var(--muted));color:rgb(var(--fg));min-height:48px;cursor:pointer;white-space:nowrap">Não posso ir</button>
+                  </div>
+                </div>
+                <div style="background:rgb(var(--card));border-radius:4px;box-shadow:0 1px 3px rgb(0 0 0 / .08);padding:16px;display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:15px;font-weight:700">Assiduidade · outubro</span><span style="font-size:13px;font-weight:700">6 de 7</span></div>
+                  <div style="display:flex;gap:6px"><span style="flex:1;height:22px;background:rgb(var(--fg))"></span><span style="flex:1;height:22px;background:rgb(var(--fg))"></span><span style="flex:1;height:22px;background:rgb(var(--fg))"></span><span style="flex:1;height:22px;box-shadow:inset 0 0 0 2px rgb(var(--mfg))"></span><span style="flex:1;height:22px;background:rgb(var(--fg))"></span><span style="flex:1;height:22px;background:rgb(var(--fg))"></span><span style="flex:1;height:22px;background:rgb(var(--fg))"></span></div>
+                  <div style="display:flex;gap:14px;font-size:12px;font-weight:600;color:rgb(var(--mfg))"><span>■ Presente</span><span>□ Falta · 14 out</span></div>
+                </div>
+                <div style="background:rgb(var(--card));border-radius:4px;box-shadow:0 1px 3px rgb(0 0 0 / .08);padding:16px;display:flex;flex-direction:column;gap:6px">
+                  <span style="font-size:12px;font-weight:700;color:rgb(var(--mfg))">Turma</span>
+                  <span style="display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700"><span style="width:9px;height:9px;border-radius:50%;background:rgb(160 90 170)"></span>Iniciação Sub-14</span>
+                  <span style="font-size:13px;font-weight:600;color:rgb(var(--mfg))">Terças e quintas · 19:00–20:00 · 8 alunos</span>
+                </div>
+                <div style="margin-top:auto"><dc-import name="PoolseTabBar" mode="multi" sports="pool,padel" active="sports" current="padel" hint-size="348px,64px"></dc-import></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section id="s5" style="padding:40px 56px;display:flex;flex-direction:column;gap:22px;border-bottom:1px solid rgb(0 0 0 / .08)">
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font:500 12px 'Geist Mono',monospace;padding:3px 7px;background:rgb(17 24 28);color:#fff;border-radius:2px">05</span><span style="font:600 22px Poppins,sans-serif">App · separador Modalidades</span><span style="font-size:13px;color:rgb(90 103 112)">Um hexágono para todas as modalidades · com 2 ou mais, abre um seletor · clicável</span></div>
+  <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+    <sc-for list="{{ themes }}" as="t" hint-placeholder-count="2">
+      <div style="display:flex;gap:32px;align-items:flex-start">
+        <div style="display:flex;flex-direction:column;gap:18px;width:380px"><div style="font-size:13px;font-weight:700">{{ t.name }} · estados da barra</div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;color:rgb(90 103 112)">Clube com 1 modalidade — igual ao atual</span>
+            <div data-app="" data-theme="{{ t.id }}" style="padding:16px;background:rgb(var(--bg));border-radius:4px"><dc-import name="PoolseTabBar" mode="one" active="home" hint-size="348px,64px"></dc-import></div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;color:rgb(90 103 112)">Inscrito numa modalidade — o separador já tem o nome, abre direto</span>
+            <div data-app="" data-theme="{{ t.id }}" style="padding:16px;background:rgb(var(--bg));border-radius:4px"><dc-import name="PoolseTabBar" mode="multi" sports="tennis" active="home" hint-size="348px,64px"></dc-import></div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;color:rgb(90 103 112)">2 ou mais modalidades · noutra página</span>
+            <div data-app="" data-theme="{{ t.id }}" style="padding:16px;background:rgb(var(--bg));border-radius:4px"><dc-import name="PoolseTabBar" mode="multi" sports="pool,padel" active="pay" hint-size="348px,64px"></dc-import></div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;color:rgb(90 103 112)">2 ou mais · Padel aberto — indicador na cor plena + nome + ícone</span>
+            <div data-app="" data-theme="{{ t.id }}" style="border-radius:4px;background:rgb(var(--bg))"><div data-sport="padel" style="padding:16px;border-radius:4px;background-image:linear-gradient(rgb(var(--sport-wash) / var(--wash-a)),rgb(var(--sport-wash) / var(--wash-a)))"><dc-import name="PoolseTabBar" mode="multi" sports="pool,padel" active="sports" current="padel" hint-size="348px,64px"></dc-import></div></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px"><div style="font-size:13px;font-weight:700">{{ t.name }} · seletor (toque no hexágono)</div>
+          <div data-theme="{{ t.id }}" style="position:relative;width:380px;height:820px;border-radius:36px;overflow:hidden;box-shadow:0 0 0 8px rgb(17 24 28),0 20px 40px rgb(0 0 0 / .18);font-family:Quicksand,sans-serif;color:rgb(var(--fg));background:rgb(var(--bg))">
+            <div data-sport="{{ t.cur }}" style="height:100%;display:flex;flex-direction:column;background-image:linear-gradient(rgb(var(--sport-wash) / var(--wash-a)),rgb(var(--sport-wash) / var(--wash-a)))">
+              <div style="display:flex;justify-content:space-between;padding:14px 26px 6px;font-size:13px;font-weight:700"><span>9:41</span><span>●●● ▮</span></div>
+              <div style="flex:1;padding:10px 16px 16px;display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:center;gap:10px">
+                  <sc-if value="{{ t.curPadel }}"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.6;stroke-linecap:round;flex:none"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path><circle cx="12.6" cy="8" r=".8" fill="currentColor" stroke="none"></circle><circle cx="16.3" cy="8.6" r=".8" fill="currentColor" stroke="none"></circle><circle cx="14.3" cy="11.7" r=".8" fill="currentColor" stroke="none"></circle></svg></sc-if>
+                  <sc-if value="{{ t.curGlyph }}"><span style="font-family:'Material Symbols Sharp';font-size:28px;line-height:1">{{ t.curIcon }}</span></sc-if>
+                  <span style="font-size:28px;font-weight:700;line-height:1.1">{{ t.curName }}</span></div>
+                  <span style="font-size:13px;font-weight:600;color:rgb(var(--mfg))">{{ t.curWho }}</span></div>
+                <div style="background:rgb(var(--card));border-radius:4px;box-shadow:0 1px 3px rgb(0 0 0 / .08);padding:18px;display:flex;flex-direction:column;gap:10px">
+                  <span style="font-size:12px;font-weight:700;color:rgb(var(--mfg))">Próxima aula</span>
+                  <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:700">{{ t.curDay }}</span><span style="font-size:34px;font-weight:700;line-height:1.1">{{ t.curTime }}</span></div>
+                  <div style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:rgb(var(--mfg))"><span>{{ t.curPlace }}</span><span>{{ t.curCoach }}</span></div>
+                </div>
+                <div style="background:rgb(var(--card));border-radius:4px;box-shadow:0 1px 3px rgb(0 0 0 / .08);padding:16px;display:flex;flex-direction:column;gap:6px">
+                  <span style="font-size:12px;font-weight:700;color:rgb(var(--mfg))">Turma</span>
+                  <span style="display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700"><span style="width:9px;height:9px;border-radius:50%;background:{{ t.curTc }}"></span>{{ t.curTurma }}</span>
+                </div>
+                <div style="margin-top:auto"><dc-import name="PoolseTabBar" mode="multi" sports="pool,padel" active="sports" current="{{ t.cur }}" on-select="{{ t.onTab }}" hint-size="348px,64px"></dc-import></div>
+              </div>
+            </div>
+            <sc-if value="{{ t.open }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ t.close }}" style="position:absolute;inset:0;background:rgb(0 0 0 / .42);display:flex;flex-direction:column;justify-content:flex-end">
+                <div onClick="{{ t.stop }}" style="background:rgb(var(--card));border-radius:4px 4px 0 0;padding:10px 16px 30px;display:flex;flex-direction:column;gap:8px">
+                  <div style="width:40px;height:4px;border-radius:2px;background:rgb(var(--fg) / .18);align-self:center;margin-bottom:8px"></div>
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 6px"><span style="font-size:20px;font-weight:700">Modalidades</span><span style="font-size:12px;font-weight:600;color:rgb(var(--mfg))">{{ t.countTxt }}</span></div>
+                  <sc-for list="{{ t.sheet }}" as="s" hint-placeholder-count="2">
+                    <div data-sport="{{ s.id }}" onClick="{{ s.pick }}" style="display:flex;align-items:center;gap:14px;min-height:64px;padding:10px 14px 10px 18px;border-radius:4px;cursor:pointer;background:{{ s.bg }};box-shadow:inset 4px 0 0 rgb(var(--sport-wash))">
+                      <sc-if value="{{ s.isPadel }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.6;stroke-linecap:round;flex:none"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path><circle cx="12.6" cy="8" r=".8" fill="currentColor" stroke="none"></circle><circle cx="16.3" cy="8.6" r=".8" fill="currentColor" stroke="none"></circle><circle cx="14.3" cy="11.7" r=".8" fill="currentColor" stroke="none"></circle></svg></sc-if>
+                      <sc-if value="{{ s.notPadel }}"><span style="font-family:'Material Symbols Sharp';font-size:24px;line-height:1">{{ s.icon }}</span></sc-if>
+                      <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:700">{{ s.name }}</span><span style="font-size:12px;font-weight:600;color:rgb(var(--mfg))">{{ s.sub }}</span></div>
+                      <sc-if value="{{ s.on }}"><span style="font-family:'Material Symbols Sharp';font-size:22px;line-height:1">check</span></sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section id="s6" style="padding:40px 56px 64px;display:flex;flex-direction:column;gap:22px">
+  <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 12px 'Geist Mono',monospace;padding:3px 7px;background:rgb(17 24 28);color:#fff;border-radius:2px">06</span><span style="font:600 22px Poppins,sans-serif">Não fazer</span></div>
+  <div data-theme="light" style="display:grid;grid-template-columns:repeat(4,300px);gap:20px">
+    <div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:14px;font-weight:700">Lavagem nos botões</span>
+      <div data-sport="tennis" style="display:flex;flex-direction:column;gap:8px">
+        <div style="padding:16px;border-radius:4px;background-color:rgb(var(--bg));background-image:linear-gradient(rgb(var(--sport-wash) / var(--wash-a)),rgb(var(--sport-wash) / var(--wash-a)));display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700">✕ Não</span><button style="font:600 13px Montserrat;padding:9px 14px;border-radius:2px;border:none;background:rgb(var(--sport-wash) / .45);color:rgb(var(--fg))">+ Nova aula</button></div>
+        <div style="padding:16px;border-radius:4px;background-color:rgb(var(--bg));background-image:linear-gradient(rgb(var(--sport-wash) / var(--wash-a)),rgb(var(--sport-wash) / var(--wash-a)));display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700">✓ Sim</span><button style="font:600 13px Montserrat;padding:9px 14px;border-radius:2px;border:none;background:rgb(var(--primary));color:rgb(var(--pfg))">+ Nova aula</button></div>
+      </div></div>
+    <div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:14px;font-weight:700">Lavagem no texto</span>
+      <div data-sport="tennis" style="display:flex;flex-direction:column;gap:8px">
+        <div style="padding:16px;border-radius:4px;background:rgb(var(--bg));display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700">✕ Não</span><span style="font:600 22px Poppins,sans-serif;color:rgb(var(--sport-wash))">Calendário</span></div>
+        <div style="padding:16px;border-radius:4px;background:rgb(var(--bg));display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700">✓ Sim</span><span style="font:600 22px Poppins,sans-serif;color:rgb(var(--fg))">Calendário</span></div>
+      </div></div>
+    <div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:14px;font-weight:700">Cor da modalidade como primária</span>
+      <div data-sport="tennis" style="display:flex;flex-direction:column;gap:8px">
+        <div style="padding:16px;border-radius:4px;background:rgb(var(--bg));display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:12px;font-weight:700">✕ Não</span><span style="padding:6px 10px;font-size:12px;font-weight:600;background:rgb(var(--sport-wash));border-radius:2px">Calendário</span><button style="font:600 13px Montserrat;padding:9px 14px;border-radius:2px;border:none;background:rgb(var(--sport-wash));color:rgb(var(--fg))">Guardar</button></div>
+        <div style="padding:16px;border-radius:4px;background:rgb(var(--bg));display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:12px;font-weight:700">✓ Sim</span><span style="padding:6px 10px;font-size:12px;font-weight:600;background:rgb(var(--muted));border-radius:2px;box-shadow:inset 4px 0 0 rgb(var(--sport-wash))">Calendário</span><button style="font:600 13px Montserrat;padding:9px 14px;border-radius:2px;border:none;background:rgb(var(--primary));color:rgb(var(--pfg))">Guardar</button></div>
+      </div></div>
+    <div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:14px;font-weight:700">Lavagem em páginas partilhadas</span>
+      <div data-sport="tennis" style="display:flex;flex-direction:column;gap:8px">
+        <div style="padding:16px;border-radius:4px;background-color:rgb(var(--bg));background-image:linear-gradient(rgb(var(--sport-wash) / var(--wash-a)),rgb(var(--sport-wash) / var(--wash-a)));display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700">✕ Não</span><span style="font:600 18px Poppins,sans-serif">Mensalidades</span></div>
+        <div style="padding:16px;border-radius:4px;background:rgb(var(--bg));display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700">✓ Sim</span><span style="font:600 18px Poppins,sans-serif">Mensalidades</span></div>
+      </div></div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { pool: [160, 205, 218], tennis: [205, 230, 80], padel: [120, 190, 190], basketball: [224, 150, 96], football: [140, 200, 120], handball: [230, 200, 150], volleyball: [240, 225, 140], gym: [170, 175, 180] };
+    const D = { pool: [110, 185, 208], tennis: [185, 215, 70], padel: [90, 170, 165], basketball: [210, 130, 80], football: [115, 180, 100], handball: [205, 175, 125], volleyball: [220, 200, 105], gym: [150, 158, 165] };
+    const META = [['pool', 'Piscina', 'pool'], ['tennis', 'Ténis', 'sports_tennis'], ['padel', 'Padel', ''], ['basketball', 'Basquetebol', 'sports_basketball'], ['football', 'Futebol', 'sports_soccer'], ['handball', 'Andebol', 'sports_handball'], ['volleyball', 'Voleibol', 'sports_volleyball'], ['gym', 'Ginásio', 'fitness_center']];
+    const NAMES = Object.fromEntries(META.map(m => [m[0], m[1]]));
+    NAMES.accent = 'Laranja app';
+    const lin = c => { c /= 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; };
+    const lum = ([r, g, b]) => .2126 * lin(r) + .7152 * lin(g) + .0722 * lin(b);
+    const cr = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+    const mix = (bg, t, a) => bg.map((v, i) => v * (1 - a) + t[i] * a);
+    const lab = rgb => {
+      const [r, g, b] = rgb.map(lin);
+      const f = t => t > .008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
+      const x = f((r * .4124 + g * .3576 + b * .1805) / .95047), y = f(r * .2126 + g * .7152 + b * .0722), z = f((r * .0193 + g * .1192 + b * .9505) / 1.08883);
+      return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+    };
+    const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); };
+    const fmt = n => n.toFixed(1).replace('.', ',');
+    const defs = [
+      { id: 'light', name: 'Claro', alpha: .14, bg: [250, 251, 252], card: [255, 255, 255], fg: [17, 24, 28], mfg: [90, 103, 112], set: L },
+      { id: 'dark', name: 'Escuro', alpha: .12, bg: [13, 18, 21], card: [20, 27, 31], fg: [230, 236, 239], mfg: [148, 162, 172], set: D }
+    ];
+    const PAIRS = [['pool', 'padel'], ['tennis', 'football'], ['tennis', 'volleyball'], ['handball', 'volleyball'], ['basketball', 'accent']];
+    const themes = defs.map(t => {
+      const rows = META.map(([id, name, icon]) => {
+        const w = mix(t.bg, t.set[id], t.alpha);
+        const a = cr(t.fg, w), b = cr(t.mfg, w), c = cr(t.card, w);
+        return { id, name, icon, isPadel: id === 'padel', notPadel: id !== 'padel', triple: t.set[id].join(' '),
+          cFg: fmt(a) + ' : 1', okFg: a >= 4.5 ? 'AA ✓' : 'Falha ✕', cMfg: fmt(b) + ' : 1', okMfg: b >= 4.5 ? 'AA ✓' : 'Falha ✕', cCard: fmt(c) + ' : 1' };
+      });
+      const col = k => k === 'accent' ? [251, 146, 60] : t.set[k];
+      const pairs = PAIRS.map(([x, y]) => { const d = dE(col(x), col(y)); return { label: NAMES[x] + ' ↔ ' + NAMES[y], de: fmt(d), ok: d >= 8 ? '✓ ≥ 8' : '✕ < 8' }; });
+      return { id: t.id, name: t.name, alphaTxt: String(t.alpha).replace('.', ','), rows, pairs };
+    });
+    const APP = {
+      pool: { name: 'Natação', icon: 'pool', who: 'Mariana e Tomás', day: 'Hoje, 29 de outubro', short: 'hoje 18:00', time: '18:00 – 18:45', place: 'Piscina 25 m · pista 3', coach: 'Prof. Rui Faria', turma: 'Nível 2', tc: 'rgb(92 110 180)' },
+      padel: { name: 'Padel', icon: '', who: 'Mariana · Iniciação Sub-14', day: 'Quinta, 30 de outubro', short: 'qui 19:00', time: '19:00 – 20:00', place: 'Campo de padel 2 · coberto', coach: 'Prof.ª Joana Reis', turma: 'Iniciação Sub-14', tc: 'rgb(160 90 170)' }
+    };
+    const WHO = { pool: 'Mariana e Tomás', padel: 'Mariana' };
+    const st = this.state || {};
+    themes.forEach(t => {
+      t.sportRows = META.map(([id, name, icon]) => ({ id, name, icon, isPadel: id === 'padel', notPadel: id !== 'padel' }));
+      const cur = st['cur_' + t.id] || (t.id === 'light' ? 'padel' : 'pool');
+      const open = st['open_' + t.id] ?? true;
+      const d = APP[cur];
+      Object.assign(t, { cur, open, curPadel: cur === 'padel', curGlyph: cur !== 'padel', curIcon: d.icon, curName: d.name, curWho: d.who, curDay: d.day, curTime: d.time, curPlace: d.place, curCoach: d.coach, curTurma: d.turma, curTc: d.tc,
+        countTxt: '2 inscritas',
+        onTab: id => { if (id === 'sports') this.setState({ ['open_' + t.id]: true }); },
+        close: () => this.setState({ ['open_' + t.id]: false }),
+        stop: e => e.stopPropagation(),
+        sheet: ['pool', 'padel'].map(id => ({ id, name: APP[id].name, icon: APP[id].icon, isPadel: id === 'padel', notPadel: id !== 'padel', on: id === cur,
+          sub: WHO[id] + ' · próxima ' + APP[id].short,
+          bg: id === cur ? 'rgb(var(--sport-wash) / var(--wash-a))' : 'transparent',
+          pick: () => this.setState({ ['cur_' + t.id]: id, ['open_' + t.id]: false }) })) });
+    });
+    return { themes };
+  }
+}
+</script>
+</body>
+</html>

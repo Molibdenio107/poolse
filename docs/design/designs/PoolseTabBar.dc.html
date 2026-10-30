@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Material+Symbols+Sharp:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet"></helmet>
+<div style="display:flex;background:rgb(var(--card, 255 255 255));border-radius:4px;box-shadow:0 1px 3px rgb(0 0 0 / .08);padding:0 4px;font-family:Quicksand,sans-serif">
+  <sc-for list="{{ items }}" as="it" hint-placeholder-count="4">
+    <div data-sport="{{ it.sport }}" onClick="{{ it.onClick }}" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 0 9px;position:relative;min-height:44px;cursor:pointer;color:{{ it.color }}">
+      <sc-if value="{{ it.bar }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;top:0;left:18%;right:18%;height:3px;background:rgb(var(--sport-wash))"></div></sc-if>
+      <div style="width:24px;height:24px;display:grid;place-items:center">
+        <sc-if value="{{ it.sq }}"><div style="width:18px;height:18px;background:currentColor"></div></sc-if>
+        <sc-if value="{{ it.ci }}"><div style="width:20px;height:20px;border-radius:50%;background:currentColor"></div></sc-if>
+        <sc-if value="{{ it.tr }}"><div style="width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-bottom:19px solid currentColor"></div></sc-if>
+        <sc-if value="{{ it.di }}"><div style="width:14px;height:14px;background:currentColor;transform:rotate(45deg)"></div></sc-if>
+        <sc-if value="{{ it.hx }}">
+          <div style="width:24px;height:21px;background:currentColor;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);display:grid;place-items:center">
+            <sc-if value="{{ it.inGlyph }}"><span style="font-family:'Material Symbols Sharp';font-size:14px;line-height:1;color:rgb(var(--card, 255 255 255))">{{ it.icon }}</span></sc-if>
+            <sc-if value="{{ it.inPadel }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgb(var(--card, 255 255 255))" style="stroke-width:2.4;stroke-linecap:round"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path></svg></sc-if>
+          </div>
+        </sc-if>
+      </div>
+      <span style="font-size:11px;font-weight:{{ it.weight }};white-space:nowrap;color:{{ it.labelColor }}">{{ it.label }}</span>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:348,&quot;height&quot;:70},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;one&quot;,&quot;multi&quot;],&quot;default&quot;:&quot;multi&quot;,&quot;tsType&quot;:&quot;'one'|'multi'&quot;},&quot;sports&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;pool,padel&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;classes&quot;,&quot;sports&quot;,&quot;pay&quot;,&quot;me&quot;],&quot;default&quot;:&quot;home&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;current&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onSelect&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(id: string) =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const mode = this.props.mode ?? 'multi';
+    const active = this.props.active ?? 'home';
+    const META = { pool: ['Natação', 'pool'], tennis: ['Ténis', 'sports_tennis'], padel: ['Padel', ''], basketball: ['Basquetebol', 'sports_basketball'], football: ['Futebol', 'sports_soccer'], handball: ['Andebol', 'sports_handball'], volleyball: ['Voleibol', 'sports_volleyball'], gym: ['Ginásio', 'fitness_center'] };
+    const sports = String(this.props.sports ?? 'pool,padel').split(',').map(s => s.trim()).filter(s => META[s]);
+    const single = sports.length === 1 ? sports[0] : '';
+    const current = this.props.current || single;
+    const sel = id => () => this.props.onSelect && this.props.onSelect(id);
+    const base = mode === 'one'
+      ? [['home', 'Início', 'sq'], ['classes', 'Aulas', 'ci'], ['pay', 'Pagamentos', 'tr'], ['me', 'Perfil', 'di']]
+      : [['home', 'Início', 'sq'], ['sports', 'Modalidades', 'hx'], ['pay', 'Pagamentos', 'tr'], ['me', 'Perfil', 'di']];
+    const items = base.map(([id, label, shape]) => {
+      const a = id === active;
+      const isS = id === 'sports';
+      const showSport = isS && (a || single) && current;
+      const sp = showSport ? current : '';
+      return { id, shape, sq: shape === 'sq', ci: shape === 'ci', tr: shape === 'tr', di: shape === 'di', hx: shape === 'hx',
+        label: showSport ? META[current][0] : label,
+        sport: sp, icon: sp ? META[sp][1] : '',
+        inGlyph: !!sp && sp !== 'padel', inPadel: sp === 'padel',
+        bar: a && isS && !!sp,
+        onClick: sel(id),
+        color: a ? (isS ? 'rgb(var(--fg, 17 24 28))' : 'rgb(var(--app-primary, 14 116 144))') : 'rgb(var(--mfg, 90 103 112))',
+        labelColor: a ? 'rgb(var(--fg, 31 63 72))' : 'rgb(var(--mfg, 90 112 120))',
+        weight: a ? '700' : '600' };
+    });
+    return { items };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Montserrat:wght@400;500;600;700&family=Material+Symbols+Sharp:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet"><style>
+body{margin:0;font-family:Montserrat,sans-serif}
+a{color:rgb(70 113 124)}a:hover{color:rgb(17 24 28)}
+:root{--bg:250 251 252;--card:255 255 255;--muted:240 243 245;--fg:17 24 28;--mfg:90 103 112;--primary:103 166 182;--pfg:17 24 28;--primary-ink:70 113 124;--wash-a:.14;
+--sport-pool:160 205 218;--sport-tennis:205 230 80;--sport-padel:120 190 190;--sport-basketball:224 150 96;--sport-football:140 200 120;--sport-handball:230 200 150;--sport-volleyball:240 225 140;--sport-gym:170 175 180}
+[data-theme="dark"]{color-scheme:dark;--bg:13 18 21;--card:20 27 31;--muted:28 36 42;--fg:230 236 239;--mfg:148 162 172;--primary:126 186 201;--pfg:13 18 21;--primary-ink:126 186 201;--wash-a:.12;
+--sport-pool:110 185 208;--sport-tennis:185 215 70;--sport-padel:90 170 165;--sport-basketball:210 130 80;--sport-football:115 180 100;--sport-handball:205 175 125;--sport-volleyball:220 200 105;--sport-gym:150 158 165}
+[data-sport="pool"]{--sport-wash:var(--sport-pool)}[data-sport="tennis"]{--sport-wash:var(--sport-tennis)}[data-sport="padel"]{--sport-wash:var(--sport-padel)}[data-sport="basketball"]{--sport-wash:var(--sport-basketball)}[data-sport="football"]{--sport-wash:var(--sport-football)}[data-sport="handball"]{--sport-wash:var(--sport-handball)}[data-sport="volleyball"]{--sport-wash:var(--sport-volleyball)}[data-sport="gym"]{--sport-wash:var(--sport-gym)}
+</style></helmet>
+<div data-theme="{{ theme }}" style="height:{{ rootH }};min-height:520px;display:grid;grid-template-columns:240px minmax(0,1fr);grid-template-rows:56px minmax(0,1fr);background:rgb(var(--bg));color:rgb(var(--fg));font-family:Montserrat,sans-serif;overflow:hidden">
+  <div style="grid-column:1 / 3;position:relative;z-index:1"><dc-import name="PoolseTopBar" sports="{{ sports }}" variant="{{ variant }}" section="{{ section }}" on-select="{{ selectSection }}" hint-size="100%,56px"></dc-import></div>
+  <dc-import name="PoolseSidebar" variant="{{ variant }}" section="{{ section }}" active="{{ page }}" on-select="{{ selectPage }}" hint-size="240px,100%"></dc-import>
+  <div data-sport="{{ sport }}" style="min-width:0;overflow:auto;padding:26px 32px;display:flex;flex-direction:column;gap:18px;background-image:{{ wash }}">
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:rgb(var(--mfg))"><span>{{ crumb }}</span><span>/</span><span style="color:rgb(var(--fg));font-weight:600">{{ pageLabel }}</span></div>
+    <h1 style="margin:0;font:600 30px/1.1 Poppins,sans-serif;letter-spacing:-.02em">{{ pageLabel }}</h1>
+    <div style="flex:1;min-height:240px;border:1.5px dashed rgb(var(--fg) / .14);border-radius:4px;display:grid;place-items:center;font-size:13px;font-weight:500;color:rgb(var(--mfg))"><span>Conteúdo · {{ pageLabel }}</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;multi&quot;,&quot;single&quot;],&quot;default&quot;:&quot;multi&quot;,&quot;tsType&quot;:&quot;'multi'|'single'&quot;},&quot;initialSection&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;facility&quot;,&quot;pool&quot;,&quot;tennis&quot;,&quot;padel&quot;],&quot;default&quot;:&quot;facility&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;initialPage&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;embedded&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = {};
+  renderVals() {
+    const variant = this.props.variant ?? 'multi';
+    const section = variant === 'single' ? 'facility' : (this.state.section ?? this.props.initialSection ?? 'facility');
+    const pages = { facility: 'dash', ...(this.state.pages || {}) };
+    if (!pages[section]) pages[section] = 'cal';
+    if (!this.state.section && this.props.initialPage) pages[section] = this.props.initialPage;
+    const page = pages[section];
+    const LABEL = { dash: 'Dashboard', alu: 'Alunos', sta: 'Staff', men: 'Mensalidades', fat: 'Faturação', ene: 'Energia', cfg: 'Configuração', cal: 'Calendário', tur: 'Turmas', rec: 'Recintos', met: 'Métricas' };
+    const SEC = { facility: 'Instalação', pool: 'Piscina', tennis: 'Ténis', padel: 'Padel', basketball: 'Basquetebol', football: 'Futebol', handball: 'Andebol', volleyball: 'Voleibol', gym: 'Ginásio' };
+    const isSport = section !== 'facility';
+    return {
+      theme: this.props.theme ?? 'light', variant, sports: this.props.sports ?? 'pool,tennis,padel', section, page,
+      rootH: this.props.embedded ? '100%' : '100vh',
+      sport: isSport ? section : '',
+      wash: isSport ? 'linear-gradient(rgb(var(--sport-wash) / var(--wash-a)),rgb(var(--sport-wash) / var(--wash-a)))' : 'none',
+      crumb: variant === 'single' ? 'Clube Desportivo da Foz' : SEC[section],
+      pageLabel: LABEL[page] || '',
+      selectSection: id => this.setState({ section: id, pages }),
+      selectPage: key => this.setState({ section, pages: { ...pages, [section]: key } })
+    };
+  }
+}
+</script>
+</body>
+</html>

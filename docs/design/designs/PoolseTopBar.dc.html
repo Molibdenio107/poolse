@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Montserrat:wght@400;500;600;700&family=Material+Symbols+Sharp:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet"></helmet>
+<div style="height:56px;box-sizing:border-box;display:flex;align-items:stretch;padding:0 18px;background:rgb(var(--card, 255 255 255));color:rgb(var(--fg, 17 24 28));font-family:Montserrat,sans-serif;box-shadow:0 1px 0 rgb(var(--fg, 17 24 28) / .07)">
+  <div style="display:flex;align-items:center;gap:10px;padding-right:20px;flex:none">
+    <div style="width:26px;height:26px;border-radius:2px;background:rgb(var(--primary, 103 166 182))"></div>
+    <div style="display:flex;flex-direction:column;gap:1px"><span style="font:600 15px/1.1 Poppins,sans-serif">Poolse</span><span style="font-size:11px;color:rgb(var(--mfg, 90 103 112));white-space:nowrap">Clube Desportivo da Foz</span></div>
+  </div>
+  <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+    <sc-if value="{{ t.sep }}" hint-placeholder-val="{{ false }}"><div style="width:1px;margin:18px 6px;background:rgb(var(--fg, 17 24 28) / .12);flex:none"></div></sc-if>
+    <sc-if value="{{ t.tab }}" hint-placeholder-val="{{ true }}">
+      <div data-sport="{{ t.sport }}" onClick="{{ t.onClick }}" style="position:relative;display:flex;align-items:center;gap:8px;padding:0 12px;cursor:pointer;font-size:13px;white-space:nowrap;flex:none;font-weight:{{ t.weight }};color:{{ t.color }};background:{{ t.bg }}" style-hover="color:rgb(var(--fg, 17 24 28))">
+        <sc-if value="{{ t.padel }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.6;stroke-linecap:round;flex:none"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path><circle cx="12.6" cy="8" r=".8" fill="currentColor" stroke="none"></circle><circle cx="16.3" cy="8.6" r=".8" fill="currentColor" stroke="none"></circle><circle cx="14.3" cy="11.7" r=".8" fill="currentColor" stroke="none"></circle></svg></sc-if>
+        <sc-if value="{{ t.glyph }}"><span style="font-family:'Material Symbols Sharp';font-size:19px;line-height:1;font-weight:normal">{{ t.icon }}</span></sc-if>
+        <span>{{ t.label }}</span>
+        <sc-if value="{{ t.on }}"><div style="position:absolute;left:0;right:0;bottom:0;height:3px;background:{{ t.bar }}"></div></sc-if>
+      </div>
+    </sc-if>
+  </sc-for>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:4px;flex:none;padding-left:12px">
+    <div style="width:36px;height:36px;display:grid;place-items:center;color:rgb(var(--mfg, 90 103 112))"><span style="font-family:'Material Symbols Sharp';font-size:20px;line-height:1">search</span></div>
+    <div style="width:36px;height:36px;display:grid;place-items:center;color:rgb(var(--mfg, 90 103 112))"><span style="font-family:'Material Symbols Sharp';font-size:20px;line-height:1">notifications</span></div>
+    <div style="display:flex;align-items:center;gap:10px;padding-left:8px">
+      <div style="width:30px;height:30px;border-radius:50%;background:rgb(var(--muted, 240 243 245));display:grid;place-items:center;font-size:11px;font-weight:700">RM</div>
+      <sc-if value="{{ showName }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:12px;font-weight:600;white-space:nowrap">Rita Matos</span><span style="font-size:11px;color:rgb(var(--mfg, 90 103 112))">Administradora</span></div></sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:56},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;multi&quot;,&quot;single&quot;],&quot;default&quot;:&quot;multi&quot;,&quot;tsType&quot;:&quot;'multi'|'single'&quot;},&quot;sports&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;pool,tennis,padel&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;section&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;facility&quot;,&quot;pool&quot;,&quot;tennis&quot;,&quot;padel&quot;,&quot;basketball&quot;,&quot;football&quot;,&quot;handball&quot;,&quot;volleyball&quot;,&quot;gym&quot;],&quot;default&quot;:&quot;facility&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onSelect&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(id: string) =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const variant = this.props.variant ?? 'multi';
+    const section = this.props.section ?? 'facility';
+    if (variant === 'single') return { tabs: [], showName: true };
+    const META = { pool: ['Piscina', 'pool'], tennis: ['Ténis', 'sports_tennis'], padel: ['Padel', ''], basketball: ['Basquetebol', 'sports_basketball'], football: ['Futebol', 'sports_soccer'], handball: ['Andebol', 'sports_handball'], volleyball: ['Voleibol', 'sports_volleyball'], gym: ['Ginásio', 'fitness_center'] };
+    const raw = this.props.sports ?? 'pool,tennis,padel';
+    const ids = (raw === 'all' ? Object.keys(META) : String(raw).split(',').map(s => s.trim())).filter(s => META[s]);
+    const mk = (id, label, icon, sport) => {
+      const on = id === section;
+      return { tab: true, sep: false, id, label, icon, sport, on, padel: sport === 'padel', glyph: sport !== 'padel',
+        onClick: () => this.props.onSelect && this.props.onSelect(id),
+        weight: on ? '600' : '500',
+        color: on ? 'rgb(var(--fg, 17 24 28))' : 'rgb(var(--mfg, 90 103 112))',
+        bg: on && sport ? 'rgb(var(--sport-wash) / var(--wash-a, .14))' : 'transparent',
+        bar: sport ? 'rgb(var(--sport-wash))' : 'rgb(var(--primary, 103 166 182))' };
+    };
+    const tabs = [mk('facility', 'Instalação', 'domain', ''), { sep: true, tab: false }, ...ids.map(s => mk(s, META[s][0], META[s][1], s))];
+    return { tabs, showName: ids.length <= 4 };
+  }
+}
+</script>
+</body>
+</html>
