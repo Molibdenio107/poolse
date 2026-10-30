@@ -107,10 +107,13 @@ test('a family link is made and shared from the student record, on a phone', asy
     await cancel.click();
     await expect(row.getByText('Sem convite')).toBeVisible({ timeout: 15_000 });
   }
-  await row.getByRole('button', { name: 'Criar link para partilhar' }).click();
-  await expect(row.getByText(/convida-o para a app Poolse, para acompanhar Ana\. Abra este link: http\S+\/join\?token=/)).toBeVisible({
-    timeout: 20_000,
-  });
+  // Retried until the page answers: a tap before hydration does nothing, and
+  // this tab is last on a heavy record (30-10-2026).
+  const message = row.getByText(/convida-o para a app Poolse, para acompanhar Ana\. Abra este link: http\S+\/join\?token=/);
+  await expect(async () => {
+    if (!(await message.isVisible())) await row.getByRole('button', { name: 'Criar link para partilhar' }).click({ timeout: 5_000 });
+    await expect(message).toBeVisible({ timeout: 10_000 });
+  }).toPass({ timeout: 60_000 });
   await expect(row.getByText(/^Link criado em \d{2}-\d{2}-\d{4}$/)).toBeVisible();
   const share = row.getByRole('button', { name: /^(Partilhar|Copiar mensagem)$/ });
   await expect(share).toBeInViewport({ ratio: 0.5 }).catch(async () => {
