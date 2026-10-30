@@ -485,6 +485,16 @@ function IdentitySection({
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
+  /*
+   * Country names come from Intl, whose data differs between Node and the
+   * browser ("Chéquia" / "República Checa"), so the full list is built only in
+   * the browser: the server and the first client render show the stored code
+   * alone, and the names arrive after mounting — no hydration mismatch.
+   */
+  const [countries, setCountries] = useState<{ value: string; label: string }[]>(() =>
+    identity?.nationality ? [{ value: identity.nationality, label: identity.nationality }] : [],
+  );
+  useEffect(() => setCountries(countryOptions(locale)), [locale]);
   const filled =
     identity !== undefined &&
     Object.entries(identity).some(([key, value]) => key !== 'snsRecorded' && value !== null && value !== false);
@@ -586,7 +596,7 @@ function IdentitySection({
           name="nationality"
           label={t('students.identity.nationality')}
           initial={identity?.nationality ?? ''}
-          options={[{ value: '', label: t('students.identity.notRecorded') }, ...countryOptions(locale)]}
+          options={[{ value: '', label: t('students.identity.notRecorded') }, ...countries]}
           className="max-w-none"
           {...fieldError('nationality')}
         />
