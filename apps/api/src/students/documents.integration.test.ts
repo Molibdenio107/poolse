@@ -98,7 +98,17 @@ test('POOLSE-132 — documents, print data and filed copies', async () => {
     for (const file of files) {
       await asAdmin(() => routes.file(id, { kind: 'fpn_declaration', seasonId: season!.id, fileId: file.id }));
     }
-    const copies = (await asAdmin(() => routes.read(id))).copies;
+    // The ID document's photograph is filed with no season (30-10-2026); a
+    // season on it is refused.
+    await asAdmin(() =>
+      expectStatus(() => routes.file(id, { kind: 'id_document', seasonId: season!.id, fileId: files[0]!.id }), 400),
+    );
+    await asAdmin(() => routes.file(id, { kind: 'id_document', fileId: files[0]!.id }));
+    const photo = (await asAdmin(() => routes.read(id))).copies.filter((c) => c.kind === 'id_document');
+    assert.equal(photo.length, 1);
+    assert.equal(photo[0]!.seasonId, null);
+
+    const copies = (await asAdmin(() => routes.read(id))).copies.filter((c) => c.kind === 'fpn_declaration');
     assert.equal(copies.length, 2);
     assert.equal(copies.filter((c) => c.replacedAt === null).length, 1);
 

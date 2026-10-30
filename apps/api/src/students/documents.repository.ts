@@ -17,7 +17,8 @@ export const FPN_DISCIPLINES = ['pura', 'open_water', 'water_polo', 'artistic', 
 export type FpnDiscipline = (typeof FPN_DISCIPLINES)[number];
 export const STUDENT_ID_DOCUMENT_TYPES = ['cc', 'bi', 'passport', 'other'] as const;
 export type StudentIdDocumentType = (typeof STUDENT_ID_DOCUMENT_TYPES)[number];
-export type StudentDocumentKind = 'fpn_declaration' | 'fpn_declaration_minor' | 'socio_form';
+/** `id_document`: the ID's photograph, filed with no season (30-10-2026). */
+export type StudentDocumentKind = 'fpn_declaration' | 'fpn_declaration_minor' | 'socio_form' | 'id_document';
 
 export interface FiledCopy {
   id: string;

@@ -125,9 +125,37 @@ export function FileUpload({
     />
   );
 
+  /*
+   * Drag and drop on every upload, not only the zone variant (Rui, 30-10-2026):
+   * a file dropped on the button's area is the same as one picked, and the
+   * area says so while a file hovers over it.
+   */
+  const dropProps = {
+    onDragOver: (event: React.DragEvent): void => {
+      if (off || busy || !Array.from(event.dataTransfer.types).includes('Files')) return;
+      event.preventDefault();
+      setDragging(true);
+    },
+    onDragLeave: (): void => setDragging(false),
+    onDrop: (event: React.DragEvent): void => {
+      if (!Array.from(event.dataTransfer.types).includes('Files')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setDragging(false);
+      if (!off && !busy) chosen(event.dataTransfer.files);
+    },
+  };
+
   if (variant === 'button') {
     return (
-      <div className={cn('flex flex-col items-start gap-1', className)}>
+      <div
+        {...dropProps}
+        className={cn(
+          'flex flex-col items-start gap-1 rounded',
+          dragging && 'outline outline-2 outline-offset-4 outline-dashed outline-primary',
+          className,
+        )}
+      >
         {button}
         {picker}
         {(off || hint !== undefined) && (

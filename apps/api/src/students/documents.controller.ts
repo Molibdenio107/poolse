@@ -137,13 +137,15 @@ export class StudentDocumentsController {
     requireRole('owner', 'admin');
     const { organizationId, membershipId } = currentTenant();
     const kind = body['kind'];
-    if (kind !== 'fpn_declaration' && kind !== 'fpn_declaration_minor' && kind !== 'socio_form') {
+    if (kind !== 'fpn_declaration' && kind !== 'fpn_declaration_minor' && kind !== 'socio_form' && kind !== 'id_document') {
       throw new BadRequestException('Unknown kind');
     }
+    // The boletim and the ID's photograph have no season; the declarations do.
+    const seasonless = kind === 'socio_form' || kind === 'id_document';
     const fileId = typeof body['fileId'] === 'string' ? body['fileId'] : '';
     const seasonId = typeof body['seasonId'] === 'string' && body['seasonId'] !== '' ? body['seasonId'] : null;
-    if (kind !== 'socio_form' && seasonId === null) throw new BadRequestException('A season is needed');
-    if (kind === 'socio_form' && seasonId !== null) throw new BadRequestException('The boletim has no season');
+    if (!seasonless && seasonId === null) throw new BadRequestException('A season is needed');
+    if (seasonless && seasonId !== null) throw new BadRequestException('This document has no season');
 
     const outcome = await fileCopy(organizationId, membershipId, studentId, kind as StudentDocumentKind, seasonId, fileId);
     if (outcome === 'not_found') throw new NotFoundException('No such student');

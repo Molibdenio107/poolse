@@ -9,7 +9,6 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { isValidNif } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import { CoreRoute } from '../tenant/modules.js';
@@ -18,13 +17,9 @@ import {
   EXAM_RESULTS,
   archiveExam,
   attachExamCertificate,
-  exportExams,
-  importExams,
   listExams,
   recordExam,
   type ExamResult,
-  type ExamSheetRow,
-  type ImportRowResult,
   type StudentExams,
 } from './medical-exams.repository.js';
 
@@ -115,43 +110,5 @@ export class MedicalExamsController {
       throw new NotFoundException('No such exam');
     }
     return { archived: true };
-  }
-}
-
-/** The club's exams as a spreadsheet: export, and import on one route with `commit`. */
-@CoreRoute()
-@Controller('medical-exams')
-export class MedicalExamsSheetController {
-  @Get('export')
-  async export(): Promise<{ rows: ExamSheetRow[] }> {
-    requireRole('owner', 'admin');
-    return { rows: await exportExams(currentTenant().organizationId) };
-  }
-
-  @Post('import')
-  async import(@Body() body: Record<string, unknown>): Promise<{ rows: ImportRowResult[]; written: number }> {
-    requireRole('owner', 'admin');
-    const { organizationId, membershipId } = currentTenant();
-    const raw = body['rows'];
-    if (!Array.isArray(raw) || raw.length > 5000) throw new BadRequestException('rows is a list of up to 5000');
-    const text = (value: unknown): string | null =>
-      typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
-    const isDate = (value: string | null): string | null => (value !== null && DATE.test(value) ? value : null);
-    const rows: ExamSheetRow[] = raw.map((item: Record<string, unknown>) => {
-      const nif = text(item['taxNumber']);
-      const r = text(item['result']);
-      return {
-        studentName: text(item['studentName']) ?? '',
-        taxNumber: nif !== null && isValidNif(nif) ? nif : null,
-        birthDate: isDate(text(item['birthDate'])),
-        examinedOn: isDate(text(item['examinedOn'])),
-        result: r !== null && (EXAM_RESULTS as readonly string[]).includes(r) ? (r as ExamResult) : null,
-        validUntil: isDate(text(item['validUntil'])),
-      };
-    });
-    const confirmed = new Set(
-      Array.isArray(body['confirmed']) ? (body['confirmed'] as unknown[]).filter((n): n is number => typeof n === 'number') : [],
-    );
-    return importExams(organizationId, rows, confirmed, body['commit'] === true, membershipId);
   }
 }

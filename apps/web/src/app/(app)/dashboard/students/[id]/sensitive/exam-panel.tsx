@@ -1,9 +1,10 @@
 'use client';
 
-import { startTransition, useRef } from 'react';
+import { startTransition, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { CircleSlash, Paperclip, ShieldAlert, ShieldCheck, Trash2 } from 'lucide-react';
 import { DocumentLink } from '@/components/file-upload';
+import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import { SelectField, TextAreaField, TextField, useSuccessKey } from '@/components/ui/field';
 import { formatDate } from '@/lib/date-format';
 import { acceptFor } from '@/lib/files';
@@ -48,9 +49,31 @@ export function ExamPanel({
 }): React.ReactElement {
   const t = useTranslations();
   const current = exams.current;
+  /*
+   * A certificate dropped anywhere on the page (Rui, 30-10-2026). It goes to
+   * the newest exam that has none; when every exam has one, it waits in the
+   * form below and is attached to the next exam saved. A student may have
+   * several exams — one a season, or more — each with its own certificate.
+   */
+  const waiting = [current, ...exams.history].find(
+    (exam): exam is MedicalExam => exam !== null && !exam.hasCertificate,
+  );
+  const [dispatchAttach, attaching] = useAttach();
+  const [pending, setPending] = useState<File | null>(null);
+  const onFile = useCallback(
+    (file: File): void => {
+      if (!canManage || !storageReady) return;
+      if (waiting !== undefined) dispatchAttach(studentId, waiting.id, file);
+      else setPending(file);
+    },
+    [canManage, storageReady, waiting, dispatchAttach, studentId],
+  );
+  const { dragging } = useFileDrop(onFile);
 
   return (
     <div className="flex flex-col gap-5">
+      <DropOverlay shown={dragging && canManage && storageReady} label={t('exams.drop')} />
+      {attaching && <p className="text-sm text-foreground-muted">{t('files.uploading')}</p>}
       <ExamState exams={exams} />
 
       {current !== null && canManage && (
@@ -83,7 +106,11 @@ export function ExamPanel({
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  {exam.fileId !== null && <DocumentLink fileId={exam.fileId} quiet fileName={t('exams.certificate')} />}
+                  {exam.fileId !== null ? (
+                    <DocumentLink fileId={exam.fileId} quiet fileName={t('exams.certificate')} />
+                  ) : (
+                    <CertificateUpload studentId={studentId} examId={exam.id} storageReady={storageReady} />
+                  )}
                   <ArchiveExam studentId={studentId} examId={exam.id} />
                 </div>
               </li>
@@ -93,7 +120,7 @@ export function ExamPanel({
       )}
 
       {canManage ? (
-        <RecordExamForm studentId={studentId} />
+        <RecordExamForm studentId={studentId} pending={pending} onClearPending={() => setPending(null)} />
       ) : (
         <p className="text-sm text-foreground-muted">{t('exams.readOnly')}</p>
       )}
@@ -162,9 +189,34 @@ function ExamLine({ exam }: { exam: MedicalExam }): React.ReactElement {
   );
 }
 
-function RecordExamForm({ studentId }: { studentId: string }): React.ReactElement {
+function RecordExamForm({
+  studentId,
+  pending: dropped,
+  onClearPending,
+}: {
+  studentId: string;
+  /** A certificate dropped on the page while every exam already has one. */
+  pending: File | null;
+  onClearPending: () => void;
+}): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(recordExamAction, INITIAL);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [chosenName, setChosenName] = useState<string | null>(null);
+  // A dropped file is put into the form's own file field, so it posts with it.
+  useEffect(() => {
+    if (dropped === null || fileInput.current === null) return;
+    const transfer = new DataTransfer();
+    transfer.items.add(dropped);
+    fileInput.current.files = transfer.files;
+    setChosenName(dropped.name);
+  }, [dropped]);
+  useEffect(() => {
+    if (state.ok) {
+      setChosenName(null);
+      onClearPending();
+    }
+  }, [state, onClearPending]);
   // Stays on screen for the next exam: remounted after a save that worked, and
   // never after one that failed, so a refusal keeps what was typed.
   const added = useSuccessKey(state);
@@ -218,6 +270,22 @@ function RecordExamForm({ studentId }: { studentId: string }): React.ReactElemen
         rows={2}
         error={error('note')}
       />
+
+      <div className="flex flex-col items-start gap-1">
+        <span className="text-sm">{t('exams.certificateOptional')}</span>
+        <input
+          ref={fileInput}
+          name="certificate"
+          type="file"
+          accept={acceptFor('medical_certificate')}
+          onChange={(event) => setChosenName(event.target.files?.[0]?.name ?? null)}
+          className="text-sm file:mr-3 file:inline-flex file:h-control file:items-center file:rounded file:border file:border-border file:bg-surface file:px-4 file:text-control"
+        />
+        <span className="text-sm text-foreground-muted">
+          {chosenName === null ? t('exams.certificateHint') : t('exams.certificateChosen', { name: chosenName })}
+        </span>
+        {error('certificate') !== undefined && <span className="text-sm text-danger">{error('certificate')}</span>}
+      </div>
 
       <p className="text-sm text-foreground-muted">{t('exams.correctionHint')}</p>
 
@@ -298,4 +366,20 @@ function CertificateUpload({
       </span>
     </div>
   );
+}
+
+/** Attaches a dropped certificate to one exam, through the same action as the button. */
+function useAttach(): [(studentId: string, examId: string, file: File) => void, boolean] {
+  const [, dispatch, pending] = useSavedAction(attachExamCertificateAction, INITIAL);
+  const send = useCallback(
+    (studentId: string, examId: string, file: File): void => {
+      const data = new FormData();
+      data.set('studentId', studentId);
+      data.set('examId', examId);
+      data.set('file', file);
+      startTransition(() => dispatch(data));
+    },
+    [dispatch],
+  );
+  return [send, pending];
 }

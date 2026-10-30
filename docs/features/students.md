@@ -289,6 +289,13 @@ FPN's *Anexo 2* filled from the record (`documentos/fpn`, always Portuguese, `li
 files the signed scan per season in `student_document`, older copies kept. The club's *Associação* and
 *Sigla FPN* are set in the same section (`PATCH /fpn-settings`). Owner and admin.
 
+**The ID document's photograph** (Rui, 30-10-2026) is filed on *Identificação* as a `student_document`
+of kind `id_document` (no season, older ones kept), chosen or dropped anywhere on the page. With
+`ID_DOCUMENT_AI_ENABLED` and an API key, `lib/id-document-agent.ts` reads the type, number and dates
+from it and proposes them in the form beside it; nothing is saved until a person confirms. Every upload
+button takes a dropped file on its own area, and a photo box (`IdPhoto`) on the whole box
+(`components/drop-target.tsx`).
+
 ## Exame médico — POOLSE-133
 
 `medical_exam`: date, result (apto / apto condicionalmente / não apto), valid until (a missing one is a
@@ -297,7 +304,10 @@ attached once). The latest live row is the standing — *válido até*, *expirou
 against `club_today()`. A warning, never a gate: shown on *Saúde e consentimentos* and in the register
 beside the seguro. An instructor sees the state, never the note or the file. A spreadsheet import (match
 by NIF, else name and birth date confirmed; never creates a student) and export, on one route with
-`commit`. Erasing a student's health data clears the notes and shreds the certificates' keys (trigger).
+`commit` — **removed 30-10-2026 (Rui)**: exams are kept per student only. A student has as many exams
+as needed (one a season, or more), each with its own certificate: a certificate dropped anywhere on the
+exam tab goes to the newest exam without one, or waits in the new-exam form and is attached when it is
+saved. Erasing a student's health data clears the notes and shreds the certificates' keys (trigger).
 
 ## Boletim de sócio — POOLSE-134
 

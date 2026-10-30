@@ -495,20 +495,17 @@ function IdentitySection({
     identity?.nationality ? [{ value: identity.nationality, label: identity.nationality }] : [],
   );
   useEffect(() => setCountries(countryOptions(locale)), [locale]);
-  const filled =
-    identity !== undefined &&
-    Object.entries(identity).some(([key, value]) => key !== 'snsRecorded' && value !== null && value !== false);
   // The number is withheld from this reader when the API says one is on file
   // but sends none.
   const snsHidden = identity?.snsRecorded === true && identity.snsNumber === null;
 
   return (
-    <details open={filled} className="group rounded border border-border">
-      <summary className="flex min-h-control cursor-pointer items-center justify-between gap-2 px-4 text-control">
-        <span className="font-medium">{t('students.identity.title')}</span>
-        <span className="text-sm text-foreground-muted">{t('students.identity.optional')}</span>
-      </summary>
-      <div className="grid grid-cols-1 gap-4 p-4 pt-2 sm:grid-cols-2">
+    <section className="flex flex-col gap-3 rounded border border-border p-4">
+      <h3 className="font-medium">
+        {t('students.identity.title')}{' '}
+        <span className="text-sm font-normal text-foreground-muted">· {t('students.identity.optional')}</span>
+      </h3>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <TextField
           name="addressLine"
           label={t('students.identity.addressLine')}
@@ -517,6 +514,16 @@ function IdentitySection({
           maxLength={200}
           className="max-w-none sm:col-span-2"
           {...fieldError('addressLine')}
+        />
+        <TextField
+          name="postalCode"
+          inputMode="numeric"
+          label={t('students.identity.postalCode')}
+          initial={identity?.postalCode ?? ''}
+          autoComplete="postal-code"
+          maxLength={8}
+          className="max-w-none"
+          {...fieldError('postalCode')}
         />
         <TextField
           name="locality"
@@ -528,15 +535,20 @@ function IdentitySection({
           {...fieldError('locality')}
         />
         <TextField
-          name="postalCode"
-          inputMode="numeric"
-          label={t('students.identity.postalCode')}
-          placeholder="0000-000"
-          initial={identity?.postalCode ?? ''}
-          autoComplete="postal-code"
-          maxLength={8}
+          name="birthplace"
+          label={t('students.identity.birthplace')}
+          initial={identity?.birthplace ?? ''}
+          maxLength={120}
           className="max-w-none"
-          {...fieldError('postalCode')}
+          {...fieldError('birthplace')}
+        />
+        <SelectField
+          name="nationality"
+          label={t('students.identity.nationality')}
+          initial={identity?.nationality ?? ''}
+          options={[{ value: '', label: t('students.identity.notRecorded') }, ...countries]}
+          className="max-w-none"
+          {...fieldError('nationality')}
         />
         <TextField
           name="parentOneName"
@@ -584,24 +596,8 @@ function IdentitySection({
           className="max-w-none"
           {...fieldError('education')}
         />
-        <TextField
-          name="birthplace"
-          label={t('students.identity.birthplace')}
-          initial={identity?.birthplace ?? ''}
-          maxLength={120}
-          className="max-w-none"
-          {...fieldError('birthplace')}
-        />
-        <SelectField
-          name="nationality"
-          label={t('students.identity.nationality')}
-          initial={identity?.nationality ?? ''}
-          options={[{ value: '', label: t('students.identity.notRecorded') }, ...countries]}
-          className="max-w-none"
-          {...fieldError('nationality')}
-        />
         {snsHidden ? (
-          <p className="text-sm text-foreground-muted sm:col-span-2">{t('students.identity.snsRecorded')}</p>
+          <p className="text-sm text-foreground-muted">{t('students.identity.snsRecorded')}</p>
         ) : (
           <TextField
             name="snsNumber"
@@ -615,6 +611,6 @@ function IdentitySection({
           />
         )}
       </div>
-    </details>
+    </section>
   );
 }

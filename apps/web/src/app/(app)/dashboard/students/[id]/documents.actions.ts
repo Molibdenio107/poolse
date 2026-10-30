@@ -1,7 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { ApiError, apiPatch } from '@/lib/api';
+import { ApiError, apiPatch, apiPost, apiUpload } from '@/lib/api';
+import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
+import { idDocumentReaderAvailable, readIdDocument } from '@/lib/id-document-agent';
 import type { FormState } from '../../actions';
 
 /**
@@ -70,4 +72,40 @@ export async function saveFpnSettingsAction(_previous: FormState, formData: Form
   }
   revalidatePath(`/dashboard/students/${studentId}`);
   return { ok: true };
+}
+
+/**
+ * The ID document's photograph — Rui, 30-10-2026. Filed on the student (a
+ * `student_document` of kind `id_document`), then, when the reader is switched
+ * on, read for its number and dates. What it reads is only proposed: the form
+ * beside it is filled for a person to confirm and save.
+ */
+export interface IdPhotoState extends FormState {
+  proposal?: { type: 'cc' | 'bi' | 'passport' | 'other' | null; number: string | null; issuedOn: string | null; validUntil: string | null };
+  /** Why nothing was proposed, when a read was attempted. */
+  readNote?: 'disabled' | 'unreadable' | 'nothingFound' | 'notAllowed' | 'rateLimited';
+}
+
+export async function uploadIdPhotoAction(_previous: IdPhotoState, formData: FormData): Promise<IdPhotoState> {
+  const studentId = String(formData.get('studentId') ?? '');
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return { ok: false, errorKey: 'files.uploadFailed' };
+  const bytes = await file.arrayBuffer();
+  try {
+    const query = new URLSearchParams({ purpose: 'student_document', name: file.name });
+    const stored = await apiUpload<{ id: string }>(`/files?${query.toString()}`, bytes);
+    await apiPost(`/students/${studentId}/documents/copies`, { kind: 'id_document', seasonId: null, fileId: stored.id });
+  } catch (error) {
+    return { ok: false, errorKey: error instanceof ApiError && error.status < 500 ? 'files.uploadFailed' : 'common.noAnswer' };
+  }
+  revalidatePath(`/dashboard/students/${studentId}`);
+
+  if (!idDocumentReaderAvailable()) return { ok: true, toastKey: 'documents.idPhoto.filed', readNote: 'disabled' };
+  const refused = await guardAiCall(AI_ROLES.students);
+  if (refused !== null) {
+    return { ok: true, toastKey: 'documents.idPhoto.filed', readNote: refused === 'notAllowed' ? 'notAllowed' : 'rateLimited' };
+  }
+  const read = await readIdDocument(Buffer.from(bytes), file.type || 'image/jpeg');
+  if ('error' in read) return { ok: true, toastKey: 'documents.idPhoto.filed', readNote: read.error };
+  return { ok: true, toastKey: 'documents.idPhoto.read', proposal: read.draft };
 }

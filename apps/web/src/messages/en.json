@@ -2340,7 +2340,7 @@
       "optional": "Optional",
       "addressLine": "Address",
       "locality": "Town",
-      "postalCode": "Use the format 0000-000.",
+      "postalCode": "Postcode: use the format 0000-000.",
       "parentOneName": "Child of",
       "parentTwoName": "and of",
       "maritalStatus": "Marital status",
@@ -6453,6 +6453,26 @@
       "hint": "These belong to the club, not the swimmer: they print on every declaration. For example, ANNP and GCST.",
       "association": "Regional association",
       "clubCode": "Club's FPN abbreviation"
+    },
+    "idPhoto": {
+      "title": "Photo of the document",
+      "intro": "Upload or drop the photo of the identification document here. It is kept on the record, and its number and dates are read from it for you to confirm.",
+      "current": "Current photo",
+      "filedOn": "saved on {date}",
+      "upload": "Upload photo",
+      "replace": "Replace photo",
+      "reading": "Uploading…",
+      "hint": "JPG, PNG or PDF, up to 10 MB. You can also drop the file anywhere on the page.",
+      "drop": "Drop the document's photo",
+      "proposed": "Read from the photo: confirm the type, number and dates before saving.",
+      "filed": "Photo saved",
+      "read": "Photo saved and read — confirm the details",
+      "note": {
+        "unreadable": "The photo could not be read. Fill in the details by hand.",
+        "nothingFound": "No details were found on the photo. Fill them in by hand.",
+        "notAllowed": "Automatic reading is not available for your role.",
+        "rateLimited": "Too many reads in a row. Fill in by hand or try again shortly."
+      }
     }
   },
   "boletim": {
@@ -6568,6 +6588,11 @@
       "commit": "{count, plural, =0 {Nothing to record} one {Record # exam} other {Record # exams}}",
       "doneCount": "{count, plural, =0 {No exams recorded.} one {# exam recorded.} other {# exams recorded.}}",
       "failed": "The medical exams could not be imported."
-    }
+    },
+    "drop": "Drop the exam certificate",
+    "certificateOptional": "Certificate (optional)",
+    "certificateHint": "You can also drop the certificate anywhere on the page.",
+    "certificateChosen": "Will be attached: {name}",
+    "savedNoCertificate": "Exam saved, but the certificate was not attached. Attach it on the exam's row."
   }
 }

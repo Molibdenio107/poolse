@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { startTransition, useCallback, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Printer } from 'lucide-react';
+import { Camera, Printer, Sparkles } from 'lucide-react';
+import { DropOverlay, useFileDrop } from '@/components/file-drop';
+import { acceptFor } from '@/lib/files';
 import { FromLink } from '@/components/from-link';
 import { DocumentLink, FileUpload } from '@/components/file-upload';
 import { SelectField, TextField, useSeeded, useSuccessKey } from '@/components/ui/field';
@@ -11,7 +13,13 @@ import { formatDate } from '@/lib/date-format';
 import { useSavedAction } from '@/lib/saved';
 import { FPN_DISCIPLINES, type FpnDiscipline, type StudentDocuments } from '@/lib/fpn-forms';
 import type { FormState } from '../../actions';
-import { saveDisciplinesAction, saveFpnSettingsAction, saveIdDocumentAction } from './documents.actions';
+import {
+  saveDisciplinesAction,
+  saveFpnSettingsAction,
+  saveIdDocumentAction,
+  uploadIdPhotoAction,
+  type IdPhotoState,
+} from './documents.actions';
 
 /**
  * *Documentos* on the student's record — POOLSE-132.
@@ -37,9 +45,12 @@ const ID_TYPES = ['cc', 'bi', 'passport', 'other'] as const;
 export function IdDocumentForm({
   studentId,
   idDocument,
+  proposal = null,
 }: {
   studentId: string;
   idDocument: StudentDocuments['idDocument'];
+  /** Read from the photograph, for a person to confirm (30-10-2026). */
+  proposal?: NonNullable<IdPhotoState['proposal']> | null;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, dispatch, isPending] = useSavedAction(saveIdDocumentAction, INITIAL);
@@ -53,12 +64,18 @@ export function IdDocumentForm({
   return (
     <form action={dispatch} className={CARD}>
       <h3 className={HEADING}>{t('documents.idDocument.title')}</h3>
+      {proposal !== null && (
+        <p className="flex items-start gap-2 rounded border border-primary/40 bg-primary/10 p-3 text-sm">
+          <Sparkles className="mt-0.5 size-4 shrink-0" aria-hidden />
+          {t('documents.idPhoto.proposed')}
+        </p>
+      )}
       <input type="hidden" name="studentId" value={studentId} />
       <div className="flex flex-wrap gap-4">
         <SelectField
           name="idDocumentType"
           label={t('documents.idDocument.type')}
-          initial={idDocument.type ?? ''}
+          initial={proposal?.type ?? idDocument.type ?? ''}
           options={[
             { value: '', label: t('documents.idDocument.typeNone') },
             ...ID_TYPES.map((type) => ({ value: type, label: t(`documents.idDocument.types.${type}`) })),
@@ -68,6 +85,7 @@ export function IdDocumentForm({
         <TextField
           key={saved}
           name="idDocumentNumber"
+          initial={proposal?.number ?? ''}
           label={t('documents.idDocument.number')}
           autoComplete="off"
           maxLength={30}
@@ -81,7 +99,7 @@ export function IdDocumentForm({
           name="idDocumentIssuedOn"
           type="date"
           label={t('documents.idDocument.issuedOn')}
-          initial={idDocument.issuedOn ?? ''}
+          initial={proposal?.issuedOn ?? idDocument.issuedOn ?? ''}
           hint={t('documents.idDocument.issuedOnHint')}
           error={error('idDocumentIssuedOn')}
         />
@@ -89,7 +107,7 @@ export function IdDocumentForm({
           name="idDocumentValidUntil"
           type="date"
           label={t('documents.idDocument.validUntil')}
-          initial={idDocument.validUntil ?? ''}
+          initial={proposal?.validUntil ?? idDocument.validUntil ?? ''}
           error={error('idDocumentValidUntil')}
         />
       </div>
@@ -373,5 +391,84 @@ function FpnClubForm({
         </button>
       </div>
     </form>
+  );
+}
+
+/**
+ * *Identificação* — the ID document's photograph and its details, together
+ * (Rui, 30-10-2026). The photo is chosen or dropped anywhere on the page; it is
+ * filed on the student and, when the reader is on, its number and dates are
+ * proposed in the form below for a person to confirm and save.
+ */
+export function IdentificationSection({
+  studentId,
+  idDocument,
+  photo,
+  storageReady,
+}: {
+  studentId: string;
+  idDocument: StudentDocuments['idDocument'];
+  photo: { fileId: string; filedAt: string } | null;
+  storageReady: boolean;
+}): React.ReactElement {
+  const t = useTranslations();
+  const input = useRef<HTMLInputElement>(null);
+  const [state, dispatch, pending] = useSavedAction(uploadIdPhotoAction, { ok: false } as IdPhotoState);
+
+  const send = useCallback(
+    (file: File): void => {
+      if (!storageReady) return;
+      const data = new FormData();
+      data.set('studentId', studentId);
+      data.set('file', file);
+      startTransition(() => dispatch(data));
+    },
+    [dispatch, storageReady, studentId],
+  );
+  const { dragging } = useFileDrop(send);
+
+  return (
+    <>
+      <DropOverlay shown={dragging && storageReady} label={t('documents.idPhoto.drop')} />
+      <section className={CARD}>
+        <h3 className={HEADING}>{t('documents.idPhoto.title')}</h3>
+        <p className="text-sm text-foreground-muted">{t('documents.idPhoto.intro')}</p>
+        {photo !== null && (
+          <p className="flex flex-wrap items-center gap-2 text-sm">
+            <DocumentLink fileId={photo.fileId} fileName={t('documents.idPhoto.current')} />
+            <span className="text-foreground-muted">{t('documents.idPhoto.filedOn', { date: formatDate(photo.filedAt) })}</span>
+          </p>
+        )}
+        <div className="flex flex-col items-start gap-1">
+          <button
+            type="button"
+            disabled={!storageReady || pending}
+            onClick={() => input.current?.click()}
+            className="inline-flex h-control items-center justify-center gap-2 rounded border border-border bg-surface px-4 text-control hover:bg-surface-muted disabled:opacity-60"
+          >
+            <Camera className="size-4" aria-hidden />
+            {pending ? t('documents.idPhoto.reading') : photo === null ? t('documents.idPhoto.upload') : t('documents.idPhoto.replace')}
+          </button>
+          <input
+            ref={input}
+            type="file"
+            className="hidden"
+            accept={acceptFor('student_document')}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file !== undefined) send(file);
+              event.target.value = '';
+            }}
+          />
+          <span className="text-sm text-foreground-muted">
+            {storageReady ? t('documents.idPhoto.hint') : t('files.notConfigured')}
+          </span>
+          {state.readNote !== undefined && state.readNote !== 'disabled' && (
+            <span className="text-sm text-foreground-muted">{t(`documents.idPhoto.note.${state.readNote}`)}</span>
+          )}
+        </div>
+      </section>
+      <IdDocumentForm studentId={studentId} idDocument={idDocument} proposal={state.proposal ?? null} />
+    </>
   );
 }

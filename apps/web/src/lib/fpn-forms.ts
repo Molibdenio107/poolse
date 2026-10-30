@@ -20,7 +20,7 @@
 export const FPN_DISCIPLINES = ['pura', 'open_water', 'water_polo', 'artistic', 'adapted', 'masters', 'diving'] as const;
 export type FpnDiscipline = (typeof FPN_DISCIPLINES)[number];
 export type StudentIdDocumentType = 'cc' | 'bi' | 'passport' | 'other';
-export type StudentDocumentKind = 'fpn_declaration' | 'fpn_declaration_minor' | 'socio_form';
+export type StudentDocumentKind = 'fpn_declaration' | 'fpn_declaration_minor' | 'socio_form' | 'id_document';
 
 /** `GET /students/:id/documents`. */
 export interface StudentDocuments {

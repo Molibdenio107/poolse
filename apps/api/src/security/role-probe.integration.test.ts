@@ -38,7 +38,7 @@ import {
   StudentInvitationsController,
 } from '../students/family-invitations.controller.js';
 import { BoletimController, FpnSettingsController, StudentDocumentsController } from '../students/documents.controller.js';
-import { MedicalExamsController, MedicalExamsSheetController } from '../students/medical-exams.controller.js';
+import { MedicalExamsController } from '../students/medical-exams.controller.js';
 import { MaintenanceController } from '../maintenance/maintenance.controller.js';
 import { FacilityIncidentsController, IncidentsController } from '../safety/incidents.controller.js';
 import {
@@ -870,8 +870,6 @@ test('medical exams refuse a guardian and a student (403)', async () => {
       exams.record(fixture.aliceId, { examinedOn: '2026-01-01', result: 'fit' }),
     );
     await refused('POST students/:id/medical-exams/:id/archive', 403, () => exams.archive(fixture.aliceId, NO_SUCH_ID));
-    await refused('GET medical-exams/export', 403, () => new MedicalExamsSheetController().export());
-    await refused('POST medical-exams/import', 403, () => new MedicalExamsSheetController().import({ rows: [] }));
   });
 });
 

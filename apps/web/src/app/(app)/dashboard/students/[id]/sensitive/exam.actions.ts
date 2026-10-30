@@ -40,15 +40,38 @@ export async function recordExamAction(_previous: FormState, formData: FormData)
   }
   if (Object.keys(fields).length > 0) return { ok: false, fields };
 
+  // The certificate may come with the exam (chosen, or dropped on the page) —
+  // Rui, 30-10-2026. Checked before anything is written.
+  const file = formData.get('certificate');
+  const certificate = file instanceof File && file.size > 0 ? file : null;
+  if (certificate !== null && certificate.size > MAX_FILE_BYTES) {
+    return { ok: false, fields: { certificate: 'files.tooLarge' } };
+  }
+
+  let examId: string;
   try {
-    await apiPost(`/students/${studentId}/medical-exams`, {
+    ({ id: examId } = await apiPost<{ id: string }>(`/students/${studentId}/medical-exams`, {
       examinedOn,
       result,
       ...(validUntil === '' ? {} : { validUntil }),
       ...(note === '' ? {} : { note }),
-    });
+    }));
   } catch (error) {
     return refusal(error, 'exams.failed');
+  }
+
+  if (certificate !== null) {
+    try {
+      const query = new URLSearchParams({ name: certificate.name });
+      await apiUpload(
+        `/students/${studentId}/medical-exams/${examId}/certificate?${query.toString()}`,
+        await certificate.arrayBuffer(),
+      );
+    } catch {
+      // The exam is saved; the certificate can be attached on its row.
+      revalidatePath(`/dashboard/students/${studentId}/sensitive`);
+      return { ok: true, toastKey: 'exams.savedNoCertificate' };
+    }
   }
 
   revalidatePath(`/dashboard/students/${studentId}/sensitive`);

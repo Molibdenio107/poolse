@@ -4,6 +4,7 @@ import { useUser } from '@clerk/nextjs';
 import { useTranslations } from 'next-intl';
 import { EntityIcon } from '@/components/entity-icon';
 import { DetachFileButton, FileUpload } from '@/components/file-upload';
+import { DropTarget } from '@/components/drop-target';
 import type { FileTarget } from '@/lib/files';
 
 /**
@@ -36,8 +37,10 @@ export function IdPhoto({
   const { user } = useUser();
   const own = target === 'own-photo';
 
+  // The whole box takes a dropped photo, when this reader may change it
+  // (Rui, 30-10-2026): the file reaches the upload below as if picked there.
   return (
-    <div className="flex w-28 shrink-0 flex-col gap-1.5">
+    <DropTarget disabled={target === null || reason !== null} className="flex w-28 shrink-0 flex-col gap-1.5">
       <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded border border-border bg-surface-muted text-foreground-muted">
         {url === null ? (
           <EntityIcon kind="photo" />
@@ -67,7 +70,7 @@ export function IdPhoto({
         </>
       )}
       {reason !== null && <span className="text-xs leading-tight text-foreground-muted">{reason}</span>}
-    </div>
+    </DropTarget>
   );
 }
 

@@ -1,4 +1,4 @@
-import type { ExamImportRow, ExamResult } from './exam-sheet';
+export type ExamResult = 'fit' | 'fit_with_conditions' | 'unfit';
 
 /**
  * The exame médico as the API answers it — POOLSE-133.
@@ -25,18 +25,3 @@ export interface StudentMedicalExams {
 }
 
 export const EXAM_RESULTS: readonly ExamResult[] = ['fit', 'fit_with_conditions', 'unfit'];
-
-/** `GET /medical-exams/export` — one row per live student, blanks when no exam. */
-export type ExamExportRow = ExamImportRow;
-
-export type ExamImportStatus = 'new' | 'unchanged' | 'needs_confirmation' | 'no_match' | 'invalid';
-
-/** One row of `POST /medical-exams/import`'s answer. */
-export interface ExamImportRowResult {
-  index: number;
-  status: ExamImportStatus;
-  studentId: string | null;
-  studentName: string | null;
-  /** An `exams.import.reason.*` key, or null. */
-  reason: string | null;
-}

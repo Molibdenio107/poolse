@@ -17,7 +17,6 @@ import {
   type ReposicaoCredit,
 } from '../../../../../lib/api';
 import { addDays, isDate, mondayOf, today } from '@/lib/dates';
-import { DocumentUpload } from '@/components/document-upload';
 import { PersonAvatar } from '@/components/person-avatar';
 import { IdPhoto } from '@/components/id-photo';
 import { storageConfigured } from '@/lib/storage-status';
@@ -32,7 +31,7 @@ import { BoletimPanel } from './boletim-panel';
 import { AppInviteButton, FamilyAccess, type Invitee } from './family-access';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 import type { StudentDocuments } from '@/lib/fpn-forms';
-import { FpnSection, IdDocumentForm } from './documents';
+import { FpnSection, IdentificationSection } from './documents';
 import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -456,39 +455,6 @@ export default async function StudentPage({
         },
         {
           /*
-            Who on this record uses the app — POOLSE-129. A family is invited
-            here, never from Pessoas: the invitation names the guardian the
-            club already has. Staff only; the API decides whether this reader
-            may send (an instructor, for their own turmas).
-          */
-          slug: 'app',
-          labelKey: 'detailTabs.appAccess',
-          visible: !family,
-          content: () => {
-            if (access === null || access.state !== 'ok') {
-              if (access === null) return null;
-              return access.state === 'failed' ? (
-                <PageError
-                  message={t(access.failure.key)}
-                  {...(access.failure.detail === '' ? {} : { detail: access.failure.detail })}
-                />
-              ) : (
-                <p className="text-sm text-foreground-muted">{t('familyAccess.readOnly')}</p>
-              );
-            }
-            return (
-              <FamilyAccess
-                studentId={id}
-                studentFirstName={loaded.firstName}
-                organizationName={access.data.organizationName}
-                canInvite={access.data.canInvite}
-                invitees={access.data.invitees}
-              />
-            );
-          },
-        },
-        {
-          /*
             What this student pays — POOLSE-42. Absent for an instructor: AC10
             makes that a page without the tab, not a tab saying no.
           */
@@ -527,9 +493,12 @@ export default async function StudentPage({
                     path={`/dashboard/students/${id}`}
                   />
                   {/* POOLSE-134: the boletim, beside the sócio it is about. */}
-                  {reg.canManage && loaded.isSocio && (
-                    <BoletimPanel studentId={loaded.id} storageReady={storageReady} />
-                  )}
+                  {/* Only under the Sócio section — Rui, 30-10-2026. */}
+                  {reg.canManage &&
+                    loaded.isSocio &&
+                    feesSections(billing.data.fees.seasonCharges.length > 0, section).section === 'socio' && (
+                      <BoletimPanel studentId={loaded.id} storageReady={storageReady} />
+                    )}
                 </>
               )
             ),
@@ -566,22 +535,20 @@ export default async function StudentPage({
                 />
                 {current === 'identificacao' && (
                   <>
-                    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-                      <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                        {t('documents.section.identificacao')}
-                      </h2>
-                      {/*
-                        Its own slot beside the photograph, never mixed with it —
-                        POOLSE-11. A Cartão de Cidadão rendered as an avatar would put a
-                        government identity document on every list that shows a face.
-                      */}
-                      <DocumentUpload
-                        label={t('students.documentUpload')}
-                        reason={t('students.documentNoStorage')}
-                        purpose={t('students.documentPurpose')}
-                      />
-                    </section>
-                    <IdDocumentForm studentId={loaded.id} idDocument={docs.idDocument} />
+                    {/*
+                      The ID document's photograph and its details, together: a photo dropped
+                      anywhere on the page is filed and, with the reader on, read into the form
+                      below for confirmation (Rui, 30-10-2026).
+                    */}
+                    <IdentificationSection
+                      studentId={loaded.id}
+                      idDocument={docs.idDocument}
+                      photo={(() => {
+                        const current = docs.copies.find((copy) => copy.kind === 'id_document' && copy.replacedAt === null);
+                        return current === undefined ? null : { fileId: current.fileId, filedAt: current.filedAt };
+                      })()}
+                      storageReady={storageReady}
+                    />
                   </>
                 )}
                 {current === 'fpn' && (
@@ -788,6 +755,41 @@ export default async function StudentPage({
                 )}
                 <Pagination page={list} basePath={`/dashboard/students/${id}`} query={{ tab: 'feedback', from }} />
               </section>
+            );
+          },
+        },
+        {
+          /*
+            Who on this record uses the app — POOLSE-129. A family is invited
+            here, never from Pessoas: the invitation names the guardian the
+            club already has. Staff only; the API decides whether this reader
+            may send (an instructor, for their own turmas).
+          */
+          slug: 'app',
+          labelKey: 'detailTabs.appAccess',
+          // Owner, admin and instructor — the readers the API answers; beside
+          // Atividade, since only some roles see either (Rui, 30-10-2026).
+          visible: !family && access !== null && access.state !== 'refused',
+          content: () => {
+            if (access === null || access.state !== 'ok') {
+              if (access === null) return null;
+              return access.state === 'failed' ? (
+                <PageError
+                  message={t(access.failure.key)}
+                  {...(access.failure.detail === '' ? {} : { detail: access.failure.detail })}
+                />
+              ) : (
+                <p className="text-sm text-foreground-muted">{t('familyAccess.readOnly')}</p>
+              );
+            }
+            return (
+              <FamilyAccess
+                studentId={id}
+                studentFirstName={loaded.firstName}
+                organizationName={access.data.organizationName}
+                canInvite={access.data.canInvite}
+                invitees={access.data.invitees}
+              />
             );
           },
         },

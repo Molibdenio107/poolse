@@ -1,6 +1,6 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MedicalExamsController, MedicalExamsSheetController } from './medical-exams.controller.js';
+import { MedicalExamsController } from './medical-exams.controller.js';
 import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant } from '../test/harness.js';
 
 /**
@@ -19,7 +19,7 @@ function shift(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-test('POOLSE-133 — exams on the record, and the spreadsheet', async () => {
+test('POOLSE-133 — exams on the record, several per student', async () => {
   await withScratchTenant(async (tenant) => {
     const org = tenant.organizationId;
     const admin = await addMember(tenant, 'Carla', 'Admin', ['admin']);
@@ -27,7 +27,6 @@ test('POOLSE-133 — exams on the record, and the spreadsheet', async () => {
     const asAdmin = <T>(fn: () => Promise<T>): Promise<T> =>
       actingAs(tenant, { membershipId: admin, roles: ['admin'] }, fn);
     const exams = new MedicalExamsController();
-    const sheet = new MedicalExamsSheetController();
 
     const students = await tenant.sql<{ id: string }>(
       `INSERT INTO student (organization_id, first_name, last_name, birth_date, tax_number)
@@ -59,24 +58,6 @@ test('POOLSE-133 — exams on the record, and the spreadsheet', async () => {
     await actingAs(tenant, { membershipId: instructor, roles: ['instructor'] }, () =>
       expectStatus(() => exams.record(ines, { examinedOn: shift(0), result: 'fit' }), 403),
     );
-
-    // Import: Inês by NIF; Tomás by name and birth date needs confirming.
-    const rows = [
-      { studentName: 'Inês Morais', taxNumber: '123456789', examinedOn: shift(-2), result: 'fit', validUntil: shift(360) },
-      { studentName: 'Tomás Lopes', birthDate: '2011-03-02', examinedOn: shift(-2), result: 'fit_with_conditions' },
-      { studentName: 'Ninguém', examinedOn: shift(-2), result: 'fit' },
-    ];
-    const preview = await asAdmin(() => sheet.import({ rows }));
-    assert.deepEqual(preview.rows.map((r) => r.status), ['new', 'needs_confirmation', 'no_match']);
-    assert.equal(preview.written, 0);
-    const committed = await asAdmin(() => sheet.import({ rows, confirmed: [1], commit: true }));
-    assert.equal(committed.written, 2);
-    assert.equal((await asAdmin(() => exams.list(tomas))).state, 'valid');
-
-    // The export imported back writes nothing.
-    const exported = await asAdmin(() => sheet.export());
-    const again = await asAdmin(() => sheet.import({ rows: exported.rows, confirmed: exported.rows.map((_, i) => i), commit: true }));
-    assert.equal(again.written, 0);
 
     // Retention: erasing the student's health data clears the note.
     await tenant.sql('UPDATE student SET health_erased_at = now() WHERE id = $1', [ines]);

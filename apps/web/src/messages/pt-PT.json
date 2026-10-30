@@ -2340,7 +2340,7 @@
       "optional": "Opcional",
       "addressLine": "Morada",
       "locality": "Localidade",
-      "postalCode": "Use o formato 0000-000.",
+      "postalCode": "Código postal: use o formato 0000-000.",
       "parentOneName": "Filho/a de",
       "parentTwoName": "e de",
       "maritalStatus": "Estado civil",
@@ -6453,6 +6453,26 @@
       "hint": "São do clube, não do aluno: saem em todas as declarações. Por exemplo, ANNP e GCST.",
       "association": "Associação regional",
       "clubCode": "Sigla FPN do clube"
+    },
+    "idPhoto": {
+      "title": "Fotografia do documento",
+      "intro": "Carregue ou largue aqui a fotografia do documento de identificação. Fica guardada na ficha, e o número e as datas são lidos dela para confirmar.",
+      "current": "Fotografia atual",
+      "filedOn": "guardada a {date}",
+      "upload": "Carregar fotografia",
+      "replace": "Substituir fotografia",
+      "reading": "A carregar…",
+      "hint": "JPG, PNG ou PDF, até 10 MB. Também pode largar o ficheiro em qualquer ponto da página.",
+      "drop": "Largue a fotografia do documento",
+      "proposed": "Lido da fotografia: confirme o tipo, o número e as datas antes de guardar.",
+      "filed": "Fotografia guardada",
+      "read": "Fotografia guardada e lida — confirme os dados",
+      "note": {
+        "unreadable": "Não foi possível ler a fotografia. Preencha os dados à mão.",
+        "nothingFound": "Não se encontraram dados na fotografia. Preencha-os à mão.",
+        "notAllowed": "A leitura automática não está disponível para a sua função.",
+        "rateLimited": "Demasiadas leituras seguidas. Preencha à mão ou tente daqui a pouco."
+      }
     }
   },
   "boletim": {
@@ -6568,6 +6588,11 @@
       "commit": "{count, plural, =0 {Nada a registar} one {Registar # exame} other {Registar # exames}}",
       "doneCount": "{count, plural, =0 {Nenhum exame registado.} one {# exame registado.} other {# exames registados.}}",
       "failed": "Não foi possível importar os exames médicos."
-    }
+    },
+    "drop": "Largue o certificado do exame",
+    "certificateOptional": "Certificado (opcional)",
+    "certificateHint": "Também pode largar o certificado em qualquer ponto da página.",
+    "certificateChosen": "Será anexado: {name}",
+    "savedNoCertificate": "Exame guardado, mas o certificado não foi anexado. Anexe-o na linha do exame."
   }
 }
