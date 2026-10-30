@@ -113,6 +113,7 @@ import {
 import { deliverLevelChangeNotice } from './level-change-delivery.js';
 import { clubToday } from '../common/club-day.js';
 import { CoreRoute } from '../tenant/modules.js';
+import { forReader, parseIdentity } from './identity.js';
 import { studentCover, type StudentCover } from '../billing/fees.repository.js';
 
 const MAX_NAME = 120;
@@ -415,9 +416,14 @@ export class StudentsController {
       ageOfMajority(organizationId),
     ]);
 
+    // POOLSE-131: the SNS number for owner and admin only.
+    const mayReadSns = hasRole('owner', 'admin');
     return {
       organizationId,
-      students,
+      students: {
+        ...students,
+        items: students.items.map((one) => ({ ...one, identity: forReader(one.identity, mayReadSns) })),
+      },
       levels,
       canManage: hasRole('owner', 'admin'),
       // *Convidar famílias* — POOLSE-129. An instructor's run is narrowed to
@@ -432,10 +438,12 @@ export class StudentsController {
     // Security review, 12 October 2026: this answered any member, a guardian included. A family reads its own child only.
     await requireActsForStudent(id);
     const { organizationId } = currentTenant();
-    const student = await findStudent(organizationId, id);
+    const found = await findStudent(organizationId, id);
     // Also the answer when the id belongs to another tenant: RLS makes the two
     // indistinguishable from here, which is the point.
-    if (!student) throw new NotFoundException('No such student');
+    if (!found) throw new NotFoundException('No such student');
+    // POOLSE-131: the SNS number for owner and admin only — a family included.
+    const student = { ...found, identity: forReader(found.identity, hasRole('owner', 'admin')) };
 
     // So the record can hide a control its owner may not use. Not access
     // control — SensitiveController and RecordsController each enforce their own
@@ -915,6 +923,11 @@ export function parseStudent(body: Record<string, unknown>, majority: number): S
     taxNumber: readNif(body['taxNumber'], 'taxNumber'),
     // The FPN licence — POOLSE-81. Text, because its format is the FPN's.
     federationLicence: optionalText(body['federationLicence'], 'federationLicence', 40),
+    // POOLSE-131. Absent from the body, nothing on file changes.
+    ...(() => {
+      const identity = parseIdentity(body);
+      return identity === undefined ? {} : { identity };
+    })(),
     notes: optionalText(body['notes'], 'notes', MAX_NOTES),
     // Masculino or feminino, and anything else is "not recorded" — which is the
     // ordinary state of an imported row and must stay representable.

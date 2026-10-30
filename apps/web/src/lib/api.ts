@@ -1488,6 +1488,23 @@ export interface PersonSummary {
   shortName: string;
 }
 
+/** POOLSE-131 — the student's address and identity, all optional. */
+export interface StudentIdentity {
+  addressLine: string | null;
+  locality: string | null;
+  postalCode: string | null;
+  parentOneName: string | null;
+  parentTwoName: string | null;
+  maritalStatus: 'single' | 'married' | 'civil_union' | 'divorced' | 'widowed' | null;
+  profession: string | null;
+  education: string | null;
+  birthplace: string | null;
+  nationality: string | null;
+  snsNumber: string | null;
+  /** Whether a number is on file, for a reader who may not see it. */
+  snsRecorded?: boolean;
+}
+
 export interface Student {
   /** When this student left and when their data goes — 7b.8. Null while enrolled. */
   retention?: {
@@ -1532,6 +1549,8 @@ export interface Student {
   taxNumber: string | null;
   /** The FPN licence — POOLSE-81. */
   federationLicence: string | null;
+  /** Address and identity — POOLSE-131. `snsNumber` only reaches owner and admin. */
+  identity?: StudentIdentity;
   /** In a competitive level with no licence: a warning, never a gate. */
   licenceMissing: boolean;
   notes: string | null;

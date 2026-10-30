@@ -2302,7 +2302,36 @@
     "licenceTaken": "Another student of the club already holds this licence.",
     "licenceMissing": "In a competition level ({level}) with no FPN licence on record. They stay enrolled and marked as before; without a licence they cannot compete.",
     "levelCompetitive": "Competition",
-    "levelCompetitiveHint": "Swimmers in this level compete (pre-competition, competition). Warns when the FPN licence is missing."
+    "levelCompetitiveHint": "Swimmers in this level compete (pre-competition, competition). Warns when the FPN licence is missing.",
+    "identity": {
+      "title": "Identity and address",
+      "optional": "Optional",
+      "addressLine": "Address",
+      "locality": "Town",
+      "postalCode": "Use the format 0000-000.",
+      "parentOneName": "Child of",
+      "parentTwoName": "and of",
+      "maritalStatus": "Marital status",
+      "profession": "Occupation",
+      "education": "Education",
+      "birthplace": "Place of birth",
+      "nationality": "Nationality",
+      "snsNumber": "The SNS number has nine digits.",
+      "snsHint": "Nine digits. Only the owner and administrators see it.",
+      "snsRecorded": "SNS patient number on file. Only the owner and administrators see it.",
+      "snsOnFile": "On file",
+      "snsNone": "Not on file",
+      "notRecorded": "Not given",
+      "marital": {
+        "single": "Single",
+        "married": "Married",
+        "civil_union": "Civil partnership",
+        "divorced": "Divorced",
+        "widowed": "Widowed"
+      },
+      "invalid": "Invalid value.",
+      "tooLong": "Text too long."
+    }
   },
   "advancement": {
     "title": "Advancement",
@@ -5666,7 +5695,18 @@
       "colour": "Colour",
       "feeCategoryId": "Category",
       "status": "Attendance",
-      "note": "Note"
+      "note": "Note",
+      "addressLine": "address",
+      "locality": "town",
+      "postalCode": "postcode",
+      "parentOneName": "parentage (1)",
+      "parentTwoName": "parentage (2)",
+      "maritalStatus": "marital status",
+      "profession": "occupation",
+      "education": "education",
+      "birthplace": "place of birth",
+      "nationality": "nationality",
+      "snsNumber": "SNS number"
     },
     "action": {
       "student": {

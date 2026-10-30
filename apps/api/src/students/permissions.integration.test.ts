@@ -290,13 +290,15 @@ test('a re-invited colleague appears on the staff list once, not twice', async (
      */
     const colleague = await addMember(tenant, 'Sofia', 'Antunes', ['instructor']);
 
-    for (const email of ['sofia.old@example.test', 'sofia.new@example.test']) {
+    // The old address's invitation withdrawn, as the re-invite does — one live
+    // invitation per person is an index since POOLSE-129 — but still a row.
+    for (const [email, revoked] of [['sofia.old@example.test', true], ['sofia.new@example.test', false]] as const) {
       await tenant.sql(
         `INSERT INTO invitation (organization_id, membership_id, email, token_hash,
-                                 roles, expires_at, invited_by_membership_id)
+                                 roles, expires_at, invited_by_membership_id, revoked_at)
          VALUES ($1, $2, $3::citext, $4, ARRAY['instructor']::member_role[],
-                 now() + interval '7 days', $5)`,
-        [tenant.organizationId, colleague, email, `${email}-hash`.padEnd(64, 'x'), tenant.ownerMembershipId],
+                 now() + interval '7 days', $5, CASE WHEN $6 THEN now() END)`,
+        [tenant.organizationId, colleague, email, `${email}-hash`.padEnd(64, 'x'), tenant.ownerMembershipId, revoked],
       );
     }
 

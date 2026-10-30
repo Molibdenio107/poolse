@@ -2302,7 +2302,36 @@
     "licenceTaken": "Esta licença já pertence a outro aluno do clube.",
     "licenceMissing": "Está num nível de competição ({level}) e não tem licença FPN registada. Pode continuar inscrito e com presenças; sem licença não pode competir.",
     "levelCompetitive": "Competição",
-    "levelCompetitiveHint": "Os alunos deste nível competem (pré-competição, competição). Avisa quando falta a licença FPN."
+    "levelCompetitiveHint": "Os alunos deste nível competem (pré-competição, competição). Avisa quando falta a licença FPN.",
+    "identity": {
+      "title": "Identificação e morada",
+      "optional": "Opcional",
+      "addressLine": "Morada",
+      "locality": "Localidade",
+      "postalCode": "Use o formato 0000-000.",
+      "parentOneName": "Filho/a de",
+      "parentTwoName": "e de",
+      "maritalStatus": "Estado civil",
+      "profession": "Profissão",
+      "education": "Habilitações literárias",
+      "birthplace": "Naturalidade",
+      "nationality": "Nacionalidade",
+      "snsNumber": "O nº de utente tem nove algarismos.",
+      "snsHint": "Nove algarismos. Só o proprietário e os administradores o veem.",
+      "snsRecorded": "Nº de utente registado. Só o proprietário e os administradores o veem.",
+      "snsOnFile": "Registado",
+      "snsNone": "Não registado",
+      "notRecorded": "Não indicado",
+      "marital": {
+        "single": "Solteiro/a",
+        "married": "Casado/a",
+        "civil_union": "União de facto",
+        "divorced": "Divorciado/a",
+        "widowed": "Viúvo/a"
+      },
+      "invalid": "Valor inválido.",
+      "tooLong": "Texto demasiado longo."
+    }
   },
   "advancement": {
     "title": "Progressões",
@@ -5666,7 +5695,18 @@
       "colour": "Cor",
       "feeCategoryId": "Categoria",
       "status": "Presença",
-      "note": "Nota"
+      "note": "Nota",
+      "addressLine": "morada",
+      "locality": "localidade",
+      "postalCode": "código postal",
+      "parentOneName": "filiação (1)",
+      "parentTwoName": "filiação (2)",
+      "maritalStatus": "estado civil",
+      "profession": "profissão",
+      "education": "habilitações",
+      "birthplace": "naturalidade",
+      "nationality": "nacionalidade",
+      "snsNumber": "nº de utente"
     },
     "action": {
       "student": {

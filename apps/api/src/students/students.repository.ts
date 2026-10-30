@@ -16,6 +16,13 @@ import {
   type Paginated,
 } from '../common/pagination.js';
 import { searchPredicate } from '../common/search.js';
+import {
+  IDENTITY_SELECT,
+  identityChanges,
+  readIdentity,
+  writeIdentity,
+  type StudentIdentity,
+} from './identity.js';
 import { HAS_UNINVITED } from './family-invitations.repository.js';
 
 export interface StudentLevel {
@@ -175,6 +182,8 @@ export interface Student {
   taxNumber: string | null;
   /** The FPN licence number — POOLSE-81. Optional; the FPN's own format. */
   federationLicence: string | null;
+  /** Address and identity — POOLSE-131. The SNS number only for owner and admin. */
+  identity: StudentIdentity;
   /**
    * In a competitive level with no licence — POOLSE-81. A warning on the page,
    * never a gate: the student is enrolled and marked as before.
@@ -796,6 +805,7 @@ export async function listStudents(
       is_socio: boolean;
       socio_number: string | null;
       federation_licence: string | null;
+      identity: StudentIdentity;
       level_competitive: boolean;
       notes: string | null;
       guardians: Guardian[];
@@ -822,6 +832,7 @@ export async function listStudents(
              s.contact_phone,
              s.tax_number, s.is_socio, s.socio_number,
              s.federation_licence, coalesce(l.competitive, false) AS level_competitive,
+             ${IDENTITY_SELECT('s')} AS identity,
              ${PAYMENT_STATE} AS payment_state,
              s.notes,
              ${GUARDIANS} AS guardians,
@@ -932,6 +943,7 @@ export async function exportStudents(
              s.contact_email::text AS contact_email, s.contact_phone, s.tax_number,
              s.is_socio, s.socio_number, s.notes,
              s.federation_licence, coalesce(l.competitive, false) AS level_competitive,
+             ${IDENTITY_SELECT('s')} AS identity,
              ${PAYMENT_STATE} AS payment_state,
              ${GUARDIANS} AS guardians,
              ${PHOTO_KEY} AS photo_file_id,
@@ -990,6 +1002,7 @@ export async function findStudent(
              s.contact_email::text AS contact_email, s.contact_phone, s.tax_number,
              s.is_socio, s.socio_number, s.notes,
              s.federation_licence, coalesce(l.competitive, false) AS level_competitive,
+             ${IDENTITY_SELECT('s')} AS identity,
              ${PAYMENT_STATE} AS payment_state,
              ${GUARDIANS} AS guardians,
              ${PHOTO_KEY} AS photo_file_id,
@@ -1021,6 +1034,11 @@ export interface StudentInput {
   taxNumber: string | null;
   /** The FPN licence — POOLSE-81. Optional, unique per club among live students. */
   federationLicence: string | null;
+  /**
+   * Address and identity — POOLSE-131. Undefined leaves what is on file alone:
+   * an import or a lead that predates it does not blank it.
+   */
+  identity?: StudentIdentity;
   notes: string | null;
   /** Masculino or feminino. Null is "nobody has recorded it", and is normal. */
   gender: 'male' | 'female' | null;
@@ -1103,6 +1121,8 @@ export async function insertStudent(
 
     const id = rows[0]?.id;
     if (!id) throw new Error('Could not create the student');
+
+    if (input.identity !== undefined) await writeIdentity(tx, id, input.identity);
 
     await syncGuardians(tx, organizationId, id, input.guardians);
 
@@ -1239,6 +1259,7 @@ async function updateStudentIn(
     // Locked and read first, so the entry can say what each field was — POOLSE-80.
     const before = await lockStudentFields(tx, studentId);
     if (before === null) return 'not_found';
+    const identityBefore = input.identity === undefined ? null : await readIdentity(tx, studentId);
 
     await tx.query(
       `UPDATE student
@@ -1263,13 +1284,25 @@ async function updateStudentIn(
 
     await syncGuardians(tx, organizationId, studentId, input.guardians);
 
+    // POOLSE-131: the identity group moves with the form, named and never valued.
+    const change = describeChange(STUDENT_CHANGE, before, fieldsOf(input));
+    let identityMoved: string[] = [];
+    if (input.identity !== undefined) {
+      await writeIdentity(tx, studentId, input.identity);
+      identityMoved = identityChanges(identityBefore, input.identity);
+    }
+    const logged =
+      identityMoved.length === 0
+        ? change
+        : { before: change?.before ?? {}, after: change?.after ?? {}, withheld: [...(change?.withheld ?? []), ...identityMoved] };
+
     await recordAudit(tx, {
       action: 'student.updated',
       entityType: 'student',
       entityId: studentId,
       data: {
         name: `${input.firstName} ${input.lastName}`,
-        ...describeChange(STUDENT_CHANGE, before, fieldsOf(input)),
+        ...logged,
       },
     });
 
@@ -1441,6 +1474,7 @@ function toStudent(row: {
   is_socio: boolean;
   socio_number: string | null;
   federation_licence: string | null;
+  identity: StudentIdentity;
   level_competitive: boolean;
   notes: string | null;
   guardians: Guardian[];
@@ -1485,6 +1519,7 @@ function toStudent(row: {
     contactPhone: row.contact_phone,
     taxNumber: row.tax_number,
     federationLicence: row.federation_licence,
+    identity: row.identity,
     licenceMissing: row.level_competitive && row.federation_licence === null,
     paymentState: row.payment_state,
     isSocio: row.is_socio,

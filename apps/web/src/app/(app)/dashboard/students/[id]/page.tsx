@@ -37,6 +37,7 @@ import { DetailPage } from '@/components/detail-page';
 import { FeedbackList } from '@/components/feedback-list';
 import { Pagination } from '@/components/pagination';
 import { formatDate } from '@/lib/date-format';
+import { countryName } from '@/lib/countries';
 
 /**
  * One student's record.
@@ -412,6 +413,36 @@ export default async function StudentPage({
                         label={t('students.federationLicence')}
                         value={loaded.federationLicence}
                       />
+                      {/* POOLSE-131: read-only, and the SNS number only as "registado". */}
+                      <Row
+                        label={t('students.identity.addressLine')}
+                        value={
+                          [
+                            loaded.identity?.addressLine,
+                            [loaded.identity?.postalCode, loaded.identity?.locality].filter(Boolean).join(' '),
+                          ]
+                            .filter((part) => part !== undefined && part !== null && part !== '')
+                            .join(', ') || null
+                        }
+                      />
+                      <Row
+                        label={t('students.identity.nationality')}
+                        value={
+                          loaded.identity?.nationality == null
+                            ? null
+                            : countryName(loaded.identity.nationality, locale)
+                        }
+                      />
+                      {!family && (
+                        <Row
+                          label={t('students.identity.snsNumber')}
+                          value={
+                            loaded.identity?.snsRecorded === true
+                              ? t('students.identity.snsOnFile')
+                              : t('students.identity.snsNone')
+                          }
+                        />
+                      )}
                       {!family && <Row label={t('students.notes')} value={loaded.notes} />}
                     </dl>
                   </>

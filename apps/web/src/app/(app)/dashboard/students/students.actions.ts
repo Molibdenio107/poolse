@@ -43,6 +43,23 @@ function studentBody(formData: FormData): Record<string, unknown> {
     taxNumber: text('taxNumber'),
     federationLicence: text('federationLicence'),
     notes: text('notes'),
+    // POOLSE-131. Posted only when the form shows the section, so a form
+    // without it (or a reader who may not see the SNS number) changes nothing.
+    ...(formData.has('addressLine')
+      ? {
+          addressLine: text('addressLine'),
+          locality: text('locality'),
+          postalCode: text('postalCode'),
+          parentOneName: text('parentOneName'),
+          parentTwoName: text('parentTwoName'),
+          maritalStatus: text('maritalStatus'),
+          profession: text('profession'),
+          education: text('education'),
+          birthplace: text('birthplace'),
+          nationality: text('nationality'),
+          snsNumber: text('snsNumber'),
+        }
+      : {}),
   };
 }
 

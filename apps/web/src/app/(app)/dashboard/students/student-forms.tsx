@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
-import { useTranslations } from 'next-intl';
-import type { Guardian, StudentLevel } from '../../../../lib/api';
+import { useLocale, useTranslations } from 'next-intl';
+import type { Guardian, StudentIdentity, StudentLevel } from '../../../../lib/api';
+import { countryOptions } from '@/lib/countries';
 import {
   CONTROL_LINE,
   FIELD_COLUMN,
@@ -46,6 +47,7 @@ export interface StudentFormValues {
   taxNumber?: string | null;
   federationLicence?: string | null;
   notes?: string | null;
+  identity?: StudentIdentity;
 }
 
 /**
@@ -226,6 +228,8 @@ export function StudentForm({
           {...fieldError('federationLicence')}
         />
       </div>
+
+      <IdentitySection identity={student?.identity} fieldError={fieldError} />
 
       {/* Prose, so it takes the wider cap rather than the single-control one. */}
       <div className="max-w-form">
@@ -461,5 +465,146 @@ function LevelPicker({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * *Identificação e morada* — POOLSE-131 (Rui, 30-10-2026). All optional, the
+ * student's own: what the FPN's Anexo 2 and the boletim de sócio fill from.
+ * Folded by default and open once anything is on file, so a club that never
+ * uses it never scrolls past it. The SNS number is owner and admin only: a
+ * reader who may not see it gets no box, and posting the form then leaves the
+ * number on file untouched (the API keeps it unless the field is sent).
+ */
+function IdentitySection({
+  identity,
+  fieldError,
+}: {
+  identity: StudentIdentity | undefined;
+  fieldError: (name: string) => { error?: string };
+}): React.ReactElement {
+  const t = useTranslations();
+  const locale = useLocale();
+  const filled =
+    identity !== undefined &&
+    Object.entries(identity).some(([key, value]) => key !== 'snsRecorded' && value !== null && value !== false);
+  // The number is withheld from this reader when the API says one is on file
+  // but sends none.
+  const snsHidden = identity?.snsRecorded === true && identity.snsNumber === null;
+
+  return (
+    <details open={filled} className="group rounded border border-border">
+      <summary className="flex min-h-control cursor-pointer items-center justify-between gap-2 px-4 text-control">
+        <span className="font-medium">{t('students.identity.title')}</span>
+        <span className="text-sm text-foreground-muted">{t('students.identity.optional')}</span>
+      </summary>
+      <div className="grid grid-cols-1 gap-4 p-4 pt-2 sm:grid-cols-2">
+        <TextField
+          name="addressLine"
+          label={t('students.identity.addressLine')}
+          initial={identity?.addressLine ?? ''}
+          autoComplete="street-address"
+          maxLength={200}
+          className="max-w-none sm:col-span-2"
+          {...fieldError('addressLine')}
+        />
+        <TextField
+          name="locality"
+          label={t('students.identity.locality')}
+          initial={identity?.locality ?? ''}
+          autoComplete="address-level2"
+          maxLength={100}
+          className="max-w-none"
+          {...fieldError('locality')}
+        />
+        <TextField
+          name="postalCode"
+          inputMode="numeric"
+          label={t('students.identity.postalCode')}
+          placeholder="0000-000"
+          initial={identity?.postalCode ?? ''}
+          autoComplete="postal-code"
+          maxLength={8}
+          className="max-w-none"
+          {...fieldError('postalCode')}
+        />
+        <TextField
+          name="parentOneName"
+          label={t('students.identity.parentOneName')}
+          initial={identity?.parentOneName ?? ''}
+          maxLength={160}
+          className="max-w-none"
+          {...fieldError('parentOneName')}
+        />
+        <TextField
+          name="parentTwoName"
+          label={t('students.identity.parentTwoName')}
+          initial={identity?.parentTwoName ?? ''}
+          maxLength={160}
+          className="max-w-none"
+          {...fieldError('parentTwoName')}
+        />
+        <SelectField
+          name="maritalStatus"
+          label={t('students.identity.maritalStatus')}
+          initial={identity?.maritalStatus ?? ''}
+          options={[
+            { value: '', label: t('students.identity.notRecorded') },
+            ...(['single', 'married', 'civil_union', 'divorced', 'widowed'] as const).map((value) => ({
+              value,
+              label: t(`students.identity.marital.${value}`),
+            })),
+          ]}
+          className="max-w-none"
+          {...fieldError('maritalStatus')}
+        />
+        <TextField
+          name="profession"
+          label={t('students.identity.profession')}
+          initial={identity?.profession ?? ''}
+          maxLength={120}
+          className="max-w-none"
+          {...fieldError('profession')}
+        />
+        <TextField
+          name="education"
+          label={t('students.identity.education')}
+          initial={identity?.education ?? ''}
+          maxLength={120}
+          className="max-w-none"
+          {...fieldError('education')}
+        />
+        <TextField
+          name="birthplace"
+          label={t('students.identity.birthplace')}
+          initial={identity?.birthplace ?? ''}
+          maxLength={120}
+          className="max-w-none"
+          {...fieldError('birthplace')}
+        />
+        <SelectField
+          name="nationality"
+          label={t('students.identity.nationality')}
+          initial={identity?.nationality ?? ''}
+          options={[{ value: '', label: t('students.identity.notRecorded') }, ...countryOptions(locale)]}
+          className="max-w-none"
+          {...fieldError('nationality')}
+        />
+        {snsHidden ? (
+          <p className="text-sm text-foreground-muted sm:col-span-2">{t('students.identity.snsRecorded')}</p>
+        ) : (
+          <TextField
+            name="snsNumber"
+            inputMode="numeric"
+            label={t('students.identity.snsNumber')}
+            initial={identity?.snsNumber ?? ''}
+            maxLength={11}
+            hint={t('students.identity.snsHint')}
+            className="max-w-none"
+            {...fieldError('snsNumber')}
+          />
+        )}
+      </div>
+    </details>
   );
 }
