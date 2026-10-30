@@ -50,8 +50,14 @@ const CONTENT_TYPE: Record<Format, string> = {
 };
 
 /** A filename a Windows, macOS and Linux machine will all accept unchanged. */
-function fileNameFor(locale: string, filtered: boolean, format: Format): string {
-  const base = locale === 'en' ? 'students' : 'alunos';
+function fileNameFor(locale: string, filtered: boolean, format: Format, socios = false): string {
+  const base = socios
+    ? locale === 'en'
+      ? 'members'
+      : 'socios'
+    : locale === 'en'
+      ? 'students'
+      : 'alunos';
   const today = clubToday();
   // ASCII only, deliberately. A `Content-Disposition` carrying accented
   // characters needs the RFC 5987 encoding and is mangled by something in the
@@ -67,9 +73,17 @@ export async function GET(request: Request): Promise<Response> {
   // mistyped query parameter should still hand somebody their register.
   const format: Format = url.searchParams.get('format') === 'csv' ? 'csv' : 'xlsx';
 
+  /*
+   * *Exportar sócios* — POOLSE-134. The same sheet narrowed to the club's
+   * sócios, so it re-imports through the ordinary student import: that import
+   * *is* *Importar sócios*, and there is no second pipeline.
+   */
+  const socios = url.searchParams.get('socios') === '1';
+
   const query = new URLSearchParams();
   if (search !== '') query.set('search', search);
   if (levelId !== '') query.set('levelId', levelId);
+  if (socios) query.set('socios', '1');
 
   let data: ExportResponse;
   try {
@@ -132,6 +146,7 @@ export async function GET(request: Request): Promise<Response> {
           if (at >= 0) row[at] = value;
         };
         set('birthDate', formatDate(student.birthDate));
+        set('socioSince', formatDate(student.socioSince ?? null));
         set(
           'gender',
           student.gender === null
@@ -169,7 +184,7 @@ export async function GET(request: Request): Promise<Response> {
   return new Response(body, {
     headers: {
       'content-type': CONTENT_TYPE[format],
-      'content-disposition': `attachment; filename="${fileNameFor(locale, filtered, format)}"`,
+      'content-disposition': `attachment; filename="${fileNameFor(locale, filtered, format, socios)}"`,
       // A register changes every day and this is a snapshot of it; a cached copy
       // handed back tomorrow would be wrong in a way nobody would think to check.
       'cache-control': 'no-store',

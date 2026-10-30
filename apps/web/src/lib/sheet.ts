@@ -45,6 +45,8 @@ export const IMPORT_FIELDS = [
   'guardianTaxNumber',
   'isSocio',
   'socioNumber',
+  // Sócio desde — POOLSE-134.
+  'socioSince',
   // The FPN licence — POOLSE-81, Excel parity with the student form.
   'federationLicence',
   'gender',
@@ -104,6 +106,7 @@ export const EMPTY_MAPPING: Mapping = {
   guardianTaxNumber: null,
   isSocio: null,
   socioNumber: null,
+  socioSince: null,
   federationLicence: null,
   gender: null,
   isPaid: null,
@@ -275,6 +278,11 @@ const SYNONYMS: [ImportField, string[]][] = [
    */
   ['gender', ['genero', 'sexo', 'm f', 'gender', 'sex']],
   ['isPaid', ['pago', 'pagou', 'esta pago', 'mensalidade paga', 'paid', 'is paid']],
+  // POOLSE-134. Before the sócio pair, so "Sócio desde" is not read as a yes.
+  [
+    'socioSince',
+    ['socio desde', 'data de socio', 'data de admissao', 'admissao', 'member since', 'membership date'],
+  ],
   ['socioNumber', ['numero de socio', 'n socio', 'numero socio', 'membership number']],
   // Before anything a bare "licença" might be claimed by; the FPN's own word first.
   [
@@ -558,6 +566,7 @@ const EXPECTED_SHAPE: Partial<Record<ImportField, (looks: string[]) => boolean>>
   contactEmail: (looks) => looks.includes('email'),
   guardianEmail: (looks) => looks.includes('email'),
   birthDate: (looks) => looks.includes('date'),
+  socioSince: (looks) => looks.includes('date'),
   contactPhone: (looks) => looks.some((shape) => /^(9|10|11|12|13) digits$/.test(shape)),
   guardianPhone: (looks) => looks.some((shape) => /^(9|10|11|12|13) digits$/.test(shape)),
   taxNumber: (looks) => looks.includes('9 digits'),
@@ -837,6 +846,7 @@ export const EXPORT_FIELDS: ImportField[] = [
   'guardianTaxNumber',
   'isSocio',
   'socioNumber',
+  'socioSince',
   'federationLicence',
   'gender',
   'isPaid',

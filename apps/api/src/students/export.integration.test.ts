@@ -325,3 +325,56 @@ test('the identity columns survive export and re-import unchanged', async () => 
     });
   });
 });
+
+/**
+ * POOLSE-134 — *Exportar sócios* is the same sheet, sócios only, and importing
+ * it back through the ordinary student import changes nothing.
+ */
+test('the sócios export carries only sócios, and re-imports unchanged', async () => {
+  await withScratchTenant(async (tenant) => {
+    const importer = new StudentImportController();
+    const exporter = new ExportsController();
+
+    await tenant.sql(
+      `INSERT INTO student (organization_id, first_name, last_name, birth_date, is_socio, socio_number, socio_since)
+       VALUES ($1, 'Marta', 'Vaz', '1980-03-15', true, '101', '2018-09-01'),
+              ($1, 'Rui', 'Reis', '1975-06-02', true, '102', NULL),
+              ($1, 'Tiago', 'Sousa', '2015-01-20', false, NULL, NULL)`,
+      [tenant.organizationId],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const { students } = await exporter.students(undefined, undefined, '1');
+      assert.deepEqual(
+        students.map((student) => [student.lastName, student.socioNumber, student.socioSince]),
+        [
+          ['Reis', '102', null],
+          ['Vaz', '101', '2018-09-01'],
+        ],
+        'only the sócios, with their number and date',
+      );
+
+      // The rows as `write-sheet.ts` writes them.
+      const again = await importer.run({
+        rows: students.map((student) => ({
+          firstName: student.firstName,
+          lastName: student.lastName,
+          birthDate: student.birthDate ?? '',
+          isSocio: student.isSocio ? 'Sim' : '',
+          socioNumber: student.socioNumber ?? '',
+          socioSince: student.socioSince ?? '',
+        })),
+        commit: true,
+        include: [0, 1],
+      });
+
+      assert.deepEqual(again.rows.map((row) => row.problems), [[], []]);
+      assert.deepEqual(again.rows.map((row) => row.updates), [[], []]);
+      assert.equal(again.created, 0);
+      assert.equal(again.updated, 0, 'a round trip changes nothing');
+
+      const { students: after } = await exporter.students(undefined, undefined, '1');
+      assert.deepEqual(after, students);
+    });
+  });
+});

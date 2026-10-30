@@ -107,6 +107,9 @@ async function existingStudents(tx: Tx): Promise<ExistingStudent[]> {
     notes: string | null;
     federation_licence: string | null;
     identity: StudentIdentity;
+    is_socio: boolean;
+    socio_number: string | null;
+    socio_since: string | null;
   }>(
     `SELECT s.id, s.first_name, s.last_name,
             to_char(s.birth_date, 'YYYY-MM-DD') AS birth_date,
@@ -114,6 +117,8 @@ async function existingStudents(tx: Tx): Promise<ExistingStudent[]> {
             s.contact_email::text AS contact_email, s.contact_phone, s.notes,
             s.federation_licence,
             ${IDENTITY_SELECT('s')} AS identity,
+            s.is_socio, s.socio_number,
+            to_char(s.socio_since, 'YYYY-MM-DD') AS socio_since,
             ${displayName('s')} AS display_name
        FROM student s
       WHERE s.archived_at IS NULL`,
@@ -133,6 +138,9 @@ async function existingStudents(tx: Tx): Promise<ExistingStudent[]> {
     notes: row.notes,
     federationLicence: row.federation_licence,
     identity: row.identity,
+    isSocio: row.is_socio,
+    socioNumber: row.socio_number,
+    socioSince: row.socio_since,
   }));
 }
 
@@ -315,8 +323,8 @@ export async function runImport(
        */
       if (created !== null && (row.isSocio || row.socioNumber !== null)) {
         await tx.query(
-          `UPDATE student SET is_socio = $2, socio_number = $3 WHERE id = $1`,
-          [created, row.isSocio, row.socioNumber],
+          `UPDATE student SET is_socio = $2, socio_number = $3, socio_since = $4::date WHERE id = $1`,
+          [created, row.isSocio, row.socioNumber, row.socioSince],
         );
       }
 
@@ -421,6 +429,10 @@ export async function runImport(
         notes: row.updates.find((update) => update.field === 'notes')?.value ?? null,
         federationLicence:
           row.updates.find((update) => update.field === 'federationLicence')?.value ?? null,
+        // POOLSE-134: the sócio, only where the preview found it empty.
+        isSocio: row.updates.some((update) => update.field === 'isSocio'),
+        socioNumber: row.updates.find((update) => update.field === 'socioNumber')?.value ?? null,
+        socioSince: row.updates.find((update) => update.field === 'socioSince')?.value ?? null,
         // POOLSE-131: only the identity fields the preview found empty on file.
         identity: Object.fromEntries(
           row.updates

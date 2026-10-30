@@ -60,6 +60,9 @@ function existing(overrides: Partial<ExistingStudent> & { id: string }): Existin
     notes: null,
     federationLicence: null,
     identity: null,
+    isSocio: false,
+    socioNumber: null,
+    socioSince: null,
     ...overrides,
   };
 }
@@ -675,4 +678,78 @@ test('identity fills a blank on a matched student and never overwrites one', () 
 
   // The address and the nationality on file stay; only the empty town is filled.
   assert.deepEqual(rows[0]?.updates, [{ field: 'locality', value: 'Braga' }]);
+});
+
+/**
+ * POOLSE-134 — the sócio columns: a date read like a birth date, a number that
+ * is refused when somebody else holds it, and blanks filled only.
+ */
+test('sócio desde is read like a birth date, and a non-date refuses the row', () => {
+  const { rows } = validate([
+    { ...ADULT, socioSince: '01/09/2020' },
+    { firstName: 'Tiago', lastName: 'Sousa', socioSince: 'há muito' },
+  ]);
+
+  assert.equal(rows[0]?.socioSince, '2020-09-01');
+  assert.equal(rows[0]?.isSocio, true, 'a date on its own says they are a member');
+  assert.deepEqual(rows[1]?.problems, [{ field: 'socioSince', code: 'badDate', value: 'há muito' }]);
+});
+
+test('a sócio number another student holds is refused, quoting it', () => {
+  const { rows } = validate([{ ...ADULT, socioNumber: '42' }], {
+    existing: [existing({ id: 'student-9', firstName: 'Ana', lastName: 'Reis', socioNumber: '42', isSocio: true })],
+  });
+
+  assert.deepEqual(rows[0]?.problems, [{ field: 'socioNumber', code: 'socioNumberTaken', value: '42' }]);
+  assert.equal(rows[0]?.importable, false);
+});
+
+test('the same sócio number twice in one file refuses the second row', () => {
+  const { rows } = validate([
+    { ...ADULT, socioNumber: '7' },
+    { firstName: 'Tiago', lastName: 'Sousa', socioNumber: '7' },
+  ]);
+
+  assert.deepEqual(rows[0]?.problems, []);
+  assert.equal(rows[1]?.problems[0]?.code, 'socioNumberTaken');
+});
+
+test('a student holding their own number is no clash, and the sócio fills only blanks', () => {
+  const { rows } = validate(
+    [{ fullName: 'Rita Nunes', birthDate: '1988-04-12', isSocio: 'Sim', socioNumber: '42', socioSince: '2019-01-01' }],
+    {
+      existing: [
+        existing({
+          id: 'student-1',
+          firstName: 'Rita',
+          lastName: 'Nunes',
+          birthDate: '1988-04-12',
+          displayName: 'Rita Nunes',
+          isSocio: true,
+          socioNumber: '42',
+          socioSince: '2015-03-01',
+        }),
+      ],
+    },
+  );
+
+  assert.deepEqual(rows[0]?.problems, []);
+  assert.deepEqual(rows[0]?.updates, [], 'the date on file stays');
+});
+
+test('a matched student who is not a sócio becomes one, with number and date', () => {
+  const { rows } = validate(
+    [{ fullName: 'Rita Nunes', birthDate: '1988-04-12', socioNumber: '43', socioSince: '2026-01-10' }],
+    {
+      existing: [
+        existing({ id: 'student-1', firstName: 'Rita', lastName: 'Nunes', birthDate: '1988-04-12', displayName: 'Rita Nunes' }),
+      ],
+    },
+  );
+
+  assert.deepEqual(rows[0]?.updates, [
+    { field: 'isSocio', value: 'true' },
+    { field: 'socioNumber', value: '43' },
+    { field: 'socioSince', value: '2026-01-10' },
+  ]);
 });

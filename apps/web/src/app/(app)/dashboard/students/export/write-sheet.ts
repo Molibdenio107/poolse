@@ -60,6 +60,8 @@ export function rowFor(student: Student): string[] {
     guardianTaxNumber: guardian?.taxNumber ?? '',
     isSocio: student.isSocio ? 'Sim' : '',
     socioNumber: student.socioNumber ?? '',
+    // ISO, like the birth date: the same day in either language — POOLSE-134.
+    socioSince: student.socioSince ?? '',
     federationLicence: student.federationLicence ?? '',
     /*
      * Género and payment — round 5.

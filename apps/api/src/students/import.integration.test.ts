@@ -568,3 +568,72 @@ test('a bad postal code is refused in the preview, and nothing is written', asyn
     assert.equal(await countStudents(tenant), 0);
   });
 });
+
+/**
+ * POOLSE-134 — the sócio columns: a clash is refused in the preview with
+ * nothing written, and sócio desde fills only a blank.
+ */
+test('a sócio number another student holds is refused in the preview, and nothing is written', async () => {
+  await withScratchTenant(async (tenant) => {
+    const controller = new StudentImportController();
+
+    await tenant.sql(
+      `INSERT INTO student (organization_id, first_name, last_name, is_socio, socio_number)
+       VALUES ($1, 'Ana', 'Reis', true, '42')`,
+      [tenant.organizationId],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const preview = await controller.run({
+        rows: [
+          { fullName: 'Rita Nunes', socioNumber: '42' },
+          { fullName: 'Tiago Sousa', socioNumber: '43' },
+        ],
+      });
+
+      assert.deepEqual(preview.rows[0]?.problems, [
+        { field: 'socioNumber', code: 'socioNumberTaken', value: '42' },
+      ]);
+      assert.equal(preview.rows[1]?.importable, true);
+      assert.equal(preview.summary.refused, 1);
+    });
+
+    assert.equal(await countStudents(tenant), 1, 'the preview wrote nothing');
+  });
+});
+
+test('sócio desde fills a blank and never overwrites a date on file', async () => {
+  await withScratchTenant(async (tenant) => {
+    const controller = new StudentImportController();
+
+    await tenant.sql(
+      `INSERT INTO student (organization_id, first_name, last_name, tax_number, is_socio, socio_number, socio_since)
+       VALUES ($1, 'Marta', 'Vaz', '123456789', true, '7', '2015-03-01'),
+              ($1, 'Rui', 'Reis', '987654322', false, NULL, NULL)`,
+      [tenant.organizationId],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const result = await controller.run({
+        rows: [
+          { fullName: 'Marta Vaz', taxNumber: '123456789', socioNumber: '7', socioSince: '01/01/2020' },
+          { fullName: 'Rui Reis', taxNumber: '987654322', socioNumber: '8', socioSince: '10/01/2026' },
+        ],
+        commit: true,
+        include: [0, 1],
+      });
+
+      assert.deepEqual(result.rows[0]?.updates, []);
+      assert.equal(result.updated, 1, 'only Rui changes');
+    });
+
+    const rows = await tenant.sql<{ last_name: string; is_socio: boolean; socio_number: string | null; socio_since: string | null }>(
+      `SELECT last_name, is_socio, socio_number, to_char(socio_since, 'YYYY-MM-DD') AS socio_since
+         FROM student ORDER BY last_name`,
+    );
+    assert.deepEqual(rows, [
+      { last_name: 'Reis', is_socio: true, socio_number: '8', socio_since: '2026-01-10' },
+      { last_name: 'Vaz', is_socio: true, socio_number: '7', socio_since: '2015-03-01' },
+    ]);
+  });
+});

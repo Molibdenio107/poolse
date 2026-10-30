@@ -218,6 +218,8 @@ export interface Student {
   isAdultStudent: boolean;
   isGuardian: boolean;
   socioNumber: string | null;
+  /** Sócio desde, `YYYY-MM-DD` — POOLSE-134. Carried by the export only. */
+  socioSince?: string | null;
   notes: string | null;
   /**
    * Present only when a `photo` consent is granted and not withdrawn. The query
@@ -929,6 +931,8 @@ export const MAX_EXPORT_ROWS = 5000;
 export async function exportStudents(
   organizationId: string,
   query: StudentQuery,
+  /** POOLSE-134: only the club's sócios — *Exportar sócios*. */
+  socios = false,
 ): Promise<Student[]> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query(
@@ -943,6 +947,7 @@ export async function exportStudents(
              s.level_id, l.name AS level_name, s.gender,
              s.contact_email::text AS contact_email, s.contact_phone, s.tax_number,
              s.is_socio, s.socio_number, s.notes,
+             to_char(s.socio_since, 'YYYY-MM-DD') AS socio_since,
              s.federation_licence, coalesce(l.competitive, false) AS level_competitive,
              ${IDENTITY_SELECT('s')} AS identity,
              ${PAYMENT_STATE} AS payment_state,
@@ -959,10 +964,11 @@ export async function exportStudents(
            '$1',
          )}
          AND ($2::uuid IS NULL OR s.level_id = $2::uuid)
+         AND (NOT $4::boolean OR s.is_socio)
        ORDER BY ${nameOrder('s')}, s.id
        LIMIT $3
       `,
-      [query.search, query.levelId, MAX_EXPORT_ROWS],
+      [query.search, query.levelId, MAX_EXPORT_ROWS, socios],
     );
 
     const students = rows.map((row) => toStudent(row as never));
@@ -977,6 +983,7 @@ export async function exportStudents(
         rows: students.length,
         search: query.search,
         levelId: query.levelId,
+        socios,
         capped: students.length === MAX_EXPORT_ROWS,
       },
     });
@@ -1167,6 +1174,13 @@ export interface StudentBlanks {
   taxNumber: string | null;
   notes: string | null;
   federationLicence: string | null;
+  /**
+   * POOLSE-134: the sócio, filled like the rest — a number or a date only where
+   * there is none, and `isSocio` only ever turns membership on.
+   */
+  isSocio?: boolean;
+  socioNumber?: string | null;
+  socioSince?: string | null;
   /** POOLSE-131: identity fields to fill where empty. Named in the audit, never valued. */
   identity?: Partial<Record<keyof StudentIdentity, string | null>>;
 }
@@ -1184,7 +1198,7 @@ export async function fillStudentBlanks(
     const value = blanks.identity?.[field];
     return typeof value === 'string' && value.trim() !== '';
   }).map(([field, column], at) => {
-    const param = `$${9 + at}${column === 'marital_status' ? '::marital_status' : ''}`;
+    const param = `$${12 + at}${column === 'marital_status' ? '::marital_status' : ''}`;
     return { field, value: blanks.identity![field]!, set: `${column} = coalesce(${column}, ${param})`, when: `(${column} IS NULL)` };
   });
   const identitySets = identityFills.map((fill) => `,
@@ -1200,7 +1214,10 @@ export async function fillStudentBlanks(
             contact_phone = coalesce(contact_phone, nullif(btrim($5), '')),
             tax_number    = coalesce(tax_number, nullif(btrim($6), '')),
             notes         = coalesce(notes, nullif(btrim($7), '')),
-            federation_licence = coalesce(federation_licence, nullif(btrim($8), ''))${identitySets}
+            federation_licence = coalesce(federation_licence, nullif(btrim($8), '')),
+            is_socio      = is_socio OR $9::boolean,
+            socio_number  = coalesce(socio_number, nullif(btrim($10), '')),
+            socio_since   = coalesce(socio_since, $11::date)${identitySets}
       WHERE id = $1 AND archived_at IS NULL
         /*
          * Nothing to do is not a write. Without this an import of an unchanged
@@ -1214,7 +1231,10 @@ export async function fillStudentBlanks(
           OR (contact_phone IS NULL AND nullif(btrim($5), '') IS NOT NULL)
           OR (tax_number IS NULL AND nullif(btrim($6), '') IS NOT NULL)
           OR (notes IS NULL AND nullif(btrim($7), '') IS NOT NULL)
-          OR (federation_licence IS NULL AND nullif(btrim($8), '') IS NOT NULL)${identityWhen}
+          OR (federation_licence IS NULL AND nullif(btrim($8), '') IS NOT NULL)
+          OR (NOT is_socio AND $9::boolean)
+          OR (socio_number IS NULL AND nullif(btrim($10), '') IS NOT NULL)
+          OR (socio_since IS NULL AND $11::date IS NOT NULL)${identityWhen}
         )
     RETURNING id, level_id`,
     [
@@ -1226,6 +1246,9 @@ export async function fillStudentBlanks(
       blanks.taxNumber,
       blanks.notes,
       blanks.federationLicence,
+      blanks.isSocio === true,
+      blanks.socioNumber ?? null,
+      blanks.socioSince ?? null,
       ...identityFills.map((fill) => fill.value),
     ],
   );
@@ -1241,7 +1264,14 @@ export async function fillStudentBlanks(
       data: {
         fields: [
           ...Object.entries(blanks)
-            .filter(([field, value]) => field !== 'identity' && value !== null && String(value).trim() !== '')
+            .filter(
+              ([field, value]) =>
+                field !== 'identity' &&
+                value !== null &&
+                value !== undefined &&
+                value !== false &&
+                String(value).trim() !== '',
+            )
             .map(([field]) => field),
           ...identityFills.map((fill) => fill.field),
         ],
@@ -1493,6 +1523,7 @@ function toStudent(row: {
   payment_state: 'none' | 'paid' | 'due' | 'overdue';
   is_socio: boolean;
   socio_number: string | null;
+  socio_since?: string | null;
   federation_licence: string | null;
   identity: StudentIdentity;
   level_competitive: boolean;
@@ -1544,6 +1575,7 @@ function toStudent(row: {
     paymentState: row.payment_state,
     isSocio: row.is_socio,
     socioNumber: row.socio_number,
+    ...(row.socio_since === undefined ? {} : { socioSince: row.socio_since }),
     notes: row.notes,
     photoFileId: row.photo_file_id,
     photoConsent: row.photo_consent,

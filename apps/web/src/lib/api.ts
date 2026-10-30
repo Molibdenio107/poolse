@@ -1571,6 +1571,8 @@ export interface Student {
   isAdultStudent: boolean;
   isGuardian: boolean;
   socioNumber: string | null;
+  /** Sócio desde, `YYYY-MM-DD` — POOLSE-134. Carried by the export only. */
+  socioSince?: string | null;
   /** Null unless a live `photo` consent exists — the API decides, not the caller. */
   photoFileId: string | null;
   photoConsent: boolean;
@@ -1641,7 +1643,9 @@ export type ImportProblemCode =
   | 'badPostalCode'
   | 'badSnsNumber'
   | 'badNationality'
-  | 'badMaritalStatus';
+  | 'badMaritalStatus'
+  /** POOLSE-134: the sócio number belongs to another student. */
+  | 'socioNumberTaken';
 
 /** What is said out loud and imported anyway. */
 export type ImportWarningCode =
@@ -1660,6 +1664,9 @@ export interface ImportUpdate {
     | 'taxNumber'
     | 'notes'
     | 'federationLicence'
+    | 'isSocio'
+    | 'socioNumber'
+    | 'socioSince'
     | Exclude<keyof StudentIdentity, 'snsRecorded'>;
   value: string;
 }

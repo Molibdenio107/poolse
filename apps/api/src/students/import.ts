@@ -74,6 +74,8 @@ export const IMPORT_FIELDS = [
    */
   'isSocio',
   'socioNumber',
+  /** Sócio desde — POOLSE-134. A date, read the way a birth date is. */
+  'socioSince',
   /** The FPN licence — POOLSE-81, Excel parity with the student form. */
   'federationLicence',
   /**
@@ -162,7 +164,9 @@ export type ImportProblemCode =
   | 'badPostalCode'
   | 'badSnsNumber'
   | 'badNationality'
-  | 'badMaritalStatus';
+  | 'badMaritalStatus'
+  /** POOLSE-134: the sócio number belongs to another student, quoted back. */
+  | 'socioNumberTaken';
 
 /**
  * What is worth saying but never worth refusing over.
@@ -216,6 +220,9 @@ export interface ImportUpdate {
     | 'taxNumber'
     | 'notes'
     | 'federationLicence'
+    | 'isSocio'
+    | 'socioNumber'
+    | 'socioSince'
     | IdentityImportField;
   /** What would be written. `levelId` carries the level's name, for the screen. */
   value: string;
@@ -270,6 +277,8 @@ export interface ImportRow {
   notes: string | null;
   isSocio: boolean;
   socioNumber: string | null;
+  /** Sócio desde, `YYYY-MM-DD` — POOLSE-134. */
+  socioSince: string | null;
   federationLicence: string | null;
   /** Masculino or feminino. Null is "the sheet did not say", which is normal. */
   gender: 'male' | 'female' | null;
@@ -324,6 +333,10 @@ export interface ExistingStudent {
   federationLicence: string | null;
   /** What is on file of the identity group — POOLSE-131. */
   identity: StudentIdentity | null;
+  /** The sócio on file — POOLSE-134. */
+  isSocio: boolean;
+  socioNumber: string | null;
+  socioSince: string | null;
 }
 
 export interface ImportContext {
@@ -727,6 +740,7 @@ function validateRow(
   existingByTax: Map<string, ExistingStudent>,
   seen: Map<string, ImportRow>,
   seenTax: Map<string, ImportRow>,
+  socios: { existing: Map<string, ExistingStudent>; seen: Map<string, ImportRow> },
 ): ImportRow {
   const problems: ImportProblem[] = [];
   const warnings: ImportWarning[] = [];
@@ -807,9 +821,21 @@ function validateRow(
     MAX_NIF,
     problems,
   );
+  // Sócio desde — POOLSE-134: any date a birth date may be, refused the same way.
+  let socioSince: string | null = null;
+  const rawSince = text(raw, 'socioSince');
+  if (rawSince !== '') {
+    const parsed = parseImportDate(rawSince);
+    if ('error' in parsed || parsed.date < EARLIEST_BIRTH_DATE) {
+      problems.push({ field: 'socioSince', code: 'badDate', value: rawSince });
+    } else {
+      socioSince = parsed.date;
+    }
+  }
   // A number on its own says they are a member. Writing one and leaving the
   // yes-column blank is how half of these sheets are actually filled in.
-  const isSocio = readsAsYes(text(raw, 'isSocio')) || socioNumber !== null;
+  const isSocio =
+    readsAsYes(text(raw, 'isSocio')) || socioNumber !== null || socioSince !== null;
   const gender = readsAsGender(text(raw, 'gender'));
   const isPaid = readsAsYes(text(raw, 'isPaid'));
 
@@ -927,6 +953,25 @@ function validateRow(
   }
 
   /*
+   * ---- a sócio number held by somebody else — POOLSE-134 ---------------------
+   *
+   * Refused, never resolved: a number identifies one member, and which of two
+   * records is wrong is not something an importer can know. The unique index
+   * would otherwise refuse the commit at the last moment and take the whole
+   * file with it. The same child listed twice in the file is not a clash.
+   */
+  if (socioNumber !== null) {
+    const holder = socios.existing.get(socioNumber);
+    const earlier = socios.seen.get(socioNumber);
+    const heldElsewhere = holder !== undefined && holder.id !== matched?.id;
+    const earlierInFile =
+      earlier !== undefined && !(duplicate?.kind === 'file' && duplicate.line === earlier.line);
+    if (heldElsewhere || earlierInFile) {
+      problems.push({ field: 'socioNumber', code: 'socioNumberTaken', value: socioNumber });
+    }
+  }
+
+  /*
    * ---- what a commit would fill in ------------------------------------------
    *
    * Blanks only. A field the register already has stays exactly as it is, so a
@@ -953,6 +998,10 @@ function validateRow(
     fill('contactEmail', matched.contactEmail, contactEmail);
     fill('contactPhone', matched.contactPhone, contactPhone);
     fill('notes', matched.notes, notes);
+    // The sócio, blanks only — POOLSE-134. Membership only ever turns on here.
+    if (isSocio && !matched.isSocio) updates.push({ field: 'isSocio', value: 'true' });
+    fill('socioNumber', matched.socioNumber, socioNumber);
+    fill('socioSince', matched.socioSince, socioSince);
     // Identity fills only what is empty on file, field by field — POOLSE-131.
     if (identity !== null) {
       for (const field of IDENTITY_IMPORT_FIELDS) {
@@ -1010,6 +1059,7 @@ function validateRow(
     notes,
     isSocio,
     socioNumber,
+    socioSince,
     federationLicence,
     gender,
     isPaid,
@@ -1026,6 +1076,7 @@ function validateRow(
     if (!seen.has(nameKey)) seen.set(nameKey, row);
     if (nifKey !== null && nifKey !== '' && !seenTax.has(nifKey)) seenTax.set(nifKey, row);
   }
+  if (socioNumber !== null && !socios.seen.has(socioNumber)) socios.seen.set(socioNumber, row);
   return row;
 }
 
@@ -1093,8 +1144,16 @@ export function validateImportRows(
 
   const seen = new Map<string, ImportRow>();
   const seenTax = new Map<string, ImportRow>();
+  const socios = {
+    existing: new Map(
+      context.existing
+        .filter((student) => student.socioNumber !== null)
+        .map((student) => [student.socioNumber ?? '', student]),
+    ),
+    seen: new Map<string, ImportRow>(),
+  };
   const validated = rows.map((raw, index) =>
-    validateRow(raw, index, context, levelsByKey, existingByKey, existingByTax, seen, seenTax),
+    validateRow(raw, index, context, levelsByKey, existingByKey, existingByTax, seen, seenTax, socios),
   );
 
   return {

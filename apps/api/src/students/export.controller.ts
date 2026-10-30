@@ -33,6 +33,8 @@ export class ExportsController {
   async students(
     @Query('search') search?: string,
     @Query('levelId') levelId?: string,
+    /** POOLSE-134: `socios=1` is *Exportar sócios* — the same sheet, sócios only. */
+    @Query('socios') socios?: string,
   ): Promise<{ students: Student[]; total: number; capped: boolean; max: number }> {
     /*
      * The same roles as the import, and for a stronger reason. This hands over
@@ -54,7 +56,7 @@ export class ExportsController {
       // screen is too short to filter the file — POOLSE-30.
       search: readSearch(search),
       levelId: levelId?.trim() ? levelId.trim() : null,
-    });
+    }, socios === '1' || socios === 'true');
 
     return {
       students,
