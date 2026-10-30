@@ -233,7 +233,12 @@ export function StudentForm({
         <IdentityFields identity={student?.identity} fieldError={fieldError} only={['snsNumber']} />
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 border-t border-border pt-5">
-        <IdentityFields identity={student?.identity} fieldError={fieldError} only={['parentOneName', 'parentTwoName', 'maritalStatus', 'profession', 'education']} />
+        <IdentityFields
+          identity={student?.identity}
+          fieldError={fieldError}
+          guardians={student?.guardians}
+          only={['parentOneName', 'parentTwoName', 'maritalStatus', 'profession', 'education']}
+        />
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 border-t border-border pt-5">
         <LevelPicker
@@ -505,9 +510,12 @@ function IdentityFields({
   identity,
   fieldError,
   only,
+  guardians,
 }: {
   identity: StudentIdentity | undefined;
   fieldError: (name: string) => { error?: string };
+  /** For *Filho/a de* / *e de* while they are empty (Rui, 30-10-2026). */
+  guardians?: readonly Guardian[] | undefined;
   /** Which of the identity fields, in the order the form places them. */
   only: readonly (keyof StudentIdentity)[];
 }): React.ReactElement {
@@ -527,6 +535,7 @@ function IdentityFields({
   // but sends none.
   const snsHidden = identity?.snsRecorded === true && identity.snsNumber === null;
 
+  const parentage = parentageFrom(guardians);
   const fields: Partial<Record<keyof StudentIdentity, React.ReactNode>> = {
     addressLine: (
       <TextField
@@ -586,7 +595,7 @@ function IdentityFields({
       <TextField
         name="parentOneName"
         label={t('students.identity.parentOneName')}
-        initial={identity?.parentOneName ?? ''}
+        initial={identity?.parentOneName ?? parentage.one}
         maxLength={160}
         className="max-w-none"
         {...fieldError('parentOneName')}
@@ -596,7 +605,7 @@ function IdentityFields({
       <TextField
         name="parentTwoName"
         label={t('students.identity.parentTwoName')}
-        initial={identity?.parentTwoName ?? ''}
+        initial={identity?.parentTwoName ?? parentage.two}
         maxLength={160}
         className="max-w-none"
         {...fieldError('parentTwoName')}
@@ -722,4 +731,22 @@ function IdDocumentFields({
       />
     </>
   );
+}
+
+/**
+ * *Filho/a de* and *e de* from the guardians, for fields still empty (Rui,
+ * 30-10-2026): the father first, then the mother, then any other guardian, in
+ * that order. Only a suggestion in the form: nothing is
+ * stored until Guardar, and a name already on file is never replaced.
+ */
+function parentageFrom(guardians: readonly Guardian[] | undefined): { one: string; two: string } {
+  const list = guardians ?? [];
+  const relation = (guardian: Guardian): string => (guardian.relationship ?? '').trim().toLowerCase();
+  const father = list.find((g) => /^(pai|father)(\s|$)/.test(relation(g)));
+  const mother = list.find((g) => /^(m[ãa]e|mother)(\s|$)/.test(relation(g)));
+  const others = list.filter((g) => g !== father && g !== mother);
+  // The father leads when there is one; otherwise whoever there is, the mother
+  // included, so a single guardian is never left in the second field alone.
+  const ordered = [father, mother, ...others].filter((g): g is Guardian => g !== undefined);
+  return { one: ordered[0]?.name ?? '', two: ordered[1]?.name ?? '' };
 }

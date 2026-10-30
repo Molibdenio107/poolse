@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Smartphone } from 'lucide-react';
 import { FromLink } from '@/components/from-link';
 import { ActivityPanel } from '@/components/activity-panel';
 import { readPage, type Paginated } from '@/lib/pagination';
@@ -29,7 +29,7 @@ import { CoverBadge, FeesBlock, type FeesSection } from './fees-block';
 import { ContactsCard } from './contacts-card';
 import { FamilyFees } from './family-fees';
 import { BoletimPanel } from './boletim-panel';
-import { AppInviteButton, FamilyAccess, type Invitee } from './family-access';
+import { FamilyAccess, type Invitee } from './family-access';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 import type { StudentDocuments } from '@/lib/fpn-forms';
 import { FpnSection, IdentificationSection } from './documents';
@@ -251,12 +251,29 @@ export default async function StudentPage({
       subtitle={subtitle}
       back={back}
       actions={
-        <PersonAvatar
-          id={loaded.id}
-          name={loaded.displayName}
-          photoUrl={photoUrlFor(loaded.photoFileId)}
-          size="lg"
-        />
+        <div className="flex flex-col items-center gap-1">
+          <PersonAvatar
+            id={loaded.id}
+            name={loaded.displayName}
+            photoUrl={photoUrlFor(loaded.photoFileId)}
+            size="lg"
+          />
+          {/*
+            Invite to the app, discreetly (Rui, 30-10-2026): a small icon under
+            the photo that opens Acesso à app, where the invitations are. Only
+            while somebody on the record has not joined.
+          */}
+          {invitable && (
+            <FromLink
+              href={`/dashboard/students/${id}?tab=app`}
+              aria-label={t('familyAccess.openButton')}
+              title={t('familyAccess.openButton')}
+              className="inline-flex size-8 items-center justify-center rounded-full text-foreground-muted hover:bg-surface-muted hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary coarse:size-11"
+            >
+              <Smartphone className="size-4" aria-hidden />
+            </FromLink>
+          )}
+        </div>
       }
       requested={tab}
       tabs={[
@@ -295,17 +312,6 @@ export default async function StudentPage({
                   <AlertTriangle className="attention mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
                   {t('students.licenceMissing', { level: loaded.levelName ?? '' })}
                 </p>
-              )}
-
-              {/* One student at a time, into the app — Rui, 30-10-2026. */}
-              {invitable && access?.state === 'ok' && (
-                <AppInviteButton
-                  studentId={id}
-                  studentFirstName={loaded.firstName}
-                  organizationName={access.data.organizationName}
-                  canInvite={access.data.canInvite}
-                  invitees={access.data.invitees}
-                />
               )}
 
               {/*
