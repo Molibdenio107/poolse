@@ -445,11 +445,12 @@ export async function listMembers(
 
 export async function listPendingInvitations(
   organizationId: string,
+  options: { staffOnly?: boolean } = {},
 ): Promise<PendingInvitation[]> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
       id: string;
-      email: string;
+      email: string | null;
       roles: string[];
       expires_at: Date;
       created_at: Date;
@@ -475,12 +476,14 @@ export async function listPendingInvitations(
                ON inviter.id = inviter_m.app_user_id
        WHERE i.accepted_at IS NULL
          AND i.revoked_at IS NULL
+         AND (NOT $1::boolean OR NOT i.roles <@ ARRAY['guardian', 'student']::member_role[])
        ORDER BY i.created_at DESC
-    `);
+    `, [options.staffOnly === true]);
 
     return rows.map((row) => ({
       id: row.id,
-      email: row.email,
+      // Never null once staffOnly is asked; a family link has no address.
+      email: row.email ?? '',
       roles: row.roles,
       expiresAt: row.expires_at.toISOString(),
       createdAt: row.created_at.toISOString(),
@@ -654,7 +657,8 @@ export async function createInvitation(input: CreateInvitationInput): Promise<st
 
 export interface ReissuedInvitation {
   id: string;
-  email: string;
+  /** Null for a family link shared by hand (POOLSE-129). */
+  email: string | null;
   roles: string[];
   expiresAt: string;
 }
@@ -704,47 +708,61 @@ export async function reissueInvitation(
   expiresAt: Date,
 ): Promise<ReissuedInvitation | null> {
   return withOrg(organizationId, async (tx) => {
-    const existing = await tx.query<{ email: string; roles: string[]; membership_id: string }>(
-      `UPDATE invitation
+    const existing = await tx.query<{ email: string | null; roles: string[]; membership_id: string; placeholder: boolean }>(
+      `UPDATE invitation i
           SET revoked_at = now()
-        WHERE id = $1
-          AND accepted_at IS NULL
-          AND revoked_at IS NULL
-      RETURNING email::text AS email, roles::text[] AS roles, membership_id`,
+         FROM membership m
+        WHERE i.id = $1
+          AND i.accepted_at IS NULL
+          AND i.revoked_at IS NULL
+          AND m.id = i.membership_id
+      RETURNING i.email::text AS email, i.roles::text[] AS roles, i.membership_id,
+                (m.status = 'invited'
+                 OR NOT i.roles <@ ARRAY['guardian', 'student']::member_role[]) AS placeholder`,
       [invitationId],
     );
 
     const previous = existing.rows[0];
     if (!previous) return null;
 
-    // Retire the placeholder membership the old invitation created, exactly as
-    // revoking does — the replacement makes its own.
-    await tx.query(
-      // Only a placeholder's roles — sweep of 15-10-2026. A staff re-invite points
-      // at the person's live membership, and revoking it stripped their roles.
-      `UPDATE membership_role SET archived_at = now()
-        WHERE membership_id = $1 AND archived_at IS NULL
-          AND EXISTS (SELECT 1 FROM membership m WHERE m.id = $1 AND m.status = 'invited')`,
-      [previous.membership_id],
-    );
-    await tx.query(
-      `UPDATE membership SET archived_at = now()
-        WHERE id = $1 AND archived_at IS NULL AND status = 'invited'`,
-      [previous.membership_id],
-    );
+    /*
+     * A family invitation names the guardian or student the club already has
+     * (POOLSE-129). The new link goes to the same person; there is no
+     * placeholder to retire and none to make.
+     */
+    let membershipId = previous.membership_id;
+    if (previous.placeholder) {
 
-    const membership = await tx.query<{ id: string }>(
-      `INSERT INTO membership (organization_id, status) VALUES ($1, 'invited') RETURNING id`,
-      [organizationId],
-    );
-    const membershipId = membership.rows[0]?.id;
-    if (!membershipId) throw new Error('Could not create the replacement membership');
+      // Retire the placeholder membership the old invitation created, exactly as
+      // revoking does — the replacement makes its own.
+      await tx.query(
+        // Only a placeholder's roles — sweep of 15-10-2026. A staff re-invite points
+        // at the person's live membership, and revoking it stripped their roles.
+        `UPDATE membership_role SET archived_at = now()
+          WHERE membership_id = $1 AND archived_at IS NULL
+            AND EXISTS (SELECT 1 FROM membership m WHERE m.id = $1 AND m.status = 'invited')`,
+        [previous.membership_id],
+      );
+      await tx.query(
+        `UPDATE membership SET archived_at = now()
+          WHERE id = $1 AND archived_at IS NULL AND status = 'invited'`,
+        [previous.membership_id],
+      );
 
-    await tx.query(
-      `INSERT INTO membership_role (organization_id, membership_id, role)
-       SELECT $1, $2, offered FROM unnest($3::member_role[]) AS offered`,
-      [organizationId, membershipId, previous.roles],
-    );
+      const membership = await tx.query<{ id: string }>(
+        `INSERT INTO membership (organization_id, status) VALUES ($1, 'invited') RETURNING id`,
+        [organizationId],
+      );
+      const placeholderId = membership.rows[0]?.id;
+      if (!placeholderId) throw new Error('Could not create the replacement membership');
+      membershipId = placeholderId;
+
+      await tx.query(
+        `INSERT INTO membership_role (organization_id, membership_id, role)
+         SELECT $1, $2, offered FROM unnest($3::member_role[]) AS offered`,
+        [organizationId, membershipId, previous.roles],
+      );
+    }
 
     const created = await tx.query<{ id: string; expires_at: Date }>(
       `INSERT INTO invitation (

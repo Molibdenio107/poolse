@@ -4610,7 +4610,8 @@
     "access": "Access",
     "actions": "Actions",
     "requests": "Requests and errors",
-    "occupancy": "Occupancy"
+    "occupancy": "Occupancy",
+    "appAccess": "App access"
   },
   "messages": {
     "title": "Messages",
@@ -6203,5 +6204,62 @@
     "sportOff": "This sport is not switched on for the club.",
     "addFailed": "The playing area could not be added.",
     "archiveFailed": "The playing area could not be archived."
+  },
+  "familyAccess": {
+    "title": "App access",
+    "intro": "Who can follow this student in the app: their guardians and, from age 12, the student themself. The invitation goes by email, or as a link you send from the club's phone (WhatsApp, SMS).",
+    "readOnly": "You can invite the families of students in your own classes only.",
+    "nobody": "Nobody on this record can use the app: there are no guardians and the student is under 12 (or has no date of birth).",
+    "self": "the student",
+    "noContact": "No email or phone",
+    "emailLabel": "Email for the invitation",
+    "emailHint": "Saved on this person. To send a link only, leave it blank.",
+    "sendEmail": "Send invitation by email",
+    "makeLink": "Create a link to share",
+    "newLink": "New link",
+    "revoke": "Cancel invitation",
+    "share": "Share",
+    "copy": "Copy message",
+    "linkOnce": "This link is shown only now. Send it straight away; if it is lost, create a new one.",
+    "shareText": "{club} invites you to the Poolse app, to follow {student}. Open this link:",
+    "shareTextSelf": "{club} invites you to the Poolse app. Open this link:",
+    "state": {
+      "none": "Not invited",
+      "invited": "Invitation sent on {date}",
+      "linked": "Link created on {date}",
+      "expired": "Invitation expired on {date}",
+      "inApp": "Uses the app"
+    },
+    "toast": {
+      "emailed": "Invitation sent to {email}",
+      "notEmailed": "Invitation created for {email}, but the email did not go out. Share the link.",
+      "linkReady": "Link created. Share it now.",
+      "revoked": "Invitation cancelled"
+    },
+    "error": {
+      "alreadyInApp": "This person already uses the app.",
+      "alreadyInvited": "This person already has a live invitation. Use New link.",
+      "emailTaken": "Somebody else in the club already has this email.",
+      "noEmail": "Type an email to send the invitation.",
+      "invalidEmail": "This does not look like an email address.",
+      "notYourStudent": "You can invite the families of students in your own classes only.",
+      "failed": "The invitation could not be created."
+    }
+  },
+  "familyBulk": {
+    "open": "Invite families",
+    "hint": "Sends the app invitation to everyone with an email on this list.",
+    "title": "Invite families to the app",
+    "description": "Using the search and level chosen on the list.",
+    "students": "{count, plural, one {# student on the list} other {# students on the list}}",
+    "byEmail": "{count, plural, =0 {Nobody gets the invitation by email} one {# person gets the invitation by email} other {# people get the invitation by email}}",
+    "phoneOnly": "{count, plural, =0 {Nobody with a phone only} one {# has a phone only: stays on Not yet invited, to share the link} other {# have a phone only: stay on Not yet invited, to share the link}}",
+    "alreadyInvited": "{count, plural, =0 {No live invitations} one {# already has a live invitation} other {# already have a live invitation}}",
+    "inApp": "{count, plural, =0 {Nobody uses the app yet} one {# already uses the app} other {# already use the app}}",
+    "send": "{count, plural, =0 {Send} one {Send # invitation} other {Send # invitations}}",
+    "ceiling": "The limit is {ceiling} invitations a day. {sentToday} have gone today, and these would be {asked} more. Filter the list or carry on tomorrow.",
+    "failed": "The invitations could not be sent.",
+    "toast": "{count, plural, =0 {No invitations sent} one {# invitation sent} other {# invitations sent}}",
+    "pendingOnly": "Not yet invited"
   }
 }

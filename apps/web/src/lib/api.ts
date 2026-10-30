@@ -1592,6 +1592,8 @@ export interface Students {
   /** Not paginated: the programme ladder is fixed, and it fills the filter. */
   levels: StudentLevel[];
   canManage: boolean;
+  /** POOLSE-129: whether *Convidar famílias* is offered. */
+  canInviteFamilies: boolean;
   /**
    * The club's maioridade — POOLSE-22.
    *

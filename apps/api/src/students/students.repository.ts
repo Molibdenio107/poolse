@@ -16,6 +16,7 @@ import {
   type Paginated,
 } from '../common/pagination.js';
 import { searchPredicate } from '../common/search.js';
+import { HAS_UNINVITED } from './family-invitations.repository.js';
 
 export interface StudentLevel {
   id: string;
@@ -760,6 +761,12 @@ export interface StudentQuery {
    * says how many there are, and the count in the header means something.
    */
   overdueOnly?: boolean;
+  /**
+   * *Por convidar* — POOLSE-129: somebody on the record could be in the app and
+   * has neither a login nor a live invitation. The bulk invite reads the same
+   * predicate (`HAS_UNINVITED`).
+   */
+  toInvite?: boolean;
   search: string | null;
   levelId: string | null;
 }
@@ -853,6 +860,7 @@ export async function listStudents(
          -- Only who owes, when the register asks for it — round 5. A filter
          -- rather than a sort, so the count in the header is the answer.
          AND (NOT $5::boolean OR ${PAYMENT_STATE} = 'overdue')
+         AND (NOT $6::boolean OR ${HAS_UNINVITED('s')})
        /*
         * The window goes here, inside the statement that carries the tenant
         * scope, the search and the sort — POOLSE-29. Never a page taken from a
@@ -871,7 +879,7 @@ export async function listStudents(
        ORDER BY ${nameOrder('s')}, s.id
        LIMIT $3 OFFSET $4
       `,
-      [query.search, query.levelId, limit, offset, query.overdueOnly ?? false],
+      [query.search, query.levelId, limit, offset, query.overdueOnly ?? false, query.toInvite ?? false],
     );
 
     return windowed(page, run, toStudent);

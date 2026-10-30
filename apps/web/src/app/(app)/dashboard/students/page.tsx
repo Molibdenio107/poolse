@@ -16,6 +16,7 @@ import { ArchiveStudentButton } from './student-forms';
 import { StudentActions } from './import-panel';
 import { PaymentMark } from './payment-mark';
 import { PageError, PageShell } from '@/components/page-shell';
+import { FamilyBulkInvite } from './family-bulk';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -37,10 +38,11 @@ export default async function StudentsPage({
     page?: string;
     from?: string;
     sort?: string;
+    invite?: string;
   }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { search = '', levelId = '', page: pageParam, from, sort } = await searchParams;
+  const { search = '', levelId = '', page: pageParam, from, sort, invite } = await searchParams;
 
   /*
    * Only the students who owe money — round 5.
@@ -55,6 +57,13 @@ export default async function StudentsPage({
    * reaches an ORDER BY or a WHERE is a parameter somebody can inject.
    */
   const overdueOnly = sort === 'overdue';
+  // *Por convidar* — POOLSE-129: somebody on the record could use the app and
+  // has neither a login nor a live invitation.
+  const pendingOnly = invite === 'pending';
+  const flags = {
+    sort: overdueOnly ? 'overdue' : undefined,
+    invite: pendingOnly ? 'pending' : undefined,
+  };
 
   /*
    * The register is a top-level section, so it has no parent and no back link —
@@ -69,6 +78,7 @@ export default async function StudentsPage({
   if (search.trim()) query.set('search', search.trim());
   if (levelId.trim()) query.set('levelId', levelId.trim());
   if (overdueOnly) query.set('sort', 'overdue');
+  if (pendingOnly) query.set('invite', 'pending');
   if (page > 1) query.set('page', String(page));
 
   /*
@@ -101,7 +111,7 @@ export default async function StudentsPage({
   }
 
   const filtering =
-    search.trim().length > 0 || levelId.trim().length > 0 || overdueOnly;
+    search.trim().length > 0 || levelId.trim().length > 0 || overdueOnly || pendingOnly;
 
   /*
    * A page that has fallen off the end — QA 29.6 and 29.12.
@@ -118,7 +128,7 @@ export default async function StudentsPage({
         '/dashboard/students',
         // The filter and the way back travel too: settling the last debtor on
         // the last page must not land somebody on the whole register.
-        { search, levelId, sort: overdueOnly ? 'overdue' : undefined, from },
+        { search, levelId, ...flags, from },
         lastPage(data.students.total, data.students.limit),
       ),
     );
@@ -179,13 +189,11 @@ export default async function StudentsPage({
               real checkbox with an onChange would not.
             */}
             <FromLink
-              href={
-                overdueOnly
-                  ? pageHref('/dashboard/students', { search, levelId }, 1)
-                  : `${pageHref('/dashboard/students', { search, levelId }, 1)}${
-                      search.trim() || levelId.trim() ? '&' : '?'
-                    }sort=overdue`
-              }
+              href={pageHref(
+                '/dashboard/students',
+                { search, levelId, ...flags, sort: overdueOnly ? undefined : 'overdue' },
+                1,
+              )}
               role="checkbox"
               aria-checked={overdueOnly}
               className={cn(
@@ -205,6 +213,34 @@ export default async function StudentsPage({
                 {overdueOnly && <Check className="size-3" />}
               </span>
               {t('fees.showOverdueOnly')}
+            </FromLink>
+
+            {/* *Por convidar* — POOLSE-129, the same checkbox-as-a-link. */}
+            <FromLink
+              href={pageHref(
+                '/dashboard/students',
+                { search, levelId, ...flags, invite: pendingOnly ? undefined : 'pending' },
+                1,
+              )}
+              role="checkbox"
+              aria-checked={pendingOnly}
+              className={cn(
+                'flex h-control items-center gap-2 rounded border px-4 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                pendingOnly
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border hover:bg-surface-muted',
+              )}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  'flex size-4 shrink-0 items-center justify-center rounded-sm border',
+                  pendingOnly ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
+                )}
+              >
+                {pendingOnly && <Check className="size-3" />}
+              </span>
+              {t('familyBulk.pendingOnly')}
             </FromLink>
 
             {filtering && (
@@ -235,6 +271,14 @@ export default async function StudentsPage({
 
           {!data.canManage && (
             <p className="text-sm text-foreground-muted">{t('students.readOnly')}</p>
+          )}
+
+          {/* POOLSE-129: the families on this list, into the app. */}
+          {data.canInviteFamilies && (
+            <div className="flex flex-wrap items-center gap-3">
+              <FamilyBulkInvite search={search.trim()} levelId={levelId.trim()} />
+              <span className="text-sm text-foreground-muted">{t('familyBulk.hint')}</span>
+            </div>
           )}
 
           <section className="rounded border border-border bg-surface p-5">
@@ -383,7 +427,7 @@ export default async function StudentsPage({
               basePath="/dashboard/students"
               // The overdue filter and the way back travel with the page, as
               // they do on the past-the-end redirect above.
-              query={{ search, levelId, sort: overdueOnly ? 'overdue' : undefined, from }}
+              query={{ search, levelId, ...flags, from }}
             />
           </section>
 

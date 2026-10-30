@@ -540,4 +540,114 @@ BEGIN
   RAISE NOTICE 'PASS test 10: a family member is invited and bound, Clerk owning the name';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 11 — a family invitation names the guardian the club already has
+--
+-- POOLSE-129. The link may carry no address (shared from the club's phone), a
+-- staff invitation may not, and accepting binds the login to the guardian's own
+-- record, so the child's guardian_link is the login's. Accepted by somebody who
+-- is already in the club (a parent who also teaches), the guardian record is
+-- merged into theirs rather than archived, and the link follows.
+-- ---------------------------------------------------------------------------
+
+SELECT provision_app_user('user_eva', 'eva@familia.pt', 'Eva', 'Lopes', NULL, '2026-08-26 09:00:00+00');
+
+DO $$
+DECLARE v_org uuid; v_inviter uuid; v_guardian uuid; v_guardian2 uuid; v_child uuid;
+        v_ana uuid; r record; n int; refused boolean := false;
+BEGIN
+  SET CONSTRAINTS ALL IMMEDIATE;
+  SELECT id INTO v_org FROM organization WHERE name = 'Clube A';
+  SELECT m.id INTO v_inviter FROM membership m
+    JOIN app_user u ON u.id = m.app_user_id
+   WHERE m.organization_id = v_org AND u.clerk_user_id = 'user_rui';
+
+  -- A staff invitation with no address is refused.
+  BEGIN
+    INSERT INTO invitation (organization_id, email, roles, token_hash, expires_at,
+                            membership_id, invited_by_membership_id)
+    VALUES (v_org, NULL, ARRAY['instructor']::member_role[], 'h-staff-null',
+            '2026-09-02 09:00:00+00', v_inviter, v_inviter);
+  EXCEPTION WHEN check_violation THEN refused := true;
+  END;
+  IF NOT refused THEN RAISE EXCEPTION 'FAIL test 11a: a staff invitation went out with no address'; END IF;
+
+  -- The guardian as the student form makes one: active, a name, a NIF, no login.
+  INSERT INTO membership (organization_id, status, first_name, last_name, tax_number, phone)
+  VALUES (v_org, 'active', 'Eva', 'Lopes', '123456789', '+351912345678') RETURNING id INTO v_guardian;
+  INSERT INTO membership_role (organization_id, membership_id, role) VALUES (v_org, v_guardian, 'guardian');
+  INSERT INTO student (organization_id, first_name, last_name) VALUES (v_org, 'Tomás', 'Lopes')
+  RETURNING id INTO v_child;
+  INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id, relationship, is_primary)
+  VALUES (v_org, v_child, v_guardian, 'mother', true);
+
+  -- Shared by hand: no address.
+  INSERT INTO invitation (organization_id, email, roles, token_hash, expires_at,
+                          membership_id, invited_by_membership_id)
+  VALUES (v_org, NULL, ARRAY['guardian']::member_role[],
+          encode(sha256(convert_to('token-eva', 'utf8')), 'hex'),
+          '2026-09-02 09:00:00+00', v_guardian, v_inviter);
+
+  -- One live invitation per person.
+  refused := false;
+  BEGIN
+    INSERT INTO invitation (organization_id, email, roles, token_hash, expires_at,
+                            membership_id, invited_by_membership_id)
+    VALUES (v_org, NULL, ARRAY['guardian']::member_role[], 'h-eva-twice',
+            '2026-09-02 09:00:00+00', v_guardian, v_inviter);
+  EXCEPTION WHEN unique_violation THEN refused := true;
+  END;
+  IF NOT refused THEN RAISE EXCEPTION 'FAIL test 11b: a guardian held two live links'; END IF;
+
+  SELECT o_status AS status, o_email AS email INTO r
+    FROM find_invitation_by_token(encode(sha256(convert_to('token-eva', 'utf8')), 'hex'), '2026-08-26 10:00:00+00');
+  IF r.status <> 'pending' OR r.email IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL test 11c: the preview read % / %', r.status, r.email;
+  END IF;
+
+  SELECT o_status AS status, o_membership_id AS bound INTO r
+    FROM accept_invitation(encode(sha256(convert_to('token-eva', 'utf8')), 'hex'), 'user_eva', '2026-08-26 10:00:00+00');
+  IF r.status <> 'accepted' OR r.bound <> v_guardian THEN
+    RAISE EXCEPTION 'FAIL test 11d: accepted % onto % rather than the guardian', r.status, r.bound;
+  END IF;
+  SELECT count(*) INTO n FROM membership
+   WHERE organization_id = v_org
+     AND app_user_id = (SELECT id FROM app_user WHERE clerk_user_id = 'user_eva')
+     AND archived_at IS NULL;
+  IF n <> 1 THEN RAISE EXCEPTION 'FAIL test 11e: Eva has % memberships, not one', n; END IF;
+  SELECT count(*) INTO n FROM guardian_link WHERE guardian_membership_id = v_guardian AND archived_at IS NULL;
+  IF n <> 1 THEN RAISE EXCEPTION 'FAIL test 11f: the child lost the guardian link'; END IF;
+
+  -- Ana is already staff in Clube A. Invited as a second child's guardian, her
+  -- guardian record is merged into her membership and the link follows her.
+  SELECT m.id INTO v_ana FROM membership m JOIN app_user u ON u.id = m.app_user_id
+   WHERE m.organization_id = v_org AND u.clerk_user_id = 'user_ana' AND m.archived_at IS NULL;
+  INSERT INTO membership (organization_id, status, first_name, last_name, tax_number)
+  VALUES (v_org, 'active', 'Ana', 'Martins', '234567899') RETURNING id INTO v_guardian2;
+  INSERT INTO membership_role (organization_id, membership_id, role) VALUES (v_org, v_guardian2, 'guardian');
+  INSERT INTO student (organization_id, first_name, last_name) VALUES (v_org, 'Rita', 'Martins')
+  RETURNING id INTO v_child;
+  INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id, relationship, is_primary)
+  VALUES (v_org, v_child, v_guardian2, 'mother', true);
+  INSERT INTO invitation (organization_id, email, roles, token_hash, expires_at,
+                          membership_id, invited_by_membership_id)
+  VALUES (v_org, NULL, ARRAY['guardian']::member_role[],
+          encode(sha256(convert_to('token-ana-mother', 'utf8')), 'hex'),
+          '2026-09-02 09:00:00+00', v_guardian2, v_inviter);
+
+  SELECT o_status AS status, o_membership_id AS bound INTO r
+    FROM accept_invitation(encode(sha256(convert_to('token-ana-mother', 'utf8')), 'hex'), 'user_ana', '2026-08-26 10:00:00+00');
+  IF r.status <> 'accepted' OR r.bound <> v_ana THEN
+    RAISE EXCEPTION 'FAIL test 11g: accepted % onto % rather than Ana''s own membership', r.status, r.bound;
+  END IF;
+  SELECT count(*) INTO n FROM guardian_link
+   WHERE student_id = v_child AND guardian_membership_id = v_ana AND archived_at IS NULL;
+  IF n <> 1 THEN RAISE EXCEPTION 'FAIL test 11h: Rita''s guardian link did not follow Ana'; END IF;
+  SELECT count(*) INTO n FROM membership_role
+   WHERE membership_id = v_ana AND role = 'guardian' AND archived_at IS NULL;
+  IF n <> 1 THEN RAISE EXCEPTION 'FAIL test 11i: Ana is not a guardian after accepting'; END IF;
+
+  RAISE NOTICE 'PASS test 11: a family invitation binds to the guardian the club has, or merges it into the login';
+END $$;
+
 ROLLBACK;

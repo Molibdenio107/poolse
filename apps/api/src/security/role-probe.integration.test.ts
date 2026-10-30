@@ -33,6 +33,10 @@ import { FilesController } from '../files/files.controller.js';
 import { SensitiveController } from '../sensitive/sensitive.controller.js';
 import { InventoryController } from '../inventory/inventory.controller.js';
 import { InvitationsController } from '../invitations/invitations.controller.js';
+import {
+  FamilyInvitationsBulkController,
+  StudentInvitationsController,
+} from '../students/family-invitations.controller.js';
 import { MaintenanceController } from '../maintenance/maintenance.controller.js';
 import { FacilityIncidentsController, IncidentsController } from '../safety/incidents.controller.js';
 import {
@@ -819,6 +823,22 @@ test('protected: invitations and role grants refuse non-staff', async () => {
       403,
     );
   });
+});
+
+// POOLSE-129 — a family is invited from the student's record.
+test('family invitations refuse a guardian and a student (403), and maintenance', async () => {
+  const probe = async (): Promise<void> => {
+    const routes = new StudentInvitationsController();
+    await refused('GET students/:id/invitations', 403, () => routes.list(fixture.aliceId));
+    await refused('POST students/:id/invitations', 403, () =>
+      routes.create(fixture.aliceId, { membershipId: fixture.martaId, channel: 'link' }),
+    );
+    await refused('POST students/:id/invitations/:id/reissue', 403, () => routes.reissue(fixture.aliceId, NO_SUCH_ID));
+    await refused('POST students/:id/invitations/:id/revoke', 403, () => routes.revoke(fixture.aliceId, NO_SUCH_ID));
+    await refused('POST family-invitations/bulk', 403, () => new FamilyInvitationsBulkController().bulk({}));
+  };
+  await asEach(probe);
+  await as(fixture.maintenanceId, ['maintenance'], probe);
 });
 
 // POOLSE-70 — the incident book and the lifeguard roster, added with the

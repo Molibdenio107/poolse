@@ -186,10 +186,13 @@ membership_role                 -- a membership can hold several roles at once
   unique (membership_id, role) where archived_at is null
 
 invitation
-  id, organization_id, email, roles member_role[], token_hash (unique), expires_at,
+  id, organization_id, email (null only for a family link, POOLSE-129), roles member_role[],
+  token_hash (unique), expires_at,
   membership_id, accepted_at, accepted_membership_id, revoked_at,
   invited_by_membership_id
   unique (organization_id, email) where accepted_at is null and revoked_at is null
+  unique (organization_id, membership_id) where accepted_at is null and revoked_at is null
+  check (email is not null or roles <@ '{guardian,student}')
 
 facility                        -- a site; a personal org has exactly one
   id, organization_id, name, address, timezone, archived_at,
@@ -290,6 +293,15 @@ actually bound to. They are the same row in the normal case. They differ in exac
 the invitee already had a live membership, so the offered roles merge into it and the
 placeholder is retired — binding it instead would collide with
 `membership_org_user_uq`, which is that constraint doing its job.
+
+**A family invitation names the person, not a placeholder** (POOLSE-129). Its `membership_id` is
+the guardian's own membership, or the student's, so binding a login keeps the `guardian_link`. When the
+acceptor is already in the club, `accept_invitation` merges that record into theirs with
+`merge_memberships` (only for a record with no login of its own). The same migration fixed two
+long-standing faults in the merge, which only ever met two records without a login: it copied a name
+and address onto a survivor with a login (refused by `membership_identity_belongs_to_one_owner`), and
+it copied a NIF or email while the absorbed record still held it live. It also tests the club login's
+privileges by name (`poolse_app`), so a definer caller does not rewrite insert-only history.
 
 **`revoked_at` exists so a typo is recoverable.** The one-live-invite-per-address rule is
 a partial unique index; without a revoked state, a mistyped address is blocked until the

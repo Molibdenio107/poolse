@@ -15,6 +15,13 @@ throttled per token (`publicInvitationTracker`), reads through `find_invitation_
 nothing else, and answers every miss as a status. The page has no Voltar — an invitee may belong
 to nothing yet — and after accepting the way in is `/app`, which routes by role.
 
+## Pessoas invites staff only (POOLSE-129, 30-10-2026)
+
+The invite form on Pessoas offers admin, instructor and maintenance; `POST /invitations` refuses
+`guardian` and `student` with 422 `family_role_from_student`, and Pessoas' pending list leaves family
+invitations out. A family is invited from the student's record — `students.md`, *Inviting a family into
+the app*. Pessoas already listed staff only (`scope=staff`).
+
 ## What nobody does to themselves, and what only the person does
 
 Sweep of 15 October 2026:

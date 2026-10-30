@@ -139,6 +139,8 @@ interface StudentsResponse {
   students: Paginated<Student>;
   levels: StudentLevel[];
   canManage: boolean;
+  /** POOLSE-129: whether *Convidar famílias* is offered. */
+  canInviteFamilies: boolean;
   /**
    * The club's maioridade — POOLSE-22.
    *
@@ -385,6 +387,7 @@ export class StudentsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('sort') sort?: string,
+    @Query('invite') invite?: string,
   ): Promise<StudentsResponse> {
     // Security review, 12 October 2026: this answered any member, a guardian included.
     requireRole('owner', 'admin', 'instructor');
@@ -403,6 +406,8 @@ export class StudentsController {
           // rather than sorting: "who do I telephone" is answered by a shorter
           // list, not by the same list in a different order — round 5.
           overdueOnly: sort === 'overdue',
+          // *Por convidar* — POOLSE-129.
+          toInvite: invite === 'pending',
         },
         readPageQuery(page, limit),
       ),
@@ -415,6 +420,9 @@ export class StudentsController {
       students,
       levels,
       canManage: hasRole('owner', 'admin'),
+      // *Convidar famílias* — POOLSE-129. An instructor's run is narrowed to
+      // their own turmas by the endpoint; support invites nobody.
+      canInviteFamilies: currentTenant().support !== true,
       ageOfMajority: majority,
     };
   }

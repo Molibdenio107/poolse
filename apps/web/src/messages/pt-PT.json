@@ -4610,7 +4610,8 @@
     "access": "Acesso",
     "actions": "Ações",
     "requests": "Pedidos e erros",
-    "occupancy": "Ocupação"
+    "occupancy": "Ocupação",
+    "appAccess": "Acesso à app"
   },
   "messages": {
     "title": "Mensagens",
@@ -6203,5 +6204,62 @@
     "sportOff": "Este desporto não está ativo para o clube.",
     "addFailed": "Não foi possível adicionar o recinto.",
     "archiveFailed": "Não foi possível arquivar o recinto."
+  },
+  "familyAccess": {
+    "title": "Acesso à app",
+    "intro": "Quem pode acompanhar este aluno na app: os encarregados de educação e, a partir dos 12 anos, o próprio aluno. O convite vai por email ou por um link que envia do telemóvel do clube (WhatsApp, SMS).",
+    "readOnly": "Só pode convidar as famílias dos alunos das suas turmas.",
+    "nobody": "Ninguém nesta ficha pode ter acesso à app: não há encarregados de educação e o aluno tem menos de 12 anos (ou não tem data de nascimento).",
+    "self": "o próprio aluno",
+    "noContact": "Sem email nem telefone",
+    "emailLabel": "Email para o convite",
+    "emailHint": "Fica guardado nesta pessoa. Para enviar só um link, deixe em branco.",
+    "sendEmail": "Enviar convite por email",
+    "makeLink": "Criar link para partilhar",
+    "newLink": "Novo link",
+    "revoke": "Cancelar convite",
+    "share": "Partilhar",
+    "copy": "Copiar mensagem",
+    "linkOnce": "Este link só aparece agora. Envie-o já; se se perder, crie um novo.",
+    "shareText": "{club} convida-o para a app Poolse, para acompanhar {student}. Abra este link:",
+    "shareTextSelf": "{club} convida-o para a app Poolse. Abra este link:",
+    "state": {
+      "none": "Sem convite",
+      "invited": "Convite enviado em {date}",
+      "linked": "Link criado em {date}",
+      "expired": "Convite expirado em {date}",
+      "inApp": "Usa a app"
+    },
+    "toast": {
+      "emailed": "Convite enviado para {email}",
+      "notEmailed": "Convite criado para {email}, mas o email não saiu. Partilhe o link.",
+      "linkReady": "Link criado. Partilhe-o agora.",
+      "revoked": "Convite cancelado"
+    },
+    "error": {
+      "alreadyInApp": "Esta pessoa já usa a app.",
+      "alreadyInvited": "Já há um convite ativo para esta pessoa. Use Novo link.",
+      "emailTaken": "Outra pessoa do clube já tem este email.",
+      "noEmail": "Escreva um email para enviar o convite.",
+      "invalidEmail": "Este email não parece válido.",
+      "notYourStudent": "Só pode convidar as famílias dos alunos das suas turmas.",
+      "failed": "Não foi possível criar o convite."
+    }
+  },
+  "familyBulk": {
+    "open": "Convidar famílias",
+    "hint": "Envia o convite para a app a quem tem email, nesta lista.",
+    "title": "Convidar famílias para a app",
+    "description": "Com a pesquisa e o nível escolhidos na lista.",
+    "students": "{count, plural, one {# aluno na lista} other {# alunos na lista}}",
+    "byEmail": "{count, plural, =0 {Ninguém recebe o convite por email} one {# pessoa recebe o convite por email} other {# pessoas recebem o convite por email}}",
+    "phoneOnly": "{count, plural, =0 {Ninguém só com telefone} one {# só tem telefone: fica em Por convidar, para partilhar o link} other {# só têm telefone: ficam em Por convidar, para partilhar o link}}",
+    "alreadyInvited": "{count, plural, =0 {Nenhum convite ativo} one {# já tem um convite ativo} other {# já têm um convite ativo}}",
+    "inApp": "{count, plural, =0 {Ninguém usa a app ainda} one {# já usa a app} other {# já usam a app}}",
+    "send": "{count, plural, =0 {Enviar} one {Enviar # convite} other {Enviar # convites}}",
+    "ceiling": "O limite é de {ceiling} convites por dia. Hoje já saíram {sentToday}, e estes seriam mais {asked}. Filtre a lista ou continue amanhã.",
+    "failed": "Não foi possível enviar os convites.",
+    "toast": "{count, plural, =0 {Nenhum convite enviado} one {# convite enviado} other {# convites enviados}}",
+    "pendingOnly": "Por convidar"
   }
 }

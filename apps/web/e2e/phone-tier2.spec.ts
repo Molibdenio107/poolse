@@ -40,7 +40,7 @@ function tier2(lesson: PoolsideLesson): string[] {
     '/dashboard/students/levels',
     '/dashboard/students/guardians',
     '/dashboard/calendar/closures',
-    ...['general', 'fees', 'turmas', 'week', 'credits', 'activity'].map((tab) => `${ana}?tab=${tab}`),
+    ...['general', 'app', 'fees', 'turmas', 'week', 'credits', 'activity'].map((tab) => `${ana}?tab=${tab}`),
     ...['general', 'schedule', 'students', 'activity'].map((tab) => `${turma}?tab=${tab}`),
     `${turma}/skills`,
   ];
@@ -91,6 +91,37 @@ test('tier 2, as the owner — nothing scrolls sideways, no field is squeezed', 
   test.setTimeout(180_000);
   const lesson = await poolsideLesson();
   for (const path of tier2(lesson)) await plainly(page, path);
+});
+
+// POOLSE-129 QA 4: the pilot shares a family's link from the phone. Ana's
+// mother has no live invitation (each run cancels what the last one made);
+// the link is made, the club's message wraps it, and the share button is
+// reachable without scrolling sideways.
+test('a family link is made and shared from the student record, on a phone', async ({ page }) => {
+  test.setTimeout(120_000);
+  const lesson = await poolsideLesson();
+  await visit(page, `/dashboard/students/${lesson.studentIds[0]}?tab=app`);
+  const row = page.locator('li').filter({ hasText: 'Rita Poolside' });
+  const cancel = row.getByRole('button', { name: 'Cancelar convite' });
+  if (await cancel.isVisible()) {
+    await cancel.click();
+    await expect(row.getByText('Sem convite')).toBeVisible({ timeout: 15_000 });
+  }
+  await row.getByRole('button', { name: 'Criar link para partilhar' }).click();
+  await expect(row.getByText(/convida-o para a app Poolse, para acompanhar Ana\. Abra este link: http\S+\/join\?token=/)).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(row.getByText(/^Link criado em \d{2}-\d{2}-\d{4}$/)).toBeVisible();
+  const share = row.getByRole('button', { name: /^(Partilhar|Copiar mensagem)$/ });
+  await expect(share).toBeInViewport({ ratio: 0.5 }).catch(async () => {
+    await share.scrollIntoViewIfNeeded();
+    await expect(share).toBeInViewport();
+  });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+  // Leave nothing live behind for the next run.
+  await row.getByRole('button', { name: 'Cancelar convite' }).click();
+  await expect(row.getByText('Sem convite')).toBeVisible({ timeout: 15_000 });
 });
 
 test.describe('as the instructor', () => {

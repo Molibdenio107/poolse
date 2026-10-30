@@ -28,6 +28,7 @@ import { StudentWeek } from './student-week';
 import { CoverBadge, FeesBlock, type FeesSection } from './fees-block';
 import { ContactsCard } from './contacts-card';
 import { FamilyFees } from './family-fees';
+import { FamilyAccess, type Invitee } from './family-access';
 import { pickSection } from '@/components/section-pills';
 import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
@@ -394,6 +395,45 @@ export default async function StudentPage({
               </section>
             </>
           ),
+        },
+        {
+          /*
+            Who on this record uses the app — POOLSE-129. A family is invited
+            here, never from Pessoas: the invitation names the guardian the
+            club already has. Staff only; the API decides whether this reader
+            may send (an instructor, for their own turmas).
+          */
+          slug: 'app',
+          labelKey: 'detailTabs.appAccess',
+          visible: !family,
+          content: async () => {
+            const access = await outcome(
+              apiFetch<{
+                organizationName: string;
+                canInvite: boolean;
+                invitees: Invitee[];
+              }>(`/students/${id}/invitations`),
+            );
+            if (access.state !== 'ok') {
+              return access.state === 'failed' ? (
+                <PageError
+                  message={t(access.failure.key)}
+                  {...(access.failure.detail === '' ? {} : { detail: access.failure.detail })}
+                />
+              ) : (
+                <p className="text-sm text-foreground-muted">{t('familyAccess.readOnly')}</p>
+              );
+            }
+            return (
+              <FamilyAccess
+                studentId={id}
+                studentFirstName={loaded.firstName}
+                organizationName={access.data.organizationName}
+                canInvite={access.data.canInvite}
+                invitees={access.data.invitees}
+              />
+            );
+          },
         },
         {
           /*

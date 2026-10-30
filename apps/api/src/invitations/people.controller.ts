@@ -103,7 +103,8 @@ export class PeopleController {
         },
         readPageQuery(page, limit),
       ),
-      listPendingInvitations(organizationId),
+      // Staff invitations only: a family's lives on the student's record.
+      listPendingInvitations(organizationId, { staffOnly: true }),
       transferCandidates(organizationId),
       countStaff(organizationId),
     ]);
@@ -118,7 +119,9 @@ export class PeopleController {
      * Ownership is still the owner's alone and still moves only by transfer:
      * `owner` is in nobody's grantable set, including their own.
      */
-    const grantable = grantableRoles();
+    // Staff roles only — POOLSE-129. A family is invited from the student's
+    // record; the matrix still lets an instructor add a family role elsewhere.
+    const grantable = grantableRoles().filter((r) => r !== 'guardian' && r !== 'student');
 
     return {
       organizationId,

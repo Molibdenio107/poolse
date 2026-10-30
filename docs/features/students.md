@@ -223,6 +223,38 @@ student and never stored) and when.
   and reopens the family's box. The toast offers *Anular*, and Arquivados restores it. Maintenance
   and families are refused, and another club's student is a 404.
 
+## Inviting a family into the app — POOLSE-129
+
+*Acesso à app* is a staff tab on the student's record. It lists everyone on the record who may hold a
+login: each live guardian, and the student themself once they are 12 (`self_answer_min_age()`, the
+rule `family_may_answer` reads; no birth date, no row). Each row says its state in words — *Sem
+convite*, *Convite enviado em dd-MM-yyyy* (or *Link criado em*), *Convite expirado em*, *Usa a app*.
+
+- **Two ways in.** *Enviar convite por email* sends the ordinary invitation email; a person with no
+  address on file gets a box, and the address typed there is saved on the person (409 `email_taken`
+  if another live person in the club holds it). *Criar link para partilhar* makes an invitation with
+  **no address**, and *Partilhar* opens the phone's share menu (WhatsApp, SMS) with the club's message
+  and the link; with no share menu it copies them. The link is shown once — only its hash is stored —
+  so a pending invitation offers *Novo link* (the old token dies) and *Cancelar convite*.
+- **The invitation names the person the club already has.** `invitation.membership_id` is the
+  guardian's own membership, or the student's (made on the first invitation, active, carrying
+  `student`, holding the student's name until a login binds). Nothing makes a placeholder, so
+  accepting binds the login to the record the child's `guardian_link` already points at. Accepted by
+  somebody already in the club (a parent who also teaches), `accept_invitation` merges the guardian
+  record into theirs with `merge_memberships`, so the link follows the login.
+- **Who may.** Owner and admin for any student; an instructor for a student actively enrolled in a
+  turma they teach (403 `not_your_student`, echoed as `canInvite`); a support session never.
+- **One live invitation per person** (unique index on `membership_id`); an expired one is withdrawn
+  when a new one is made. A staff invitation still needs an address, by CHECK.
+- **Convidar famílias** on Alunos takes the list's search and level, previews (students, by email,
+  phone only, already invited, in the app) and sends the email invitations in one transaction under
+  an advisory lock; phone-only families stay on **Por convidar** (`?invite=pending`, the same
+  predicate, `HAS_UNINVITED`). An instructor's run covers their own turmas. **200 family invitations
+  per club per Lisbon day**, refused whole with the figures (409 `invitation_ceiling`). Invitations
+  are account mail: the family opt-out and the messages ceiling do not apply.
+- Invitations still expire after 24 hours (`INVITATION_TTL_HOURS`). Family invitations sent from
+  Pessoas before this change still accept, and do not show on the record.
+
 ## Levels
 
 Senior levels sit in the **same ladder** as everything else, ordered by the same `sort_order`

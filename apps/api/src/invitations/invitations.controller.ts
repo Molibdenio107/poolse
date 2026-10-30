@@ -7,6 +7,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import {
@@ -60,7 +61,7 @@ interface CreateInvitationResponse {
  * Where the invitee will land. The API composes it rather than the web app,
  * because the email is sent from here and the link inside it has to be absolute.
  */
-function joinLink(token: string): string {
+export function joinLink(token: string): string {
   const origin = (process.env['WEB_ORIGIN'] ?? 'http://localhost:3000').split(',')[0]!.trim();
   return `${origin.replace(/\/$/, '')}/join?token=${encodeURIComponent(token)}`;
 }
@@ -139,6 +140,18 @@ export class InvitationsController {
     const roles = parseRoles(body.roles);
     if (roles.length === 0) throw new BadRequestException('At least one role is required');
 
+    /*
+     * Pessoas invites staff only — POOLSE-129 (Rui, 30-10-2026). A family is
+     * invited from the student's record, where the invitation names the guardian
+     * the club already has; from here it made a second, unlinked person.
+     */
+    if (roles.some((role) => role === 'guardian' || role === 'student')) {
+      throw new UnprocessableEntityException({
+        code: 'family_role_from_student',
+        message: 'Invite a family from the student’s record',
+      });
+    }
+
     // Checked here rather than trusted from the form: the client decides what to
     // show, the server decides what is allowed. `owner` is refused for everyone,
     // including the owner — it moves only through transfer.
@@ -210,16 +223,11 @@ export class InvitationsController {
     );
     if (!replacement) throw new NotFoundException('No pending invitation with that id');
 
-    const emailed = await deliver(
-      organizationId,
-      id,
-      replacement.email,
-      replacement.roles,
-      token,
-      expiresAt,
-    );
+    const emailed = replacement.email === null
+      ? false
+      : await deliver(organizationId, replacement.id, replacement.email, replacement.roles, token, expiresAt);
 
-    return { ...replacement, token, emailed };
+    return { ...replacement, email: replacement.email ?? '', token, emailed };
   }
 
   /**
