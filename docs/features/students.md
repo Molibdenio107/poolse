@@ -246,7 +246,14 @@ convite*, *Convite enviado em dd-MM-yyyy* (or *Link criado em*), *Convite expira
   turma they teach (403 `not_your_student`, echoed as `canInvite`); a support session never.
 - **One live invitation per person** (unique index on `membership_id`); an expired one is withdrawn
   when a new one is made. A staff invitation still needs an address, by CHECK.
-- **Convidar famílias** on Alunos takes the list's search and level, previews (students, by email,
+- **Convidar aluno** on Alunos (owner/admin, Rui 30-10-2026) is for somebody not yet registered: first
+  name, surname, a phone and/or an email. `POST /family-invitations/new-student` creates the student by
+  the ordinary insert and invites them in one transaction (no birth date, so the 12-year rule is waived
+  for this one path), emails if there is an address, and returns the link for *Partilhar*. A taken
+  address is a 409 and leaves no student behind.
+- **Convidar para a app** on the record's General tab opens the same rows in place, one student at a
+  time; it shows only while somebody on the record has not joined.
+- **Convidar membros** (renamed from *Convidar famílias*) on Alunos takes the list's search and level, previews (students, by email,
   phone only, already invited, in the app) and sends the email invitations in one transaction under
   an advisory lock; phone-only families stay on **Por convidar** (`?invite=pending`, the same
   predicate, `HAS_UNINVITED`). An instructor's run covers their own turmas. **200 family invitations

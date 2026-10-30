@@ -348,3 +348,49 @@ test('QA 8, 9 — Convidar famílias previews, sends to the addresses, then stop
     assert.equal(live!.n, 0, 'nothing was sent');
   });
 });
+
+test('Convidar aluno — a new student is created and invited in one go; the login is that student', async () => {
+  await withScratchTenant(async (tenant) => {
+    const f = await seed(tenant);
+    const routes = new FamilyInvitationsBulkController();
+
+    // A contact is required, and an instructor may not create students.
+    await asAdmin(tenant, f, () => expectStatus(() => routes.newStudent({ firstName: 'Lia', lastName: 'Nova' }), 400));
+    await actingAs(tenant, { membershipId: f.instructorId, roles: ['instructor'] }, () =>
+      expectStatus(() => routes.newStudent({ firstName: 'Lia', lastName: 'Nova', phone: '914000000' }), 403),
+    );
+
+    // Phone only: a link, no address.
+    const byPhone = await asAdmin(tenant, f, () =>
+      routes.newStudent({ firstName: 'Lia', lastName: 'Nova', phone: '914000000' }),
+    );
+    assert.equal(byPhone.email, null);
+    assert.match(byPhone.link, /\/join\?token=/);
+    const [lia] = await tenant.sql<{ phone: string; membership_id: string | null; invited: string }>(
+      `SELECT s.contact_phone AS phone, s.membership_id, i.membership_id AS invited
+         FROM student s JOIN invitation i ON i.id = $2
+        WHERE s.id = $1`,
+      [byPhone.studentId, byPhone.invitationId],
+    );
+    assert.equal(lia!.phone, '914000000');
+    assert.equal(lia!.invited, lia!.membership_id, 'the invitation names the new student');
+
+    // With an address: emailed (console in tests), the address on the record.
+    const byEmail = await asAdmin(tenant, f, () =>
+      routes.newStudent({ firstName: 'Rui', lastName: 'Novo', email: 'Rui.Novo@Exemplo.test', phone: '' }),
+    );
+    assert.equal(byEmail.email, 'rui.novo@exemplo.test');
+
+    // The same address again: refused, and no second student is left behind.
+    const before = await tenant.sql<{ n: number }>('SELECT count(*)::int AS n FROM student WHERE organization_id = $1', [
+      tenant.organizationId,
+    ]);
+    await asAdmin(tenant, f, () =>
+      expectStatus(() => routes.newStudent({ firstName: 'Rui', lastName: 'Outro', email: 'rui.novo@exemplo.test' }), 409),
+    );
+    const after = await tenant.sql<{ n: number }>('SELECT count(*)::int AS n FROM student WHERE organization_id = $1', [
+      tenant.organizationId,
+    ]);
+    assert.equal(after[0]!.n, before[0]!.n);
+  });
+});

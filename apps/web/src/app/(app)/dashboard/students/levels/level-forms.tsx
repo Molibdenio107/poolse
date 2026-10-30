@@ -16,6 +16,7 @@ import {
   renameLevelAction,
 } from '../students.actions';
 import { Dialog } from '@/components/ui/dialog';
+import { Reveal } from '@/components/ui/reveal';
 
 const INITIAL: FormState = { ok: false };
 
@@ -481,6 +482,7 @@ export function EditLevelForm({
   }
 
   return (
+    <Reveal open appear>
     <div
       ref={panel}
       onKeyDown={(event) => {
@@ -549,6 +551,7 @@ export function EditLevelForm({
         </div>
       </form>
     </div>
+    </Reveal>
   );
 }
 

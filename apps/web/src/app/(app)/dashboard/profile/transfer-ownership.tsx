@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import type { OrganizationMember } from '@/lib/api';
 import type { FormState } from '../actions';
 import { transferOwnershipAction } from '../actions';
+import { Reveal } from '@/components/ui/reveal';
 
 const INITIAL: FormState = { ok: false };
 
@@ -67,6 +68,7 @@ export function TransferOwnership({
   }
 
   return (
+    <Reveal open appear>
     <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
 
@@ -115,5 +117,6 @@ export function TransferOwnership({
         </p>
       )}
     </form>
+    </Reveal>
   );
 }

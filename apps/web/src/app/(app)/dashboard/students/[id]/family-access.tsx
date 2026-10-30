@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { CheckCircle2, Clock, Mail, Share2, Smartphone, UserX } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
+import { Reveal } from '@/components/ui/reveal';
 import { TextField } from '@/components/ui/field';
 import { formatDate } from '@/lib/date-format';
 import {
@@ -252,7 +253,7 @@ function StateLine({ invitee }: { invitee: Invitee }): React.ReactElement {
  * tap rather than sharing straight after the server answers: a browser only
  * opens the share menu from a tap, and the wait for the server spends it.
  */
-function ShareLink({ link, text }: { link: string; text: string }): React.ReactElement {
+export function ShareLink({ link, text }: { link: string; text: string }): React.ReactElement {
   const t = useTranslations();
   const [copied, setCopied] = useState(false);
   const message = `${text} ${link}`;
@@ -286,6 +287,40 @@ function ShareLink({ link, text }: { link: string; text: string }): React.ReactE
           {canShare ? t('familyAccess.share') : copied ? t('common.copied') : t('familyAccess.copy')}
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * *Convidar para a app* on the record's first tab — Rui, 30-10-2026: one
+ * student at a time, for somebody already registered who never joined. It
+ * opens the same rows as *Acesso à app*, in place; it is not offered once
+ * everybody on the record uses the app.
+ */
+export function AppInviteButton(props: {
+  studentId: string;
+  studentFirstName: string;
+  organizationName: string;
+  canInvite: boolean;
+  invitees: Invitee[];
+}): React.ReactElement {
+  const t = useTranslations();
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex flex-col gap-3">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls="app-invite"
+        onClick={() => setOpen((was) => !was)}
+        className={`${SECONDARY} self-start`}
+      >
+        <Smartphone className="size-4" aria-hidden />
+        {t('familyAccess.openButton')}
+      </button>
+      <Reveal open={open} id="app-invite">
+        <FamilyAccess {...props} />
+      </Reveal>
     </div>
   );
 }

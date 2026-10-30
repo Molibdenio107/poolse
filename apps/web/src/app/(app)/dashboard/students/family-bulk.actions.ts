@@ -75,3 +75,53 @@ function failed(error: unknown): BulkState {
   if (error instanceof ApiError && error.status < 500) return { ok: false, errorKey: 'familyBulk.failed' };
   return { ok: false, errorKey: 'familyBulk.failed', detail: String(error) };
 }
+
+/**
+ * *Convidar aluno* — POOLSE-129 follow-up (Rui, 30-10-2026): somebody not yet
+ * on the register. The API creates the student and invites them in one go.
+ */
+export interface InviteStudentState extends FormState {
+  link?: string;
+  studentId?: string;
+  email?: string | null;
+}
+
+export async function inviteNewStudentAction(
+  _previous: InviteStudentState,
+  formData: FormData,
+): Promise<InviteStudentState> {
+  try {
+    const issued = await apiPost<{ studentId: string; link: string; email: string | null; emailed: boolean }>(
+      '/family-invitations/new-student',
+      {
+        firstName: String(formData.get('firstName') ?? ''),
+        lastName: String(formData.get('lastName') ?? ''),
+        phone: String(formData.get('phone') ?? ''),
+        email: String(formData.get('email') ?? ''),
+      },
+    );
+    revalidatePath('/dashboard/students');
+    return {
+      ok: true,
+      link: issued.link,
+      studentId: issued.studentId,
+      email: issued.email,
+      toastKey: issued.emailed
+        ? 'familyAccess.toast.emailed'
+        : issued.email === null
+          ? 'familyAccess.toast.linkReady'
+          : 'familyAccess.toast.notEmailed',
+      ...(issued.email === null ? {} : { values: { email: issued.email } }),
+    };
+  } catch (error) {
+    if (error instanceof ApiError && error.status < 500) {
+      const fields = Object.keys(error.fields).length > 0 ? error.fields : undefined;
+      return {
+        ok: false,
+        errorKey: fields === undefined ? 'inviteStudent.failed' : Object.values(fields)[0]!,
+        ...(fields === undefined ? {} : { fields }),
+      };
+    }
+    return { ok: false, errorKey: 'inviteStudent.failed', detail: String(error) };
+  }
+}

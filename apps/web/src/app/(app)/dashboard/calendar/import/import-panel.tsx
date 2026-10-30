@@ -15,6 +15,7 @@ import {
 } from './import.actions';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField } from '@/components/ui/field';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * Importing the wall timetable — POOLSE-57, the interface.
@@ -184,7 +185,7 @@ export function TimetableImport({
         )}
       </Dialog>
 
-      {open && (
+      <Reveal open={open}>
         <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -384,7 +385,7 @@ export function TimetableImport({
             </div>
           )}
         </section>
-      )}
+      </Reveal>
 
       {showConflicts && result !== undefined && (
         <ConflictDialog

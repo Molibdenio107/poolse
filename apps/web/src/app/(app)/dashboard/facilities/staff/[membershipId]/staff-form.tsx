@@ -14,6 +14,7 @@ import {
   saveStaffAction,
   setRoleAction,
 } from './staff.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 const INITIAL: FormState = { ok: false };
 
@@ -312,6 +313,7 @@ export function Reinvite({
   }
 
   return (
+    <Reveal open appear>
     <form action={action} className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="membershipId" value={staff.membershipId} />
@@ -349,5 +351,6 @@ export function Reinvite({
       </div>
 
     </form>
+    </Reveal>
   );
 }

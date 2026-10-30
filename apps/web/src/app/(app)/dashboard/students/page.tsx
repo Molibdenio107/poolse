@@ -2,7 +2,7 @@ import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type Students } from '../../../../lib/api';
+import { ApiError, apiFetch, type Me, type Students } from '../../../../lib/api';
 import { Pagination } from '@/components/pagination';
 import { SearchInput, SearchStatus } from '@/components/search-input';
 import { FilterSelect } from '@/components/filter-select';
@@ -17,6 +17,7 @@ import { StudentActions } from './import-panel';
 import { PaymentMark } from './payment-mark';
 import { PageError, PageShell } from '@/components/page-shell';
 import { FamilyBulkInvite } from './family-bulk';
+import { InviteStudent } from './invite-student';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -109,6 +110,10 @@ export default async function StudentsPage({
       failure = describeLoad(error);
     }
   }
+
+  // The club's name, for the message a shared link carries.
+  const organizationName =
+    data === null ? '' : await apiFetch<Me>('/me').then((me) => me.memberships[0]?.organizationName ?? '').catch(() => '');
 
   const filtering =
     search.trim().length > 0 || levelId.trim().length > 0 || overdueOnly || pendingOnly;
@@ -273,11 +278,18 @@ export default async function StudentsPage({
             <p className="text-sm text-foreground-muted">{t('students.readOnly')}</p>
           )}
 
-          {/* POOLSE-129: the families on this list, into the app. */}
+          {/*
+            Into the app — POOLSE-129 (Rui, 30-10-2026). *Convidar aluno* is
+            somebody not yet on the register, created and invited in one go;
+            *Convidar membros* is everybody on this list who never joined.
+          */}
           {data.canInviteFamilies && (
-            <div className="flex flex-wrap items-center gap-3">
-              <FamilyBulkInvite search={search.trim()} levelId={levelId.trim()} />
-              <span className="text-sm text-foreground-muted">{t('familyBulk.hint')}</span>
+            <div className="flex flex-col gap-3">
+              {data.canManage && <InviteStudent organizationName={organizationName} />}
+              <div className="flex flex-wrap items-center gap-3">
+                <FamilyBulkInvite search={search.trim()} levelId={levelId.trim()} />
+                <span className="text-sm text-foreground-muted">{t('familyBulk.hint')}</span>
+              </div>
             </div>
           )}
 

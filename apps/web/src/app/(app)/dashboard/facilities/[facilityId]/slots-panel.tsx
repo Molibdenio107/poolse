@@ -247,6 +247,7 @@ function SlotRow({
   }
 
   return (
+    <Reveal open appear>
     <form action={action} className="flex flex-wrap items-end gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="facilityId" value={facilityId} />
@@ -296,6 +297,7 @@ function SlotRow({
 
       <Failure state={state} />
     </form>
+    </Reveal>
   );
 }
 

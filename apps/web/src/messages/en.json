@@ -6244,12 +6244,13 @@
       "invalidEmail": "This does not look like an email address.",
       "notYourStudent": "You can invite the families of students in your own classes only.",
       "failed": "The invitation could not be created."
-    }
+    },
+    "openButton": "Invite to the app"
   },
   "familyBulk": {
-    "open": "Invite families",
-    "hint": "Sends the app invitation to everyone with an email on this list.",
-    "title": "Invite families to the app",
+    "open": "Invite members",
+    "hint": "Invites everyone who has never signed in to the app: the guardian up to age 12; from 12, the student and the guardian.",
+    "title": "Invite members to the app",
     "description": "Using the search and level chosen on the list.",
     "students": "{count, plural, one {# student on the list} other {# students on the list}}",
     "byEmail": "{count, plural, =0 {Nobody gets the invitation by email} one {# person gets the invitation by email} other {# people get the invitation by email}}",
@@ -6261,5 +6262,19 @@
     "failed": "The invitations could not be sent.",
     "toast": "{count, plural, =0 {No invitations sent} one {# invitation sent} other {# invitations sent}}",
     "pendingOnly": "Not yet invited"
+  },
+  "inviteStudent": {
+    "open": "Invite a student",
+    "title": "Invite a new student",
+    "intro": "For somebody not yet registered. We create the student's record from these details and send the invitation; level, class and the rest are filled in on the record afterwards.",
+    "firstName": "First name",
+    "lastName": "Surname",
+    "phone": "Mobile",
+    "email": "Email",
+    "hint": "With an email, the invitation goes by email. Either way the link appears, to send from your phone (WhatsApp, SMS).",
+    "submit": "Invite",
+    "openRecord": "Open the student's record",
+    "contactRequired": "Give a mobile number or an email.",
+    "failed": "The student could not be invited."
   }
 }

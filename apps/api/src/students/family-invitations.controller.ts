@@ -18,6 +18,8 @@ import { readSearch } from '../common/search.js';
 import { deliver, joinLink } from '../invitations/invitations.controller.js';
 import { reissueInvitation, revokeInvitation } from '../invitations/invitations.repository.js';
 import { invitationExpiry, issueToken, normaliseEmail } from '../invitations/invitations.service.js';
+import { insertStudent } from './students.repository.js';
+import { parseStudent } from './students.controller.js';
 import {
   createFamilyInvitationIn,
   invitationOnRecord,
@@ -206,6 +208,83 @@ export class StudentInvitationsController {
 @CoreRoute()
 @Controller('family-invitations')
 export class FamilyInvitationsBulkController {
+  /**
+   * *Convidar aluno* — somebody not yet on the register (Rui, 30-10-2026). A
+   * first name, a surname and a phone and/or email: the student is created by
+   * the ordinary insert, given a membership, and invited, in one transaction —
+   * so when they accept, their login is already that student. Level, turma and
+   * the rest are filled in on the record afterwards. With an address it is
+   * emailed; the link comes back either way, for the club's phone.
+   */
+  @Post('new-student')
+  async newStudent(@Body() body: Record<string, unknown>): Promise<InvitationIssued & { studentId: string }> {
+    requireRole('owner', 'admin');
+    const { organizationId, membershipId, support } = currentTenant();
+    if (support === true) {
+      throw new ForbiddenException({ code: 'not_your_student', message: 'Support invites nobody' });
+    }
+
+    const rawEmail = typeof body['email'] === 'string' ? body['email'].trim() : '';
+    const phone = typeof body['phone'] === 'string' ? body['phone'].trim() : '';
+    const email = rawEmail === '' ? null : normaliseEmail(rawEmail);
+    if (rawEmail !== '' && email === null) {
+      throw new BadRequestException({ code: 'invalid_email', message: 'Not an email address', fields: { email: 'familyAccess.error.invalidEmail' } });
+    }
+    if (email === null && phone === '') {
+      throw new BadRequestException({
+        code: 'contact_required',
+        message: 'A phone or an email is needed',
+        fields: { phone: 'inviteStudent.contactRequired' },
+      });
+    }
+    // No birth date, so no guardian is required: the club's maioridade cannot apply.
+    const input = parseStudent(
+      { firstName: body['firstName'], lastName: body['lastName'], contactEmail: email ?? '', contactPhone: phone },
+      18,
+    );
+
+    const { token, tokenHash } = issueToken();
+    const expiresAt = invitationExpiry();
+    const created = await withOrg(organizationId, async (tx) => {
+      const studentId = await insertStudent(tx, organizationId, input);
+      if (studentId === null) throw new Error('The student could not be created');
+      const outcome = await createFamilyInvitationIn(tx, {
+        organizationId,
+        invitedByMembershipId: membershipId,
+        studentId,
+        membershipId: null,
+        channel: email === null ? 'link' : 'email',
+        email: null,
+        tokenHash,
+        expiresAt,
+        newStudent: true,
+      });
+      if (outcome.kind === 'already_invited') {
+        // Another live invitation holds that address: nothing is written.
+        throw new ConflictException({
+          code: 'already_invited',
+          message: 'That address already has a live invitation',
+          fields: { email: 'familyAccess.error.alreadyInvited' },
+        });
+      }
+      if (outcome.kind !== 'created') throw new Error(`Inviting the new student failed: ${outcome.kind}`);
+      return { studentId, outcome };
+    });
+
+    const emailed = created.outcome.email === null
+      ? false
+      : await deliver(organizationId, created.outcome.invitationId, created.outcome.email, created.outcome.roles, token, expiresAt);
+
+    return {
+      studentId: created.studentId,
+      invitationId: created.outcome.invitationId,
+      link: joinLink(token),
+      email: created.outcome.email,
+      emailed,
+      expiresAt: created.outcome.expiresAt,
+    };
+  }
+
   @Post('bulk')
   async bulk(@Body() body: Record<string, unknown>): Promise<Omit<BulkPreview, 'candidates'> & { sent: number }> {
     requireRole('owner', 'admin', 'instructor');

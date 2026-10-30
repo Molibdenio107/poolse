@@ -6244,12 +6244,13 @@
       "invalidEmail": "Este email não parece válido.",
       "notYourStudent": "Só pode convidar as famílias dos alunos das suas turmas.",
       "failed": "Não foi possível criar o convite."
-    }
+    },
+    "openButton": "Convidar para a app"
   },
   "familyBulk": {
-    "open": "Convidar famílias",
-    "hint": "Envia o convite para a app a quem tem email, nesta lista.",
-    "title": "Convidar famílias para a app",
+    "open": "Convidar membros",
+    "hint": "Convida quem ainda nunca entrou na app: o encarregado de educação até aos 12 anos; a partir dos 12, o aluno e o encarregado.",
+    "title": "Convidar membros para a app",
     "description": "Com a pesquisa e o nível escolhidos na lista.",
     "students": "{count, plural, one {# aluno na lista} other {# alunos na lista}}",
     "byEmail": "{count, plural, =0 {Ninguém recebe o convite por email} one {# pessoa recebe o convite por email} other {# pessoas recebem o convite por email}}",
@@ -6261,5 +6262,19 @@
     "failed": "Não foi possível enviar os convites.",
     "toast": "{count, plural, =0 {Nenhum convite enviado} one {# convite enviado} other {# convites enviados}}",
     "pendingOnly": "Por convidar"
+  },
+  "inviteStudent": {
+    "open": "Convidar aluno",
+    "title": "Convidar um aluno novo",
+    "intro": "Para quem ainda não está registado. Criamos a ficha do aluno com estes dados e enviamos o convite; o nível, a turma e o resto preenchem-se depois na ficha.",
+    "firstName": "Nome próprio",
+    "lastName": "Apelidos",
+    "phone": "Telemóvel",
+    "email": "Endereço de email",
+    "hint": "Com email, o convite vai por email. Em qualquer caso aparece o link, para enviar do telemóvel (WhatsApp, SMS).",
+    "submit": "Convidar",
+    "openRecord": "Abrir a ficha do aluno",
+    "contactRequired": "Indique um telemóvel ou um email.",
+    "failed": "Não foi possível convidar o aluno."
   }
 }

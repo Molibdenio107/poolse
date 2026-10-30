@@ -242,6 +242,13 @@ export interface CreateFamilyInvitation {
   email: string | null;
   tokenHash: string;
   expiresAt: Date;
+  /**
+   * *Convidar aluno* — the student was created in this same transaction from a
+   * name and a contact, with no birth date, by somebody inviting the student
+   * themself. The 12-year rule cannot be read without a date, and the person
+   * typing the form is saying who the login is for.
+   */
+  newStudent?: true;
 }
 
 export async function createFamilyInvitation(input: CreateFamilyInvitation): Promise<CreateOutcome> {
@@ -256,7 +263,7 @@ export async function createFamilyInvitationIn(
   tx: Tx,
   input: CreateFamilyInvitation,
 ): Promise<CreateOutcome> {
-  const target = await resolveTarget(tx, input.studentId, input.membershipId);
+  const target = await resolveTarget(tx, input.studentId, input.membershipId, input.newStudent === true);
   if (target === null) return { kind: 'not_found' };
   if (target.hasLogin) return { kind: 'has_login' };
 
@@ -352,6 +359,7 @@ async function resolveTarget(
   tx: Tx,
   studentId: string,
   membershipId: string | null,
+  anyAge = false,
 ): Promise<Target | null> {
   if (membershipId === null) {
     const { rows } = await tx.query<{ membership_id: string | null; email: string | null; has_login: boolean }>(
@@ -360,9 +368,9 @@ async function resolveTarget(
               coalesce(m.app_user_id IS NOT NULL, false) AS has_login
          FROM student s
          LEFT JOIN membership m ON m.id = s.membership_id AND m.organization_id = s.organization_id
-        WHERE s.id = $1 AND s.archived_at IS NULL AND ${SELF_INVITABLE('s')}
+        WHERE s.id = $1 AND s.archived_at IS NULL AND ($2::boolean OR ${SELF_INVITABLE('s')})
         FOR UPDATE OF s`,
-      [studentId],
+      [studentId, anyAge],
     );
     const row = rows[0];
     if (!row) return null;

@@ -836,6 +836,9 @@ test('family invitations refuse a guardian and a student (403), and maintenance'
     await refused('POST students/:id/invitations/:id/reissue', 403, () => routes.reissue(fixture.aliceId, NO_SUCH_ID));
     await refused('POST students/:id/invitations/:id/revoke', 403, () => routes.revoke(fixture.aliceId, NO_SUCH_ID));
     await refused('POST family-invitations/bulk', 403, () => new FamilyInvitationsBulkController().bulk({}));
+    await refused('POST family-invitations/new-student', 403, () =>
+      new FamilyInvitationsBulkController().newStudent({ firstName: 'X', lastName: 'Y', phone: '912000000' }),
+    );
   };
   await asEach(probe);
   await as(fixture.maintenanceId, ['maintenance'], probe);

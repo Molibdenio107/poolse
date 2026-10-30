@@ -29,6 +29,7 @@ import {
   type InvoicePreviewState,
   type InvoiceReadState,
 } from '../../invoice.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 /**
  * The bill, as a form — slice 5.3.
@@ -340,7 +341,7 @@ export function InvoiceForm({
         )}
       </section>
 
-      {open && (<>
+      <Reveal open={open} className="flex flex-col gap-6">
 
       {/* ---- Contador ------------------------------------------------------ */}
       {meters !== undefined && (
@@ -671,7 +672,7 @@ export function InvoiceForm({
           </button>
         </form>
       </div>
-      </>)}
+      </Reveal>
     </div>
   );
 }

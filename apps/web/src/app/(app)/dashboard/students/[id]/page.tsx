@@ -28,7 +28,7 @@ import { StudentWeek } from './student-week';
 import { CoverBadge, FeesBlock, type FeesSection } from './fees-block';
 import { ContactsCard } from './contacts-card';
 import { FamilyFees } from './family-fees';
-import { FamilyAccess, type Invitee } from './family-access';
+import { AppInviteButton, FamilyAccess, type Invitee } from './family-access';
 import { pickSection } from '@/components/section-pills';
 import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
@@ -217,6 +217,19 @@ export default async function StudentPage({
 
   const storageReady = await storageConfigured();
 
+  /*
+   * Who on this record could be in the app — POOLSE-129. Read once for both the
+   * General tab's *Convidar para a app* and the *Acesso à app* tab. Staff only.
+   */
+  type AppAccess = { organizationName: string; canInvite: boolean; invitees: Invitee[] };
+  const access: Outcome<AppAccess> | null = family
+    ? null
+    : await outcome(apiFetch<AppAccess>(`/students/${id}/invitations`));
+  const invitable =
+    access?.state === 'ok' &&
+    access.data.canInvite &&
+    access.data.invitees.some((invitee) => invitee.state !== 'in_app');
+
   return (
     <DetailPage
       title={loaded.displayName}
@@ -267,6 +280,17 @@ export default async function StudentPage({
                   <AlertTriangle className="attention mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
                   {t('students.licenceMissing', { level: loaded.levelName ?? '' })}
                 </p>
+              )}
+
+              {/* One student at a time, into the app — Rui, 30-10-2026. */}
+              {invitable && access?.state === 'ok' && (
+                <AppInviteButton
+                  studentId={id}
+                  studentFirstName={loaded.firstName}
+                  organizationName={access.data.organizationName}
+                  canInvite={access.data.canInvite}
+                  invitees={access.data.invitees}
+                />
               )}
 
               {/*
@@ -406,15 +430,9 @@ export default async function StudentPage({
           slug: 'app',
           labelKey: 'detailTabs.appAccess',
           visible: !family,
-          content: async () => {
-            const access = await outcome(
-              apiFetch<{
-                organizationName: string;
-                canInvite: boolean;
-                invitees: Invitee[];
-              }>(`/students/${id}/invitations`),
-            );
-            if (access.state !== 'ok') {
+          content: () => {
+            if (access === null || access.state !== 'ok') {
+              if (access === null) return null;
               return access.state === 'failed' ? (
                 <PageError
                   message={t(access.failure.key)}

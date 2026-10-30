@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Reveal } from '@/components/ui/reveal';
 import { InviteForm } from './invite-form';
 
 /**
@@ -54,15 +55,30 @@ export function InvitePanel({
     // The email field is the first thing anyone does here, so it is where focus
     // lands — not on the panel, which would make a screen reader announce a
     // region and then say nothing about what to type.
-    panel.current?.querySelector<HTMLInputElement>('input[type="email"]')?.focus();
+    // After Reveal has mounted the panel (it does so in its own effect).
+    const timer = window.setTimeout(
+      () => panel.current?.querySelector<HTMLInputElement>('input[type="email"]')?.focus(),
+      50,
+    );
+    return () => window.clearTimeout(timer);
   }, [open, opening]);
 
-  if (!open) {
-    return (
+  /*
+   * The button stays and the form grows open under it — Rui, 30-10-2026: a
+   * section that opens moves smoothly (`Reveal`), it does not swap in.
+   */
+  return (
+    <div className="flex flex-col gap-3">
       <button
         ref={trigger}
         type="button"
+        aria-expanded={open}
+        aria-controls="invite-panel"
         onClick={() => {
+          if (open) {
+            close();
+            return;
+          }
           setOpening((count) => count + 1);
           setOpen(true);
         }}
@@ -70,10 +86,7 @@ export function InvitePanel({
       >
         {t('invite.open')}
       </button>
-    );
-  }
-
-  return (
+      <Reveal open={open} id="invite-panel">
     <div
       ref={panel}
       // Escape from anywhere inside, because focus is inside — the handler is on
@@ -102,6 +115,8 @@ export function InvitePanel({
         organizationId={organizationId}
         grantableRoles={grantableRoles}
       />
+    </div>
+      </Reveal>
     </div>
   );
 }

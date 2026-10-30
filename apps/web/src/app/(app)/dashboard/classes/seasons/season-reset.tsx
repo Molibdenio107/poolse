@@ -8,6 +8,7 @@ import type { ResetPreview } from '@/lib/api';
 import { TextField, useFocusFirstError } from '@/components/ui/field';
 import type { FormState } from '../../actions';
 import { resetSeasonAction } from './seasons.actions';
+import { Reveal } from '@/components/ui/reveal';
 
 const INITIAL: FormState = { ok: false };
 
@@ -63,6 +64,7 @@ export function SeasonReset({
   }
 
   return (
+    <Reveal open appear>
     <form
       ref={formRef}
       action={action}
@@ -145,6 +147,7 @@ export function SeasonReset({
         <p className="font-mono text-sm text-foreground-muted">{state.detail}</p>
       )}
     </form>
+    </Reveal>
   );
 }
 
