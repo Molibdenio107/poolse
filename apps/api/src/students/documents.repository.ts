@@ -365,3 +365,105 @@ export async function readIdNumberIn(tx: Tx, studentId: string): Promise<string 
   );
   return decryptSensitive(rows[0]?.n ?? null);
 }
+
+export interface BoletimPrint {
+  clubName: string;
+  socioNumber: string | null;
+  socioSince: string | null;
+  isSocio: boolean;
+  name: string;
+  birthDate: string | null;
+  taxNumber: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  addressLine: string | null;
+  locality: string | null;
+  postalCode: string | null;
+  parentOneName: string | null;
+  parentTwoName: string | null;
+  maritalStatus: string | null;
+  profession: string | null;
+  education: string | null;
+  birthplace: string | null;
+  nationality: string | null;
+  minor: boolean;
+  guardian: { name: string; phone: string | null; email: string | null; relationship: string | null } | null;
+}
+
+/**
+ * Everything the boletim de sócio prints — POOLSE-134. The record's own fields
+ * and the sócio columns, nothing held by the form. The SNS number is never
+ * printed; for a minor, the primary guardian.
+ */
+export async function boletimPrint(organizationId: string, studentId: string): Promise<BoletimPrint | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      club_name: string;
+      socio_number: string | null;
+      socio_since: string | null;
+      is_socio: boolean;
+      name: string;
+      birth_date: string | null;
+      tax_number: string | null;
+      contact_email: string | null;
+      contact_phone: string | null;
+      address_line: string | null;
+      locality: string | null;
+      postal_code: string | null;
+      parent_one_name: string | null;
+      parent_two_name: string | null;
+      marital_status: string | null;
+      profession: string | null;
+      education: string | null;
+      birthplace: string | null;
+      nationality: string | null;
+      minor: boolean | null;
+      guardian: { name: string; phone: string | null; email: string | null; relationship: string | null } | null;
+    }>(
+      `SELECT o.name AS club_name, s.socio_number, s.socio_since::text, s.is_socio,
+              ${displayName('s')} AS name, s.birth_date::text, s.tax_number,
+              s.contact_email::text AS contact_email, s.contact_phone,
+              s.address_line, s.locality, s.postal_code, s.parent_one_name, s.parent_two_name,
+              s.marital_status::text, s.profession, s.education, s.birthplace, s.nationality,
+              CASE WHEN s.birth_date IS NULL THEN NULL
+                   ELSE s.birth_date > club_today() - make_interval(years => o.age_of_majority) END AS minor,
+              (SELECT jsonb_build_object(
+                        'name', person_name(gl.guardian_membership_id),
+                        'phone', m.phone,
+                        'email', person_email(gl.guardian_membership_id)::text,
+                        'relationship', gl.relationship)
+                 FROM guardian_link gl
+                 JOIN membership m ON m.id = gl.guardian_membership_id
+                WHERE gl.student_id = s.id AND gl.archived_at IS NULL
+                ORDER BY gl.is_primary DESC, gl.created_at LIMIT 1) AS guardian
+         FROM student s JOIN organization o ON o.id = s.organization_id
+        WHERE s.id = $1 AND s.archived_at IS NULL`,
+      [studentId],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      clubName: row.club_name,
+      socioNumber: row.socio_number,
+      socioSince: row.socio_since,
+      isSocio: row.is_socio,
+      name: row.name,
+      birthDate: row.birth_date,
+      taxNumber: row.tax_number,
+      contactEmail: row.contact_email,
+      contactPhone: row.contact_phone,
+      addressLine: row.address_line,
+      locality: row.locality,
+      postalCode: row.postal_code,
+      parentOneName: row.parent_one_name,
+      parentTwoName: row.parent_two_name,
+      maritalStatus: row.marital_status,
+      profession: row.profession,
+      education: row.education,
+      birthplace: row.birthplace,
+      nationality: row.nationality,
+      minor: row.minor === true,
+      guardian: row.minor === true ? row.guardian : null,
+    };
+  });
+}

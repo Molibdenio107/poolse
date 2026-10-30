@@ -17,11 +17,13 @@ import { CoreRoute } from '../tenant/modules.js';
 import {
   FPN_DISCIPLINES,
   STUDENT_ID_DOCUMENT_TYPES,
+  boletimPrint,
   fileCopy,
   fpnPrint,
   readDocuments,
   saveDocumentFields,
   saveFpnClubSettings,
+  type BoletimPrint,
   type FpnDiscipline,
   type FpnPrint,
   type IdDocumentEdit,
@@ -160,6 +162,19 @@ export class StudentDocumentsController {
     requireRole('owner', 'admin');
     const seasonId = season !== undefined && /^[0-9a-f-]{36}$/i.test(season) ? season : null;
     const found = await fpnPrint(currentTenant().organizationId, studentId, seasonId, minor === '1');
+    if (found === null) throw new NotFoundException('No such student');
+    return found;
+  }
+}
+
+/** What the boletim de sócio prints (POOLSE-134). No SNS number. */
+@CoreRoute()
+@Controller('students/:studentId/boletim')
+export class BoletimController {
+  @Get()
+  async print(@Param('studentId', ParseUUIDPipe) studentId: string): Promise<BoletimPrint> {
+    requireRole('owner', 'admin');
+    const found = await boletimPrint(currentTenant().organizationId, studentId);
     if (found === null) throw new NotFoundException('No such student');
     return found;
   }

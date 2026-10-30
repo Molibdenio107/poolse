@@ -1,6 +1,6 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FpnSettingsController, StudentDocumentsController } from './documents.controller.js';
+import { BoletimController, FpnSettingsController, StudentDocumentsController } from './documents.controller.js';
 import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant } from '../test/harness.js';
 
 /**
@@ -110,5 +110,37 @@ test('POOLSE-132 — documents, print data and filed copies', async () => {
       [id],
     );
     assert.equal(gone!.n, 0);
+  });
+});
+
+test('POOLSE-134 — the boletim reads the record, a minor names the guardian, and the SNS number never prints', async () => {
+  await withScratchTenant(async (tenant) => {
+    const org = tenant.organizationId;
+    const admin = await addMember(tenant, 'Carla', 'Admin', ['admin']);
+    const mother = await addMember(tenant, 'Eva', 'Lopes', ['guardian']);
+    await tenant.sql(`UPDATE membership SET phone = '912000111' WHERE id = $1`, [mother]);
+    const [student] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name, birth_date, is_socio, socio_number, socio_since,
+                            address_line, locality, postal_code, nationality, sns_number)
+       VALUES ($1, 'Tomás', 'Lopes', current_date - interval '10 years', true, '412', '2024-09-01',
+               'Rua A, 1', 'Santo Tirso', '4780-518', 'PT', '123456789')
+       RETURNING id`,
+      [org],
+    );
+    await tenant.sql(
+      `INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id, relationship, is_primary)
+       VALUES ($1, $2, $3, 'mãe', true)`,
+      [org, student!.id, mother],
+    );
+
+    const print = await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, () =>
+      new BoletimController().print(student!.id),
+    );
+    assert.equal(print.socioNumber, '412');
+    assert.equal(print.socioSince, '2024-09-01');
+    assert.equal(print.postalCode, '4780-518');
+    assert.equal(print.minor, true);
+    assert.equal(print.guardian?.phone, '912000111');
+    assert.equal(JSON.stringify(print).includes('123456789'), false, 'the SNS number never prints');
   });
 });

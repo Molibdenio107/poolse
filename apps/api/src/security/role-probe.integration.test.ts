@@ -37,7 +37,7 @@ import {
   FamilyInvitationsBulkController,
   StudentInvitationsController,
 } from '../students/family-invitations.controller.js';
-import { FpnSettingsController, StudentDocumentsController } from '../students/documents.controller.js';
+import { BoletimController, FpnSettingsController, StudentDocumentsController } from '../students/documents.controller.js';
 import { MedicalExamsController, MedicalExamsSheetController } from '../students/medical-exams.controller.js';
 import { MaintenanceController } from '../maintenance/maintenance.controller.js';
 import { FacilityIncidentsController, IncidentsController } from '../safety/incidents.controller.js';
@@ -857,6 +857,7 @@ test('student documents and FPN settings refuse a guardian and a student (403)',
     );
     await refused('GET students/:id/documents/fpn', 403, () => docs.print(fixture.aliceId, undefined, undefined));
     await refused('PATCH fpn-settings', 403, () => new FpnSettingsController().save({ association: 'X' }));
+    await refused('GET students/:id/boletim', 403, () => new BoletimController().print(fixture.aliceId));
   });
 });
 
