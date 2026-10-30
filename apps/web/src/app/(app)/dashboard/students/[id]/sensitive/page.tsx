@@ -121,6 +121,37 @@ export default async function SensitivePage({
       eager
       tabs={[
         {
+          /*
+            The exame médico — POOLSE-133. The first tab, left of Geral (Rui,
+            30-10-2026): a
+            date that runs out, read by everyone who opens this page, the file
+            and the note by the office only. A dot when it has run out.
+          */
+          slug: 'exam',
+          labelKey: 'exams.title',
+          badge:
+            exams?.state === 'expired'
+              ? { kind: 'dot', labelKey: 'exams.needsAttention' }
+              : undefined,
+          content: () => (
+            <section className="rounded border border-border bg-surface p-5">
+              <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('exams.title')}
+              </h2>
+              {exams === null ? (
+                <PageError message={t('exams.loadFailed')} />
+              ) : (
+                <ExamPanel
+                  studentId={id}
+                  exams={exams}
+                  canManage={loaded.canManage}
+                  storageReady={storageReady}
+                />
+              )}
+            </section>
+          ),
+        },
+        {
           slug: 'general',
           labelKey: 'detailTabs.general',
           content: () => (
@@ -315,36 +346,6 @@ export default async function SensitivePage({
                   storageReady={storageReady}
                 />
               </div>
-            </section>
-          ),
-        },
-        {
-          /*
-            The exame médico — POOLSE-133. Its own tab, beside the leave: a
-            date that runs out, read by everyone who opens this page, the file
-            and the note by the office only. A dot when it has run out.
-          */
-          slug: 'exam',
-          labelKey: 'exams.title',
-          badge:
-            exams?.state === 'expired'
-              ? { kind: 'dot', labelKey: 'exams.needsAttention' }
-              : undefined,
-          content: () => (
-            <section className="rounded border border-border bg-surface p-5">
-              <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('exams.title')}
-              </h2>
-              {exams === null ? (
-                <PageError message={t('exams.loadFailed')} />
-              ) : (
-                <ExamPanel
-                  studentId={id}
-                  exams={exams}
-                  canManage={loaded.canManage}
-                  storageReady={storageReady}
-                />
-              )}
             </section>
           ),
         },

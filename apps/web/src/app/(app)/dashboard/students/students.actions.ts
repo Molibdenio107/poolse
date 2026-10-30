@@ -175,6 +175,35 @@ export async function updateStudentAction(
     return withFields(error, 'students.saveFailed');
   }
 
+  // The ID document on the General tab (Rui, 30-10-2026): the same fields as
+  // Documentos, written there only when one of them moved.
+  if (formData.has('idDocumentPresent')) {
+    const text = (field: string): string => String(formData.get(field) ?? '').trim();
+    const moved = ['idDocumentType', 'idDocumentNumber', 'idDocumentIssuedOn', 'idDocumentValidUntil'].filter(
+      (field) => text(field) !== text(`${field}Was`),
+    );
+    if (moved.length > 0) {
+      try {
+        await apiPatch(
+          `/students/${studentId}/documents`,
+          {
+            idDocumentType: text('idDocumentType'),
+            idDocumentIssuedOn: text('idDocumentIssuedOn'),
+            idDocumentValidUntil: text('idDocumentValidUntil'),
+            ...(moved.includes('idDocumentNumber')
+              ? text('idDocumentNumber') === ''
+                ? { idDocumentClear: true }
+                : { idDocumentNumber: text('idDocumentNumber') }
+              : {}),
+          },
+          { organizationId },
+        );
+      } catch (error) {
+        return withFields(error, 'students.saveFailed');
+      }
+    }
+  }
+
   revalidatePath('/dashboard/students');
   revalidatePath(`/dashboard/students/${studentId}`);
   return { ok: true };

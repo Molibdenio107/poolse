@@ -46,9 +46,12 @@ export function IdDocumentForm({
   studentId,
   idDocument,
   proposal = null,
+  fullNumber = null,
 }: {
   studentId: string;
   idDocument: StudentDocuments['idDocument'];
+  /** The number in full, as the General tab shows it (owner and admin). */
+  fullNumber?: string | null;
   /** Read from the photograph, for a person to confirm (30-10-2026). */
   proposal?: NonNullable<IdPhotoState['proposal']> | null;
 }): React.ReactElement {
@@ -85,7 +88,7 @@ export function IdDocumentForm({
         <TextField
           key={saved}
           name="idDocumentNumber"
-          initial={proposal?.number ?? ''}
+          initial={proposal?.number ?? fullNumber ?? ''}
           label={t('documents.idDocument.number')}
           autoComplete="off"
           maxLength={30}
@@ -405,9 +408,11 @@ export function IdentificationSection({
   idDocument,
   photo,
   storageReady,
+  fullNumber = null,
 }: {
   studentId: string;
   idDocument: StudentDocuments['idDocument'];
+  fullNumber?: string | null;
   photo: { fileId: string; filedAt: string } | null;
   storageReady: boolean;
 }): React.ReactElement {
@@ -468,7 +473,12 @@ export function IdentificationSection({
           )}
         </div>
       </section>
-      <IdDocumentForm studentId={studentId} idDocument={idDocument} proposal={state.proposal ?? null} />
+      <IdDocumentForm
+        studentId={studentId}
+        idDocument={idDocument}
+        proposal={state.proposal ?? null}
+        fullNumber={fullNumber}
+      />
     </>
   );
 }

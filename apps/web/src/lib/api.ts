@@ -1488,6 +1488,14 @@ export interface PersonSummary {
   shortName: string;
 }
 
+/** The student's ID document with its number in full — owner and admin, each read logged. */
+export interface StudentIdDocument {
+  type: 'cc' | 'bi' | 'passport' | 'other' | null;
+  number: string | null;
+  issuedOn: string | null;
+  validUntil: string | null;
+}
+
 /** POOLSE-131 — the student's address and identity, all optional. */
 export interface StudentIdentity {
   addressLine: string | null;

@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
-import type { Guardian, StudentIdentity, StudentLevel } from '../../../../lib/api';
+import type { Guardian, StudentIdDocument, StudentIdentity, StudentLevel } from '../../../../lib/api';
 import { countryOptions } from '@/lib/countries';
 import {
   CONTROL_LINE,
@@ -66,11 +66,17 @@ export function StudentForm({
   student,
   mode,
   ageOfMajority,
+  idDocument,
 }: {
   organizationId: string;
   levels: StudentLevel[];
   student?: StudentFormValues;
   mode: 'create' | 'edit';
+  /**
+   * The ID document, number in full (Rui, 30-10-2026). Undefined leaves the
+   * fields out — a create, or a reader the API does not answer.
+   */
+  idDocument?: StudentIdDocument | null;
   /** The club's maioridade — POOLSE-22. Comes from the API, never a literal. */
   ageOfMajority: number;
 }): React.ReactElement {
@@ -117,6 +123,12 @@ export function StudentForm({
         These components also carry their own label, hint and field-level error,
         which is what lets each server rejection land under the box it is about
         rather than as a sentence at the top of the page.
+      */}
+      {/*
+        One form, grouped by context and not titled (Rui, 30-10-2026): who the
+        student is, how to reach them and where they live, their documents,
+        their family and situation, and their swimming. A rule between groups
+        is the only separation.
       */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <TextField
@@ -179,13 +191,9 @@ export function StudentForm({
           {...fieldError('gender')}
         />
 
-        <LevelPicker
-          levels={levels}
-          student={student}
-          birthDate={birthDate}
-          {...fieldError('ageConfirmed')}
-        />
-
+        <IdentityFields identity={student?.identity} fieldError={fieldError} only={['nationality', 'birthplace']} />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 border-t border-border pt-5">
         <TextField
           name="contactEmail"
           type="email"
@@ -206,6 +214,11 @@ export function StudentForm({
           {...fieldError('contactPhone')}
         />
 
+        <IdentityFields identity={student?.identity} fieldError={fieldError} only={['addressLine', 'postalCode', 'locality']} />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 border-t border-border pt-5">
+        <IdDocumentFields idDocument={idDocument} fieldError={fieldError} />
+
         <TextField
           name="taxNumber"
           inputMode="numeric"
@@ -215,6 +228,19 @@ export function StudentForm({
           hint={t('students.taxNumberHint')}
           className="max-w-none"
           {...fieldError('taxNumber')}
+        />
+
+        <IdentityFields identity={student?.identity} fieldError={fieldError} only={['snsNumber']} />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 border-t border-border pt-5">
+        <IdentityFields identity={student?.identity} fieldError={fieldError} only={['parentOneName', 'parentTwoName', 'maritalStatus', 'profession', 'education']} />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 border-t border-border pt-5">
+        <LevelPicker
+          levels={levels}
+          student={student}
+          birthDate={birthDate}
+          {...fieldError('ageConfirmed')}
         />
 
         {/* POOLSE-81: optional; warned about, never required, in a competitive level. */}
@@ -229,7 +255,6 @@ export function StudentForm({
         />
       </div>
 
-      <IdentitySection identity={student?.identity} fieldError={fieldError} />
 
       {/* Prose, so it takes the wider cap rather than the single-control one. */}
       <div className="max-w-form">
@@ -476,12 +501,15 @@ function LevelPicker({
  * reader who may not see it gets no box, and posting the form then leaves the
  * number on file untouched (the API keeps it unless the field is sent).
  */
-function IdentitySection({
+function IdentityFields({
   identity,
   fieldError,
+  only,
 }: {
   identity: StudentIdentity | undefined;
   fieldError: (name: string) => { error?: string };
+  /** Which of the identity fields, in the order the form places them. */
+  only: readonly (keyof StudentIdentity)[];
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -499,118 +527,199 @@ function IdentitySection({
   // but sends none.
   const snsHidden = identity?.snsRecorded === true && identity.snsNumber === null;
 
+  const fields: Partial<Record<keyof StudentIdentity, React.ReactNode>> = {
+    addressLine: (
+      <TextField
+        name="addressLine"
+        label={t('students.identity.addressLine')}
+        initial={identity?.addressLine ?? ''}
+        autoComplete="street-address"
+        maxLength={200}
+        className="max-w-none sm:col-span-2"
+        {...fieldError('addressLine')}
+      />
+    ),
+    postalCode: (
+      <TextField
+        name="postalCode"
+        inputMode="numeric"
+        label={t('students.identity.postalCode')}
+        initial={identity?.postalCode ?? ''}
+        autoComplete="postal-code"
+        maxLength={8}
+        className="max-w-none"
+        {...fieldError('postalCode')}
+      />
+    ),
+    locality: (
+      <TextField
+        name="locality"
+        label={t('students.identity.locality')}
+        initial={identity?.locality ?? ''}
+        autoComplete="address-level2"
+        maxLength={100}
+        className="max-w-none"
+        {...fieldError('locality')}
+      />
+    ),
+    birthplace: (
+      <TextField
+        name="birthplace"
+        label={t('students.identity.birthplace')}
+        initial={identity?.birthplace ?? ''}
+        maxLength={120}
+        className="max-w-none"
+        {...fieldError('birthplace')}
+      />
+    ),
+    nationality: (
+      <SelectField
+        name="nationality"
+        label={t('students.identity.nationality')}
+        initial={identity?.nationality ?? ''}
+        options={[{ value: '', label: t('students.identity.notRecorded') }, ...countries]}
+        className="max-w-none"
+        {...fieldError('nationality')}
+      />
+    ),
+    parentOneName: (
+      <TextField
+        name="parentOneName"
+        label={t('students.identity.parentOneName')}
+        initial={identity?.parentOneName ?? ''}
+        maxLength={160}
+        className="max-w-none"
+        {...fieldError('parentOneName')}
+      />
+    ),
+    parentTwoName: (
+      <TextField
+        name="parentTwoName"
+        label={t('students.identity.parentTwoName')}
+        initial={identity?.parentTwoName ?? ''}
+        maxLength={160}
+        className="max-w-none"
+        {...fieldError('parentTwoName')}
+      />
+    ),
+    maritalStatus: (
+      <SelectField
+        name="maritalStatus"
+        label={t('students.identity.maritalStatus')}
+        initial={identity?.maritalStatus ?? ''}
+        options={[
+          { value: '', label: t('students.identity.notRecorded') },
+          ...(['single', 'married', 'civil_union', 'divorced', 'widowed'] as const).map((value) => ({
+            value,
+            label: t(`students.identity.marital.${value}`),
+          })),
+        ]}
+        className="max-w-none"
+        {...fieldError('maritalStatus')}
+      />
+    ),
+    profession: (
+      <TextField
+        name="profession"
+        label={t('students.identity.profession')}
+        initial={identity?.profession ?? ''}
+        maxLength={120}
+        className="max-w-none"
+        {...fieldError('profession')}
+      />
+    ),
+    education: (
+      <TextField
+        name="education"
+        label={t('students.identity.education')}
+        initial={identity?.education ?? ''}
+        maxLength={120}
+        className="max-w-none"
+        {...fieldError('education')}
+      />
+    ),
+    snsNumber: snsHidden ? (
+      <p className="text-sm text-foreground-muted">{t('students.identity.snsRecorded')}</p>
+    ) : (
+      <TextField
+        name="snsNumber"
+        inputMode="numeric"
+        label={t('students.identity.snsNumber')}
+        initial={identity?.snsNumber ?? ''}
+        maxLength={11}
+        hint={t('students.identity.snsHint')}
+        className="max-w-none"
+        {...fieldError('snsNumber')}
+      />
+    ),
+  };
+  return <>{only.map((name) => <Fragment key={name}>{fields[name]}</Fragment>)}</>;
+}
+
+/**
+ * The ID document on the General tab — Rui, 30-10-2026: the same fields as
+ * *Documentos*, so a number typed in either place is the one both show. The
+ * number is the full one, read for owner and admin only (each read is in the
+ * activity log); the originals ride along hidden, so a save that changed none
+ * of them writes nothing to the document.
+ */
+function IdDocumentFields({
+  idDocument,
+  fieldError,
+}: {
+  idDocument: StudentIdDocument | null | undefined;
+  fieldError: (name: string) => { error?: string };
+}): React.ReactElement | null {
+  const t = useTranslations();
+  if (idDocument === undefined) return null;
+  const doc = idDocument ?? { type: null, number: null, issuedOn: null, validUntil: null };
   return (
-    <section className="flex flex-col gap-3 rounded border border-border p-4">
-      <h3 className="font-medium">
-        {t('students.identity.title')}{' '}
-        <span className="text-sm font-normal text-foreground-muted">· {t('students.identity.optional')}</span>
-      </h3>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TextField
-          name="addressLine"
-          label={t('students.identity.addressLine')}
-          initial={identity?.addressLine ?? ''}
-          autoComplete="street-address"
-          maxLength={200}
-          className="max-w-none sm:col-span-2"
-          {...fieldError('addressLine')}
-        />
-        <TextField
-          name="postalCode"
-          inputMode="numeric"
-          label={t('students.identity.postalCode')}
-          initial={identity?.postalCode ?? ''}
-          autoComplete="postal-code"
-          maxLength={8}
-          className="max-w-none"
-          {...fieldError('postalCode')}
-        />
-        <TextField
-          name="locality"
-          label={t('students.identity.locality')}
-          initial={identity?.locality ?? ''}
-          autoComplete="address-level2"
-          maxLength={100}
-          className="max-w-none"
-          {...fieldError('locality')}
-        />
-        <TextField
-          name="birthplace"
-          label={t('students.identity.birthplace')}
-          initial={identity?.birthplace ?? ''}
-          maxLength={120}
-          className="max-w-none"
-          {...fieldError('birthplace')}
-        />
-        <SelectField
-          name="nationality"
-          label={t('students.identity.nationality')}
-          initial={identity?.nationality ?? ''}
-          options={[{ value: '', label: t('students.identity.notRecorded') }, ...countries]}
-          className="max-w-none"
-          {...fieldError('nationality')}
-        />
-        <TextField
-          name="parentOneName"
-          label={t('students.identity.parentOneName')}
-          initial={identity?.parentOneName ?? ''}
-          maxLength={160}
-          className="max-w-none"
-          {...fieldError('parentOneName')}
-        />
-        <TextField
-          name="parentTwoName"
-          label={t('students.identity.parentTwoName')}
-          initial={identity?.parentTwoName ?? ''}
-          maxLength={160}
-          className="max-w-none"
-          {...fieldError('parentTwoName')}
-        />
-        <SelectField
-          name="maritalStatus"
-          label={t('students.identity.maritalStatus')}
-          initial={identity?.maritalStatus ?? ''}
-          options={[
-            { value: '', label: t('students.identity.notRecorded') },
-            ...(['single', 'married', 'civil_union', 'divorced', 'widowed'] as const).map((value) => ({
-              value,
-              label: t(`students.identity.marital.${value}`),
-            })),
-          ]}
-          className="max-w-none"
-          {...fieldError('maritalStatus')}
-        />
-        <TextField
-          name="profession"
-          label={t('students.identity.profession')}
-          initial={identity?.profession ?? ''}
-          maxLength={120}
-          className="max-w-none"
-          {...fieldError('profession')}
-        />
-        <TextField
-          name="education"
-          label={t('students.identity.education')}
-          initial={identity?.education ?? ''}
-          maxLength={120}
-          className="max-w-none"
-          {...fieldError('education')}
-        />
-        {snsHidden ? (
-          <p className="text-sm text-foreground-muted">{t('students.identity.snsRecorded')}</p>
-        ) : (
-          <TextField
-            name="snsNumber"
-            inputMode="numeric"
-            label={t('students.identity.snsNumber')}
-            initial={identity?.snsNumber ?? ''}
-            maxLength={11}
-            hint={t('students.identity.snsHint')}
-            className="max-w-none"
-            {...fieldError('snsNumber')}
-          />
-        )}
-      </div>
-    </section>
+    <>
+      <input type="hidden" name="idDocumentPresent" value="1" />
+      <input type="hidden" name="idDocumentTypeWas" value={doc.type ?? ''} />
+      <input type="hidden" name="idDocumentNumberWas" value={doc.number ?? ''} />
+      <input type="hidden" name="idDocumentIssuedOnWas" value={doc.issuedOn ?? ''} />
+      <input type="hidden" name="idDocumentValidUntilWas" value={doc.validUntil ?? ''} />
+      <SelectField
+        name="idDocumentType"
+        label={t('documents.idDocument.type')}
+        initial={doc.type ?? ''}
+        options={[
+          { value: '', label: t('documents.idDocument.typeNone') },
+          ...(['cc', 'bi', 'passport', 'other'] as const).map((type) => ({
+            value: type,
+            label: t(`documents.idDocument.types.${type}`),
+          })),
+        ]}
+        className="max-w-none"
+        {...fieldError('idDocumentType')}
+      />
+      <TextField
+        name="idDocumentNumber"
+        label={t('documents.idDocument.number')}
+        initial={doc.number ?? ''}
+        autoComplete="off"
+        maxLength={30}
+        className="max-w-none"
+        {...fieldError('idDocumentNumber')}
+      />
+      <TextField
+        name="idDocumentIssuedOn"
+        type="date"
+        label={t('documents.idDocument.issuedOn')}
+        initial={doc.issuedOn ?? ''}
+        hint={t('documents.idDocument.issuedOnHint')}
+        className="max-w-none"
+        {...fieldError('idDocumentIssuedOn')}
+      />
+      <TextField
+        name="idDocumentValidUntil"
+        type="date"
+        label={t('documents.idDocument.validUntil')}
+        initial={doc.validUntil ?? ''}
+        className="max-w-none"
+        {...fieldError('idDocumentValidUntil')}
+      />
+    </>
   );
 }

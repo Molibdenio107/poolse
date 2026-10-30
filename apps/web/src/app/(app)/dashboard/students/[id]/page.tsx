@@ -12,6 +12,7 @@ import {
   type LessonFeedback,
   type Student,
   type StudentFees,
+  type StudentIdDocument,
   type Students,
   type TimetableEntry,
   type ReposicaoCredit,
@@ -221,6 +222,17 @@ export default async function StudentPage({
   const storageReady = await storageConfigured();
 
   /*
+   * The ID document with its number in full, for owner and admin (Rui,
+   * 30-10-2026) — read only on the two tabs that show it, because every read
+   * that decrypts a number is a line in the activity log.
+   */
+  const requestedTab = Array.isArray(tab) ? tab[0] : tab;
+  const idDocument: StudentIdDocument | null | undefined =
+    reg.canManage && (requestedTab === undefined || requestedTab === 'general' || requestedTab === 'document')
+      ? await apiFetch<StudentIdDocument>(`/students/${id}/documents/id-document`).catch(() => undefined)
+      : undefined;
+
+  /*
    * Who on this record could be in the app — POOLSE-129. Read once for both the
    * General tab's *Convidar para a app* and the *Acesso à app* tab. Staff only.
    */
@@ -381,6 +393,7 @@ export default async function StudentPage({
                         student={loaded}
                         mode="edit"
                         ageOfMajority={reg.ageOfMajority}
+                        {...(idDocument === undefined ? {} : { idDocument })}
                       />
                     </div>
                   </div>
@@ -543,6 +556,7 @@ export default async function StudentPage({
                     <IdentificationSection
                       studentId={loaded.id}
                       idDocument={docs.idDocument}
+                      fullNumber={idDocument?.number ?? null}
                       photo={(() => {
                         const current = docs.copies.find((copy) => copy.kind === 'id_document' && copy.replacedAt === null);
                         return current === undefined ? null : { fileId: current.fileId, filedAt: current.filedAt };

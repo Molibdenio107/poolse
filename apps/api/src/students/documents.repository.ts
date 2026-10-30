@@ -468,3 +468,43 @@ export async function boletimPrint(organizationId: string, studentId: string): P
     };
   });
 }
+
+export interface IdDocumentFull {
+  type: StudentIdDocumentType | null;
+  number: string | null;
+  issuedOn: string | null;
+  validUntil: string | null;
+}
+
+/**
+ * The ID document with its number in full — Rui, 30-10-2026, for the General
+ * tab: shown to owner and admin, and every read that decrypts a number is a
+ * `student.id_document_read` line in the activity log, in the same transaction.
+ */
+export async function readIdDocumentFull(organizationId: string, studentId: string): Promise<IdDocumentFull | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      type: StudentIdDocumentType | null;
+      number: string | null;
+      issued_on: string | null;
+      valid_until: string | null;
+    }>(
+      `SELECT id_document_type AS type, id_document_number_encrypted AS number,
+              id_document_issued_on::text AS issued_on, id_document_valid_until::text AS valid_until
+         FROM student WHERE id = $1 AND archived_at IS NULL`,
+      [studentId],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const number = decryptSensitive(row.number);
+    if (number !== null) {
+      await recordAudit(tx, {
+        action: 'student.id_document_read',
+        entityType: 'student',
+        entityId: studentId,
+        data: { purpose: 'record' },
+      });
+    }
+    return { type: row.type, number, issuedOn: row.issued_on, validUntil: row.valid_until };
+  });
+}

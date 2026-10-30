@@ -2340,7 +2340,7 @@
       "optional": "Optional",
       "addressLine": "Address",
       "locality": "Town",
-      "postalCode": "Postcode: use the format 0000-000.",
+      "postalCode": "Postcode",
       "parentOneName": "Child of",
       "parentTwoName": "and of",
       "maritalStatus": "Marital status",
@@ -2348,7 +2348,7 @@
       "education": "Education",
       "birthplace": "Place of birth",
       "nationality": "Nationality",
-      "snsNumber": "The SNS number has nine digits.",
+      "snsNumber": "SNS patient number",
       "snsHint": "Nine digits. Only the owner and administrators see it.",
       "snsRecorded": "SNS patient number on file. Only the owner and administrators see it.",
       "snsOnFile": "On file",
@@ -2362,7 +2362,9 @@
         "widowed": "Widowed"
       },
       "invalid": "Invalid value.",
-      "tooLong": "Text too long."
+      "tooLong": "Text too long.",
+      "postalCodeInvalid": "Use the format 0000-000.",
+      "snsNumberInvalid": "The SNS number has nine digits."
     }
   },
   "advancement": {

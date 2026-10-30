@@ -2340,7 +2340,7 @@
       "optional": "Opcional",
       "addressLine": "Morada",
       "locality": "Localidade",
-      "postalCode": "Código postal: use o formato 0000-000.",
+      "postalCode": "Código postal",
       "parentOneName": "Filho/a de",
       "parentTwoName": "e de",
       "maritalStatus": "Estado civil",
@@ -2348,7 +2348,7 @@
       "education": "Habilitações literárias",
       "birthplace": "Naturalidade",
       "nationality": "Nacionalidade",
-      "snsNumber": "O nº de utente tem nove algarismos.",
+      "snsNumber": "Nº de utente (SNS)",
       "snsHint": "Nove algarismos. Só o proprietário e os administradores o veem.",
       "snsRecorded": "Nº de utente registado. Só o proprietário e os administradores o veem.",
       "snsOnFile": "Registado",
@@ -2362,7 +2362,9 @@
         "widowed": "Viúvo/a"
       },
       "invalid": "Valor inválido.",
-      "tooLong": "Texto demasiado longo."
+      "tooLong": "Texto demasiado longo.",
+      "postalCodeInvalid": "Use o formato 0000-000.",
+      "snsNumberInvalid": "O nº de utente tem nove algarismos."
     }
   },
   "advancement": {

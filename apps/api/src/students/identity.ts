@@ -91,7 +91,7 @@ export function parseIdentity(body: Record<string, unknown>): StudentIdentity | 
 
   const postal = text(body, 'postalCode');
   const postalCode = postal === null ? null : postal.replace(/\s/g, '');
-  if (postalCode !== null && !/^\d{4}-\d{3}$/.test(postalCode)) throw refuse('postalCode', 'students.identity.postalCode');
+  if (postalCode !== null && !/^\d{4}-\d{3}$/.test(postalCode)) throw refuse('postalCode', 'students.identity.postalCodeInvalid');
 
   const marital = text(body, 'maritalStatus');
   if (marital !== null && !(MARITAL_STATUSES as readonly string[]).includes(marital)) {
@@ -104,7 +104,7 @@ export function parseIdentity(body: Record<string, unknown>): StudentIdentity | 
 
   const sns = text(body, 'snsNumber');
   const snsNumber = sns === null ? null : sns.replace(/\s/g, '');
-  if (snsNumber !== null && !/^\d{9}$/.test(snsNumber)) throw refuse('snsNumber', 'students.identity.snsNumber');
+  if (snsNumber !== null && !/^\d{9}$/.test(snsNumber)) throw refuse('snsNumber', 'students.identity.snsNumberInvalid');
 
   return {
     addressLine: text(body, 'addressLine'),

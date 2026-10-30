@@ -21,11 +21,13 @@ import {
   fileCopy,
   fpnPrint,
   readDocuments,
+  readIdDocumentFull,
   saveDocumentFields,
   saveFpnClubSettings,
   type BoletimPrint,
   type FpnDiscipline,
   type FpnPrint,
+  type IdDocumentFull,
   type IdDocumentEdit,
   type StudentDocumentKind,
   type StudentDocuments,
@@ -152,6 +154,15 @@ export class StudentDocumentsController {
     if (outcome === 'bad_file') throw new BadRequestException('Upload the file first');
     if (outcome === 'bad_season') throw new BadRequestException('No such season');
     return { filed: true };
+  }
+
+  /** The ID document with the number in full, for the record (each read audited). */
+  @Get('id-document')
+  async idDocument(@Param('studentId', ParseUUIDPipe) studentId: string): Promise<IdDocumentFull> {
+    requireRole('owner', 'admin');
+    const found = await readIdDocumentFull(currentTenant().organizationId, studentId);
+    if (found === null) throw new NotFoundException('No such student');
+    return found;
   }
 
   /** What the Anexo 2 prints. Decrypts the ID number; the read is audited. */

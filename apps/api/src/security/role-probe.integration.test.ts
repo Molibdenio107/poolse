@@ -856,6 +856,7 @@ test('student documents and FPN settings refuse a guardian and a student (403)',
       docs.file(fixture.aliceId, { kind: 'socio_form', fileId: NO_SUCH_ID }),
     );
     await refused('GET students/:id/documents/fpn', 403, () => docs.print(fixture.aliceId, undefined, undefined));
+    await refused('GET students/:id/documents/id-document', 403, () => docs.idDocument(fixture.aliceId));
     await refused('PATCH fpn-settings', 403, () => new FpnSettingsController().save({ association: 'X' }));
     await refused('GET students/:id/boletim', 403, () => new BoletimController().print(fixture.aliceId));
   });

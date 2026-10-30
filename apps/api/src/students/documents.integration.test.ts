@@ -82,10 +82,20 @@ test('POOLSE-132 — documents, print data and filed copies', async () => {
     );
     assert.equal(audited!.n, 1);
 
+    // The record's own read shows the number in full, and is audited too.
+    const full = await asAdmin(() => routes.idDocument(id));
+    assert.equal(full.number, CC);
+    const [twice] = await tenant.sql<{ n: number }>(
+      `SELECT count(*)::int AS n FROM audit_log WHERE entity_id = $1 AND action = 'student.id_document_read'`,
+      [id],
+    );
+    assert.equal(twice!.n, 2);
+
     // An instructor reaches none of it.
     await actingAs(tenant, { membershipId: instructor, roles: ['instructor'] }, async () => {
       await expectStatus(() => routes.read(id), 403);
       await expectStatus(() => routes.print(id, undefined, undefined), 403);
+      await expectStatus(() => routes.idDocument(id), 403);
     });
 
     // Two signed copies for one season: the second is current, the first kept.
