@@ -521,7 +521,7 @@ export function InventoryPanel({
             sideways.
           */
           <div className="relative overflow-x-auto">
-            <table className="w-full min-w-[36rem] text-sm">
+            <table className="table-stack w-full min-w-[36rem] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-foreground-muted">
                   <th scope="col" className="py-2 pr-4 font-medium">
@@ -667,7 +667,7 @@ function ItemRow({
 
   return (
     <tr className="border-b border-border align-top last:border-0">
-      <td className="py-3 pr-4">
+      <td data-label={t('inventory.field.name')} className="py-3 pr-4">
         <span className="font-medium">{item.name}</span>
         {item.notes !== null && item.notes !== '' && (
           <span className="block text-foreground-muted">{item.notes}</span>
@@ -675,7 +675,7 @@ function ItemRow({
         <Failure state={archiveState} />
       </td>
 
-      <td className="py-3 pr-4">
+      <td data-label={t('inventory.scopeLabel')} className="py-3 pr-4">
         <ScopeText item={item} />
         {/*
           Where it lives, under which tanks it serves — round 5, 6.0. Muted and
@@ -696,7 +696,7 @@ function ItemRow({
         `tabular-nums` so a column of counts lines up rather than dancing by a
         pixel per digit.
       */}
-      <td className="py-3 pr-4 text-right tabular-nums">
+      <td data-label={t('inventory.field.quantity')} className="py-3 pr-4 text-right tabular-nums">
         {item.quantity}
         {item.unit !== null && item.unit !== '' && (
           <span className="ml-1 text-foreground-muted">{item.unit}</span>

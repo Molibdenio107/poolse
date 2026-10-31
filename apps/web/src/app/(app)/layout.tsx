@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
 import { enUS, ptPT } from '@clerk/localizations';
 import { ClerkProvider } from '@clerk/nextjs';
 import { NextIntlClientProvider } from 'next-intl';
@@ -7,6 +8,7 @@ import { formats } from '../../i18n';
 import { ToastProvider } from '../../components/ui/toast';
 import { FormResetGuard } from '../../components/form-reset-guard';
 import { DetailsAnimator } from '../../components/details-animator';
+import { ScrollRows } from '../../components/scroll-rows';
 import { BusyIndicator } from '../../components/busy-indicator';
 import { readTheme } from '../../lib/preferences';
 import { ThemeScript } from '../../lib/theme-script';
@@ -149,6 +151,9 @@ export default async function AppLayout({
             {/* A refused save must not untick a box or move a select. */}
             <FormResetGuard />
             <DetailsAnimator />
+            <Suspense fallback={null}>
+              <ScrollRows />
+            </Suspense>
             {/* Something is happening, bottom right — POOLSE-98. */}
             <BusyIndicator />
           </NextIntlClientProvider>

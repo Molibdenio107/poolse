@@ -4193,7 +4193,7 @@ function Chip({
         <GripVertical aria-hidden className="mt-0.5 size-3.5 shrink-0 text-foreground-muted" />
       )}
       <span className="min-w-0 flex-1 leading-tight">
-        <span className={cn('line-clamp-2 break-words', cancelled === true && 'line-through')}>
+        <span className={cn('line-clamp-2 break-words hyphens-auto', cancelled === true && 'line-through')}>
           {label}
         </span>
         {time !== undefined && (

@@ -45,7 +45,7 @@ export function SalaryTable({
   return (
     <section className="rounded border border-border bg-surface">
       <div className="relative overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
+        <table className="table-stack w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left text-foreground-muted">
               <th scope="col" className="px-4 py-3 font-medium">{t('salaries.field.name')}</th>
@@ -92,10 +92,10 @@ export function SalaryTable({
                       {named(row.displayName) ?? t('salaries.unnamed')}
                     </button>
                   </th>
-                  <td className="px-4 py-3">
+                  <td data-label={t('salaries.field.roles')} className="px-4 py-3">
                     <RoleBadges roles={row.roles} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-label={t('salaries.field.kind')} className="px-4 py-3">
                     {live === null ? (
                       <span className="text-foreground-muted">{t('salaries.notSet')}</span>
                     ) : (
@@ -120,7 +120,7 @@ export function SalaryTable({
                       </>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
+                  <td data-label={t('salaries.field.weeklyHours')} className="px-4 py-3 text-right tabular-nums">
                     {live?.weeklyHours == null ? (
                       <Dash label={t('salaries.hoursNotRecorded')} />
                     ) : (
@@ -130,14 +130,16 @@ export function SalaryTable({
                   <Figure
                     cents={live?.monthlyCents ?? null}
                     derived={live?.monthlyDerived ?? false}
+                    label={t('salaries.field.monthly')}
                     money={money}
                   />
                   <Figure
                     cents={live?.hourlyCents ?? null}
                     derived={live?.hourlyDerived ?? false}
+                    label={t('salaries.field.hourly')}
                     money={money}
                   />
-                  <td className="px-4 py-3 tabular-nums">
+                  <td data-label={t('salaries.field.effectiveFrom')} className="px-4 py-3 tabular-nums">
                     {live === null ? (
                       <span className="text-foreground-muted">—</span>
                     ) : (
@@ -180,27 +182,30 @@ function Figure({
   cents,
   derived,
   money,
+  label,
 }: {
   cents: number | null;
   derived: boolean;
   money: (cents: number) => string;
+  /** The column's name, for the phone's stacked card (`.table-stack`). */
+  label: string;
 }): React.ReactElement {
   const t = useTranslations();
 
   if (cents === null) {
     return (
-      <td className="px-4 py-3 text-right">
+      <td data-label={label} className="px-4 py-3 text-right">
         <Dash label={t('salaries.hoursNotRecorded')} />
       </td>
     );
   }
 
   if (!derived) {
-    return <td className="px-4 py-3 text-right tabular-nums">{money(cents)}</td>;
+    return <td data-label={label} className="px-4 py-3 text-right tabular-nums">{money(cents)}</td>;
   }
 
   return (
-    <td className="px-4 py-3 text-right tabular-nums text-foreground-muted">
+    <td data-label={label} className="px-4 py-3 text-right tabular-nums text-foreground-muted">
       <Hint text={t('salaries.derivedExplains')}>
         <span
           tabIndex={0}

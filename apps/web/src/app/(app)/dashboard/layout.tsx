@@ -269,7 +269,7 @@ export default async function DashboardLayout({
         <div className="flex items-center gap-3">
           {/* POOLSE-118: Ctrl+K, or this button, to go anywhere the menu goes. */}
           <CommandPalette roles={roles} kind={kind} modules={modules} sports={sports} />
-          <PreferenceControls />
+          <PreferenceControls languageOnPhone={false} />
           <UserMenu canArchive={roles.includes('owner') || roles.includes('admin')} subscription={subscription} />
         </div>
       </header>

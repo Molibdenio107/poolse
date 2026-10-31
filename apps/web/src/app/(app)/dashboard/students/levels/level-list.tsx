@@ -72,11 +72,14 @@ export function LevelList({
         eight levels look like eight different kinds of thing. The name is
         always there, so the colour is never the only cue.
       */}
-      <span
-        aria-hidden="true"
-        className={cn('size-2.5 shrink-0 rounded-full', LEVEL_DOT[level.colour ?? ''] ?? 'bg-level-none')}
-      />
-      <span className="truncate font-medium">{level.name}</span>
+      {/* The dot sits on the name's line (sweep 31-10-2026: it had a line of its own). */}
+      <span className="flex min-w-0 items-center gap-2">
+        <span
+          aria-hidden="true"
+          className={cn('size-2.5 shrink-0 rounded-full', LEVEL_DOT[level.colour ?? ''] ?? 'bg-level-none')}
+        />
+        <span className="truncate font-medium">{level.name}</span>
+      </span>
       <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <AgeRangeBadge level={level} />
         {/*

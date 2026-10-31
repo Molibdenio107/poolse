@@ -97,7 +97,7 @@ export default async function MeetPage({
           <p className="text-sm text-foreground-muted">{t('meets.noResults')}</p>
         ) : (
           <ScrollX>
-            <table className="w-full text-left text-sm">
+            <table className="table-stack w-full text-left text-sm">
               <thead className="text-foreground-muted">
                 <tr>
                   <th scope="col" className="py-2 pr-4 font-normal">{t('meets.column.swimmer')}</th>
@@ -109,7 +109,7 @@ export default async function MeetPage({
               <tbody className="divide-y divide-border">
                 {meet.results.map((result) => (
                   <tr key={result.recordId}>
-                    <td className="py-2 pr-4">
+                    <td data-label={t('meets.column.swimmer')} className="py-2 pr-4">
                       <FromLink
                         href={`/dashboard/students/${result.studentId}/progress`}
                         className="underline underline-offset-4 hover:text-primary"
@@ -117,14 +117,14 @@ export default async function MeetPage({
                         {result.studentName}
                       </FromLink>
                     </td>
-                    <td className="py-2 pr-4">
+                    <td data-label={t('meets.column.event')} className="py-2 pr-4">
                       {result.distanceM} m {t(`progress.strokes.${result.stroke}`)}
                       {result.round !== null && result.round !== 'TIM' && (
                         <span className="text-foreground-muted"> · {t(`meets.round.${roundKey(result.round)}`)}</span>
                       )}
                     </td>
-                    <td className="py-2 pr-4 font-mono">{formatTime(result.timeMs)}</td>
-                    <td className="py-2">
+                    <td data-label={t('meets.column.time')} className="py-2 pr-4 font-mono">{formatTime(result.timeMs)}</td>
+                    <td data-label={t('meets.column.notes')} className="py-2">
                       <span className="flex flex-wrap items-center gap-2">
                         {result.isPersonalBest && (
                           <span className="rounded bg-success/15 px-2 text-success">

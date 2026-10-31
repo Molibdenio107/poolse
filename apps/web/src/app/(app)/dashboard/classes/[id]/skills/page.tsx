@@ -2,7 +2,6 @@ import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { backTarget } from '@/lib/back';
 import { apiFetch, type TurmaSkills } from '@/lib/api';
-import { BackLink } from '@/components/back-link';
 import { SkillsGrid } from './skills-grid';
 import { PageError, PageShell } from '@/components/page-shell';
 
@@ -40,10 +39,9 @@ export default async function SkillsPage({
       subtitle={data === null
             ? t('skills.subtitle')
             : [data.className, data.levelName].filter(Boolean).join(' · ')}
+      // Above the title, like every record page (sweep 31-10-2026).
+      back={{ href: back.href, label: t(back.labelKey) }}
     >
-      <BackLink href={back.href} label={t(back.labelKey)} />
-
-
       {failure !== null && (
         <PageError
           message={t(failure.key)}

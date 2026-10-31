@@ -25,7 +25,7 @@ export function DocumentLines({ lines }: { lines: InvoiceLine[] }): React.ReactE
   return (
     <section className="rounded bg-surface p-5 shadow-card">
       <div className="relative overflow-x-auto">
-        <table className="w-full min-w-[48rem] text-sm">
+        <table className="table-stack w-full min-w-[48rem] text-sm">
           <caption className="sr-only">{t('invoices.lines')}</caption>
           <thead>
             <tr className="border-b border-border text-left text-foreground-muted">
@@ -49,7 +49,7 @@ export function DocumentLines({ lines }: { lines: InvoiceLine[] }): React.ReactE
           <tbody className="divide-y divide-border">
             {lines.map((line) => (
               <tr key={line.id ?? `${line.studentFeeId ?? line.passId}-${line.periodStart}`}>
-                <td className="py-3">
+                <td data-label={t('invoices.student')} className="py-3">
                   {line.studentName ?? '—'}
                   {line.studentTaxNumber !== null && (
                     <span className="block text-foreground-muted">
@@ -57,10 +57,10 @@ export function DocumentLines({ lines }: { lines: InvoiceLine[] }): React.ReactE
                     </span>
                   )}
                 </td>
-                <td className="py-3">
+                <td data-label={t('invoices.lineDescription')} className="py-3">
                   <LineLabel line={line} />
                 </td>
-                <td className="py-3">
+                <td data-label={t('invoices.period')} className="py-3">
                   {formatDate(new Date(`${line.periodStart}T12:00:00Z`))}
                   {line.months > 1 && (
                     <span className="text-foreground-muted">
@@ -69,7 +69,7 @@ export function DocumentLines({ lines }: { lines: InvoiceLine[] }): React.ReactE
                     </span>
                   )}
                 </td>
-                <td className="py-3">
+                <td data-label={t('invoices.vat')} className="py-3">
                   {line.vatExempt ? (
                     <span>
                       {t('invoices.exempt')}
@@ -88,7 +88,7 @@ export function DocumentLines({ lines }: { lines: InvoiceLine[] }): React.ReactE
                     </span>
                   )}
                 </td>
-                <td className="py-3 text-right tabular-nums">
+                <td data-label={t('invoices.amount')} className="py-3 text-right tabular-nums">
                   {formatCents(locale, line.amountCents)}
                 </td>
               </tr>
