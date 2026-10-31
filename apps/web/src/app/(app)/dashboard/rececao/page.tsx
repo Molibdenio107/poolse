@@ -60,7 +60,7 @@ export default async function ReceptionPage({
                 aria-current={site.id === chosen.id ? 'page' : undefined}
                 className={
                   site.id === chosen.id
-                    ? 'inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground'
+                    ? 'inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground font-semibold'
                     : 'inline-flex h-control items-center justify-center rounded-sm px-4 text-control hover:bg-surface-muted bg-surface shadow-card'
                 }
               >

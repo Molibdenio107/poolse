@@ -319,7 +319,7 @@ export default async function MeterPage({
                   {bills.canRecord && !meter.archived && (
                     <FromLink
                       href={`${here}/invoices/new`}
-                      className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-border-strong transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
                     >
                       <Plus className="size-4" aria-hidden="true" />
                       {t('energy.invoice.add')}

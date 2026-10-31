@@ -31,7 +31,7 @@ export function OneTap({
         type="submit"
         disabled={pending}
         aria-label={label}
-        className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control font-semibold text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {kind === 'clean' ? t('app.maintenance.clean') : t('app.maintenance.complete')}
       </button>

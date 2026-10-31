@@ -161,7 +161,7 @@ export default async function FacilitiesPage({
                     {data.canManage && (
                       <FromLink
                         href={`/dashboard/facilities/${facility.id}`}
-                        className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                       >
                         <Settings aria-hidden className="size-4" />
                         {t('facilities.configure')}

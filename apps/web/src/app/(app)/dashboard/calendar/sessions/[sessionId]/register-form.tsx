@@ -131,7 +131,7 @@ export function RegisterForm({ register }: { register: Register & { organization
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 ml-auto rounded-sm bg-primary text-primary-foreground disabled:opacity-60 max-md:flex-1"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 ml-auto rounded-sm bg-primary text-primary-foreground disabled:opacity-60 max-md:flex-1 font-semibold"
           >
             {pending ? t('common.working') : t('attendance.save')}
           </button>

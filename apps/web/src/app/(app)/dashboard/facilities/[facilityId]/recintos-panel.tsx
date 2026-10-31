@@ -161,7 +161,7 @@ function AddForm({ facilityId, sports }: { facilityId: string; sports: PoolseSpo
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60 font-semibold"
         >
           {t('recintos.add')}
         </button>

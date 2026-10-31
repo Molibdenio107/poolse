@@ -205,7 +205,7 @@ export function RegistrationForm({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60 font-semibold"
         >
           {pending ? labels.sending : labels.submit}
         </button>

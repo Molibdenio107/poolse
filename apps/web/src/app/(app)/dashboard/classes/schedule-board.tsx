@@ -2667,7 +2667,7 @@ function MoveDialog({
               type="button"
               onClick={() => onConfirm('week')}
               disabled={pending}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold"
             >
               {pending ? t('common.working') : t('classes.moveThisWeek')}
             </button>
@@ -2680,7 +2680,7 @@ function MoveDialog({
             className={
               canScope
                 ? 'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-primary text-primary hover:bg-surface-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
-                : 'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+                : 'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold'
             }
           >
             {pending

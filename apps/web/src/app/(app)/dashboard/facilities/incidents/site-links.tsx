@@ -28,7 +28,7 @@ export function SiteLinks({
           aria-current={site.id === chosenId ? 'page' : undefined}
           className={
             site.id === chosenId
-              ? 'inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground'
+              ? 'inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground font-semibold'
               : 'inline-flex h-control items-center justify-center rounded-sm px-4 text-control hover:bg-surface-muted bg-surface shadow-card'
           }
         >

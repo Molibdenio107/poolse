@@ -209,7 +209,7 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
           <button
             type="submit"
             disabled={pending || chosen.length === 0}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
           >
             {pending ? t('common.working') : t('vacations.submit')}
           </button>

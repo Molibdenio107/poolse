@@ -111,7 +111,7 @@ export function StaffForm({
         <button
           type="submit"
           disabled={saving}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
         >
           {saving ? t('common.working') : t('staff.save')}
         </button>
@@ -337,7 +337,7 @@ export function Reinvite({
         <button
           type="submit"
           disabled={sending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
         >
           {sending ? t('common.working') : t('staff.reinviteSend')}
         </button>

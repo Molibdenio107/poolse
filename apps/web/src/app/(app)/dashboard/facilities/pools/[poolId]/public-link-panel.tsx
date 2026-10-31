@@ -31,7 +31,7 @@ export interface PublicLinkView {
 }
 
 const BUTTON =  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted disabled:opacity-60 bg-surface shadow-card';
-const PRIMARY =  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60';
+const PRIMARY =  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold';
 
 export function PublicLinkPanel({
   organizationId,

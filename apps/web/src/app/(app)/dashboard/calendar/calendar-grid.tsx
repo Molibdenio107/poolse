@@ -1281,7 +1281,7 @@ function Toolbar({
           type="button"
           onClick={onShowAll}
           disabled={hidden.size === 0}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border-strong hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 bg-surface shadow-card"
         >
           {t('calendar.showAll')}
         </button>
@@ -2178,14 +2178,14 @@ function ScopePopover({
           <button
             type="button"
             onClick={() => onScope('week')}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold"
           >
             {t('calendar.thisWeekOnly')}
           </button>
           <button
             type="button"
             onClick={() => onScope('series')}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border-strong hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
           >
             {t('calendar.wholeSeries')}
           </button>

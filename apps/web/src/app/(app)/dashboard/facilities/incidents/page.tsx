@@ -80,7 +80,7 @@ export default async function IncidentsPage({
         incidents.state === 'ok' ? (
           <FromLink
             href={newHref}
-            className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold"
           >
             {t('incidents.new')}
           </FromLink>

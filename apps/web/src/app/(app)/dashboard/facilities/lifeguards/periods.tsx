@@ -16,7 +16,7 @@ import { addPeriodAction, endPeriodAction, type PeriodState } from './roster.act
 const QUIET =
   'inline-flex h-control items-center justify-center gap-2 rounded-sm px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';
 const PRIMARY =
-  'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold';
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 

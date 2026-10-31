@@ -280,7 +280,8 @@
     "pageFailed": "This page did not load.",
     "pageFailedHint": "It may be a momentary server failure. Try again; if it keeps happening, let us know.",
     "tryAgain": "Try again",
-    "noAnswer": "Poolse did not answer. Try again in a moment."
+    "noAnswer": "Poolse did not answer. Try again in a moment.",
+    "pageNotFound": "Page not found"
   },
   "pagination": {
     "label": "Pagination",

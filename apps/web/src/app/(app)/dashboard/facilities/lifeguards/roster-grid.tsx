@@ -208,7 +208,7 @@ export function RosterGrid({
               const day = days.includes(today) ? today : phoneDay;
               setAdding({ day, from: '', to: '' });
             }}
-            className="inline-flex h-control shrink-0 items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control shrink-0 items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold"
           >
             <Plus aria-hidden className="size-4" />
             {t('roster.addDuty')}

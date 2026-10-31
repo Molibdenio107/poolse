@@ -67,7 +67,7 @@ export function AdvancementModeCard({
             <button
               type="submit"
               disabled={pending || chosen === mode}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
             >
               {t('common.save')}
             </button>

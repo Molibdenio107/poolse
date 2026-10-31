@@ -90,7 +90,7 @@ export function IdentityCard({
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control font-semibold text-primary-foreground disabled:opacity-60"
           >
             {t('staffIdentity.save')}
           </button>

@@ -37,7 +37,7 @@ const RUN_INITIAL: RunState = { ok: false, attempt: 0 };
 const MATCH_INITIAL: MatchState = { attempt: 0 };
 
 const BUTTON =
-  'inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold';
 const BUTTON_QUIET =
   'inline-flex h-control items-center justify-center gap-2 rounded px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';
 

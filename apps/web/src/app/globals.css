@@ -431,6 +431,17 @@
   }
 
   /*
+   * A placeholder is the muted ink — sweep of 31-10-2026. Left to the browser it
+   * was a grey near the typed text in dark mode, so an empty field read as a
+   * filled one. `opacity: 1` because Firefox dims it on top of the colour.
+   */
+  input::placeholder,
+  textarea::placeholder {
+    color: rgb(var(--foreground-muted));
+    opacity: 1;
+  }
+
+  /*
    * Headings are Poppins 600 — POOLSE-138. By element, never by weight: a
    * bold word in a sentence stays the body face.
    */

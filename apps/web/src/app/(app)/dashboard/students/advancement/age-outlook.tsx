@@ -127,7 +127,7 @@ export function AgeOutlook({
                 type="button"
                 onClick={() => propose(null)}
                 disabled={pending}
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
               >
                 {busyLevel === '*'
                   ? t('advancement.outlook.proposing')

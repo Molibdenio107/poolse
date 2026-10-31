@@ -243,7 +243,7 @@ export function CalendarWeek({
                     date: session.cancel!.date ?? '',
                   })
                 }
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-border-strong hover:border-danger hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm hover:border-danger hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary bg-surface shadow-card"
               >
                 <Ban className="size-4" aria-hidden="true" />
                 {t('calendar.cancel')}

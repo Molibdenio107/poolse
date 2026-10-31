@@ -209,7 +209,7 @@ export function MessageComposer({
           <button
             type="submit"
             disabled={previewing || sending}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
           >
             {previewing ? t('messages.compose.checking') : t('messages.compose.review')}
           </button>
@@ -279,7 +279,7 @@ export function MessageComposer({
                     lastAttempt.current = 'send';
                     startTransition(() => send(data));
                   }}
-                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
                 >
                   {sending
                     ? t('messages.confirm.sending')

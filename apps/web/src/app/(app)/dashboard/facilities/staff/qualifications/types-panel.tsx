@@ -27,7 +27,7 @@ import {
  */
 
 const BUTTON =  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded hover:bg-surface-muted disabled:opacity-60 bg-surface shadow-card';
-const PRIMARY =  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60';
+const PRIMARY =  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60 font-semibold';
 
 function TypeForm({
   organizationId,

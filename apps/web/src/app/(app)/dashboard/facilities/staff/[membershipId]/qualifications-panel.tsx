@@ -182,7 +182,7 @@ export function QualificationsPanel({
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
                 >
                   {t('qualifications.save')}
                 </button>

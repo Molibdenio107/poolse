@@ -671,7 +671,7 @@ function DuplicateWarning({
       <button
         type="button"
         onClick={() => onUse(match)}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground font-semibold"
       >
         {t('students.duplicateUseExisting')}
       </button>

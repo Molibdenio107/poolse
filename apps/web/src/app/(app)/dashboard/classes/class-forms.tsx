@@ -229,7 +229,7 @@ export function ClassForm({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
         >
           {pending ? t('common.working') : mode === 'create' ? t('classes.create') : t('common.save')}
         </button>
@@ -336,7 +336,7 @@ export function AddSlotForm({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
         >
           {pending ? t('common.working') : t('classes.addSlot')}
         </button>
@@ -539,7 +539,7 @@ export function EnrolForm({
           name="waiting"
           value="false"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
         >
           {pending ? t('common.working') : t('classes.enrol')}
         </button>
@@ -858,7 +858,7 @@ function LevelChoice({
               type="button"
               onClick={create}
               disabled={saving || name.trim() === ''}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
             >
               {saving ? t('common.working') : t('students.createLevel')}
             </button>

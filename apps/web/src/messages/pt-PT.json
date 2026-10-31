@@ -280,7 +280,8 @@
     "pageFailed": "Esta página não carregou.",
     "pageFailedHint": "Pode ser uma falha momentânea do servidor. Tente de novo; se continuar a acontecer, avise-nos.",
     "tryAgain": "Tentar de novo",
-    "noAnswer": "O Poolse não respondeu. Tente de novo dentro de momentos."
+    "noAnswer": "O Poolse não respondeu. Tente de novo dentro de momentos.",
+    "pageNotFound": "Página não encontrada"
   },
   "pagination": {
     "label": "Paginação",

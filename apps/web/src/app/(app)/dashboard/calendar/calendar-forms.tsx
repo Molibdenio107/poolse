@@ -63,7 +63,7 @@ export function GenerateSeason({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
       >
         {pending ? t('calendar.generating') : t('calendar.generate')}
       </button>
@@ -246,7 +246,7 @@ export function ClosureForm({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
       >
         {pending ? t('calendar.adding') : t('calendar.addClosure')}
       </button>

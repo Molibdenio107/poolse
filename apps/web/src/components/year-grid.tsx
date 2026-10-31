@@ -176,12 +176,14 @@ export function YearGrid({
                     aria-label={`${labelFor(day)}${state.description ? `, ${state.description}` : ''}`}
                     className={cn(
                       'flex aspect-square flex-col items-center justify-center rounded text-xs',
-                      inert ? 'text-foreground-muted/50' : 'text-foreground',
+                      // Muted at full strength: halved and then faded again, a past day
+                      // was close to invisible, dark grey on dark (sweep 31-10-2026).
+                      inert ? 'text-foreground-muted' : 'text-foreground',
                       state.className,
                       // Last, so it wins over whatever a closure or a vacation
                       // painted: a day that is over reads as over first, and as
                       // whatever happened on it second.
-                      past && 'bg-surface-muted/40 opacity-60',
+                      past && 'bg-surface-muted/60 text-foreground-muted',
                     )}
                   >
                     {number}

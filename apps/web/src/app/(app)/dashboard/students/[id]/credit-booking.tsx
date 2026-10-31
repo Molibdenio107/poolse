@@ -91,7 +91,7 @@ export function CreditBooking({
           onClick={load}
           disabled={pending}
           aria-busy={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
         >
           {pending ? t('common.working') : t('reposicao.findClass')}
         </button>
@@ -136,7 +136,7 @@ export function CreditBooking({
                   type="button"
                   onClick={() => book(option.sessionId)}
                   disabled={pending}
-                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
                 >
                   {t('reposicao.book')}
                 </button>

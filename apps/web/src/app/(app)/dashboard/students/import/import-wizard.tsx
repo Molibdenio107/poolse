@@ -57,7 +57,7 @@ const RUN_INITIAL: ImportState = { ok: false, attempt: 0 };
 const MATCH_INITIAL: MatchState = { attempt: 0 };
 
 const BUTTON =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold';
 
 const BUTTON_QUIET =
    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';

@@ -82,7 +82,11 @@ export function Reveal({
   return (
     <div
       className={cn(
-        "grid transition-[grid-template-rows] motion-reduce:transition-none",
+        // One column that may shrink, and an item that may too: a grid item's
+        // automatic minimum is its content, so a wide table inside (an energy
+        // bill's lines, 64rem) widened the whole page instead of scrolling in
+        // its own box (sweep 31-10-2026).
+        "grid grid-cols-[minmax(0,1fr)] transition-[grid-template-rows] motion-reduce:transition-none",
         expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
       )}
       style={TIMING}
@@ -91,7 +95,7 @@ export function Reveal({
     >
       <div
         className={cn(
-          "min-h-0 transition-opacity motion-reduce:transition-none",
+          "min-h-0 min-w-0 transition-opacity motion-reduce:transition-none",
           expanded ? "opacity-100" : "opacity-0",
           settled ? "overflow-visible" : "overflow-hidden",
         )}

@@ -434,15 +434,19 @@ async function formOptions(organizationId: string): Promise<ClassesResponse['opt
     // is the case membership_role exists for.
     const instructors = await tx.query<Choice>(
       `SELECT m.id,
-              coalesce(short_name(u.cached_first_name, u.cached_last_name),
-                       u.cached_email::text, m.id::text) AS name
+              -- A staff member with no login keeps their name on the membership
+              -- (sweep 31-10-2026: the turma page showed one as a raw id).
+              coalesce(short_name(coalesce(u.cached_first_name, m.first_name),
+                                  coalesce(u.cached_last_name, m.last_name)),
+                       u.cached_email::text, m.email::text, m.id::text) AS name
          FROM membership m
          JOIN membership_role mr
            ON mr.membership_id = m.id AND mr.organization_id = m.organization_id
           AND mr.role IN ('instructor', 'owner', 'admin') AND mr.archived_at IS NULL
          LEFT JOIN app_user u ON u.id = m.app_user_id
         WHERE m.archived_at IS NULL AND m.status = 'active'
-        GROUP BY m.id, u.cached_first_name, u.cached_last_name, u.cached_email
+        GROUP BY m.id, u.cached_first_name, u.cached_last_name, u.cached_email,
+                 m.first_name, m.last_name, m.email
         ORDER BY name`,
     );
     const students = await tx.query<Choice & { birthDate: string | null }>(

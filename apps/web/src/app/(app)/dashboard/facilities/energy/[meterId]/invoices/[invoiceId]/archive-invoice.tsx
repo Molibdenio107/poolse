@@ -12,7 +12,7 @@ import { archiveInvoiceAction } from '../../../invoice.actions';
 const INITIAL: FormState = { ok: false };
 
 const BUTTON =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-border-strong transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';
 
 /** "Are you sure" in a dialog, never `window.confirm`; back to the meter once it is gone. */
 export function ArchiveInvoice({

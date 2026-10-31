@@ -43,7 +43,7 @@ import { Reveal } from '@/components/ui/reveal';
 const ACCEPTED = ['.xlsx', '.csv', '.pdf'];
 
 const BUTTON =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold';
 
 const BUTTON_QUIET =
    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';
@@ -645,7 +645,7 @@ function ItemRow({
               <button
                 type="submit"
                 disabled={pending}
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
               >
                 {pending ? t('common.working') : t('common.save')}
               </button>
@@ -773,7 +773,7 @@ function AddItemForm({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
       >
         {pending ? t('common.working') : t('inventory.add')}
       </button>

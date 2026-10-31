@@ -66,7 +66,7 @@ export function MarketingShell({
             </Link>
             <Link
               href="/sign-up"
-              className="inline-flex h-control items-center justify-center px-4 text-control rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-primary text-primary-foreground"
+              className="inline-flex h-control items-center justify-center px-4 text-control rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-primary text-primary-foreground font-semibold"
             >
               {t('marketing.startFree')}
             </Link>
