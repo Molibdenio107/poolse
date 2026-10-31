@@ -24,7 +24,7 @@ export function ApprovalQueue({ data }: { data: PendingVacations }): React.React
 
   if (data.requests.total === 0) {
     return (
-      <section className="rounded border border-border bg-surface p-5">
+      <section className="rounded bg-surface p-5 shadow-card">
         <p className="text-sm text-foreground-muted">{t('vacations.queueEmpty')}</p>
       </section>
     );
@@ -61,7 +61,7 @@ function RequestCard({
   const day = (value: string): string => formatDate(value);
 
   return (
-    <form action={decide} className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+    <form action={decide} className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="requestId" value={request.id} />
 
@@ -96,7 +96,7 @@ function RequestCard({
           name="decision"
           value="approve"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
         >
           {t('vacations.approve')}
         </button>
@@ -142,7 +142,7 @@ function RequestCard({
               name="decision"
               value="reject"
               disabled={pending}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-destructive text-destructive-foreground disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-destructive text-destructive-foreground disabled:opacity-60"
             >
               {t('vacations.confirmReject')}
             </button>

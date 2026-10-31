@@ -16,9 +16,9 @@ import {
 const INITIAL: FormState = { ok: false };
 
 const PRIMARY =
-  'inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 const SECONDARY =
-  'inline-flex h-control items-center justify-center gap-2 rounded border border-border bg-surface px-4 text-control font-medium hover:border-primary/50 hover:text-primary disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border bg-surface px-4 text-control font-medium hover:border-primary/50 hover:text-primary disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /**
  * Acesso de suporte — POOLSE-79, under *O meu perfil*. Owner only: the club's
@@ -48,7 +48,7 @@ export function SupportAccess({
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
         <div className="flex items-start gap-2">
           <Headset aria-hidden className="mt-0.5 size-4 shrink-0 text-foreground-muted" />
           <div>
@@ -64,7 +64,7 @@ export function SupportAccess({
         {live !== null ? <LiveWindow grant={live} /> : <OpenWindow durations={durations} />}
       </section>
 
-      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
         <h2 className="text-sm font-medium">{t('support.activityTitle')}</h2>
         {activity.length === 0 ? (
           <p className="text-sm text-foreground-muted">{t('support.activityEmpty')}</p>
@@ -82,7 +82,7 @@ export function SupportAccess({
         )}
       </section>
 
-      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
         <h2 className="text-sm font-medium">{t('support.historyTitle')}</h2>
         {grants.length === 0 ? (
           <p className="text-sm text-foreground-muted">{t('support.historyEmpty')}</p>

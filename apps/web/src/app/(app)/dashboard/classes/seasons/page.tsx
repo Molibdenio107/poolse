@@ -102,7 +102,7 @@ export default async function SeasonsPage({
 
           {current === 'seasons' && (
             <>
-              <section className="rounded border border-border bg-surface p-5">
+              <section className="rounded bg-surface p-5 shadow-card">
                 {data.seasons.length === 0 ? (
                   <p className="text-foreground-muted">{t('seasons.none')}</p>
                 ) : (

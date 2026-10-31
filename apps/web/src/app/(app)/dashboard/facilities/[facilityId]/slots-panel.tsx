@@ -100,7 +100,7 @@ export function SlotsPanel({
               aria-selected={candidate === group}
               onClick={() => setGroup(candidate)}
               className={cn(
-                'inline-flex h-control items-center justify-center rounded border px-4 text-control transition-colors',
+                'inline-flex h-control items-center justify-center rounded-sm border px-4 text-control transition-colors',
                 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 candidate === group
                   ? 'border-primary bg-primary/15 font-medium text-primary'

@@ -52,7 +52,7 @@ export default async function FamilyPage(): Promise<React.ReactElement> {
       {failure !== null && <PageError message={t(failure.key)} />}
 
       {failure === null && students.length === 0 && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('family.none')}</p>
         </section>
       )}

@@ -207,7 +207,7 @@ export default async function TenantRequestsPage({
           slug: 'general',
           labelKey: 'detailTabs.general',
           content: () => (
-            <section className="flex flex-col gap-2 rounded border border-border bg-surface p-4">
+            <section className="flex flex-col gap-2 rounded bg-surface p-4 shadow-card">
               <div>
                 <h2 className="text-sm font-medium">{t('admin.claim')}</h2>
                 <p className="text-sm text-foreground-muted">{t('admin.claimHint')}</p>

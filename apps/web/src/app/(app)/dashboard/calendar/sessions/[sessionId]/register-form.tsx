@@ -66,7 +66,7 @@ export function RegisterForm({ register }: { register: Register & { organization
 
   if (register.entries.length === 0) {
     return (
-      <section className="rounded border border-border bg-surface p-5">
+      <section className="rounded bg-surface p-5 shadow-card">
         <p className="text-sm text-foreground-muted">{t('attendance.nobodyEnrolled')}</p>
       </section>
     );
@@ -89,7 +89,7 @@ export function RegisterForm({ register }: { register: Register & { organization
         second Save is a second submit button a test or a screen reader finds.
       */}
       <div className="contents md:flex md:flex-wrap md:items-center md:gap-3 md:rounded md:border md:border-border md:bg-surface md:p-4">
-        <div className="flex flex-wrap items-center gap-3 rounded border border-border bg-surface p-4 md:contents">
+        <div className="flex flex-wrap items-center gap-3 rounded bg-surface p-4 md:contents shadow-card">
           {/*
             The one-tap start. Marking a class is mostly "everybody came except
             two", and making an instructor tap fifteen times to say so is how a
@@ -98,14 +98,14 @@ export function RegisterForm({ register }: { register: Register & { organization
           <button
             type="button"
             onClick={() => setAll('present')}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border transition-colors hover:border-primary/50 hover:text-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border transition-colors hover:border-primary/50 hover:text-primary"
           >
             {t('attendance.allPresent')}
           </button>
           <button
             type="button"
             onClick={() => setAll('')}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded text-foreground-muted hover:text-foreground"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:text-foreground"
           >
             {t('attendance.clearAll')}
           </button>
@@ -131,7 +131,7 @@ export function RegisterForm({ register }: { register: Register & { organization
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 ml-auto rounded bg-primary text-primary-foreground disabled:opacity-60 max-md:flex-1"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 ml-auto rounded-sm bg-primary text-primary-foreground disabled:opacity-60 max-md:flex-1"
           >
             {pending ? t('common.working') : t('attendance.save')}
           </button>
@@ -238,7 +238,7 @@ export function RegisterForm({ register }: { register: Register & { organization
                   <label
                     key={status}
                     className={cn(
-                      'inline-flex min-h-control items-center justify-center px-1.5 text-center text-control leading-tight cursor-pointer gap-1.5 rounded border transition-colors sm:h-control sm:px-4',
+                      'inline-flex min-h-control items-center justify-center px-1.5 text-center text-control leading-tight cursor-pointer gap-1.5 rounded-sm border transition-colors sm:h-control sm:px-4',
                       // The label and the glyph render whether or not the state
                       // is chosen, so colour is never the only thing carrying it.
                       marks[entry.studentId] === status
@@ -281,7 +281,7 @@ export function RegisterForm({ register }: { register: Register & { organization
                 maxLength={200}
                 placeholder={t('attendance.notePlaceholder')}
                 aria-label={t('attendance.noteFor', { name: entry.displayName })}
-                className="h-control rounded border border-border-strong bg-background px-3 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="h-control rounded-sm border border-border-strong bg-background px-3 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               />
             )}
 

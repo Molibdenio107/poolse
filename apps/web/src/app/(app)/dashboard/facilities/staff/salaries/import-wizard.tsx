@@ -53,10 +53,10 @@ const RUN_INITIAL: ImportState = { ok: false, attempt: 0 };
 const MATCH_INITIAL: MatchState = { attempt: 0 };
 
 const BUTTON =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const BUTTON_QUIET =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /**
  * The order the mapping step lists the fields in.
@@ -159,7 +159,7 @@ export function SalaryImportWizard({
       </p>
 
       {stage === 'upload' && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <form action={readAction} className="flex flex-col gap-4">
             <div className={cn(FIELD_COLUMN, 'max-w-form')}>
               <label htmlFor="salary-import-file" className={FIELD_LABEL}>
@@ -225,7 +225,7 @@ export function SalaryImportWizard({
       )}
 
       {stage === 'done' && (
-        <section className="flex flex-col items-start gap-3 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col items-start gap-3 rounded bg-surface p-5 shadow-card">
           <p className="flex items-center gap-2 font-medium">
             <Check aria-hidden className="size-5 text-primary" />
             {t('salaries.import.doneCount', { count: created })}
@@ -375,7 +375,7 @@ function MappingStep({
   ];
 
   return (
-    <form action={action} className="flex flex-col gap-5 rounded border border-border bg-surface p-5">
+    <form action={action} className="flex flex-col gap-5 rounded bg-surface p-5 shadow-card">
       <RequestFields rows={rows} settings={settingsJson(mapping, false, [])} />
 
       <div>
@@ -591,7 +591,7 @@ function PreviewStep({
   };
 
   return (
-    <form action={action} className="flex flex-col gap-5 rounded border border-border bg-surface p-5">
+    <form action={action} className="flex flex-col gap-5 rounded bg-surface p-5 shadow-card">
       <RequestFields rows={sheetRows} settings={settingsJson(mapping, true, [...selected])} />
 
       {summary !== undefined && (

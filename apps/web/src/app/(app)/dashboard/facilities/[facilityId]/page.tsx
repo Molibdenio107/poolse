@@ -378,7 +378,7 @@ export default async function FacilityPage({
           labelKey: 'facilities.pools',
           badge: { kind: 'count', value: loaded.pools.length },
           content: () => (
-            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+            <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('facilities.pools')}
               </h2>
@@ -494,7 +494,7 @@ export default async function FacilityPage({
               <PageError message={t(tasks.failure.key)} />
             ) : (
               tasks.state === 'ok' && (
-                <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
                   <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                     {t('maintenance.section')}
                   </h2>
@@ -523,7 +523,7 @@ export default async function FacilityPage({
               return <PageError message={t('detailTabs.loadFailed')} />;
             }
             return (
-              <section className="rounded border border-border bg-surface p-5">
+              <section className="rounded bg-surface p-5 shadow-card">
                 <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                   {t('regulation.title')}
                 </h2>
@@ -593,7 +593,7 @@ export default async function FacilityPage({
                 the club's, not this site's.
               */}
               <LogoPanel />
-              <section className="rounded border border-border bg-surface p-5">
+              <section className="rounded bg-surface p-5 shadow-card">
                 <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                   {t('facilities.sitePhotos')}
                 </h2>
@@ -680,7 +680,7 @@ async function GeneralTab({
         hide badly.
       */}
       {current === 'people' && site.counts !== undefined && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
           <div>
             <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('facilities.people')}
@@ -719,7 +719,7 @@ async function GeneralTab({
       )}
 
       {current === 'location' && site.canManage && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
             {t('facilities.location')}
           </h2>
@@ -739,7 +739,7 @@ async function GeneralTab({
         enforces rather than this.
       */}
       {current === 'hours' && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('facilities.hours')}
@@ -778,7 +778,7 @@ async function GeneralTab({
         calls a tank "due" past it, and an empty box flags nothing.
       */}
       {current === 'water' && (
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
           <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
             {t('facilities.waterThreshold.title')}
           </h2>

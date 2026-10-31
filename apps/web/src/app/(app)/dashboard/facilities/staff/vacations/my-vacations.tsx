@@ -149,7 +149,7 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
         track that, and an operator who knows will keep their own note while one
         who assumes gets a wrong number in March.
       */}
-      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('vacations.balance')}
         </h2>
@@ -166,7 +166,7 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
         <input type="hidden" name="organizationId" value={data.organizationId} />
         <input type="hidden" name="days" value={chosen.join(',')} />
 
-        <div className="flex flex-wrap items-center gap-3 rounded border border-border bg-surface p-4">
+        <div className="flex flex-wrap items-center gap-3 rounded bg-surface p-4 shadow-card">
           <span className="text-sm">
             {t('vacations.chosen', { count: chosen.length })}
           </span>
@@ -203,13 +203,13 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
               maxLength={200}
               placeholder={t('vacations.leaveReasonPlaceholder')}
               aria-label={t('vacations.reason')}
-              className="h-control min-w-48 flex-1 rounded border border-border-strong bg-background px-2.5 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="h-control min-w-48 flex-1 rounded-sm border border-border-strong bg-background px-2.5 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             />
           )}
           <button
             type="submit"
             disabled={pending || chosen.length === 0}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
           >
             {pending ? t('common.working') : t('vacations.submit')}
           </button>
@@ -269,14 +269,14 @@ function RequestList({ data }: { data: MyVacations }): React.ReactElement {
 
   if (data.requests.length === 0) {
     return (
-      <section className="rounded border border-border bg-surface p-5">
+      <section className="rounded bg-surface p-5 shadow-card">
         <p className="text-sm text-foreground-muted">{t('vacations.noRequests')}</p>
       </section>
     );
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
         {t('vacations.myRequests')}
       </h2>

@@ -33,7 +33,7 @@ export async function PartnerSchedule({
   const t = await getTranslations();
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <div>
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('partners.schedule')}

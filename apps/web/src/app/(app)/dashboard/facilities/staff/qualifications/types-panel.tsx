@@ -166,7 +166,7 @@ export function TypesPanel({
   };
 
   return (
-    <section className="flex flex-col gap-5 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-5 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-col gap-1">
         <h2 className="font-medium">{t('qualifications.types')}</h2>
         <p className="text-sm text-foreground-muted">{t('qualifications.typesHint')}</p>

@@ -23,7 +23,7 @@ export async function LogoPanel(): Promise<React.ReactElement> {
   const url = fileUrl(fileId);
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
       <div>
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('files.logoTitle')}

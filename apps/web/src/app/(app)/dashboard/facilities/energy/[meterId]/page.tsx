@@ -124,7 +124,7 @@ export default async function MeterPage({
               />
 
               {generalSection === 'consumption' && (
-                <section className="rounded border border-border bg-surface p-5">
+                <section className="rounded bg-surface p-5 shadow-card">
                   <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                     {t('energy.consumption')}
                   </h2>
@@ -166,7 +166,7 @@ export default async function MeterPage({
                 the year it reached, and the two totals never meet.
               */}
               {generalSection === 'cost' && (
-                <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+                <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
                   <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                     {t('energy.tariff.costSection')}
                   </h2>
@@ -216,7 +216,7 @@ export default async function MeterPage({
           content: () => (
             <>
               {canRecord && (
-                <section className="rounded border border-border bg-surface p-5">
+                <section className="rounded bg-surface p-5 shadow-card">
                   <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                     {t('energy.recordTitle')}
                   </h2>
@@ -224,7 +224,7 @@ export default async function MeterPage({
                 </section>
               )}
 
-              <section className="rounded border border-border bg-surface p-5">
+              <section className="rounded bg-surface p-5 shadow-card">
                 <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                   {t('energy.history')}
                 </h2>
@@ -311,7 +311,7 @@ export default async function MeterPage({
 
             const here = `/dashboard/facilities/energy/${meter.id}`;
             return (
-              <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+              <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                     {t('energy.invoice.section')}
@@ -319,7 +319,7 @@ export default async function MeterPage({
                   {bills.canRecord && !meter.archived && (
                     <FromLink
                       href={`${here}/invoices/new`}
-                      className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-border-strong transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-border-strong transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       <Plus className="size-4" aria-hidden="true" />
                       {t('energy.invoice.add')}
@@ -406,7 +406,7 @@ export default async function MeterPage({
           labelKey: 'energy.details',
           visible: canPlan && !meter.archived,
           content: () => (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('energy.details')}
               </h2>

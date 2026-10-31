@@ -57,10 +57,10 @@ const RUN_INITIAL: ImportState = { ok: false, attempt: 0 };
 const MATCH_INITIAL: MatchState = { attempt: 0 };
 
 const BUTTON =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const BUTTON_QUIET =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /** The order the mapping step lists the fields in — the order a form asks for them. */
 const FIELD_ORDER: ImportField[] = [
@@ -186,7 +186,7 @@ export function ImportWizard({
       <Steps stage={stage} />
 
       {stage === 'upload' && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <form action={readAction} className="flex flex-col gap-4">
             <div className={cn(FIELD_COLUMN, 'max-w-form')}>
               <label htmlFor="import-file" className={FIELD_LABEL}>
@@ -253,7 +253,7 @@ export function ImportWizard({
       )}
 
       {stage === 'done' && (
-        <section className="flex flex-col items-start gap-3 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col items-start gap-3 rounded bg-surface p-5 shadow-card">
           <p className="flex items-center gap-2 font-medium">
             <Check aria-hidden className="size-5 text-primary" />
             {t('students.import.doneCount', { count: created })}
@@ -444,7 +444,7 @@ function MappingStep({
   return (
     <form
       action={action}
-      className="flex flex-col gap-5 rounded border border-border bg-surface p-5"
+      className="flex flex-col gap-5 rounded bg-surface p-5 shadow-card"
     >
       <RequestFields rows={rows} settings={settingsJson(mapping, false, [])} />
 
@@ -730,7 +730,7 @@ function PreviewStep({
     <form action={action} className="flex flex-col gap-5">
       <RequestFields rows={sheetRows} settings={settingsJson(mapping, true, include)} />
 
-      <section className="flex flex-wrap gap-x-8 gap-y-2 rounded border border-border bg-surface p-5">
+      <section className="flex flex-wrap gap-x-8 gap-y-2 rounded bg-surface p-5 shadow-card">
         <Count label={t('students.import.countTotal')} value={rows.length} />
         <Count label={t('students.import.countCreate')} value={creating} />
         <Count label={t('students.import.countUpdate')} value={updating} />
@@ -749,7 +749,7 @@ function PreviewStep({
         rather than discovered afterwards on the Níveis screen.
       */}
       {summary !== null && summary.levelsToCreate.length > 0 && (
-        <p className="flex items-start gap-2 rounded border border-border bg-surface p-4 text-sm">
+        <p className="flex items-start gap-2 rounded bg-surface p-4 text-sm shadow-card">
           <Sparkles aria-hidden className="mt-0.5 size-4 shrink-0 text-primary" />
           <span>
             {t('students.import.levelsWillBeCreated', {

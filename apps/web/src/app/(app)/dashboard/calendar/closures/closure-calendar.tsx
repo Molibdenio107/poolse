@@ -275,7 +275,7 @@ export function ClosureCalendar({
         different verbs — that page counts chosen days and submits a request,
         this one is drawing a range.
       */}
-      <div className="flex flex-wrap items-center gap-3 rounded border border-border bg-surface p-4">
+      <div className="flex flex-wrap items-center gap-3 rounded bg-surface p-4 shadow-card">
         <span className="text-sm">
           {anchor === null
             ? t('calendar.rangeStartHint')
@@ -554,9 +554,9 @@ function ClosureForm({
   }
 
   const BUTTON =
-    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60';
+    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60';
   const BUTTON_QUIET =
-    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border';
+    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border';
   const sendable = warning?.step === 'confirm' && warning.preview.addressCount > 0;
   const reached =
     warning?.step === 'confirm'

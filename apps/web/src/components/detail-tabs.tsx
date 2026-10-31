@@ -205,7 +205,7 @@ export function DetailTabs({
           <button
             type="button"
             onClick={() => setLeaving(null)}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('detailTabs.keepEditing')}
           </button>
@@ -217,7 +217,7 @@ export function DetailTabs({
               discard();
               go?.();
             }}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-destructive font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-destructive font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
           >
             {t('detailTabs.discard')}
           </button>
@@ -328,7 +328,7 @@ export function DetailTabPanel({ children }: { children: React.ReactNode }): Rea
           <button
             type="button"
             onClick={discard}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('detailTabs.cancel')}
           </button>

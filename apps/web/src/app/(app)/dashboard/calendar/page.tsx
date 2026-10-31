@@ -433,7 +433,7 @@ export default async function CalendarPage({
     >
 
       {noOrganization && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('account.noOrganizations')}</p>
         </section>
       )}
@@ -451,7 +451,7 @@ export default async function CalendarPage({
 
       {calendar !== null && (
         <>
-          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+          <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
             {/*
               The arrows sit at the two ends of the block — round 5.
 
@@ -608,7 +608,7 @@ export default async function CalendarPage({
           </section>
 
           {calendar.canManage && (
-            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+            <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
               <div>
                 <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                   {t('calendar.season')}
@@ -652,7 +652,7 @@ function WeekLink({ week, label }: { week: string; label: string }): React.React
   return (
     <FromLink
       href={`/dashboard/calendar?week=${week}`}
-      className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       {label}
     </FromLink>

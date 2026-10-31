@@ -80,7 +80,7 @@ export default async function IncidentsPage({
         incidents.state === 'ok' ? (
           <FromLink
             href={newHref}
-            className="inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('incidents.new')}
           </FromLink>
@@ -111,7 +111,7 @@ export default async function IncidentsPage({
         )}
 
         {incidents.state === 'ok' && incidents.data.total > 0 && (
-          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+          <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
             <ul className="flex flex-col divide-y divide-border">
               {incidents.data.items.map((incident) => (
                 <li

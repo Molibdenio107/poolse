@@ -52,7 +52,7 @@ export function ReportForm({ spaces }: { spaces: { value: string; label: string 
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control w-full items-center justify-center rounded bg-primary px-4 text-control font-medium text-primary-foreground disabled:opacity-60 md:w-auto"
+          className="inline-flex h-control w-full items-center justify-center rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground disabled:opacity-60 md:w-auto"
         >
           {t('app.maintenance.send')}
         </button>

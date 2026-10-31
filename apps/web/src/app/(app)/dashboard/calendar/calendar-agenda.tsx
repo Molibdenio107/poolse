@@ -66,7 +66,7 @@ export async function CalendarAgenda({
               aria-current={chosen ? 'date' : undefined}
               aria-label={t('calendar.agenda.dayLink', { day: t(`week.${index + 1}`), date: formatDate(date), count })}
               className={cn(
-                'flex min-h-control flex-col items-center justify-center rounded border py-1 text-sm leading-tight',
+                'flex min-h-control flex-col items-center justify-center rounded-sm border py-1 text-sm leading-tight',
                 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 chosen ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border bg-surface',
               )}
@@ -171,7 +171,7 @@ function AgendaCard({
     </div>
   );
 
-  const card = 'block rounded border border-border bg-surface p-3';
+  const card = 'block rounded-chip border border-border bg-surface p-3';
   return href === null ? (
     <div className={card}>{body}</div>
   ) : (

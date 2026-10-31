@@ -56,7 +56,7 @@ export async function SportPending({
         <section className="mt-6 flex flex-col gap-4">
           <h2 className="text-base font-semibold">{t('sportPage.recintos', { sport: sportName })}</h2>
           {areas.map(({ site, courts }) => (
-            <div key={site.id} className="rounded border border-border bg-surface p-4">
+            <div key={site.id} className="rounded bg-surface p-4 shadow-card">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="font-medium">{site.name}</h3>
                 {site.canManage && (

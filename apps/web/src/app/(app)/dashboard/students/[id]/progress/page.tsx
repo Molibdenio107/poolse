@@ -114,7 +114,7 @@ export default async function ProgressPage({
     return (
       <PageShell title={t('progress.title')} back={back}>
         {missing && (
-          <section className="rounded border border-border bg-surface p-5">
+          <section className="rounded bg-surface p-5 shadow-card">
             <p>{t('students.notFound')}</p>
           </section>
         )}
@@ -147,7 +147,7 @@ export default async function ProgressPage({
           labelKey: 'detailTabs.general',
           content: () =>
             !hasRecords ? (
-              <section className="flex flex-col gap-2 rounded border border-border bg-surface p-5">
+              <section className="flex flex-col gap-2 rounded bg-surface p-5 shadow-card">
                 <p>{t('progress.none')}</p>
                 <p className="text-sm text-foreground-muted">
                   {loaded.canRecord ? t('progress.noneHintCoach') : t('progress.noneHintMember')}
@@ -155,7 +155,7 @@ export default async function ProgressPage({
               </section>
             ) : (
               <>
-                <section className="flex flex-wrap gap-8 rounded border border-border bg-surface p-5">
+                <section className="flex flex-wrap gap-8 rounded bg-surface p-5 shadow-card">
                   <div className="flex flex-col gap-1">
                     {/*
                       "Fastest", not "best". A genuine best stroke is a comparison
@@ -189,7 +189,7 @@ export default async function ProgressPage({
                 </section>
 
                 {headline !== null && (
-                  <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+                  <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
                     <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                       {t('progress.chartTitle', {
                         stroke: t(`progress.strokes.${headline.stroke}`),
@@ -218,7 +218,7 @@ export default async function ProgressPage({
               {bestsByCourse.map((group) => (
                 <section
                   key={group.course ?? 'none'}
-                  className="rounded border border-border bg-surface p-5"
+                  className="rounded bg-surface p-5 shadow-card"
                 >
                   <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                     {t('progress.bestsIn', { course: t(`progress.course.${group.course ?? 'none'}`) })}
@@ -277,7 +277,7 @@ export default async function ProgressPage({
             if (q === null) return null;
             return (
               <>
-                <section className="flex flex-col gap-1 rounded border border-border bg-surface p-5">
+                <section className="flex flex-col gap-1 rounded bg-surface p-5 shadow-card">
                   <p>
                     {q.ageGroups.length > 0
                       ? t('qualifying.studentBand', { season: q.seasonName, groups: q.ageGroups.join(', ') })
@@ -294,12 +294,12 @@ export default async function ProgressPage({
                   <p className="text-sm text-foreground-muted">{t('qualifying.studentExplain')}</p>
                 </section>
                 {q.ageGroups.length > 0 && q.standards.length === 0 && (
-                  <section className="rounded border border-border bg-surface p-5">
+                  <section className="rounded bg-surface p-5 shadow-card">
                     <p>{t('qualifying.studentNoTimes')}</p>
                   </section>
                 )}
                 {q.standards.map((standard) => (
-                  <section key={standard.id} className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+                  <section key={standard.id} className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
                     <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                       {standard.name}
                     </h2>
@@ -316,7 +316,7 @@ export default async function ProgressPage({
           visible: hasRecords,
           badge: { kind: 'count', value: loaded.records.length },
           content: () => (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('progress.history')}
               </h2>
@@ -377,7 +377,7 @@ export default async function ProgressPage({
           visible: loaded.canRecord,
           content: () => (
             <>
-              <section className="rounded border border-border bg-surface p-5">
+              <section className="rounded bg-surface p-5 shadow-card">
                 <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                   {t('progress.add')}
                 </h2>
@@ -393,7 +393,7 @@ export default async function ProgressPage({
                 />
               </section>
 
-              <section className="rounded border border-border bg-surface p-5">
+              <section className="rounded bg-surface p-5 shadow-card">
                 <FavouriteStrokeForm
                   organizationId={loaded.organizationId}
                   studentId={id}

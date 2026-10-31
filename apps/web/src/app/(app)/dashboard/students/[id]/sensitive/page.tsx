@@ -73,13 +73,13 @@ export default async function SensitivePage({
     return (
       <PageShell title={t('sensitive.title')} back={back}>
         {notPermitted && (
-          <section className="rounded border border-border bg-surface p-5">
+          <section className="rounded bg-surface p-5 shadow-card">
             <p>{t('sensitive.notPermitted')}</p>
           </section>
         )}
 
         {missing && (
-          <section className="rounded border border-border bg-surface p-5">
+          <section className="rounded bg-surface p-5 shadow-card">
             <p>{t('students.notFound')}</p>
           </section>
         )}
@@ -134,7 +134,7 @@ export default async function SensitivePage({
               ? { kind: 'dot', labelKey: 'exams.needsAttention' }
               : undefined,
           content: () => (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('exams.title')}
               </h2>
@@ -165,7 +165,7 @@ export default async function SensitivePage({
                 {t('sensitive.accessLogged')}
               </p>
 
-              <section className="rounded border border-border bg-surface p-5">
+              <section className="rounded bg-surface p-5 shadow-card">
                 <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                   {t('sensitive.medicalNotes')}
                 </h2>
@@ -221,7 +221,7 @@ export default async function SensitivePage({
           slug: 'emergency',
           labelKey: 'sensitive.emergencyTitle',
           content: () => (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('sensitive.emergencyTitle')}
               </h2>
@@ -257,7 +257,7 @@ export default async function SensitivePage({
           slug: 'consent',
           labelKey: 'sensitive.consent',
           content: () => (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('sensitive.consent')}
               </h2>
@@ -354,7 +354,7 @@ export default async function SensitivePage({
           labelKey: 'sensitive.history',
           visible: past.length > 0,
           content: () => (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('sensitive.history')}
               </h2>

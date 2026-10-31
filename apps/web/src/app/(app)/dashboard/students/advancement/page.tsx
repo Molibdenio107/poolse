@@ -77,7 +77,7 @@ export default async function AdvancementPage({
       back={backProp(back, t)}
     >
       {notPermitted && (
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
           <p className="font-medium">{t('advancement.notPermitted')}</p>
           <p className="text-sm text-foreground-muted">{t('advancement.notPermittedHint')}</p>
         </section>
@@ -105,7 +105,7 @@ export default async function AdvancementPage({
         />
       )}
       {proposals !== null && proposals.total === 0 && outlookLoad?.state !== 'ok' && (
-        <section className="flex flex-col gap-1 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-1 rounded bg-surface p-5 shadow-card">
           <p>{t('advancement.none')}</p>
           <p className="text-sm text-foreground-muted">{t('advancement.noneHint')}</p>
         </section>

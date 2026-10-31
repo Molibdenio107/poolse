@@ -12,7 +12,7 @@ import { archiveLabResultAction, recordLabResultAction } from './lab.actions';
 const INITIAL: FormState = { ok: false };
 
 const BUTTON =
-  'inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:bg-surface-muted disabled:opacity-60';
+  'inline-flex h-control items-center justify-center rounded-sm border border-border px-4 text-control hover:bg-surface-muted disabled:opacity-60';
 
 /**
  * Record a laboratory report — POOLSE-72.
@@ -121,7 +121,7 @@ export function LabResultForm({ poolId }: { poolId: string }): React.ReactElemen
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60"
           >
             {pending ? t('common.working') : t('labResults.save')}
           </button>

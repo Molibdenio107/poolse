@@ -30,8 +30,8 @@ export interface PublicLinkView {
   svg: string | null;
 }
 
-const BUTTON =  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted disabled:opacity-60';
-const PRIMARY =  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60';
+const BUTTON =  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted disabled:opacity-60';
+const PRIMARY =  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60';
 
 export function PublicLinkPanel({
   organizationId,
@@ -72,7 +72,7 @@ export function PublicLinkPanel({
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'piscina';
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-col gap-1">
         <h2 className="font-medium">{t('publicWater.manage.title')}</h2>
         <p className="text-sm text-foreground-muted">{t('publicWater.manage.explain')}</p>

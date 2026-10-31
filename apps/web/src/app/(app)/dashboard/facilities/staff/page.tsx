@@ -136,14 +136,14 @@ export default async function PeoplePage({
       back={backProp(back, t)}
       actions={<FromLink
           href="/dashboard/facilities/staff/duplicates"
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded-sm border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('people.duplicates')}
         </FromLink>}
     >
 
       {noOrganization && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('account.noOrganizations')}</p>
         </section>
       )}
@@ -155,7 +155,7 @@ export default async function PeoplePage({
         where to go instead.
       */}
       {notPermitted && (
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
           <p className="font-medium">{t('people.restricted')}</p>
           <p className="text-sm text-foreground-muted">{t('people.restrictedHint')}</p>
         </section>
@@ -208,7 +208,7 @@ export default async function PeoplePage({
           />
 
           {current === 'members' && (
-          <section className="rounded border border-border bg-surface p-5">
+          <section className="rounded bg-surface p-5 shadow-card">
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('people.members')}
@@ -250,7 +250,7 @@ export default async function PeoplePage({
                       key={staffRole}
                       href={active ? '/dashboard/facilities/staff' : `/dashboard/facilities/staff?role=${staffRole}`}
                       aria-pressed={active}
-                      className={`inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                      className={`inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                         active
                           ? 'border-primary bg-primary/15 text-primary'
                           : 'border-border text-foreground-muted hover:border-primary/50 hover:text-foreground'
@@ -283,7 +283,7 @@ export default async function PeoplePage({
                 <p className="text-sm text-foreground-muted">{t('search.noResultsHint')}</p>
                 <FromLink
                   href={role === null ? '/dashboard/facilities/staff' : `/dashboard/facilities/staff?role=${role}`}
-                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   {t('search.clearSearch')}
                 </FromLink>
@@ -379,7 +379,7 @@ export default async function PeoplePage({
           )}
 
           {current === 'invitations' && (
-          <section className="rounded border border-border bg-surface p-5">
+          <section className="rounded bg-surface p-5 shadow-card">
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('people.invitations')}
             </h2>

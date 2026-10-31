@@ -50,7 +50,7 @@ export default async function NewFacilityPage({
       )}
 
       {data !== null && data.canManage && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <CreateFacilityForm organizationId={data.organizationId} timezones={data.timezones} />
         </section>
       )}

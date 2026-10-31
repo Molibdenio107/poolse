@@ -67,7 +67,7 @@ export function FamilyAccess({
   const t = useTranslations();
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-col gap-1">
         <h2 className="text-base font-semibold">{t('familyAccess.title')}</h2>
         <p className="text-sm text-foreground-muted">{t('familyAccess.intro')}</p>

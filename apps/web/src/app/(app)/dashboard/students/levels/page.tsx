@@ -131,7 +131,7 @@ export default async function LevelsPage({
                 href="/dashboard/students/levels"
                 aria-current={byAgeOrder ? undefined : 'true'}
                 className={cn(
-                  'inline-flex h-control items-center justify-center gap-2 rounded border px-4 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                  'inline-flex h-control items-center justify-center gap-2 rounded-sm border px-4 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                   byAgeOrder
                     ? 'border-border hover:bg-surface-muted'
                     : 'border-primary bg-primary/10 text-primary',
@@ -143,7 +143,7 @@ export default async function LevelsPage({
                 href="/dashboard/students/levels?sort=age"
                 aria-current={byAgeOrder ? 'true' : undefined}
                 className={cn(
-                  'inline-flex h-control items-center justify-center gap-2 rounded border px-4 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                  'inline-flex h-control items-center justify-center gap-2 rounded-sm border px-4 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                   byAgeOrder
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-border hover:bg-surface-muted',
@@ -162,7 +162,7 @@ export default async function LevelsPage({
             />
           )}
 
-          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+          <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
             {/* Said in words, because the grip is missing while it is on and a
                 control that disappears without explanation reads as a bug. */}
             {byAgeOrder && levels.length > 0 && (

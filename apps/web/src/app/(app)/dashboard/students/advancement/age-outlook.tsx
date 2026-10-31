@@ -57,7 +57,7 @@ export function AgeOutlook({
   const flagged = outlook.levels.filter((level) => level.aboveNow > 0 || level.belowNow > 0);
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-col gap-1">
         {queueEmpty && <p>{t('advancement.none')}</p>}
         <p className={queueEmpty ? 'text-sm text-foreground-muted' : undefined}>
@@ -111,7 +111,7 @@ export function AgeOutlook({
                     type="button"
                     onClick={() => propose(level.levelId)}
                     disabled={pending}
-                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {busyLevel === level.levelId
                       ? t('advancement.outlook.proposing')
@@ -127,7 +127,7 @@ export function AgeOutlook({
                 type="button"
                 onClick={() => propose(null)}
                 disabled={pending}
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
               >
                 {busyLevel === '*'
                   ? t('advancement.outlook.proposing')

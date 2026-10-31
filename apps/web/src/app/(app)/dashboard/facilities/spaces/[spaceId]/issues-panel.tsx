@@ -33,7 +33,7 @@ const SEVERITIES: readonly Severity[] = ['high', 'normal', 'low'];
 const INITIAL: FormState = { ok: false };
 
 const BUTTON =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-border-strong transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-border-strong transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const ICON_BUTTON =
   'inline-flex items-center gap-1 rounded p-1 text-foreground-muted transition-colors ' +
@@ -249,7 +249,7 @@ export function IssuesPanel({
   const resolved = issues.filter((issue) => issue.status === 'resolved');
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('spaces.issues')}
@@ -398,7 +398,7 @@ function SeverityPicker({
           );
         });
       }}
-      className="h-control rounded border border-border-strong bg-background px-1.5 text-control disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="h-control rounded-sm border border-border-strong bg-background px-1.5 text-control disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       {SEVERITIES.map((option) => (
         <option key={option} value={option}>

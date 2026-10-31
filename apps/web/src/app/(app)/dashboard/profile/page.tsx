@@ -135,7 +135,7 @@ export default async function ProfilePage({
           labelKey: 'detailTabs.general',
           content: () => (
             <>
-              <section className="rounded border border-border bg-surface p-5">
+              <section className="rounded bg-surface p-5 shadow-card">
                 {/*
                   The same ID square as the student and staff records — round 5.
                   Your photograph is Clerk's, as your name is (28-10-2026): it is
@@ -164,7 +164,7 @@ export default async function ProfilePage({
                 price cards do not bury the rest.
               */}
               {isOwner && (
-                <section className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded border border-border bg-surface p-5">
+                <section className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded bg-surface p-5 shadow-card">
                   <div>
                     <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                       {t('subscription.title')}
@@ -179,7 +179,7 @@ export default async function ProfilePage({
                   </div>
                   <FromLink
                     href="/dashboard/profile/subscription"
-                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded-sm border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {t('subscription.open')}
                   </FromLink>
@@ -201,7 +201,7 @@ export default async function ProfilePage({
                 )}
 
               {membership !== null && (
-                <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
                   <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                     {t('account.title')}
                   </h2>
@@ -240,7 +240,7 @@ export default async function ProfilePage({
           visible: account.memberships.length > 1,
           badge: { kind: 'count', value: account.memberships.length },
           content: () => (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('account.organizations')}
               </h2>
@@ -262,7 +262,7 @@ export default async function ProfilePage({
           labelKey: 'sessions.title',
           visible: sessions.length > 0 || sessionsLoad.state === 'failed',
           content: () => (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('sessions.title')}
               </h2>
@@ -287,7 +287,7 @@ export default async function ProfilePage({
             (people.state === 'ok' && people.data.canTransferOwnership) ||
             (people.state === 'failed' && isOwner),
           content: () => (
-            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+            <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('transfer.title')}
               </h2>

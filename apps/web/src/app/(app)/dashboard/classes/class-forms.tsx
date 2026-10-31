@@ -229,7 +229,7 @@ export function ClassForm({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
         >
           {pending ? t('common.working') : mode === 'create' ? t('classes.create') : t('common.save')}
         </button>
@@ -336,7 +336,7 @@ export function AddSlotForm({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
         >
           {pending ? t('common.working') : t('classes.addSlot')}
         </button>
@@ -367,7 +367,7 @@ export function RemoveSlotButton({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60"
       >
         {pending ? t('common.working') : t('classes.removeSlot')}
       </button>
@@ -539,7 +539,7 @@ export function EnrolForm({
           name="waiting"
           value="false"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
         >
           {pending ? t('common.working') : t('classes.enrol')}
         </button>
@@ -548,7 +548,7 @@ export function EnrolForm({
           name="waiting"
           value="true"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted disabled:opacity-60"
         >
           {t('classes.addToWaiting')}
         </button>
@@ -591,7 +591,7 @@ export function EndEnrollmentButton({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60"
       >
         {pending ? t('common.working') : t('classes.remove')}
       </button>
@@ -621,7 +621,7 @@ export function ArchiveClassButton({
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border text-foreground-muted hover:border-danger/50 hover:text-danger"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border text-foreground-muted hover:border-danger/50 hover:text-danger"
       >
         {t('classes.archive')}
       </button>
@@ -643,14 +643,14 @@ export function ArchiveClassButton({
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border text-foreground-muted hover:bg-surface-muted"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border text-foreground-muted hover:bg-surface-muted"
             >
               {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-danger/50 text-danger hover:bg-danger/10 disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-danger/50 text-danger hover:bg-danger/10 disabled:opacity-60"
             >
               {pending ? t('common.working') : t('facilities.confirmArchive')}
             </button>
@@ -800,7 +800,7 @@ function LevelChoice({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex h-control items-center justify-center px-4 text-control w-fit gap-1 rounded border border-border font-medium transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control w-fit gap-1 rounded-sm border border-border font-medium transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('classes.newLevel')}
           <span aria-hidden>+</span>
@@ -858,7 +858,7 @@ function LevelChoice({
               type="button"
               onClick={create}
               disabled={saving || name.trim() === ''}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
             >
               {saving ? t('common.working') : t('students.createLevel')}
             </button>
@@ -868,7 +868,7 @@ function LevelChoice({
                 setOpen(false);
                 setError(null);
               }}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border"
             >
               {t('common.cancel')}
             </button>

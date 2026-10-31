@@ -238,7 +238,7 @@ export function Dialog({
             aria-label={closeLabel}
             // A control-sized square, pulled back by its own margin so the title
             // row does not grow: 36px to a mouse, 44px to a finger (POOLSE-88).
-            className="-m-2 inline-flex h-control w-control shrink-0 items-center justify-center rounded hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="-m-2 inline-flex h-control w-control shrink-0 items-center justify-center rounded-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <X aria-hidden className="size-4" />
           </button>

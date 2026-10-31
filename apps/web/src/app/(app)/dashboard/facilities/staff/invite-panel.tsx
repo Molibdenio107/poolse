@@ -82,7 +82,7 @@ export function InvitePanel({
           setOpening((count) => count + 1);
           setOpen(true);
         }}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary text-primary-foreground"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground"
       >
         {t('invite.open')}
       </button>
@@ -95,7 +95,7 @@ export function InvitePanel({
       onKeyDown={(event) => {
         if (event.key === 'Escape') close();
       }}
-      className="flex flex-col gap-4 rounded border border-border bg-surface p-5"
+      className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card"
     >
       <div className="flex items-baseline justify-between gap-4">
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
@@ -104,7 +104,7 @@ export function InvitePanel({
         <button
           type="button"
           onClick={close}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded text-foreground-muted hover:text-foreground"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:text-foreground"
         >
           {t('common.cancel')}
         </button>

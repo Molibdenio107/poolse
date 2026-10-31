@@ -76,7 +76,7 @@ export async function WidgetCard({
     return (
       <section
         className={cn(
-          'flex flex-wrap items-center gap-x-4 gap-y-1 rounded border border-border bg-surface px-5 py-3',
+          'flex flex-wrap items-center gap-x-4 gap-y-1 rounded bg-surface px-5 py-3 shadow-card',
           SPAN[widget.size],
         )}
       >
@@ -98,7 +98,7 @@ export async function WidgetCard({
   return (
     <section
       className={cn(
-        'flex flex-col gap-3 rounded border border-border bg-surface p-5',
+        'flex flex-col gap-3 rounded bg-surface p-5 shadow-card',
         SPAN[widget.size],
       )}
     >

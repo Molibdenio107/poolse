@@ -80,7 +80,7 @@ export function ProposalCard({
   }
 
   return (
-    <li className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+    <li className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <FromLink
           href={`/dashboard/students/${proposal.studentId}`}
@@ -155,7 +155,7 @@ export function ProposalCard({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               {pending ? t('common.working') : t('advancement.confirm')}
             </button>
@@ -172,7 +172,7 @@ export function ProposalCard({
         >
           <button
             type="submit"
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('advancement.dismiss')}
           </button>

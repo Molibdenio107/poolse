@@ -516,7 +516,7 @@ export function FeesBlock({
     />
 
     {section === 'joining' && (
-      <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
         <div>
           <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
             {t('fees.seasonCharges')}
@@ -542,7 +542,7 @@ export function FeesBlock({
         sócio is a fact about the person that happens to carry a fee, and the
         form that sets it belongs beside the plans rather than under them.
       */
-      <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
         <div>
           <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
             {t('fees.membershipTitle')}
@@ -557,7 +557,7 @@ export function FeesBlock({
 
     {section === 'mensalidade' && (
     <>
-    <section className="flex flex-col gap-5 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-5 rounded bg-surface p-5 shadow-card">
       <div>
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('fees.studentTitle')}
@@ -683,7 +683,7 @@ export function FeesBlock({
       in SQL, the same function ticket 3 put behind the price list, so this
       and the price list cannot round differently.
     */}
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
         {t('fees.periodTotalTitle')}
       </h2>

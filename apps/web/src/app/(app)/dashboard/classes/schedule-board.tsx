@@ -1981,7 +1981,7 @@ export function ScheduleBoard({
                   setUndo(null);
                 });
               }}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:border-primary/50 hover:text-primary"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:border-primary/50 hover:text-primary"
             >
               {t('common.undo')}
             </button>
@@ -2000,7 +2000,7 @@ export function ScheduleBoard({
             {facility !== undefined && canManage && (
               <FromLink
                 href={`/dashboard/facilities/${facility.id}`}
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-3 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-3 rounded-sm border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {t('grid.buildGrid')}
               </FromLink>
@@ -2143,7 +2143,7 @@ export function ScheduleBoard({
                   <button
                     type="button"
                     onClick={() => setAdjustingGrid(true)}
-                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {t('grid.offGridFix')}
                   </button>
@@ -2202,7 +2202,7 @@ export function ScheduleBoard({
         <div className="mt-4 flex items-center gap-3">
           <FromLink
             href={facility === undefined ? '#' : `/dashboard/facilities/${facility.id}`}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('common.continue')}
           </FromLink>
@@ -2252,7 +2252,7 @@ function ExportLinks({
   });
 
   const style =
-    'inline-flex h-control items-center gap-1.5 rounded border border-border px-2.5 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+    'inline-flex h-control items-center gap-1.5 rounded-sm border border-border px-2.5 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -2504,7 +2504,7 @@ function GridToolbar({
           type="checkbox"
           checked={prefs.hideEmptyLanes}
           onChange={(event) => update({ hideEmptyLanes: event.target.checked })}
-          className="size-4 rounded border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="size-4 rounded-sm border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         />
         {t('grid.hideEmptyLanes')}
       </label>
@@ -2667,7 +2667,7 @@ function MoveDialog({
               type="button"
               onClick={() => onConfirm('week')}
               disabled={pending}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               {pending ? t('common.working') : t('classes.moveThisWeek')}
             </button>
@@ -2693,7 +2693,7 @@ function MoveDialog({
             type="button"
             onClick={onCancel}
             disabled={pending}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('common.undo')}
           </button>
@@ -3734,7 +3734,7 @@ function BookingChip({
         {booking.controls.mark !== undefined && (
           <FromLink
             href={booking.controls.mark.href}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-primary/40 font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-primary/40 font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
           >
             <ClipboardCheck aria-hidden className="size-3.5" />
             {booking.controls.mark.label}
@@ -3745,7 +3745,7 @@ function BookingChip({
           <button
             type="button"
             onClick={() => askToCancel?.(booking)}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-danger/40 font-medium text-danger hover:bg-danger/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-danger/40 font-medium text-danger hover:bg-danger/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
           >
             <X aria-hidden className="size-3.5" />
             {t('calendar.cancel')}

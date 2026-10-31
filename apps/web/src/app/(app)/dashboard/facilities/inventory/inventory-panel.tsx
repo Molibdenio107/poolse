@@ -312,7 +312,7 @@ export function InventoryPanel({
         debounce, or at once on Enter, and a new term drops the page so a search
         always starts at the first one.
       */}
-      <section className="flex flex-wrap items-end gap-3 rounded border border-border bg-surface p-5">
+      <section className="flex flex-wrap items-end gap-3 rounded bg-surface p-5 shadow-card">
         <SearchInput
           label={t('inventory.search')}
           placeholder={t('inventory.searchPlaceholder')}
@@ -458,7 +458,7 @@ export function InventoryPanel({
       </Dialog>
 
       <Reveal open={open}>
-        <section ref={panel} className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <section ref={panel} className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
@@ -493,7 +493,7 @@ export function InventoryPanel({
         </section>
       </Reveal>
 
-      <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
         <p className="text-sm text-foreground-muted">{t('inventory.hint')}</p>
 
         {/*
@@ -645,14 +645,14 @@ function ItemRow({
               <button
                 type="submit"
                 disabled={pending}
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
               >
                 {pending ? t('common.working') : t('common.save')}
               </button>
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border"
               >
                 {t('common.cancel')}
               </button>
@@ -773,7 +773,7 @@ function AddItemForm({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary text-primary-foreground disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
       >
         {pending ? t('common.working') : t('inventory.add')}
       </button>

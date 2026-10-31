@@ -12,7 +12,7 @@ import { addRecintoAction, archiveRecintoAction } from './recintos.actions';
 
 const INITIAL: FormState = { ok: false };
 const BUTTON =
-  'inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:bg-surface-muted';
+  'inline-flex h-control items-center justify-center rounded-sm border border-border px-4 text-control hover:bg-surface-muted';
 
 /**
  * Recintos — the courts and pitches of a site (POOLSE-125's first piece, Rui,
@@ -37,7 +37,7 @@ export function RecintosPanel({
   const orphans = areas.filter((area) => !sports.includes(area.sportId as PoolseSport));
 
   return (
-    <section className="flex flex-col gap-5 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-5 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-col gap-1">
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">{t('recintos.title')}</h2>
         <p className="text-sm text-foreground-muted">{t('recintos.hint')}</p>
@@ -118,7 +118,7 @@ function Row({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex h-control items-center justify-center gap-2 rounded border border-danger/50 px-4 text-control text-danger hover:bg-danger/10 disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center gap-2 rounded-sm border border-danger/50 px-4 text-control text-danger hover:bg-danger/10 disabled:opacity-60"
             >
               {t('recintos.archive')}
             </button>
@@ -161,7 +161,7 @@ function AddForm({ facilityId, sports }: { facilityId: string; sports: PoolseSpo
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60"
         >
           {t('recintos.add')}
         </button>

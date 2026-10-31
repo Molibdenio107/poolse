@@ -89,7 +89,7 @@ export default async function TaskPage({
               : undefined,
           content: () => (
             <>
-              <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+              <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
                 <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="flex flex-col gap-0.5">
                     <dt className="text-sm text-foreground-muted">{t('maintenance.about')}</dt>
@@ -141,7 +141,7 @@ export default async function TaskPage({
               </section>
 
               {detail.canComplete && task.state !== 'paused' && (
-                <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
                   <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                     {t('maintenance.recordTitle')}
                   </h2>
@@ -162,7 +162,7 @@ export default async function TaskPage({
             );
 
             return (
-              <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+              <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
                 <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                   {t('maintenance.history')}
                 </h2>
@@ -219,7 +219,7 @@ export default async function TaskPage({
           labelKey: 'maintenance.plan',
           visible: detail.canPlan,
           content: () => (
-            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+            <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('maintenance.plan')}
               </h2>

@@ -30,7 +30,7 @@ const TEXT_MAX = 5000;
 const SHORT_MAX = 200;
 
 const PRIMARY =
-  'inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /**
  * The new-incident form — POOLSE-70, slice 1.
@@ -165,7 +165,7 @@ export function IncidentForm({
     <form ref={form} action={submit} className="flex flex-col gap-6">
       <section
         aria-labelledby="incident-facts"
-        className="flex flex-col gap-4 rounded border border-border bg-surface p-5"
+        className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card"
       >
         <h2 id="incident-facts" className="font-medium">
           {t('incidents.factsTitle')}

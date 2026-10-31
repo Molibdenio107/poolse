@@ -56,7 +56,7 @@ export default async function NewPoolPage({
       )}
 
       {data !== null && facility === null && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('facilities.pickAFacility')}</p>
           <ul className="mt-3 flex flex-col gap-2">
             {data.facilities.map((candidate) => (
@@ -78,7 +78,7 @@ export default async function NewPoolPage({
       )}
 
       {data !== null && facility !== null && data.canManage && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <PoolForm
             organizationId={data.organizationId}
             facilityId={facility.id}

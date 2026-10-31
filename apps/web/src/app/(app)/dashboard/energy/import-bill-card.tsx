@@ -74,7 +74,7 @@ export function ImportBillCard({
       }}
       className="group scroll-mt-24 rounded border border-border bg-surface"
     >
-      <summary className="flex min-h-control cursor-pointer list-none items-center gap-2 rounded p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-control cursor-pointer list-none items-center gap-2 rounded-sm p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
         <ChevronRight aria-hidden className="size-4 shrink-0 transition-transform group-open:rotate-90" />
         <span className="font-medium">{t('energy.importCard.summary')}</span>
       </summary>

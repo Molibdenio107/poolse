@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { ThemeScript } from '../../lib/theme-script';
 import { FormResetGuard } from '../../components/form-reset-guard';
 import { DetailsAnimator } from '../../components/details-animator';
+import { fontVariables } from '../../lib/fonts';
 import '../globals.css';
 
 /**
@@ -30,7 +31,7 @@ export default function PublicLayout({
       <head>
         <ThemeScript />
       </head>
-      <body>
+      <body className={fontVariables}>
         {children}
         {/* The pre-registration form's choices survive a refusal. */}
         <FormResetGuard />

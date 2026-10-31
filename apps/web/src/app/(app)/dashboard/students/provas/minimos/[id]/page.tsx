@@ -65,7 +65,7 @@ export default async function StandardPage({
           slug: 'general',
           labelKey: 'detailTabs.general',
           content: () => (
-            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+            <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
               <EditStandardForm organizationId={standard.organizationId} standard={standard} />
               {standard.canArchive && (
                 <div className="border-t border-border pt-4">
@@ -88,7 +88,7 @@ export default async function StandardPage({
               // The table first, greyed, then why and the way out — never one
               // sentence where a grid should be (POOLSE-111).
               return (
-                <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
                   <div role="status" className="flex flex-col gap-3 rounded border border-border bg-surface-muted p-4">
                     <p className="font-medium">{t('qualifying.noAgeGroupsYet')}</p>
                     <FpnAgeGroupsButton
@@ -135,7 +135,7 @@ export default async function StandardPage({
                     count: count(entry.id),
                   }))}
                 />
-                <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
                   <div className="flex flex-col gap-0.5">
                     <h2 className="font-medium">{group.name}</h2>
                     <p className="text-sm text-foreground-muted">{bandText(t, group)}</p>
@@ -208,7 +208,7 @@ async function Board({
         )}
       </nav>
 
-      <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
         <p className="text-sm text-foreground-muted">{t('qualifying.boardExplain')}</p>
         {board.swimmers.length === 0 ? (
           <p>{t('qualifying.boardEmpty')}</p>
@@ -259,7 +259,7 @@ async function Board({
       </section>
 
       {board.unplaced.length > 0 && (
-        <section className="flex flex-col gap-2 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-2 rounded bg-surface p-5 shadow-card">
           <h2 className="font-medium">{t('qualifying.unplacedTitle')}</h2>
           <p className="text-sm text-foreground-muted">{t('qualifying.unplacedExplain')}</p>
           <ul className="flex flex-col gap-1 text-sm">

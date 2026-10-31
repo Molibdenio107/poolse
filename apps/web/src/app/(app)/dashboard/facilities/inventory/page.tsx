@@ -121,7 +121,7 @@ export default async function InventoryPage({
       actions={<EntityIcon kind="facility" className="size-6 text-primary" />}
     >
       {noOrganization && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('account.noOrganizations')}</p>
         </section>
       )}
@@ -139,7 +139,7 @@ export default async function InventoryPage({
         form that would 404 on save.
       */}
       {data !== null && data.facilityId === null && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('inventory.noSites')}</p>
         </section>
       )}

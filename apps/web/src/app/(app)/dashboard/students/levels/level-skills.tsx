@@ -96,7 +96,7 @@ export function LevelSkills({
               <button
                 type="button"
                 onClick={() => setAttempt((n) => n + 1)}
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border bg-surface hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border bg-surface hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {t('skills.retry')}
               </button>
@@ -254,7 +254,7 @@ export function LevelSkills({
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
                 >
                   {saving ? t('common.working') : t('skills.addSkill')}
                 </button>

@@ -241,7 +241,7 @@ export function PageEmpty({
   action?: React.ReactNode;
 }): React.ReactElement {
   return (
-    <section className="flex flex-col items-start gap-2 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col items-start gap-2 rounded bg-surface p-5 shadow-card">
       <p>{message}</p>
       {hint !== undefined && <p className="text-sm text-foreground-muted">{hint}</p>}
       {action}

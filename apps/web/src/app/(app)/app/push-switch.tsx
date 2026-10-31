@@ -102,7 +102,7 @@ export function PushSwitch({ available, publicKey }: { available: boolean; publi
           : t(`app.push.${status}`);
 
   return (
-    <section className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
+    <section className="flex flex-col gap-2 rounded-lg bg-surface p-3 shadow-card">
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-1.5 font-medium">
           <BellRing className="size-4" aria-hidden />

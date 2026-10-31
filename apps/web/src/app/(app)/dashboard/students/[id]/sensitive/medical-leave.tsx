@@ -171,7 +171,7 @@ export function MedicalLeavePanel({
         <div>
           <FromLink
             href="/dashboard/classes/reposicoes"
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-complementary/60 bg-complementary/25 font-medium text-foreground transition-colors hover:bg-complementary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-complementary/60 bg-complementary/25 font-medium text-foreground transition-colors hover:bg-complementary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('sensitive.leaveToReposicoes')}
           </FromLink>
@@ -264,7 +264,7 @@ export function MedicalLeavePanel({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
             >
               {pending ? t('common.working') : t('sensitive.saveLeave')}
             </button>

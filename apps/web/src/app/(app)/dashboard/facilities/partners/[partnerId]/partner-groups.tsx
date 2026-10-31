@@ -51,7 +51,7 @@ export function PartnerGroups({
   const [editing, setEditing] = useState<string | null>(null);
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
           <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">

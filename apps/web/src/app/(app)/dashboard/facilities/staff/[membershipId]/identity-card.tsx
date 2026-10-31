@@ -37,7 +37,7 @@ export function IdentityCard({
     state.fields?.[field] === undefined ? {} : { error: t(state.fields[field]) };
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
       <h2 className="flex items-center gap-1.5 font-medium">
         <IdCard className="size-4" aria-hidden />
         {t('staffIdentity.title')}
@@ -90,7 +90,7 @@ export function IdentityCard({
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control font-medium text-primary-foreground disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground disabled:opacity-60"
           >
             {t('staffIdentity.save')}
           </button>

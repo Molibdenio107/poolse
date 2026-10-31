@@ -60,7 +60,7 @@ export function TransferOwnership({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border text-foreground-muted hover:bg-surface-muted hover:text-foreground"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-border text-foreground-muted hover:bg-surface-muted hover:text-foreground"
       >
         {t('transfer.open')}
       </button>
@@ -93,14 +93,14 @@ export function TransferOwnership({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-danger/50 text-danger hover:bg-danger/10 disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-danger/50 text-danger hover:bg-danger/10 disabled:opacity-60"
         >
           {pending ? t('common.working') : t('transfer.confirm')}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border text-foreground-muted hover:bg-surface-muted"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border text-foreground-muted hover:bg-surface-muted"
         >
           {t('common.cancel')}
         </button>

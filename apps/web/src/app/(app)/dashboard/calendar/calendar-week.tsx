@@ -214,7 +214,7 @@ export function CalendarWeek({
                 onClick={() =>
                   setPlanning({ sessionId: session.sessionId!, booking })
                 }
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-primary/40 font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-primary/40 font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
               >
                 <NotebookPen className="size-4" aria-hidden="true" />
                 {t('calendar.plan.title')}
@@ -224,7 +224,7 @@ export function CalendarWeek({
             {session.mark !== undefined && (
               <FromLink
                 href={session.mark.href}
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-primary/40 font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-primary/40 font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
               >
                 <ClipboardCheck className="size-4" aria-hidden="true" />
                 {session.mark.label}
@@ -243,7 +243,7 @@ export function CalendarWeek({
                     date: session.cancel!.date ?? '',
                   })
                 }
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-border-strong hover:border-danger hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-border-strong hover:border-danger hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
               >
                 <Ban className="size-4" aria-hidden="true" />
                 {t('calendar.cancel')}
@@ -739,7 +739,7 @@ export function CalendarWeek({
                     type="button"
                     disabled={busy || partnerDays.length === 0}
                     onClick={() => void placePartner()}
-                    className="inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {t('partnerDays.place', { count: partnerDays.length })}
                   </button>
@@ -791,7 +791,7 @@ export function CalendarWeek({
               <button
                 type="submit"
                 disabled={busy || freeSwimTitle.trim() === ''}
-                className="inline-flex h-control items-center justify-center gap-2 rounded border border-primary/40 px-4 text-control font-medium text-primary hover:bg-primary/10 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="inline-flex h-control items-center justify-center gap-2 rounded-sm border border-primary/40 px-4 text-control font-medium text-primary hover:bg-primary/10 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 <Waves className="size-4" aria-hidden="true" />
                 {t('calendar.freeSwimHere')}

@@ -79,7 +79,7 @@ export default async function DuplicatesPage({
 
 
       {notPermitted && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('people.duplicatesRestricted')}</p>
         </section>
       )}
@@ -92,7 +92,7 @@ export default async function DuplicatesPage({
       )}
 
       {report !== null && report.total === 0 && (
-        <section className="flex flex-col gap-1 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-1 rounded bg-surface p-5 shadow-card">
           <p>{t('people.noDuplicates')}</p>
           <p className="text-sm text-foreground-muted">{t('people.noDuplicatesHint')}</p>
         </section>
@@ -106,7 +106,7 @@ export default async function DuplicatesPage({
             {report.items.map((pair) => (
               <li
                 key={`${pair.keepId}:${pair.absorbId}`}
-                className="flex flex-col gap-3 rounded border border-border bg-surface p-5"
+                className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="font-medium">{pair.keepName}</span>

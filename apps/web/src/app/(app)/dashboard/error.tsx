@@ -38,13 +38,13 @@ export default function DashboardError({
         <button
           type="button"
           onClick={reset}
-          className="inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('common.tryAgain')}
         </button>
         <Link
           href="/dashboard"
-          className="inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center rounded-sm border border-border px-4 text-control hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('common.backToDashboard')}
           <LinkBusy />

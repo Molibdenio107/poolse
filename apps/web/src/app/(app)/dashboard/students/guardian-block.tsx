@@ -77,7 +77,7 @@ function draftOf(guardian: Guardian): Draft {
  * (`h-control px-2.5 text-sm`) with the focus-within variant instead.
  */
 const TYPEAHEAD_SHELL =
-  'flex h-control w-full items-center gap-2 rounded border border-border-strong bg-background px-2.5 text-control ' +
+  'flex h-control w-full items-center gap-2 rounded-sm border border-border-strong bg-background px-2.5 text-control ' +
   'focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary';
 
 const BLANK: Draft = {
@@ -282,7 +282,7 @@ function GuardianRow({
             type="button"
             onClick={onRemove}
             aria-label={t('students.guardianRemove', { name: draft.name })}
-            className="-m-2 inline-flex h-control w-control shrink-0 items-center justify-center rounded text-foreground-muted hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="-m-2 inline-flex h-control w-control shrink-0 items-center justify-center rounded-sm text-foreground-muted hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <X className="size-4" aria-hidden />
           </button>
@@ -565,7 +565,7 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
       <button
         type="button"
         onClick={() => onPick({ ...BLANK, name: query.trim() })}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <UserPlus className="size-4" aria-hidden />
         {t('students.guardianAddNew')}
@@ -671,7 +671,7 @@ function DuplicateWarning({
       <button
         type="button"
         onClick={() => onUse(match)}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary text-primary-foreground"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground"
       >
         {t('students.duplicateUseExisting')}
       </button>

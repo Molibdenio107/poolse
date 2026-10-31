@@ -123,7 +123,7 @@ export async function EntryCard({
     </div>
   );
 
-  const card = 'block rounded-lg border border-border bg-surface p-3';
+  const card = 'block rounded-lg bg-surface p-3 shadow-card';
   return href === null ? (
     <div className={card}>{body}</div>
   ) : (
@@ -154,7 +154,7 @@ export async function FeeStatus({ children }: { children: AppChild[] }): Promise
   const destinations = paying[0]?.payTo?.destinations ?? null;
 
   return (
-    <section className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
+    <section className="flex flex-col gap-2 rounded-lg bg-surface p-3 shadow-card">
       <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">{t('app.family.feesTitle')}</h2>
       <ul className="flex flex-col divide-y divide-border">
         {owing.map((child) => (

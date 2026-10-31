@@ -133,7 +133,7 @@ export default async function ArchivePage({
       )}
 
       {entries.state === 'ok' && entries.data.total > 0 && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
           <ul className="flex flex-col divide-y divide-border">
             {entries.data.items.map((entry) => (
               <ArchiveRow key={entry.id} entry={entry} t={t} />

@@ -102,7 +102,7 @@ export default async function EnergyPage({
       )}
 
       {sites !== null && sites.facilities.length === 0 && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p className="text-sm text-foreground-muted">{t('energy.noSites')}</p>
         </section>
       )}
@@ -122,7 +122,7 @@ export default async function EnergyPage({
       {panels.map(({ site, list }) => (
         <section
           key={site.id}
-          className="flex flex-col gap-4 rounded border border-border bg-surface p-5"
+          className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card"
         >
           <h2 className="flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-foreground-muted">
             <EntityIcon kind="facility" />

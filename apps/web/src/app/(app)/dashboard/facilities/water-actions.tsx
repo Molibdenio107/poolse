@@ -112,7 +112,7 @@ export function UnsafeWaterNotice({
         {recordHref !== null && (
           <FromLink
             href={recordHref}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-warning/60 transition-colors hover:bg-warning/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-warning/60 transition-colors hover:bg-warning/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('facilities.recordNewAnalysis')}
           </FromLink>
@@ -120,7 +120,7 @@ export function UnsafeWaterNotice({
         {closure === null && (
           <FromLink
             href={target}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-warning/60 transition-colors hover:bg-warning/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-warning/60 transition-colors hover:bg-warning/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('facilities.closePool')}
           </FromLink>
@@ -170,7 +170,7 @@ export function WaterBackInRangeNote({
       </div>
       <FromLink
         href={closuresHref}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {t('facilities.openClosures')}
       </FromLink>

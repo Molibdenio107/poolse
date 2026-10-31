@@ -72,7 +72,7 @@ export default async function SpacePage({
         back={{ href: back.href, label: t(back.labelKey) }}
       >
         {missing && (
-          <section className="rounded border border-border bg-surface p-5">
+          <section className="rounded bg-surface p-5 shadow-card">
             <p>{t('spaces.notFound')}</p>
           </section>
         )}
@@ -118,7 +118,7 @@ export default async function SpacePage({
           slug: 'history',
           labelKey: 'spaces.history',
           content: () => (
-            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+            <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('spaces.history')}
               </h2>

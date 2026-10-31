@@ -169,7 +169,7 @@ export function PartnerImportWizard({
       </p>
 
       {stage === 'upload' && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <form action={readAction} className="flex flex-col gap-4">
             <div className={cn(FIELD_COLUMN, 'max-w-form')}>
               <label htmlFor="partner-import-file" className={FIELD_LABEL}>
@@ -239,7 +239,7 @@ export function PartnerImportWizard({
       )}
 
       {stage === 'done' && (
-        <section className="flex flex-col items-start gap-3 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col items-start gap-3 rounded bg-surface p-5 shadow-card">
           <p className="flex items-center gap-2 font-medium">
             <Check aria-hidden className="size-5 text-primary" />
             {t('partnerImport.doneCount', {
@@ -426,7 +426,7 @@ function MappingStep({
   return (
     <form
       action={action}
-      className="flex flex-col gap-5 rounded border border-border bg-surface p-5"
+      className="flex flex-col gap-5 rounded bg-surface p-5 shadow-card"
     >
       <RequestFields
         facilityId={facilityId}
@@ -734,7 +734,7 @@ function PreviewStep({
         settings={settingsJson(mapping, true, include)}
       />
 
-      <section className="flex flex-wrap gap-x-8 gap-y-2 rounded border border-border bg-surface p-5">
+      <section className="flex flex-wrap gap-x-8 gap-y-2 rounded bg-surface p-5 shadow-card">
         <Count label={t('students.import.countTotal')} value={rows.length} />
         <Count label={t('partnerImport.countPartners')} value={newPartners} />
         <Count label={t('partnerImport.countGroups')} value={creating} />
@@ -850,7 +850,7 @@ function PartnerBlock({
           <button
             type="button"
             onClick={() => onToggleAll(ticked < rows.length)}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {ticked < rows.length
               ? t('partnerImport.tickAll')

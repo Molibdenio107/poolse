@@ -265,11 +265,27 @@ export default {
         'flash-today': 'flash-today 1.4s ease-out forwards',
       },
 
+      /*
+       * POOLSE-138, from the design handoff: a card is 4 px (`rounded`, and
+       * `rounded-lg` with it), a control 2 px (`rounded-sm`, which every
+       * `h-control` carries), a turma chip 6 px (`rounded-chip`). Named rather
+       * than derived from one base, because 4 px minus 4 is no corner at all.
+       */
       borderRadius: {
         DEFAULT: 'var(--radius)',
         lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        md: 'var(--radius-control)',
+        sm: 'var(--radius-control)',
+        chip: 'var(--radius-chip)',
+      },
+      /* A card is lifted, not outlined; dark mode adds a hairline to it (globals.css). */
+      boxShadow: {
+        card: 'var(--shadow-card)',
+      },
+      /* The handoff's typefaces, loaded by next/font in lib/fonts.ts. */
+      fontFamily: {
+        sans: ['var(--font-body)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        heading: ['var(--font-heading)', 'var(--font-body)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
     },
   },

@@ -48,7 +48,7 @@ export async function WeatherPanel({
   // and the control that fixes it is on the same screen.
   if (city === null || latitude === null || longitude === null) {
     return (
-      <section className="rounded border border-border bg-surface p-5">
+      <section className="rounded bg-surface p-5 shadow-card">
         <h2 className="mb-2 text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('weather.title')}
         </h2>
@@ -74,7 +74,7 @@ export async function WeatherPanel({
   const weather = result?.available === true ? result.weather : null;
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('weather.title')}

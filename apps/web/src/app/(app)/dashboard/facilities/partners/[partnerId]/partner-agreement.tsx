@@ -45,10 +45,10 @@ const BILLING_MODELS: readonly BillingModel[] = [
 ];
 
 const BUTTON =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const BUTTON_QUIET =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /**
  * A decimal string, shown in the reader's locale, without arithmetic.
@@ -89,7 +89,7 @@ export function PartnerAgreementPanel({
 
   if (!canManage) {
     return (
-      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('partners.contract')}
         </h2>
@@ -105,7 +105,7 @@ export function PartnerAgreementPanel({
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
           <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">

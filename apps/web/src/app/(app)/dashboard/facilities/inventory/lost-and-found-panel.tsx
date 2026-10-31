@@ -361,7 +361,7 @@ function AddFound({
         <button
           type="button"
           onClick={onDone}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted"
         >
           {t('common.cancel')}
         </button>

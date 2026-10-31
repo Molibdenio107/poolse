@@ -62,7 +62,7 @@ export async function EnergyDashboard({ summary }: { summary: EnergySummary }): 
   const perUse = summary.perUse;
 
   return (
-    <section aria-labelledby="energy-dashboard" className="flex flex-col gap-5 rounded border border-border bg-surface p-5">
+    <section aria-labelledby="energy-dashboard" className="flex flex-col gap-5 rounded bg-surface p-5 shadow-card">
       <div>
         <h2 id="energy-dashboard" className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('energy.dashboard.title')}

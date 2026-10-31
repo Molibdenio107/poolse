@@ -117,7 +117,7 @@ export default async function ClosuresPage({
 
 
       {noOrganization && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('account.noOrganizations')}</p>
         </section>
       )}

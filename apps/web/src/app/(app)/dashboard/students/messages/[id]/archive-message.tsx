@@ -34,7 +34,7 @@ export function ArchiveMessage({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted"
       >
         {t('messages.archive')}
       </button>
@@ -50,7 +50,7 @@ export function ArchiveMessage({
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted"
           >
             {t('common.cancel')}
           </button>
@@ -70,7 +70,7 @@ export function ArchiveMessage({
                 }
               })
             }
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
           >
             {t('messages.archive')}
           </button>

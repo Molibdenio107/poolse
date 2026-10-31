@@ -63,7 +63,7 @@ export async function StandardList({
   const t = await getTranslations();
   return (
     <>
-      <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
         <p className="text-sm text-foreground-muted">{t('qualifying.standardsExplain')}</p>
         {overview.standards.length === 0 ? (
           <p>{t('qualifying.noStandards')}</p>
@@ -86,7 +86,7 @@ export async function StandardList({
         )}
       </section>
       {overview.canEdit && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
           <h2 className="font-medium">{t('qualifying.addStandard')}</h2>
           {overview.ageGroups.length === 0 && (
             <p className="text-sm text-warning">{t('qualifying.noAgeGroupsYet')}</p>
@@ -141,7 +141,7 @@ export async function AgeGroupList({
   const t = await getTranslations();
   return (
     <>
-      <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
         <p className="text-sm text-foreground-muted">{t('qualifying.ageGroupsExplain')}</p>
         {overview.ageGroups.length === 0 ? (
           <p>{t('qualifying.noAgeGroups')}</p>
@@ -176,13 +176,13 @@ export async function AgeGroupList({
       </section>
       {overview.canEdit && (
         // The FPN's set in one click (POOLSE-111) — the same as a standard's Tempos tab offers.
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
           <h2 className="font-medium">{t('qualifying.fpnTitle')}</h2>
           <FpnAgeGroupsButton organizationId={overview.organizationId} seasonId={seasonId} />
         </section>
       )}
       {overview.canEdit && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
           <h2 className="font-medium">{t('qualifying.addAgeGroup')}</h2>
           <CreateAgeGroupForm organizationId={overview.organizationId} seasonId={seasonId} />
         </section>

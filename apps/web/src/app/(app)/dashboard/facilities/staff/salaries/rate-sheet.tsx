@@ -491,7 +491,7 @@ function ArchiveButton({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-danger/40 bg-danger/10 text-danger hover:border-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-danger/40 bg-danger/10 text-danger hover:border-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {t('salaries.confirmRemove')}
       </button>

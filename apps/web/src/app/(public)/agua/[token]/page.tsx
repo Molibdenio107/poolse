@@ -102,7 +102,7 @@ export default async function PublicWaterPage({
       </header>
 
       {page.readings.length === 0 ? (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('publicWater.noReadings')}</p>
         </section>
       ) : (
@@ -135,7 +135,7 @@ export default async function PublicWaterPage({
         nothing else from the report; words and an icon, never colour alone.
       */}
       {page.lab !== null && (
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-surface p-4">
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded bg-surface p-4 shadow-card">
           <div className="flex flex-col gap-0.5">
             <span className={cn('font-medium', lobby && 'text-2xl')}>{t('publicWater.lab.title')}</span>
             <span className={cn('text-foreground-muted', lobby ? 'text-lg' : 'text-sm')}>

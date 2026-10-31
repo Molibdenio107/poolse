@@ -66,7 +66,7 @@ export function SettlementPanel({
   const settled = invoice.outstandingCents === 0 || invoice.status === 'credited';
 
   return (
-    <section className="grid grid-cols-1 gap-6 rounded border border-border bg-surface p-5 sm:grid-cols-2">
+    <section className="grid grid-cols-1 gap-6 rounded bg-surface p-5 sm:grid-cols-2 shadow-card">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">

@@ -33,7 +33,7 @@ export async function FamilyCertificates({
       <p className="text-sm text-foreground-muted">{t('app.family.certificatesHint')}</p>
       <ul className="flex flex-col gap-2">
         {leaves.map((leave) => (
-          <li key={leave.id} className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4">
+          <li key={leave.id} className="flex flex-col gap-2 rounded-lg bg-surface p-4 shadow-card">
             <span className="font-medium">
               {names !== null && names.has(leave.studentId)
                 ? `${t('app.family.certificateFor', { name: names.get(leave.studentId)! })} · `

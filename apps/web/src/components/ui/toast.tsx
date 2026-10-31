@@ -209,7 +209,7 @@ function ToastCard({
             toast.action?.onAct();
             onDismiss(toast.id);
           }}
-          className="-my-1.5 inline-flex h-control shrink-0 items-center justify-center rounded border border-primary/40 px-4 text-control font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+          className="-my-1.5 inline-flex h-control shrink-0 items-center justify-center rounded-sm border border-primary/40 px-4 text-control font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
         >
           {toast.action.label}
         </button>

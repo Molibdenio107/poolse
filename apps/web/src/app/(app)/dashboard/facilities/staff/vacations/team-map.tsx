@@ -151,7 +151,7 @@ export function TeamMap({ data }: { data: TeamVacations }): React.ReactElement {
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
             {t('vacations.showEveryone')}

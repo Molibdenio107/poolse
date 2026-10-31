@@ -102,7 +102,7 @@ export async function YearOnYearPanel({
     `${fmt.number(value, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} °C`;
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
       <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
         {t('energy.yoy.section')}
       </h2>

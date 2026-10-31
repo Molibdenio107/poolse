@@ -139,7 +139,7 @@ export default async function VacationsPage({
                     href={`/dashboard/facilities/staff/vacations?tab=${tab}&year=${option}`}
                     aria-current={option === chosenYear ? 'page' : undefined}
                     className={cn(
-                      'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border transition-colors',
+                      'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border transition-colors',
                       'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                       option === chosenYear
                         ? 'border-primary bg-primary/15 font-medium text-primary'
@@ -154,7 +154,7 @@ export default async function VacationsPage({
           </div>
 
           {refused ? (
-            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+            <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
               <p className="font-medium">{t('vacations.restricted')}</p>
               <p className="text-sm text-foreground-muted">{t('vacations.restrictedHint')}</p>
             </section>
@@ -204,7 +204,7 @@ function TabLink({
       href={`/dashboard/facilities/staff/vacations?tab=${tab}&year=${year}`}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'inline-flex h-control items-center justify-center gap-2 rounded px-4 text-control transition-colors',
+        'inline-flex h-control items-center justify-center gap-2 rounded-sm px-4 text-control transition-colors',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
         active
           ? 'bg-primary/15 font-medium text-primary'

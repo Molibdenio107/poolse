@@ -33,7 +33,7 @@ export async function BillingPanel({
   const format = await getFormatter();
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+    <section className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
       <div>
         <h2 className="text-sm font-medium">{t('admin.billing.title')}</h2>
         <p className="text-sm text-foreground-muted">{t('admin.billing.hint')}</p>

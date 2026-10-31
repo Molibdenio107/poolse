@@ -99,10 +99,10 @@ function PlanAmount({
 const INITIAL: FormState = { ok: false };
 
 const BUTTON =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const BUTTON_QUIET =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 function Problem({ state }: { state: FormState }): React.ReactElement | null {
   const t = useTranslations();
@@ -165,7 +165,7 @@ export function PricesPanel({
   const seguros = plans.filter((plan) => plan.kind === 'seguro');
 
   return (
-    <section className="flex flex-col gap-6 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-6 rounded bg-surface p-5 shadow-card">
       {/* ---- what a place costs -------------------------------------------- */}
       {section === 'mensalidade' && (
       <div className="flex flex-col gap-3">

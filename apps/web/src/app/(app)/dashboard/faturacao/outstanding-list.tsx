@@ -98,7 +98,7 @@ export function OutstandingList({
   const offerEverywhere = allOverdue && overdueEverywhere.length > overdue.length;
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('invoices.owingTitle')}
@@ -117,7 +117,7 @@ export function OutstandingList({
             type="button"
             disabled={ticked.size === 0}
             onClick={() => setReminding(true)}
-            className="inline-flex min-h-control items-center justify-center gap-2 rounded bg-primary px-4 py-1 text-control text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+            className="inline-flex min-h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 py-1 text-control text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
           >
             <Mail aria-hidden className="size-4" />
             {t('invoices.reminders.open', { count: ticked.size })}

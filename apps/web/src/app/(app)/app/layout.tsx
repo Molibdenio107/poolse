@@ -66,7 +66,7 @@ export default async function AppModeLayout({
             {hats.staff && (
               <Link
                 href="/dashboard"
-                className="ml-auto inline-flex h-control items-center justify-center rounded px-3 text-control text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="ml-auto inline-flex h-control items-center justify-center rounded-sm px-3 text-control text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {t('app.openBackoffice')}
                 <LinkBusy />

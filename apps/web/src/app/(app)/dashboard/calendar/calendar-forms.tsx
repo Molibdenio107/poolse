@@ -63,7 +63,7 @@ export function GenerateSeason({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary text-primary-foreground disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
       >
         {pending ? t('calendar.generating') : t('calendar.generate')}
       </button>
@@ -246,7 +246,7 @@ export function ClosureForm({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary text-primary-foreground disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
       >
         {pending ? t('calendar.adding') : t('calendar.addClosure')}
       </button>
@@ -521,7 +521,7 @@ export function CancelSessionDialog({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-destructive text-destructive-foreground disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-destructive text-destructive-foreground disabled:opacity-60"
             >
               {t('calendar.confirmCancel')}
             </button>

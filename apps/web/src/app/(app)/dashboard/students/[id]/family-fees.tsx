@@ -25,7 +25,7 @@ export function FamilyFees({ fees }: { fees: StudentFees }): React.ReactElement 
   const { live, paidTotal, outstanding } = feeTotals(fees);
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
         {t('detailTabs.fees')}
       </h2>

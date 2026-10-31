@@ -13,9 +13,9 @@ import { publishRegulationAction, saveComplaintsAction, withdrawRegulationAction
 const INITIAL: FormState = { ok: false };
 
 const PRIMARY =
-  'inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground disabled:opacity-60';
+  'inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60';
 const BUTTON =
-  'inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:bg-surface-muted disabled:opacity-60';
+  'inline-flex h-control items-center justify-center rounded-sm border border-border px-4 text-control hover:bg-surface-muted disabled:opacity-60';
 
 /**
  * Publish a new version — POOLSE-73. Seeded with the version in force, because
@@ -147,7 +147,7 @@ export function WithdrawRegulationButton({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex h-control items-center justify-center gap-2 rounded border border-danger/50 px-4 text-control text-danger hover:bg-danger/10 disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center gap-2 rounded-sm border border-danger/50 px-4 text-control text-danger hover:bg-danger/10 disabled:opacity-60"
             >
               {pending ? t('common.working') : t('regulation.withdraw')}
             </button>

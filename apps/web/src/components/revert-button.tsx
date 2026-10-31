@@ -10,9 +10,9 @@ import { revertAction, type RevertState } from '@/app/(app)/dashboard/activity.a
 const INITIAL: RevertState = { ok: false };
 
 const SECONDARY =
-  'inline-flex h-control items-center justify-center gap-2 rounded border border-primary/40 px-4 text-control font-medium text-primary hover:bg-primary/10 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm border border-primary/40 px-4 text-control font-medium text-primary hover:bg-primary/10 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 const PRIMARY =
-  'inline-flex h-control items-center justify-center px-4 text-control rounded bg-primary font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center px-4 text-control rounded-sm bg-primary font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /**
  * *Reverter* on one entry of a record's *Atividade* — POOLSE-80.

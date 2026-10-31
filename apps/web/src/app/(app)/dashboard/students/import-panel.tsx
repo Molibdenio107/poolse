@@ -326,7 +326,7 @@ export function StudentActions({
       <Reveal open={open}>
         <section
           ref={panel}
-          className={cn('flex flex-col gap-4 rounded border border-border bg-surface p-5')}
+          className={cn('flex flex-col gap-4 rounded bg-surface p-5 shadow-card')}
         >
           <div className="flex items-start justify-between gap-4">
             <div>

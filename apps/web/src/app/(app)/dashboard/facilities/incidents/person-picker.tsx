@@ -7,7 +7,7 @@ import { TextField } from '@/components/ui/field';
 import type { PickOption } from './incidents.actions';
 
 const QUIET =
-  'inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /**
  * Find one person and hold their id in a hidden field — POOLSE-70.

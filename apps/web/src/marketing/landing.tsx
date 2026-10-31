@@ -38,7 +38,7 @@ export function Landing({ locale }: { locale: MarketingLocale }): React.ReactEle
   return (
     <MarketingShell locale={locale}>
       <section className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-20">
-        <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
+        <h1 className="max-w-3xl text-4xl font-semibold leading-snug tracking-tight sm:text-5xl">
           {t('marketing.headline')}
         </h1>
         <p className="max-w-2xl text-lg text-foreground-muted">{t('marketing.subhead')}</p>

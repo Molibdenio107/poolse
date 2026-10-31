@@ -132,7 +132,7 @@ export default async function MeetPrintPage({
       key={label}
       href={to}
       aria-current={active ? 'true' : undefined}
-      className={`inline-flex h-control items-center justify-center rounded border px-4 text-control ${
+      className={`inline-flex h-control items-center justify-center rounded-sm border px-4 text-control ${
         active ? 'border-black bg-black text-white' : 'border-black/40 text-black hover:border-black'
       }`}
     >

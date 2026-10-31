@@ -54,7 +54,7 @@ export default async function LeadsPage({
 
   if (openLeads.state === 'refused') {
     return shell(
-      <section className="flex flex-col gap-2 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-2 rounded bg-surface p-5 shadow-card">
         <p className="font-medium">{t('leads.notPermitted')}</p>
       </section>,
     );
@@ -178,7 +178,7 @@ function LeadCard({
 }): React.ReactElement {
   const days = lead.preferredDays.map((d) => t(`week.${d}`)).join(', ');
   return (
-    <article className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+    <article className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-base font-semibold">
           {lead.swimmerFirstName} {lead.swimmerLastName}

@@ -28,7 +28,7 @@ export async function SupportPanel(): Promise<React.ReactElement> {
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
       <ul className="flex flex-col divide-y divide-border">
         {open.data.map((grant) => (
           <li

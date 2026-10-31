@@ -15,7 +15,7 @@ export async function MessagePreferenceCard({ clubName }: { clubName: string }):
   if (loaded.state === 'ok' && loaded.data.email === null) return null;
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
       <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
         {t('profile.messages.title')}
       </h2>

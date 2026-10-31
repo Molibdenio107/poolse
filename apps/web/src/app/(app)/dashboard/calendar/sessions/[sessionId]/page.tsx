@@ -81,7 +81,7 @@ export default async function AttendancePage({
     >
 
       {notPermitted && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p className="font-medium">{t('attendance.restricted')}</p>
         </section>
       )}
@@ -121,7 +121,7 @@ export default async function AttendancePage({
             "who is the child I don't know" has its answer before the class starts.
           */}
           {register.trialGuests.length > 0 && register.status !== 'cancelled' && (
-            <section className="flex flex-col gap-2 rounded border border-border bg-surface p-4">
+            <section className="flex flex-col gap-2 rounded bg-surface p-4 shadow-card">
               <h2 className="font-medium">
                 {t('attendance.trialGuests', { count: register.trialGuests.length })}
               </h2>
@@ -144,7 +144,7 @@ export default async function AttendancePage({
             once a class is marked it can no longer be cancelled.
           */}
           {register.status === 'cancelled' ? (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <p>{t('attendance.classCancelled')}</p>
             </section>
           ) : register.canRecord && !register.started ? (
@@ -154,7 +154,7 @@ export default async function AttendancePage({
               *Não vou* beside its name; nothing can be marked, and the API
               refuses a save the same way.
             */
-            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+            <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
               <p className="font-medium">
                 {t('attendance.notStarted', {
                   date: formatDate(register.localDate),
@@ -184,7 +184,7 @@ export default async function AttendancePage({
           ) : register.canRecord ? (
             <RegisterForm register={register} />
           ) : (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <p className="text-sm text-foreground-muted">{t('attendance.readOnly')}</p>
             </section>
           )}
@@ -195,7 +195,7 @@ export default async function AttendancePage({
             the office); a colleague's register carries none, so no strip.
           */}
           {register.status !== 'cancelled' && register.started && (register.canRecord || register.canEndSeries) && (
-            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+            <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
               <h2 className="font-medium">{t('feedback.title')}</h2>
               {(register.feedback ?? []).length === 0 ? (
                 <p className="text-sm text-foreground-muted">{t('feedback.noneForLesson')}</p>

@@ -81,7 +81,7 @@ export default async function JoinPage({
     >
 
       {!token && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('join.tokenMissing')}</p>
         </section>
       )}
@@ -110,14 +110,14 @@ export default async function JoinPage({
       )}
 
       {preview !== null && preview.status !== 'pending' && !joined && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p className="font-medium">{t(`join.status.${preview.status}`)}</p>
           <p className="mt-1 text-sm text-foreground-muted">{t('join.statusHint')}</p>
         </section>
       )}
 
       {preview !== null && preview.status === 'pending' && token !== undefined && (
-        <section className="flex flex-col gap-5 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-5 rounded bg-surface p-5 shadow-card">
           <div className="flex flex-col gap-1">
             <p className="text-lg">
               {t('join.invitedTo', { organization: preview.organizationName ?? '' })}

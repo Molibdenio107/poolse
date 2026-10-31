@@ -92,7 +92,7 @@ function LessonCard({
     <Link
       href={`/dashboard/calendar/sessions/${lesson.sessionId}?from=${encodeURIComponent('/app/aulas')}`}
       className={cn(
-        'flex items-start gap-3 rounded-lg border border-border bg-surface p-3',
+        'flex items-start gap-3 rounded-lg bg-surface p-3 shadow-card',
         'hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
       )}
     >

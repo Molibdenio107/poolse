@@ -98,7 +98,7 @@ export function QualifyingImportWizard({
       <Steps stage={stage} />
 
       {stage === 'upload' && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <form action={readAction} className="flex flex-col gap-4">
             <input type="hidden" name="standardId" value={standardId} />
             <div className={cn(FIELD_COLUMN, 'max-w-form')}>
@@ -129,7 +129,7 @@ export function QualifyingImportWizard({
       )}
 
       {stage === 'map' && sheet !== null && mapping !== null && (
-        <form action={runAction} className="flex flex-col gap-5 rounded border border-border bg-surface p-5">
+        <form action={runAction} className="flex flex-col gap-5 rounded bg-surface p-5 shadow-card">
           <RequestFields standardId={standardId} sheet={sheet} mapping={mapping} course={course} commit={false} />
           <div>
             <h2 className="font-medium">{t('students.import.mapTitle')}</h2>
@@ -193,7 +193,7 @@ export function QualifyingImportWizard({
       )}
 
       {stage === 'preview' && sheet !== null && mapping !== null && (
-        <form action={runAction} className="flex flex-col gap-5 rounded border border-border bg-surface p-5">
+        <form action={runAction} className="flex flex-col gap-5 rounded bg-surface p-5 shadow-card">
           <RequestFields standardId={standardId} sheet={sheet} mapping={mapping} course={course} commit />
           <Preview cells={wizard.rows} summary={runState.summary} course={course} ageGroups={ageGroups} />
           <Problem errorKey={runState.errorKey} detail={runState.detail} />
@@ -219,7 +219,7 @@ export function QualifyingImportWizard({
       )}
 
       {stage === 'done' && (
-        <section className="flex flex-col items-start gap-3 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col items-start gap-3 rounded bg-surface p-5 shadow-card">
           <p className="flex items-center gap-2 font-medium">
             <Check aria-hidden className="size-5 text-primary" />
             {t('qualifying.import.done', { added: wizard.created, changed: wizard.updated })}

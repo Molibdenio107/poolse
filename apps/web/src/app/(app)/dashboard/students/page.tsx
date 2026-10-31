@@ -147,7 +147,7 @@ export default async function StudentsPage({
     >
 
       {noOrganization && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('account.noOrganizations')}</p>
         </section>
       )}
@@ -170,7 +170,7 @@ export default async function StudentsPage({
             somebody who has narrowed by level *and* by name wants one control
             that undoes both.
           */}
-          <section className="flex flex-wrap items-end gap-3 rounded border border-border bg-surface p-5">
+          <section className="flex flex-wrap items-end gap-3 rounded bg-surface p-5 shadow-card">
             <SearchInput
               label={t('students.search')}
               placeholder={t('students.searchPlaceholder')}
@@ -202,7 +202,7 @@ export default async function StudentsPage({
               role="checkbox"
               aria-checked={overdueOnly}
               className={cn(
-                'flex h-control items-center gap-2 rounded border px-4 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'flex min-h-control items-center gap-2 rounded-sm border px-4 py-1 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 overdueOnly
                   ? 'border-primary bg-primary/10 text-primary'
                   : 'border-border hover:bg-surface-muted',
@@ -230,7 +230,7 @@ export default async function StudentsPage({
               role="checkbox"
               aria-checked={pendingOnly}
               className={cn(
-                'flex h-control items-center gap-2 rounded border px-4 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'flex min-h-control items-center gap-2 rounded-sm border px-4 py-1 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 pendingOnly
                   ? 'border-primary bg-primary/10 text-primary'
                   : 'border-border hover:bg-surface-muted',
@@ -251,7 +251,7 @@ export default async function StudentsPage({
             {filtering && (
               <FromLink
                 href="/dashboard/students"
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {t('students.clear')}
               </FromLink>
@@ -294,7 +294,7 @@ export default async function StudentsPage({
             </div>
           )}
 
-          <section className="rounded border border-border bg-surface p-5">
+          <section className="rounded bg-surface p-5 shadow-card">
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('students.count', { count: data.students.total })}
             </h2>
@@ -315,7 +315,7 @@ export default async function StudentsPage({
                     <p className="text-sm text-foreground-muted">{t('search.noResultsHint')}</p>
                     <FromLink
                       href={levelId.trim() === '' ? '/dashboard/students' : `/dashboard/students?levelId=${levelId.trim()}`}
-                      className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       {t('search.clearSearch')}
                     </FromLink>

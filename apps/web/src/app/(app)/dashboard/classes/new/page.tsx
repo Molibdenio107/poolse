@@ -51,7 +51,7 @@ export default async function NewClassPage({
       )}
 
       {data !== null && data.canManage && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <ClassForm organizationId={data.organizationId} options={data.options} mode="create" />
         </section>
       )}

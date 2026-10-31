@@ -47,7 +47,7 @@ export function SeasonReset({
 
   if (!open) {
     return (
-      <div className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+      <div className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('seasons.startNew')}
         </h2>
@@ -55,7 +55,7 @@ export function SeasonReset({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('seasons.startNew')}
         </button>
@@ -130,14 +130,14 @@ export function SeasonReset({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-destructive text-destructive-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-destructive text-destructive-foreground disabled:opacity-60"
         >
           {pending ? t('common.working') : t('seasons.confirmButton')}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border"
         >
           {t('common.cancel')}
         </button>

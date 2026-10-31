@@ -197,7 +197,7 @@ export default async function DashboardPage({
           ))}
 
           {poolsFailed && (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('dashboard.myPool')}
               </h2>
@@ -207,7 +207,7 @@ export default async function DashboardPage({
 
 
           {membership === null && (
-            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+            <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
               <div className="flex flex-col gap-1">
                 <h2 className="text-lg font-medium">{t('account.noOrganizations')}</h2>
                 <p className="text-sm text-foreground-muted">{t('account.noOrganizationsHint')}</p>

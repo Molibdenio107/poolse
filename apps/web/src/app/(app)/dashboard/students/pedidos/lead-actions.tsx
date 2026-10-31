@@ -20,9 +20,9 @@ import {
 const INITIAL: FormState = { ok: false };
 
 const BUTTON =
-  'inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:bg-surface-muted';
+  'inline-flex h-control items-center justify-center rounded-sm border border-border px-4 text-control hover:bg-surface-muted';
 const PRIMARY =
-  'inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground disabled:opacity-60';
+  'inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60';
 
 /**
  * The four answers to one request — POOLSE-69. Each opens a question in a

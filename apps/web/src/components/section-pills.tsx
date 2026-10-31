@@ -56,7 +56,7 @@ export function SectionPills({
               aria-current={on ? 'page' : undefined}
               scroll={false}
               className={cn(
-                'inline-flex h-control shrink-0 items-center justify-center gap-2 rounded px-4 text-control',
+                'inline-flex h-control shrink-0 items-center justify-center gap-2 rounded-sm px-4 text-control',
                 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 on
                   ? 'bg-primary text-primary-foreground'

@@ -23,7 +23,7 @@ export function DocumentLines({ lines }: { lines: InvoiceLine[] }): React.ReactE
   const locale = useLocale();
 
   return (
-    <section className="rounded border border-border bg-surface p-5">
+    <section className="rounded bg-surface p-5 shadow-card">
       <div className="relative overflow-x-auto">
         <table className="w-full min-w-[48rem] text-sm">
           <caption className="sr-only">{t('invoices.lines')}</caption>

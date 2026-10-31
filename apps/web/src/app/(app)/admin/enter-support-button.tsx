@@ -18,7 +18,7 @@ export function EnterSupportButton({ grantId, club }: { grantId: string; club: s
         type="submit"
         disabled={pending}
         aria-label={t('admin.support.enterNamed', { club })}
-        className="inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <LogIn aria-hidden className="size-4" />
         {pending ? t('common.working') : t('admin.support.enter')}

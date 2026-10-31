@@ -39,7 +39,7 @@ const ACCEPTED = ['.xlsx', '.csv', '.pdf'];
 const EXPORT = '/dashboard/facilities/staff/salaries/export';
 
 const BUTTON_QUIET =
-  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 function isAccepted(file: File): boolean {
   const name = file.name.toLowerCase();

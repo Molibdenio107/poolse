@@ -76,7 +76,7 @@ export default async function StaffMemberPage({
     return (
       <PageShell title={t('staff.title')} back={back}>
         {notPermitted && (
-          <section className="rounded border border-border bg-surface p-5">
+          <section className="rounded bg-surface p-5 shadow-card">
             <p>{t('staff.recordRestricted')}</p>
           </section>
         )}
@@ -150,7 +150,7 @@ export default async function StaffMemberPage({
                 with no login; somebody with a login sets their own, as with
                 their name, and their own record offers them that here too.
               */}
-              <section className="flex flex-wrap items-start gap-5 rounded border border-border bg-surface p-5">
+              <section className="flex flex-wrap items-start gap-5 rounded bg-surface p-5 shadow-card">
                 <IdPhoto
                   url={record.photoFileId !== null ? fileUrl(record.photoFileId) : record.avatarUrl}
                   name={record.displayName ?? ''}

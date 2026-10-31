@@ -95,8 +95,13 @@
      * root (`[data-surface='app']`) points `--primary` and its kin at them, and
      * the desktop palette is untouched. CLAUDE.md lets this one move.
      */
-    --app-primary: 14 116 144;
-    --app-primary-foreground: 255 255 255;
+    /*
+     * POOLSE-138: the handoff's app blue (#4FA3C7) is a fill with ink on it
+     * (6.4:1); it is never small text on white, so the ink below stays the
+     * deeper teal the app's links and labels already read in.
+     */
+    --app-primary: 79 163 199;
+    --app-primary-foreground: 17 24 28;
     --app-primary-ink: 14 116 144;
     --app-accent: 251 146 60;
     --app-accent-foreground: 28 25 23;
@@ -254,7 +259,32 @@
     --role-guardian: 58 138 86;
     --role-student: 37 110 176;
 
-    --radius: 0.5rem;
+    /*
+     * The handoff's shapes — POOLSE-138 (docs/design/tokens.css): cards 4 px,
+     * controls 2 px, turma chips 6 px. A card is lifted by a shadow rather than
+     * drawn with a border; in dark mode the shadow is invisible on the ground,
+     * so `.dark .shadow-card` below adds the handoff's hairline instead.
+     */
+    --radius: 4px;
+    --radius-control: 2px;
+    --radius-chip: 6px;
+    --shadow-card: 0 1px 3px rgb(0 0 0 / 0.08);
+
+    /*
+     * Sport washes — POOLSE-138, copied from docs/design/tokens.css. Atmosphere
+     * only, painted by `.sport-shell` on a sport's own pages once a club has a
+     * second sport (POOLSE-125/127). Nothing sets `data-sport` yet, so a pool
+     * club renders exactly as before. Never a button, a text or a primary.
+     */
+    --sport-pool: 160 205 218;
+    --sport-tennis: 205 230 80;
+    --sport-padel: 120 190 190;
+    --sport-basketball: 224 150 96;
+    --sport-football: 140 200 120;
+    --sport-handball: 230 200 150;
+    --sport-volleyball: 240 225 140;
+    --sport-gym: 170 175 180;
+    --wash-a: 0.14;
 
     /* --- shadcn aliases (see the note above) --- */
     --card: 255 255 255;
@@ -295,6 +325,17 @@
 
     /* On the dark ground the fills already read 5.4–8.5:1, so the ink is the fill. */
     --primary-ink: 126 186 201;
+
+    /* Sport washes, dark — POOLSE-138, docs/design/tokens.css. */
+    --sport-pool: 110 185 208;
+    --sport-tennis: 185 215 70;
+    --sport-padel: 90 170 165;
+    --sport-basketball: 210 130 80;
+    --sport-football: 115 180 100;
+    --sport-handball: 205 175 125;
+    --sport-volleyball: 220 200 105;
+    --sport-gym: 150 158 165;
+    --wash-a: 0.12;
 
     --app-primary: 56 189 248;
     --app-primary-foreground: 8 47 73;
@@ -370,7 +411,22 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    /*
+     * `font-sans` here and not only on `html` (Tailwind's preflight): the font
+     * variables are set on `<body>` by lib/fonts.ts, so on `html` they do not
+     * exist yet and the page would fall back to the browser's serif.
+     */
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+
+  /*
+   * Headings are Poppins 600 — POOLSE-138. By element, never by weight: a
+   * bold word in a sentence stays the body face.
+   */
+  h1,
+  h2,
+  h3 {
+    @apply font-heading;
   }
 
   /*
@@ -565,10 +621,19 @@
  * palette through the tokens they already use, so nothing is restyled by hand.
  */
 [data-surface='app'] {
+  /*
+   * One face for everything in app mode — POOLSE-138. The family is set here as
+   * well as the variables, because what this element inherits from `<body>` is
+   * the already-resolved Montserrat, not the variable.
+   */
+  --font-body: var(--font-app);
+  --font-heading: var(--font-app);
+  font-family: var(--font-app), ui-sans-serif, system-ui, sans-serif;
   --primary: var(--app-primary);
   --primary-foreground: var(--app-primary-foreground);
   --primary-ink: var(--app-primary-ink);
-  --ring: var(--app-primary);
+  /* The ink, not the fill: #4FA3C7 is 2.8:1 on white, under a ring's 3:1 (POOLSE-138). */
+  --ring: var(--app-primary-ink);
 }
 
 /*
@@ -659,4 +724,31 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
     animation: none;
     opacity: 0.6;
   }
+}
+
+/*
+ * Dark cards keep an edge — POOLSE-138. The card shadow is invisible on the
+ * dark ground, so `shadow-card` there is the handoff's hairline instead: one
+ * rule, no second class at the call site.
+ */
+.dark .shadow-card {
+  box-shadow: inset 0 0 0 1px rgb(var(--foreground) / 0.07);
+}
+
+/*
+ * Sport scopes and the one surface the wash is painted on — POOLSE-138, from
+ * docs/design/tokens.css. Inert until a page sets `data-sport` (POOLSE-125/127).
+ */
+[data-sport='pool'] { --sport-wash: var(--sport-pool); }
+[data-sport='tennis'] { --sport-wash: var(--sport-tennis); }
+[data-sport='padel'] { --sport-wash: var(--sport-padel); }
+[data-sport='basketball'] { --sport-wash: var(--sport-basketball); }
+[data-sport='football'] { --sport-wash: var(--sport-football); }
+[data-sport='handball'] { --sport-wash: var(--sport-handball); }
+[data-sport='volleyball'] { --sport-wash: var(--sport-volleyball); }
+[data-sport='gym'] { --sport-wash: var(--sport-gym); }
+
+.sport-shell {
+  background-color: rgb(var(--background));
+  background-image: linear-gradient(rgb(var(--sport-wash) / var(--wash-a)) 0 0);
 }

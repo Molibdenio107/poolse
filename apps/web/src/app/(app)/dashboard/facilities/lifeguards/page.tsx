@@ -14,7 +14,7 @@ import { RosterGrid } from './roster-grid';
 import { PeriodsPanel } from './periods';
 
 const QUIET =
-  'inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /**
  * Nadadores-salvadores — POOLSE-70, slice 2.
@@ -182,7 +182,7 @@ export default async function LifeguardsPage({
                 label={t('roster.pools')}
               />
 
-              <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+              <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
                 <RosterGrid
                   // A new week or tank starts on its own today and its own dialogs.
                   key={`${monday}-${poolId}`}

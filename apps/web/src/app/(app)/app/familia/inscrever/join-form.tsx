@@ -157,7 +157,7 @@ function Fields({
       <button
         type="submit"
         disabled={pending || who === '' || picked === ''}
-        className="inline-flex min-h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground disabled:opacity-60"
+        className="inline-flex min-h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60"
       >
         {t('app.join.submit')}
       </button>

@@ -71,8 +71,8 @@ export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<Re
                     aria-current={current ? 'page' : undefined}
                     className={
                       current
-                        ? 'inline-flex h-control items-center justify-center rounded border border-primary bg-primary/10 px-4 text-control font-medium text-primary'
-                        : 'inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+                        ? 'inline-flex h-control items-center justify-center rounded-sm border border-primary bg-primary/10 px-4 text-control font-medium text-primary'
+                        : 'inline-flex h-control items-center justify-center rounded-sm border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
                     }
                   >
                     {child.self ? t('family.yourselfShort', { name: child.name }) : child.name}

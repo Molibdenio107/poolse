@@ -30,7 +30,7 @@ export async function InboxList({
   const t = await getTranslations();
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <p className="text-sm text-foreground-muted">{t('meetInbox.intro')}</p>
       {inbox.total === 0 ? (
         <p>{t('meetInbox.empty')}</p>

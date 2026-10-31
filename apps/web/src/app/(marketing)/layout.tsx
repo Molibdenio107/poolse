@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ThemeScript } from '../../lib/theme-script';
+import { fontVariables } from '../../lib/fonts';
 import '../globals.css';
 
 export const metadata: Metadata = {
@@ -30,7 +31,7 @@ export default function MarketingLayout({
       <head>
         <ThemeScript />
       </head>
-      <body>{children}</body>
+      <body className={fontVariables}>{children}</body>
     </html>
   );
 }

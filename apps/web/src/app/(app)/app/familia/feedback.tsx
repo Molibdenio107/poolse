@@ -67,7 +67,7 @@ export async function FeedbackPanel({
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-3">
+    <section className="flex flex-col gap-3 rounded-lg bg-surface p-3 shadow-card">
       <h2 className="flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-foreground-muted">
         <MessageSquareText className="size-4" aria-hidden />
         {named ? t('app.feedback.titleFor', { name: standing.studentName }) : t('app.feedback.title')}

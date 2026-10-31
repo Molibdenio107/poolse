@@ -26,7 +26,7 @@ export async function SwitchesPanel(): Promise<React.ReactElement> {
   const keyed = anthropicKeyConfigured();
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
       <ul className="flex flex-col divide-y divide-border">
         {switches.map((one) => (
           <li key={one.name} className="py-3 first:pt-0 last:pb-0">

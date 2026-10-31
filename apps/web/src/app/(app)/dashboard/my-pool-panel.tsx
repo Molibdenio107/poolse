@@ -37,7 +37,7 @@ export async function MyPoolPanel({ pool }: { pool: PoolDetail }): Promise<React
   const href = `/dashboard/facilities/pools/${pool.id}`;
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {pool.name}
@@ -107,7 +107,7 @@ export async function MyPoolPanel({ pool }: { pool: PoolDetail }): Promise<React
       <div className="flex flex-wrap gap-3">
         <FromLink
           href={href}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {latest === undefined
             ? t('facilities.recordAnalysisTitle')

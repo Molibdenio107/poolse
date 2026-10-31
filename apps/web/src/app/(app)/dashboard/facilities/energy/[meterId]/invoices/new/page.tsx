@@ -53,7 +53,7 @@ export default async function NewInvoicePage({
       // caller. The lines table scrolls inside its own container instead.
       back={{ href: back.href, label: t(back.labelKey) }}
     >
-      <section className="rounded border border-border bg-surface p-5">
+      <section className="rounded bg-surface p-5 shadow-card">
         <InvoiceForm
           meterId={meter.id}
           facilityId={meter.facilityId}

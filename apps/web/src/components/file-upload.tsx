@@ -250,7 +250,7 @@ export function DetachFileButton({
         startTransition(() => dispatch(data));
       }}
       className={cn(
-        'inline-flex h-control items-center justify-center rounded border border-border bg-surface px-4 text-control text-foreground hover:bg-surface-muted disabled:opacity-60',
+        'inline-flex h-control items-center justify-center rounded-sm border border-border bg-surface px-4 text-control text-foreground hover:bg-surface-muted disabled:opacity-60',
         className,
       )}
     >
@@ -380,7 +380,7 @@ export function DocumentLink({
       className={
         quiet
           ? 'inline-flex items-center gap-1.5 text-primary underline-offset-2 hover:underline coarse:-my-3 coarse:py-3'
-          : 'inline-flex h-control items-center justify-center gap-2 rounded border border-border bg-surface px-4 text-control text-primary hover:bg-surface-muted'
+          : 'inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border bg-surface px-4 text-control text-primary hover:bg-surface-muted'
       }
     >
       <Paperclip className="size-4" aria-hidden="true" />

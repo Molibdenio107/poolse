@@ -48,7 +48,7 @@ export function MessagePreference({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center self-start rounded bg-primary px-4 text-control text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center self-start rounded-sm bg-primary px-4 text-control text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
       >
         {pending ? t('common.working') : t('common.save')}
       </button>

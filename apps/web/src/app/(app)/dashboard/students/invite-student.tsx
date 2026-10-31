@@ -11,7 +11,7 @@ import { ShareLink } from './[id]/family-access';
 import { inviteNewStudentAction, type InviteStudentState } from './family-bulk.actions';
 
 const INITIAL: InviteStudentState = { ok: false };
-const BUTTON = 'inline-flex h-control items-center justify-center gap-2 rounded px-4 text-control disabled:opacity-60';
+const BUTTON = 'inline-flex h-control items-center justify-center gap-2 rounded-sm px-4 text-control disabled:opacity-60';
 
 /**
  * *Convidar aluno* — somebody not yet on the register (Rui, 30-10-2026).
@@ -60,7 +60,7 @@ export function InviteStudent({ organizationName }: { organizationName: string }
           onKeyDown={(event) => {
             if (event.key === 'Escape') setOpen(false);
           }}
-          className="flex flex-col gap-4 rounded border border-border bg-surface p-5"
+          className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card"
         >
           <div className="flex flex-col gap-1">
             <h2 className="text-base font-semibold">{t('inviteStudent.title')}</h2>

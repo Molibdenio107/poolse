@@ -182,7 +182,7 @@ export function SkillsGrid({ data }: { data: TurmaSkills }): React.ReactElement 
 
   if (data.skills.length === 0) {
     return (
-      <section className="flex flex-col gap-2 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-2 rounded bg-surface p-5 shadow-card">
         <p>{t('skills.noSkills')}</p>
         <p className="text-sm text-foreground-muted">{t('skills.noSkillsHint')}</p>
       </section>
@@ -191,7 +191,7 @@ export function SkillsGrid({ data }: { data: TurmaSkills }): React.ReactElement 
 
   if (data.students.length === 0) {
     return (
-      <section className="rounded border border-border bg-surface p-5">
+      <section className="rounded bg-surface p-5 shadow-card">
         <p className="text-foreground-muted">{t('classes.noStudents')}</p>
       </section>
     );
@@ -199,7 +199,7 @@ export function SkillsGrid({ data }: { data: TurmaSkills }): React.ReactElement 
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+      <div className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
         <SkillLegend />
         <p className="text-sm text-foreground-muted">{t('skills.gridHint')}</p>
         {failed !== null && <p className="text-sm text-danger">{failed}</p>}
@@ -394,11 +394,11 @@ function OverrideDialog({
           type="button"
           disabled={reason.trim() === ''}
           onClick={() => onConfirm(reason.trim())}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
         >
           {t('skills.overrideConfirm')}
         </button>
-        <button type="button" onClick={onCancel} className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border">
+        <button type="button" onClick={onCancel} className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border">
           {t('common.cancel')}
         </button>
       </div>

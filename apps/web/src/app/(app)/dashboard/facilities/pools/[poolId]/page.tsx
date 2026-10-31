@@ -79,7 +79,7 @@ export default async function PoolPage({
         back={{ href: back.href, label: t(back.labelKey) }}
       >
         {missing && (
-          <section className="rounded border border-border bg-surface p-5">
+          <section className="rounded bg-surface p-5 shadow-card">
             <p>{t('facilities.poolNotFound')}</p>
           </section>
         )}
@@ -119,7 +119,7 @@ export default async function PoolPage({
           labelKey: 'detailTabs.general',
           content: () => (
             <>
-              <section className="rounded border border-border bg-surface p-5">
+              <section className="rounded bg-surface p-5 shadow-card">
                 <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                   {t('facilities.details')}
                 </h2>
@@ -191,7 +191,7 @@ export default async function PoolPage({
               </section>
 
               {loaded.canManage && (
-                <section className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-surface p-5">
+                <section className="flex flex-wrap items-center justify-between gap-3 rounded bg-surface p-5 shadow-card">
                   <span className="text-sm text-foreground-muted">
                     {t('facilities.archivePoolHint')}
                   </span>
@@ -225,7 +225,7 @@ export default async function PoolPage({
               apiFetch<{ results: LabResult[] }>(`/facilities/pools/${poolId}/lab-results`),
             );
             return (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('facilities.readings')}
               </h2>
@@ -310,7 +310,7 @@ export default async function PoolPage({
           slug: 'photos',
           labelKey: 'facilities.photos',
           content: () => (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('facilities.photos')}
               </h2>

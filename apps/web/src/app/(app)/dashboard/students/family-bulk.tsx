@@ -12,7 +12,7 @@ import {
 } from './family-bulk.actions';
 
 const INITIAL: BulkState = { ok: false };
-const BUTTON = 'inline-flex h-control items-center justify-center gap-2 rounded px-4 text-control disabled:opacity-60';
+const BUTTON = 'inline-flex h-control items-center justify-center gap-2 rounded-sm px-4 text-control disabled:opacity-60';
 
 /**
  * *Convidar famílias* — POOLSE-129. Opens on the list's own filters, says what

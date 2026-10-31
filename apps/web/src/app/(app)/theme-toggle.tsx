@@ -95,7 +95,7 @@ export function ThemeToggle({ label, theme }: { label: string; theme: Theme }): 
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={t('theme.current', { label, theme: t(`theme.option.${choice}`) })}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border bg-surface text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border bg-surface text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <Current aria-hidden className="size-4" />
       </button>

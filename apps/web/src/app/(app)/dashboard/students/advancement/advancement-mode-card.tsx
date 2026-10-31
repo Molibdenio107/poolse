@@ -33,7 +33,7 @@ export function AdvancementModeCard({
   const [, action, pending] = useSavedAction(setAdvancementModeAction, INITIAL);
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
       <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
         {t('advancement.mode.title')}
       </h2>
@@ -67,7 +67,7 @@ export function AdvancementModeCard({
             <button
               type="submit"
               disabled={pending || chosen === mode}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
             >
               {t('common.save')}
             </button>

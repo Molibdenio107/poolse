@@ -160,7 +160,7 @@ async function Chart({
   t: Awaited<ReturnType<typeof getTranslations>>;
 }): Promise<React.ReactElement> {
   return (
-    <section className="rounded border border-border bg-surface p-4">
+    <section className="rounded bg-surface p-4 shadow-card">
       <h2 className="text-sm font-medium">{title}</h2>
       <p className="mt-0.5 text-sm text-foreground-muted">{caption}</p>
 

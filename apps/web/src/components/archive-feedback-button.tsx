@@ -31,7 +31,7 @@ export function ArchiveFeedbackButton({
         type="submit"
         disabled={pending}
         aria-label={label}
-        className="inline-flex h-control items-center justify-center rounded border border-border px-4 text-control text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center rounded-sm border border-border px-4 text-control text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60"
       >
         {t('feedback.archive')}
       </button>

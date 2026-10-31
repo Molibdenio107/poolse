@@ -10,6 +10,7 @@ import { DetailsAnimator } from '../../components/details-animator';
 import { BusyIndicator } from '../../components/busy-indicator';
 import { readTheme } from '../../lib/preferences';
 import { ThemeScript } from '../../lib/theme-script';
+import { fontVariables } from '../../lib/fonts';
 import '../globals.css';
 
 /**
@@ -126,7 +127,7 @@ export default async function AppLayout({
           body element's own attributes and nothing inside it, so a genuine
           mismatch in the tree is still reported.
         */}
-        <body suppressHydrationWarning>
+        <body className={fontVariables} suppressHydrationWarning>
           {/*
             `formats` as well as `messages`.
 

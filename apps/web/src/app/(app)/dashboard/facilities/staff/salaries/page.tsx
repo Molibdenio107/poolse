@@ -80,7 +80,7 @@ export default async function SalariesPage({
       )}
 
       {summary !== null && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <h2 className="text-sm font-medium text-foreground-muted">{t('salaries.rollup')}</h2>
 
           <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">

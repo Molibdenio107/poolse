@@ -11,7 +11,7 @@ import { endSupportAction, forgetActiveClubAction, stepOutOfSupportAction } from
 const INITIAL: FormState = { ok: false };
 
 const BUTTON =
-  'inline-flex h-control items-center justify-center gap-2 rounded border px-4 text-control font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm border px-4 text-control font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60';
 
 /**
  * Support access — POOLSE-79. Two strips, one for each side of the window.

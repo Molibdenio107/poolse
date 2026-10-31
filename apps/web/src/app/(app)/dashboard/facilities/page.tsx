@@ -59,7 +59,7 @@ export default async function FacilitiesPage({
     >
 
       {noOrganization && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('account.noOrganizations')}</p>
         </section>
       )}
@@ -91,14 +91,14 @@ export default async function FacilitiesPage({
             ) : (
               <FromLink
                 href="/dashboard/facilities/new"
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border hover:bg-surface-muted"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-border hover:bg-surface-muted"
               >
                 {t('facilities.addSite')}
               </FromLink>
             ))}
 
           {data.facilities.length === 0 ? (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <p>{t('facilities.none')}</p>
               <p className="mt-1 text-sm text-foreground-muted">
                 {data.canManage ? t('facilities.noneHintManager') : t('facilities.noneHintMember')}
@@ -108,7 +108,7 @@ export default async function FacilitiesPage({
             data.facilities.map((facility) => (
               <section
                 key={facility.id}
-                className="flex flex-col gap-4 rounded border border-border bg-surface p-5"
+                className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-col">
@@ -161,7 +161,7 @@ export default async function FacilitiesPage({
                     {data.canManage && (
                       <FromLink
                         href={`/dashboard/facilities/${facility.id}`}
-                        className="inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control font-medium text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                       >
                         <Settings aria-hidden className="size-4" />
                         {t('facilities.configure')}
@@ -177,7 +177,7 @@ export default async function FacilitiesPage({
                       <FromLink
                         href={`/dashboard/facilities/${facility.id}`}
                         aria-label={t('facilities.openSite', { name: facility.name })}
-                        className="inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        className="inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border px-4 text-control hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                       >
                         {t('facilities.open')}
                       </FromLink>
@@ -266,7 +266,7 @@ export default async function FacilitiesPage({
                 {data.canManage && (
                   <FromLink
                     href={`/dashboard/facilities/pools/new?facilityId=${facility.id}`}
-                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border hover:bg-surface-muted"
+                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-border hover:bg-surface-muted"
                   >
                     {t('facilities.addPool')}
                   </FromLink>

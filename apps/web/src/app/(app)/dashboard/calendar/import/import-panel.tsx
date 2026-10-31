@@ -186,7 +186,7 @@ export function TimetableImport({
       </Dialog>
 
       <Reveal open={open}>
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">

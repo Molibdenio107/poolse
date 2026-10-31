@@ -55,13 +55,13 @@ export function SessionActions({
   const [cancelling, setCancelling] = useState<CancelTarget | null>(null);
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+    <section className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
       <div className="flex flex-wrap items-center gap-2">
         {/* A cancelled lesson keeps its plan and says so (calendar.md), so this stays. */}
         <button
           type="button"
           onClick={() => setPlanning(true)}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-primary/40 font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-primary/40 font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
         >
           <NotebookPen className="size-4" aria-hidden="true" />
           {t('calendar.plan.title')}
@@ -71,7 +71,7 @@ export function SessionActions({
           <button
             type="button"
             onClick={() => setCancelling({ sessionId, className, when, classGroupId, date })}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-border-strong hover:border-danger hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-border-strong hover:border-danger hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
           >
             <Ban className="size-4" aria-hidden="true" />
             {t('calendar.cancel')}

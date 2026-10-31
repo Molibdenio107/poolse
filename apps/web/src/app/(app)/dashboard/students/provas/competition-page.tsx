@@ -136,7 +136,7 @@ export async function CompetitionPage({
       )}
 
       {notPermitted && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('meets.notPermitted')}</p>
         </section>
       )}
@@ -155,7 +155,7 @@ export async function CompetitionPage({
       )}
 
       {section === 'meets' && meets !== null && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
           {meets.total === 0 ? (
             <div className="flex flex-col gap-1">
               <p>{t('meets.empty')}</p>
@@ -200,7 +200,7 @@ export async function CompetitionPage({
 
       {qualifying !== null &&
         (qualifying.seasonId === null ? (
-          <section className="rounded border border-border bg-surface p-5">
+          <section className="rounded bg-surface p-5 shadow-card">
             <p>{t('qualifying.noSeason')}</p>
           </section>
         ) : (

@@ -62,7 +62,7 @@ export default async function SubscriptionPage({
 
       {view !== null && (
         <>
-          <section className="rounded border border-border bg-surface p-5">
+          <section className="rounded bg-surface p-5 shadow-card">
             <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('subscription.whereYouStand')}
             </h2>
@@ -150,7 +150,7 @@ export default async function SubscriptionPage({
             * showing a zero. A pool club has none, and sees nothing here.
             */}
           {view.addons.length > 0 && (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('subscription.addons.title')}
               </h2>

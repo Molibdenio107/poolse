@@ -124,7 +124,7 @@ export default async function InvoicePage({
           </p>
         )}
 
-        <section className="grid grid-cols-1 gap-6 rounded border border-border bg-surface p-5 sm:grid-cols-2">
+        <section className="grid grid-cols-1 gap-6 rounded bg-surface p-5 sm:grid-cols-2 shadow-card">
           <div>
             <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('invoices.payer')}
@@ -165,7 +165,7 @@ export default async function InvoicePage({
 
         <SettlementPanel facilityId={facilityId} invoice={invoice} />
 
-        <section className="flex flex-col gap-1 rounded border border-border bg-surface p-5 text-sm">
+        <section className="flex flex-col gap-1 rounded bg-surface p-5 text-sm shadow-card">
           <div className="flex justify-between">
             <span className="text-foreground-muted">{t('invoices.net')}</span>
             <span className="tabular-nums">{formatCents(locale, invoice.netCents)}</span>
@@ -194,7 +194,7 @@ export default async function InvoicePage({
             href={`/dashboard/faturacao/${invoice.id}/print?facilityId=${facilityId}`}
             target="_blank"
             rel="noopener"
-            className="inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border px-4 text-control transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <Printer aria-hidden className="size-4" />
             {t('export.pdf.option')}

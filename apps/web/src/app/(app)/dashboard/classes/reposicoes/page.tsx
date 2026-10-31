@@ -59,7 +59,7 @@ export default async function ReposicoesPage({
         Somebody who followed a link is not doing anything wrong.
       */}
       {notPermitted && (
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
           <p className="font-medium">{t('reposicao.notPermitted')}</p>
           <p className="text-sm text-foreground-muted">{t('reposicao.notPermittedHint')}</p>
         </section>
@@ -73,7 +73,7 @@ export default async function ReposicoesPage({
       )}
 
       {settings !== null && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <ReposicaoSettingsForm organizationId={organizationId} settings={settings} />
         </section>
       )}

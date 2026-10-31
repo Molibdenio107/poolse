@@ -54,7 +54,7 @@ export default async function NewStudentPage({
       )}
 
       {data !== null && data.canManage && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <StudentForm
             organizationId={data.organizationId}
             levels={data.levels}

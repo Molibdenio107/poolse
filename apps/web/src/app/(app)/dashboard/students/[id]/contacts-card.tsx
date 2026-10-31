@@ -48,7 +48,7 @@ export async function ContactsCard({
   if (people.length === 0) return null;
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
       <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
         {t('students.contactsTitle')}
       </h2>
@@ -64,7 +64,7 @@ export async function ContactsCard({
                 <a
                   href={`tel:${person.phone.replace(/[^\d+]/g, '')}`}
                   aria-label={t('students.callName', { name: person.name, phone: person.phone })}
-                  className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-primary/40 font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-primary/40 font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
                 >
                   <Phone className="size-4" aria-hidden />
                   {person.phone}
@@ -74,7 +74,7 @@ export async function ContactsCard({
                 <a
                   href={`mailto:${person.email}`}
                   aria-label={t('students.emailName', { name: person.name })}
-                  className="inline-flex h-control min-w-0 max-w-full items-center justify-center px-4 text-control gap-1.5 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+                  className="inline-flex h-control min-w-0 max-w-full items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
                 >
                   <Mail className="size-4 shrink-0" aria-hidden />
                   <span className="truncate">{person.email}</span>

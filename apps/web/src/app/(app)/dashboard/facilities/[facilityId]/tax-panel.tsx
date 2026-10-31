@@ -33,7 +33,7 @@ export function TaxPanel({ settings }: { settings: TaxSettings }): React.ReactEl
   const [state, dispatch, pending] = useSavedAction(saveTaxNumberAction, INITIAL);
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+    <section className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
       <div>
         <h2 className="text-sm font-medium">{t('settings.tax.title')}</h2>
         <p className="text-sm text-foreground-muted">{t('settings.tax.hint')}</p>
@@ -52,7 +52,7 @@ export function TaxPanel({ settings }: { settings: TaxSettings }): React.ReactEl
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary font-medium text-primary-foreground outline-primary hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary font-medium text-primary-foreground outline-primary hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
         >
           {pending ? t('common.working') : t('common.save')}
         </button>
@@ -80,7 +80,7 @@ export function PaymentInstructionsPanel({ settings }: { settings: TaxSettings }
     fields?.[name] === undefined ? undefined : t(fields[name]);
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+    <section className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
       <div>
         <h2 className="text-sm font-medium">{t('clubData.paymentTitle')}</h2>
         <p className="text-sm text-foreground-muted">{t('clubData.payment.hint')}</p>
@@ -127,7 +127,7 @@ export function PaymentInstructionsPanel({ settings }: { settings: TaxSettings }
         <button
           type="submit"
           disabled={savingDetails}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary font-medium text-primary-foreground outline-primary hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary font-medium text-primary-foreground outline-primary hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
         >
           {savingDetails ? t('common.working') : t('common.save')}
         </button>
@@ -147,7 +147,7 @@ export function PaymentInstructionsPanel({ settings }: { settings: TaxSettings }
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary font-medium text-primary-foreground outline-primary hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary font-medium text-primary-foreground outline-primary hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
         >
           {pending ? t('common.working') : t('common.save')}
         </button>

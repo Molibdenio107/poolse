@@ -31,7 +31,7 @@ export default async function MaintenanceHomePage(): Promise<React.ReactElement>
   }
 
   const nothing = home.tasks.length === 0 && home.overdueSpaces.length === 0 && home.issues.length === 0;
-  const card = 'flex flex-col gap-2 rounded-lg border border-border bg-surface p-3';
+  const card = 'flex flex-col gap-2 rounded-lg bg-surface p-3 shadow-card';
 
   return (
     <>
@@ -39,7 +39,7 @@ export default async function MaintenanceHomePage(): Promise<React.ReactElement>
         <h1 className="text-xl font-semibold tracking-tight">{t('app.maintenance.title')}</h1>
         <Link
           href="/app/manutencao/reportar"
-          className="inline-flex h-control items-center justify-center gap-2 rounded border border-border bg-surface px-4 text-control font-medium hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border bg-surface px-4 text-control font-medium hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <Plus className="size-4" aria-hidden />
           {t('app.maintenance.report')}

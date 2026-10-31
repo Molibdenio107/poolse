@@ -97,7 +97,7 @@ export default async function QualificationsPage({
       back={backProp(back, t)}
     >
       {notPermitted && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('staff.recordRestricted')}</p>
         </section>
       )}
@@ -122,7 +122,7 @@ export default async function QualificationsPage({
       )}
 
       {list !== null && current === 'attention' && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-medium">{t('qualifications.attention')}</h2>
             {/* All, or only the records with no certificate on file — POOLSE-97. */}

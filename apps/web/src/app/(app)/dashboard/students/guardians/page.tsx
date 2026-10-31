@@ -83,7 +83,7 @@ export default async function GuardiansPage({
       )}
 
       {data !== null && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
           {/* Name, email or phone — what the row shows. POOLSE-30. */}
           <SearchInput
             label={t('search.label')}
@@ -100,7 +100,7 @@ export default async function GuardiansPage({
                   <p className="text-sm text-foreground-muted">{t('search.noResultsHint')}</p>
                   <FromLink
                     href="/dashboard/students/guardians"
-                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {t('search.clearSearch')}
                   </FromLink>

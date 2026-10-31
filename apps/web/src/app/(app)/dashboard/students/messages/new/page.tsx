@@ -49,7 +49,7 @@ export default async function NewMessagePage({
       back={backProp(backTarget(query.from, '/dashboard/students/messages'), t)}
     >
       {notPermitted && (
-        <section className="flex flex-col gap-1 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-1 rounded bg-surface p-5 shadow-card">
           <p className="font-medium">{t('messages.notPermitted')}</p>
           <p className="text-sm text-foreground-muted">{t('messages.notPermittedHint')}</p>
         </section>

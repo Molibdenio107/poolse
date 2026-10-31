@@ -68,7 +68,7 @@ export default async function EmailPreferencePage({
         </p>
       )}
 
-      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
         <p className="flex items-start gap-2 font-medium">
           {page.optedOut && <MailX aria-hidden className="mt-0.5 size-5 shrink-0 text-foreground-muted" />}
           {t(page.optedOut ? 'emailPreference.isOut' : 'emailPreference.isIn', { club: page.clubName })}
@@ -80,7 +80,7 @@ export default async function EmailPreferencePage({
           {(lang === 'en' || lang === 'pt') && <input type="hidden" name="lang" value={lang} />}
           <button
             type="submit"
-            className="inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground hover:bg-primary/90"
+            className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground hover:bg-primary/90"
           >
             {t(page.optedOut ? 'emailPreference.optIn' : 'emailPreference.optOut')}
           </button>

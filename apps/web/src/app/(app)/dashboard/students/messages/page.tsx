@@ -55,7 +55,7 @@ export default async function MessagesPage({
         data?.canSend ? (
           <FromLink
             href="/dashboard/students/messages/new"
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground"
           >
             {t('messages.new')}
           </FromLink>
@@ -63,7 +63,7 @@ export default async function MessagesPage({
       }
     >
       {notPermitted && (
-        <section className="flex flex-col gap-1 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-1 rounded bg-surface p-5 shadow-card">
           <p className="font-medium">{t('messages.notPermitted')}</p>
           <p className="text-sm text-foreground-muted">{t('messages.notPermittedHint')}</p>
         </section>
@@ -77,7 +77,7 @@ export default async function MessagesPage({
       )}
 
       {data !== null && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
           {data.total === 0 ? (
             <div className="flex flex-col gap-1">
               <p>{t('messages.empty')}</p>

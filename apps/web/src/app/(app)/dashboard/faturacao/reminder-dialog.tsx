@@ -26,9 +26,9 @@ import { previewRemindersAction, sendRemindersAction } from './invoices.actions'
 
 const INITIAL: FormState = { ok: false };
 const PRIMARY =
-  'inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control text-primary-foreground hover:bg-primary/90 disabled:opacity-60';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control text-primary-foreground hover:bg-primary/90 disabled:opacity-60';
 const QUIET =
-  'inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control hover:bg-surface-muted';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border px-4 text-control hover:bg-surface-muted';
 
 const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
 

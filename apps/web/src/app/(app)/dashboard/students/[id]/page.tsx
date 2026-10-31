@@ -192,7 +192,7 @@ export default async function StudentPage({
     return (
       <PageShell title={t(readerIsFamily ? 'family.title' : 'students.title')} subtitle={subtitle} back={back}>
         {missing && (
-          <section className="rounded border border-border bg-surface p-5">
+          <section className="rounded bg-surface p-5 shadow-card">
             <p>{t('students.notFound')}</p>
           </section>
         )}
@@ -374,7 +374,7 @@ export default async function StudentPage({
                 The photograph sits inside this block rather than in a section of
                 its own: an ID photo belongs beside the name it identifies.
               */}
-              <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+              <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
                 {reg.canManage ? (
                   <div className="flex flex-wrap items-start gap-5">
                     {/* Filed only with a photo consent, as it is shown (28-10-2026). */}
@@ -576,7 +576,7 @@ export default async function StudentPage({
                 )}
                 {current === 'fpn-menores' &&
                   (docs.minor === null ? (
-                    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+                    <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
                       <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                         {t('documents.fpn.titleMinor')}
                       </h2>
@@ -615,7 +615,7 @@ export default async function StudentPage({
           visible: turmas.length > 0,
           badge: { kind: 'count', value: turmas.length },
           content: () => (
-            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+            <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('students.turmas')}
               </h2>
@@ -695,7 +695,7 @@ export default async function StudentPage({
           visible: credits.length > 0,
           badge: { kind: 'count', value: credits.length },
           content: () => (
-            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+            <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('reposicao.credits')}
               </h2>
@@ -766,7 +766,7 @@ export default async function StudentPage({
             ).catch(() => null);
             if (list === null) return <PageError message={t('detailTabs.loadFailed')} />;
             return (
-              <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+              <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
                 <h2 className="font-medium">{t('feedback.title')}</h2>
                 {list.items.length === 0 ? (
                   <p className="text-sm text-foreground-muted">{t('feedback.noneForStudent')}</p>

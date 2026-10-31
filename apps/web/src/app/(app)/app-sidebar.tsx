@@ -181,7 +181,7 @@ export function MobileMenu({
         onClick={() => setOpen(true)}
         aria-label={t('nav.openMenu')}
         aria-expanded={open}
-        className="inline-flex h-control w-control shrink-0 items-center justify-center rounded border border-border bg-surface text-foreground hover:bg-surface-muted md:hidden"
+        className="inline-flex h-control w-control shrink-0 items-center justify-center rounded-sm border border-border bg-surface text-foreground hover:bg-surface-muted md:hidden"
       >
         <Menu aria-hidden className="size-5" />
       </button>

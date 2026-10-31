@@ -64,7 +64,7 @@ export function AcceptForm({
 
   if (!signedIn) {
     const button =
-      'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded';
+      'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm';
     return (
       <div className="flex flex-col gap-3">
         <p className="text-sm text-foreground-muted">{t('join.accountNeeded')}</p>
@@ -95,7 +95,7 @@ export function AcceptForm({
    */
   const mismatch =
     invitedEmail !== null && signedInAs !== null && invitedEmail.toLowerCase() !== signedInAs.toLowerCase();
-  const BUTTON = 'inline-flex min-h-control items-center justify-center px-4 text-control gap-2 rounded';
+  const BUTTON = 'inline-flex min-h-control items-center justify-center px-4 text-control gap-2 rounded-sm';
 
   return (
     <form action={action} className="flex flex-col gap-3">

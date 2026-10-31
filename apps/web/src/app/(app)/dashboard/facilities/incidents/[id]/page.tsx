@@ -75,7 +75,7 @@ export default async function IncidentPage({
               href={`/dashboard/facilities/incidents/${incident.id}/print`}
               target="_blank"
               rel="noopener"
-              className="inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               <FileText aria-hidden className="size-4" />
               {t('incidents.print.link')}
@@ -96,7 +96,7 @@ export default async function IncidentPage({
 
         <section
           aria-labelledby="incident-facts"
-          className="flex flex-col gap-3 rounded border border-border bg-surface p-5"
+          className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card"
         >
           <h2 id="incident-facts" className="font-medium">
             {t('incidents.factsTitle')}
@@ -156,7 +156,7 @@ export default async function IncidentPage({
 
         <section
           aria-labelledby="incident-addenda"
-          className="flex flex-col gap-3 rounded border border-border bg-surface p-5"
+          className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card"
         >
           <div className="flex flex-col gap-1">
             <h2 id="incident-addenda" className="font-medium">

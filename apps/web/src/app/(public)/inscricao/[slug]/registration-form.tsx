@@ -60,7 +60,7 @@ export function RegistrationForm({
     return (
       <section
         role="status"
-        className="flex flex-col gap-2 rounded border border-border bg-surface p-5"
+        className="flex flex-col gap-2 rounded bg-surface p-5 shadow-card"
       >
         <p className="flex items-center gap-2 text-lg font-semibold">
           <CheckCircle2 aria-hidden className="size-5 text-success" />
@@ -71,7 +71,7 @@ export function RegistrationForm({
     );
   }
 
-  const section = 'flex flex-col gap-4 rounded border border-border bg-surface p-5';
+  const section = 'flex flex-col gap-4 rounded bg-surface p-5 shadow-card';
   const legend = 'text-base font-semibold';
 
   return (
@@ -205,7 +205,7 @@ export function RegistrationForm({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60"
         >
           {pending ? labels.sending : labels.submit}
         </button>

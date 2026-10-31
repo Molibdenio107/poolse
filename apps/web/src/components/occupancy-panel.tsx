@@ -61,7 +61,7 @@ export async function OccupancyPanel({
       </p>
 
       {/* 1 — how full. */}
-      <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
         <h2 className="font-medium">{t('occupancy.q1')}</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Gauge
@@ -137,7 +137,7 @@ export async function OccupancyPanel({
 
       {/* 2 and 3, side by side on a desk and in order on a phone. */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
           <h2 className="font-medium">{t('occupancy.q2')}</h2>
           {!hasGrid ? (
             <p className="text-sm text-foreground-muted">{t('occupancy.unavailable')}</p>
@@ -161,7 +161,7 @@ export async function OccupancyPanel({
           )}
         </section>
 
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
           <h2 className="font-medium">{t('occupancy.q3')}</h2>
           {!hasGrid ? (
             <p className="text-sm text-foreground-muted">{t('occupancy.unavailable')}</p>

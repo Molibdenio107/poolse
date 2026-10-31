@@ -31,7 +31,7 @@ import type { FormState } from '../../actions';
 const EMPTY: FormState = { ok: false };
 
 const BUTTON =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 export function PlanPicker({
   organizationId,
@@ -58,7 +58,7 @@ export function PlanPicker({
 
   if (hasSubscription) {
     return (
-      <section className="rounded border border-border bg-surface p-5">
+      <section className="rounded bg-surface p-5 shadow-card">
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('subscription.manage')}
         </h2>
@@ -96,7 +96,7 @@ export function PlanPicker({
             <form
               key={offer.interval}
               action={startCheckout}
-              className="flex flex-col rounded border border-border bg-surface p-5"
+              className="flex flex-col rounded bg-surface p-5 shadow-card"
             >
               <input type="hidden" name="organizationId" value={organizationId} />
               <input type="hidden" name="interval" value={offer.interval} />

@@ -36,7 +36,7 @@ export function ActionButton({
     <FromLink
       href={href}
       className={cn(
-        'inline-flex h-control items-center justify-center gap-2 rounded border px-4 text-control font-medium transition-colors',
+        'inline-flex h-control items-center justify-center gap-2 rounded-sm border px-4 text-control font-medium transition-colors',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
         tone === 'sensitive'
           ? // Warning-toned, not danger-toned. Opening a medical record is a

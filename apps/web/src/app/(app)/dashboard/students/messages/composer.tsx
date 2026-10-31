@@ -126,7 +126,7 @@ export function MessageComposer({
 
   if (audiences.length === 0) {
     return (
-      <section className="flex flex-col gap-1 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-1 rounded bg-surface p-5 shadow-card">
         <p className="font-medium">{t('messages.compose.nothingToAddress')}</p>
         <p className="text-sm text-foreground-muted">{t('messages.compose.nothingToAddressHint')}</p>
       </section>
@@ -141,7 +141,7 @@ export function MessageComposer({
   const result = previewState.preview;
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <form
         id={formId}
         ref={form}
@@ -209,7 +209,7 @@ export function MessageComposer({
           <button
             type="submit"
             disabled={previewing || sending}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
           >
             {previewing ? t('messages.compose.checking') : t('messages.compose.review')}
           </button>
@@ -264,7 +264,7 @@ export function MessageComposer({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted"
               >
                 {t('common.cancel')}
               </button>
@@ -279,7 +279,7 @@ export function MessageComposer({
                     lastAttempt.current = 'send';
                     startTransition(() => send(data));
                   }}
-                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
                 >
                   {sending
                     ? t('messages.confirm.sending')

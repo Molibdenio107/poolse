@@ -135,7 +135,7 @@ export function SpacesPanel({
         'flex flex-col',
         block
           ? 'gap-3 border-t border-border pt-4'
-          : 'gap-4 rounded border border-border bg-surface p-5',
+          : 'gap-4 rounded bg-surface p-5 shadow-card',
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">

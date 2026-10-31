@@ -217,7 +217,7 @@ export function TurmaPicker({
             type="button"
             onClick={reopen}
             aria-label={t('turmaPicker.changeLabel', { name: chosen.name })}
-            className="inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center rounded-sm border border-border px-4 text-control hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('turmaPicker.change')}
           </button>
@@ -245,7 +245,7 @@ export function TurmaPicker({
               }}
               onKeyDown={onKeyDown}
               placeholder={t('turmaPicker.search')}
-              className="h-control w-full rounded border border-border bg-surface pl-9 pr-2 text-control"
+              className="h-control w-full rounded-sm border border-border bg-surface pl-9 pr-2 text-control"
             />
             <p id={`${id}-hint`} className="sr-only">
               {t('turmaPicker.keyboardHint')}

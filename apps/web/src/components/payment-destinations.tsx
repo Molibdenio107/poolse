@@ -95,7 +95,7 @@ export function CopyButton({ value, label }: { value: string; label: string }): 
       type="button"
       onClick={() => void copy()}
       aria-label={label}
-      className="inline-flex h-control items-center justify-center gap-1.5 rounded px-4 text-control text-primary hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="inline-flex h-control items-center justify-center gap-1.5 rounded-sm px-4 text-control text-primary hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       {copied ? <Check aria-hidden className="size-4" /> : <Copy aria-hidden className="size-4" />}
       <span aria-live="polite">{copied ? t('common.copied') : t('common.copy')}</span>

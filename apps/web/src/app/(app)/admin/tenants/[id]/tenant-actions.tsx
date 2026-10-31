@@ -104,7 +104,7 @@ function Card({
   children: React.ReactNode;
 }): React.ReactElement {
   return (
-    <form action={action} className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+    <form action={action} className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
       {/* The subject, not the actor — see the note in actions.ts. */}
       <input type="hidden" name="tenantId" value={tenantId} />
 
@@ -410,7 +410,7 @@ function AiCard({ tenant, ai }: { tenant: PlatformTenant; ai: PlatformTenantAi |
 
   if (ai === null) {
     return (
-      <section className="flex flex-col gap-1 rounded border border-border bg-surface p-4 md:col-span-2">
+      <section className="flex flex-col gap-1 rounded bg-surface p-4 md:col-span-2 shadow-card">
         <h3 className="text-sm font-medium">{t('admin.ai.title')}</h3>
         <p className="text-sm text-foreground-muted">{t('admin.ai.loadFailed')}</p>
       </section>
@@ -646,7 +646,7 @@ function SuspensionCard({ tenant }: { tenant: PlatformTenant }): React.ReactElem
 
   return (
     <>
-      <div className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+      <div className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
         <div>
           <h3 className="text-sm font-medium">{t('admin.action.suspension')}</h3>
           <p className="text-sm text-foreground-muted">{t('admin.action.suspendHint')}</p>
@@ -655,7 +655,7 @@ function SuspensionCard({ tenant }: { tenant: PlatformTenant }): React.ReactElem
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-danger/40 bg-danger/10 font-medium text-danger hover:border-danger/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-danger/40 bg-danger/10 font-medium text-danger hover:border-danger/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
         >
           <Lock className="size-4" aria-hidden />
           {t('admin.action.suspend')}
@@ -729,7 +729,7 @@ function SuspensionCard({ tenant }: { tenant: PlatformTenant }): React.ReactElem
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               {t('common.cancel')}
             </button>

@@ -347,7 +347,7 @@ export default async function ClassesPage({
     >
 
       {noOrganization && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <p>{t('account.noOrganizations')}</p>
         </section>
       )}
@@ -416,7 +416,7 @@ export default async function ClassesPage({
                         aria-current={on ? 'page' : undefined}
                         scroll={false}
                         className={cn(
-                          'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                          'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                           on
                             ? 'border-primary bg-primary/10 font-medium text-primary'
                             : 'border-border text-foreground-muted hover:border-border-strong hover:text-foreground',
@@ -441,7 +441,7 @@ export default async function ClassesPage({
               {data.canManage && (
                 <FromLink
                   href="/dashboard/classes/new"
-                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   {t('classes.create')}
                 </FromLink>
@@ -453,7 +453,7 @@ export default async function ClassesPage({
             <>
               {/* Above the grid, so a club with none is told before an empty week. */}
               {data.groups.length === 0 && (
-                <section className="rounded border border-border bg-surface p-5">
+                <section className="rounded bg-surface p-5 shadow-card">
                   <p>{t('classes.none')}</p>
                   <p className="mt-1 text-sm text-foreground-muted">
                     {data.canManage ? t('classes.noneHintManager') : t('classes.noneHintMember')}
@@ -461,7 +461,7 @@ export default async function ClassesPage({
                 </section>
               )}
 
-              <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+              <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
                 <div className="flex flex-col gap-1">
                   <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                     {t('classes.week')}
@@ -488,7 +488,7 @@ export default async function ClassesPage({
           )}
 
           {current === 'unscheduled' && (
-            <section className="rounded border border-border bg-surface p-5">
+            <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('classes.unscheduled')}
               </h2>

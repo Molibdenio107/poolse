@@ -71,7 +71,7 @@ export function SeasonDrafts({
   const drafts = seasons.filter((season) => season.status === 'draft');
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <div>
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('seasons.planning')}

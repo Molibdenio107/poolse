@@ -75,7 +75,7 @@ export default async function FamilyLesson({
           return (
             <section
               key={`notice-${entry.studentId}`}
-              className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3"
+              className="flex flex-col gap-2 rounded-lg bg-surface p-3 shadow-card"
             >
               <h2 className="flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 <CalendarCheck className="size-4" aria-hidden />
@@ -96,7 +96,7 @@ export default async function FamilyLesson({
           );
         })}
 
-      <section className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
+      <section className="flex flex-col gap-2 rounded-lg bg-surface p-3 shadow-card">
         <h2 className="flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-foreground-muted">
           <NotebookPen className="size-4" aria-hidden />
           {t('app.family.planTitle')}

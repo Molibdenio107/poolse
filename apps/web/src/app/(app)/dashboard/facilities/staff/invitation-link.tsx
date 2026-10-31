@@ -75,7 +75,7 @@ export function InvitationLink({
         <button
           type="button"
           onClick={() => void copy()}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border bg-surface hover:bg-surface-muted"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border bg-surface hover:bg-surface-muted"
         >
           {canShare ? t('familyAccess.share') : copied ? t('common.copied') : t('common.copy')}
         </button>

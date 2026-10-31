@@ -223,7 +223,7 @@ export function ArchiveButton({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex h-control items-center justify-center rounded border border-danger/50 px-4 text-control text-danger hover:bg-danger/10 disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center rounded-sm border border-danger/50 px-4 text-control text-danger hover:bg-danger/10 disabled:opacity-60"
             >
               {pending ? t('common.working') : t('qualifying.archive')}
             </button>

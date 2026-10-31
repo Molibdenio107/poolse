@@ -103,7 +103,7 @@ export function FeedbackForm({
         <button
           type="submit"
           disabled={pending || mood === ''}
-          className="inline-flex h-control w-full items-center justify-center rounded bg-primary px-4 text-control font-medium text-primary-foreground disabled:opacity-60 md:w-auto"
+          className="inline-flex h-control w-full items-center justify-center rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground disabled:opacity-60 md:w-auto"
         >
           {savedMood === null ? t('app.feedback.send') : t('app.feedback.update')}
         </button>

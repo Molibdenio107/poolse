@@ -334,7 +334,7 @@ export async function ReadingsBlock({
               href={`/dashboard/facilities/pools/${poolId}/report`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               {t('facilities.analysisReport')}
             </a>

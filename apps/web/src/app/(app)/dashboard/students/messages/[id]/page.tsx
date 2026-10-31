@@ -87,7 +87,7 @@ export default async function MessagePage({
           slug: 'general',
           labelKey: 'detailTabs.general',
           content: () => (
-          <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+          <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
             <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-[max-content_1fr]">
               <dt className="text-foreground-muted">{t('messages.field.audience')}</dt>
               <dd>{t(audienceKey(loaded.audience) as never, { name: loaded.targetName ?? '' })}</dd>
@@ -108,7 +108,7 @@ export default async function MessagePage({
           slug: 'recipients',
           labelKey: 'messages.recipients',
           content: () => (
-          <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+          <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
             {loaded.unreachableCount > 0 && (
               <p className="text-sm">
                 {t('messages.unreachableCount', { count: loaded.unreachableCount })}

@@ -108,7 +108,7 @@ export function QualificationsPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
         <h2 className="font-medium">{t('qualifications.standing')}</h2>
         {data.standings.length === 0 ? (
           <p className="text-sm text-foreground-muted">{t('qualifications.noneOnFile')}</p>
@@ -133,7 +133,7 @@ export function QualificationsPanel({
       </section>
 
       {data.canManage && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
           <h2 className="font-medium">{t('qualifications.add')}</h2>
           {types.length === 0 ? (
             <p className="text-sm text-foreground-muted">{t('qualifications.noTypes')}</p>
@@ -182,7 +182,7 @@ export function QualificationsPanel({
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60"
                 >
                   {t('qualifications.save')}
                 </button>
@@ -193,7 +193,7 @@ export function QualificationsPanel({
       )}
 
       {data.history.length > 0 && (
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
           <h2 className="font-medium">{t('qualifications.history')}</h2>
           <ul className="flex flex-col divide-y divide-border text-sm">
             {data.history.map((record) => (
@@ -234,7 +234,7 @@ export function QualificationsPanel({
                     type="button"
                     disabled={pending}
                     onClick={() => archive(record.id)}
-                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted disabled:opacity-60"
+                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted disabled:opacity-60"
                   >
                     {t('qualifications.archive')}
                   </button>

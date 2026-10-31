@@ -53,7 +53,7 @@ export default async function InvoicePage({
       subtitle={`${invoice.supplier} · ${invoice.meterName}`}
       back={{ href: back.href, label: t(back.labelKey) }}
     >
-      <section className="rounded border border-border bg-surface p-5">
+      <section className="rounded bg-surface p-5 shadow-card">
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Item label={t('energy.invoice.period')} value={`${day(invoice.periodStart)} – ${day(invoice.periodEnd)} · ${t('energy.invoice.days', { days: invoice.days })}`} />
           <Item label={t('energy.invoice.issuedOn')} value={day(invoice.issuedOn)} />
@@ -83,7 +83,7 @@ export default async function InvoicePage({
       </section>
 
       {invoice.registers.length > 0 && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="rounded bg-surface p-5 shadow-card">
           <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-foreground-muted">
             {t('energy.invoice.registersTitle')}
           </h2>
@@ -110,7 +110,7 @@ export default async function InvoicePage({
         </section>
       )}
 
-      <section className="rounded border border-border bg-surface p-5">
+      <section className="rounded bg-surface p-5 shadow-card">
         <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('energy.invoice.linesTitle')}
         </h2>
@@ -153,7 +153,7 @@ export default async function InvoicePage({
       </section>
 
       {canArchive && (
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-surface p-5">
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded bg-surface p-5 shadow-card">
           <span className="text-sm text-foreground-muted">{t('energy.invoice.removeHint')}</span>
           <ArchiveInvoice invoiceId={invoice.id} meterId={meterId} facilityId={invoice.facilityId} />
         </section>

@@ -78,7 +78,7 @@ export function TariffPanel({
   const live = tariffs.find((tariff) => tariff.live) ?? null;
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('energy.tariff.section')}
@@ -399,7 +399,7 @@ function RemoveTariffDialog({
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-destructive font-medium text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-destructive font-medium text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('energy.tariff.remove')}
           </button>

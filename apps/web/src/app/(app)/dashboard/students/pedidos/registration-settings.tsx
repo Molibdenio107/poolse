@@ -37,7 +37,7 @@ export function RegistrationSettingsForm({
 
   return (
     <div className="flex flex-col gap-5">
-      <section className="flex flex-col gap-2 rounded border border-border bg-surface p-5">
+      <section className="flex flex-col gap-2 rounded bg-surface p-5 shadow-card">
         <p className="font-medium">
           {settings.open ? t('leads.settings.isOpen') : t('leads.settings.isClosed')}
         </p>
@@ -78,7 +78,7 @@ export function RegistrationSettingsForm({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60"
             >
               {t('common.save')}
             </button>

@@ -41,7 +41,7 @@ export function MergeButton({
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {label}
         </button>
@@ -63,14 +63,14 @@ export function MergeButton({
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border"
             >
               {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-destructive text-destructive-foreground disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-destructive text-destructive-foreground disabled:opacity-60"
             >
               {pending ? t('common.working') : t('people.mergeYes')}
             </button>
