@@ -287,6 +287,8 @@ export default {
          */
         'hairline-b': '0 1px 0 rgb(var(--foreground) / 0.07)',
         'hairline-r': '1px 0 0 rgb(var(--foreground) / 0.07)',
+        // The sidebar's foot, above Poolse's own mark (Rui, 31-10-2026).
+        'hairline-t': '0 -1px 0 rgb(var(--foreground) / 0.07)',
       },
       /* The handoff's typefaces, loaded by next/font in lib/fonts.ts. */
       fontFamily: {

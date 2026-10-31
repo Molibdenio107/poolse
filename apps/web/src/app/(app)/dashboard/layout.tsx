@@ -1,8 +1,5 @@
 import * as Sentry from '@sentry/nextjs';
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { LinkBusy } from '@/components/link-busy';
-import { LogoMark } from '@/components/logo-mark';
 import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
 import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import { AppSidebar, ClubBrandOrSections, MobileMenu, SportShell, type Badges } from '../app-sidebar';
@@ -253,20 +250,11 @@ export default async function DashboardLayout({
             club={{ name: organizationName, logoFileId }}
           />
           {/*
-            Poolse's mark, moved here from the top of the sidebar — POOLSE-139,
-            the handoff's top bar. The club's own logo and name keep their place
-            right beside it, at their own size: that part of the corner is still
-            the customer's. Not on a phone, where the club's name needs the room.
-            With two sports, on a desk, the club becomes the first section tab
-            instead and the sports follow it, left-aligned (POOLSE-141, Rui
-            31-10-2026).
+            The top bar is the club's (Rui, 31-10-2026): its logo and name, a
+            link to its Painel, and Poolse's own mark in the sidebar's bottom
+            corner instead. With two sports, on a desk, the club becomes the
+            first section tab and the sports follow it (POOLSE-141).
           */}
-          <Link href="/dashboard" className="hidden shrink-0 items-center gap-2 sm:flex" aria-label={t('app.name')}>
-            <LogoMark />
-            <span className="hidden font-heading text-[15px] font-semibold sm:inline">{t('app.name')}</span>
-            <LinkBusy />
-          </Link>
-          <span aria-hidden className="hidden h-5 w-px bg-foreground/10 sm:block" />
           <ClubBrandOrSections
             roles={roles}
             kind={kind}

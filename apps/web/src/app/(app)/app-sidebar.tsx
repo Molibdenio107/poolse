@@ -10,6 +10,7 @@ import { EntityIcon, type EntityKind } from '@/components/entity-icon';
 import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import type { OrganizationKind } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
+import { LogoMark } from '@/components/logo-mark';
 import { SiteIcon, SportIcon } from '@/components/sport-icon';
 import { cn } from '@/lib/utils';
 import {
@@ -99,14 +100,19 @@ export function AppSidebar({
    * scrolling sideways across the top of a phone is a menu nobody can read.
    */
   return (
-    // Under the full-width top bar since POOLSE-139, which now carries the
-    // Poolse mark; a hairline rather than a border on the right.
+    // Under the full-width top bar since POOLSE-139; a hairline rather than a
+    // border on the right. The top bar is the club's, so Poolse's own mark and
+    // name sit in the sidebar's bottom corner (Rui, 31-10-2026).
     <aside className="hidden bg-surface shadow-hairline-r md:sticky md:top-app-bar md:block md:h-[calc(100dvh-3.5rem-var(--safe-top))] md:w-60 md:shrink-0">
       <div className="flex h-full flex-col overflow-y-auto px-2.5 py-4">
         <SectionFade section={section}>
           {section !== null && section !== 'site' && <SportHeader sport={section} />}
           <SidebarNav sections={itemsOf(sections, section)} pathname={pathname} badges={badges} sport={sport} />
         </SectionFade>
+        <p className="mt-4 flex shrink-0 items-center gap-2 px-3 pt-3 shadow-hairline-t">
+          <LogoMark />
+          <span className="font-heading text-[15px] font-semibold">{t('app.name')}</span>
+        </p>
       </div>
     </aside>
   );
@@ -168,16 +174,20 @@ export interface ClubBrand {
   logoFileId: string | null;
 }
 
-/** The club's logo and name — the brand slot's own content (POOLSE-139). */
+/** The club's logo and name, a link to its Painel — the top bar's start (Rui, 31-10-2026). */
 function ClubIdentity({ club }: { club: ClubBrand }): React.ReactElement {
   return (
-    <span className="flex min-w-0 items-center gap-2">
+    <Link
+      href="/dashboard"
+      className="flex min-w-0 items-center gap-2 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    >
       {club.logoFileId !== null && (
         // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id
         <img src={`/files/${club.logoFileId}`} alt="" className="h-8 w-auto max-w-32 object-contain" />
       )}
       {club.name !== null && <span className="truncate text-sm font-medium">{club.name}</span>}
-    </span>
+      <LinkBusy />
+    </Link>
   );
 }
 
@@ -227,6 +237,19 @@ function SectionLinks({
     const tab = row.current.querySelector<HTMLElement>(`[data-section='${target}']`);
     if (tab === null) return;
     setLine((before) => ({ left: tab.offsetLeft, width: tab.offsetWidth, animate: before !== null }));
+    // A font arriving late or a window resized widens the tabs: follow them,
+    // without a slide, because nothing was chosen.
+    // The observer also fires once on start, unchanged: that one keeps the slide.
+    const observer = new ResizeObserver(() =>
+      setLine((before) =>
+        before !== null && before.left === tab.offsetLeft && before.width === tab.offsetWidth
+          ? before
+          : { left: tab.offsetLeft, width: tab.offsetWidth, animate: false },
+      ),
+    );
+    observer.observe(row.current);
+    observer.observe(tab);
+    return () => observer.disconnect();
   }, [target, placement, club.name]);
 
   if (section === null || groups.length === 0) return null;
@@ -251,7 +274,12 @@ function SectionLinks({
       key={key}
       href={href}
       data-section={key}
-      onClick={() => setChosen(key as NavSection)}
+      onClick={(event) => {
+        // A click that opens another tab leaves this one where it is.
+        if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+          setChosen(key as NavSection);
+        }
+      }}
       aria-current={current ? 'page' : undefined}
       {...(sport === null ? {} : { 'data-sport': sport })}
       className={cn(
@@ -366,7 +394,7 @@ export function ClubBrandOrSections({
       <span className="contents md:hidden">
         <ClubIdentity club={club} />
       </span>
-      <div className="hidden min-w-0 self-stretch md:ml-4 md:flex">
+      <div className="hidden min-w-0 self-stretch md:flex">
         <SectionLinks sections={sections} section={section} badges={badges} placement="bar" club={club} />
       </div>
     </>
@@ -497,7 +525,10 @@ export function MobileMenu({
   const sections = visibleSections({ roles, kind, modules, sports });
   const section = sectionOf(sections, pathname, sport);
 
-  useEffect(() => setOpen(false), [pathname]);
+  // Any arrival closes it, another sport's tab (the same path, another
+  // `?sport=`) included.
+  const query = useSearchParams().toString();
+  useEffect(() => setOpen(false), [pathname, query]);
 
   return (
     <>
