@@ -899,7 +899,9 @@
       "newMeterHint": "No meter carries this bill's CPE. A “Whole site” meter with this CPE is created when you file.",
       "newMeterSite": "Site for the new meter",
       "newMeterNoPreview": "The full check happens on filing, once the meter exists.",
-      "dropHere": "Drag the bill (PDF or photo) anywhere onto this page — or choose the file below."
+      "dropHere": "Drag the bill (PDF or photo) anywhere onto this page — or choose the file below.",
+      "noKey": "Automatic bill reading is on, but this server has no API key. Type the bill into the form below.",
+      "capReached": "The club has used all of this month's AI reads. Type the bill into the form below."
     },
     "title": "Energy",
     "subtitle": "Each site's meters and their readings.",
@@ -1293,7 +1295,9 @@
         "disabled": "Report parsing is not enabled yet.",
         "disabledHint": "Ask for it to be switched on, or record the result by hand under Record a result. The club's readings log as .xlsx or .csv still imports.",
         "unreadable": "This report could not be read. Check that the file opens and try again.",
-        "nothingFound": "No values were found in this report."
+        "nothingFound": "No values were found in this report.",
+        "noKey": "Automatic report reading is on, but this server has no API key. Record the result by hand under Record a result.",
+        "capReached": "The club has used all of this month's AI reads. Record the result by hand under Record a result."
       },
       "problem": {
         "dateMissing": "No date",
@@ -4493,7 +4497,9 @@
       "manualNeedsPayment": "Record a payment first: a hand-paid subscription has to say what it is paid up to.",
       "nameMismatch": "That is not this tenant's name. Type it as shown above.",
       "sportInvalid": "Unknown sport.",
-      "poolAlwaysOn": "Swimming cannot be switched off."
+      "poolAlwaysOn": "Swimming cannot be switched off.",
+      "aiReaderInvalid": "Unknown AI reader.",
+      "aiCapInvalid": "The limit is a whole number from 1, or empty for no limit."
     },
     "actions": "Actions",
     "suspended": "Suspended",
@@ -4579,7 +4585,9 @@
       "trials": "{started} trials started · {converted} converted · {running} running now.",
       "energyReadsTitle": "Energy bills read automatically",
       "energyReadsHint": "Each read is a paid call to Anthropic's API, whether or not it found the bill.",
-      "energyReadsUnread": "{count, plural, one {# found nothing} other {# found nothing}}"
+      "energyReadsUnread": "{count, plural, one {# found nothing} other {# found nothing}}",
+      "aiReadsTitle": "All AI reads",
+      "aiReadsHint": "All five readers together, across every club. Each read is a paid call to Anthropic's API."
     },
     "payments": "Payments received",
     "paymentsHint": "Outside Stripe. A payment is never edited or deleted — a correction is another record.",
@@ -4639,10 +4647,18 @@
     },
     "switches": {
       "name": {
-        "id_document_ai": "Reading the ID document"
+        "id_document_ai": "Reading the ID document",
+        "energy_invoice_ai": "Energy bill reading",
+        "water_report_ai": "Lab report reading",
+        "pdf_table_ai": "Reading lists from PDF",
+        "column_match_ai": "Column matching"
       },
       "covers": {
-        "id_document_ai": "When a student's ID card photo is uploaded, its number and dates are read and proposed in the form for someone to confirm. Only the image is sent. Each read has a cost."
+        "id_document_ai": "When a student's ID card photo is uploaded, its number and dates are read and proposed in the form for someone to confirm. Only the image is sent. Each read has a cost.",
+        "energy_invoice_ai": "Under Energy → Import bill, the bill PDF is read and proposed on the form for somebody to confirm. Each read has a cost. Each club also needs its own tick on its page.",
+        "water_report_ai": "A lab report as a PDF or photo, dropped on a pool, is read and proposed for somebody to confirm. Each read has a cost. Each club also needs its own tick on its page.",
+        "pdf_table_ai": "The list importers (students, timetable, partnerships, salaries, inventory, entry times) take a PDF, transcribed as a spreadsheet. Each read has a cost. Each club also needs its own tick on its page.",
+        "column_match_ai": "When importing students, columns no synonym recognised are proposed by the model. Only the headings and the shape of each column are sent. Each call has a cost. Each club also needs its own tick on its page."
       },
       "on": "On",
       "off": "Off",
@@ -4653,6 +4669,39 @@
       "turnOff": "Turn off",
       "failed": "The setting could not be changed.",
       "invalid": "Invalid value."
+    },
+    "ai": {
+      "title": "AI reading",
+      "hint": "Which AI readers this club may use, how much it used them and what they are estimated to have cost. The club does not see this.",
+      "loadFailed": "This club's AI reading could not be loaded.",
+      "failed": "AI reading could not be saved.",
+      "reader": "Reader",
+      "thisMonth": "This month",
+      "lastMonth": "Last month",
+      "lastUsed": "Last used",
+      "never": "Never",
+      "platformOff": "Off for the platform: even ticked, it reads nothing.",
+      "reads": "{count, plural, one {# read} other {# reads}} · {failed, plural, one {# failed} other {# failed}}",
+      "cost": "Estimate: {amount}",
+      "costUnpriced": "Estimate: —",
+      "coverage": "based on {measured} of {reads}",
+      "estimateNote": "The estimate multiplies each read's tokens by the model's list price, converted to euros. It is not an invoice. “—” means the model has no known price.",
+      "cap": "Monthly read limit",
+      "capHint": "For all five readers together, per calendar month. Empty: no limit. Used this month: {used}.",
+      "name": {
+        "energy_invoice": "Energy bill reading",
+        "id_document": "ID document reading",
+        "water_report": "Lab report reading",
+        "pdf_table": "Reading lists from PDF",
+        "column_match": "Column matching"
+      },
+      "covers": {
+        "energy_invoice": "Under Energy → Import bill, the bill PDF is read and proposed on the form for somebody to confirm.",
+        "id_document": "When a student's ID card photo is uploaded, the number and dates are read and proposed on the form for somebody to confirm.",
+        "water_report": "A lab report as a PDF or photo, dropped on a pool, is read and proposed for somebody to confirm.",
+        "pdf_table": "The list importers (students, timetable, partnerships, salaries, inventory, entry times) take a PDF, transcribed as a spreadsheet.",
+        "column_match": "When importing students, columns no synonym recognised are proposed by the model. Only the headings and the shape of each column are sent."
+      }
     }
   },
   "suspended": {
@@ -4948,7 +4997,9 @@
       "notAllowed": "Only people who may import this list can have a file read.",
       "tooMany": "Too many files have been read in the last few minutes. Wait a little and try again."
     },
-    "pdfDisabled": "Reading PDFs is not switched on here. Export the document to Excel or CSV from the program it came from — or ask for PDF reading to be switched on."
+    "pdfDisabled": "Reading PDFs is not switched on here. Export the document to Excel or CSV from the program it came from — or ask for PDF reading to be switched on.",
+    "pdfNoKey": "PDF reading is on, but this server has no API key. Export the document to Excel or CSV from the program it came from and import that file.",
+    "pdfCapReached": "The club has used all of this month's AI reads. Export the document to Excel or CSV from the program it came from and import that file."
   },
   "export": {
     "pdf": {
@@ -6495,7 +6546,7 @@
         "rateLimited": "Too many reads in a row. Fill in by hand or try again shortly.",
         "off": "Automatic reading of the document is switched off. Fill in the details by hand.",
         "noKey": "Automatic reading is switched on, but this server has no API key. Fill in the details by hand.",
-        "disabled": "Automatic reading is not available. Fill in the details by hand."
+        "capReached": "The club has used all of this month's AI reads. Fill in the details by hand."
       }
     }
   },
@@ -6618,5 +6669,11 @@
     "certificateHint": "You can also drop the certificate anywhere on the page.",
     "certificateChosen": "Will be attached: {name}",
     "savedNoCertificate": "Exam saved, but the certificate was not attached. Attach it on the exam's row."
+  },
+  "ai": {
+    "error": {
+      "reader": "Unknown reader.",
+      "tokens": "Invalid token count."
+    }
   }
 }

@@ -94,7 +94,7 @@ stamps the bill's CPE and serial onto the meter — said on the preview first. T
 supplier + number twice is refused; archived, the number is free again.
 
 **The parser** (`lib/energy-invoice.ts` + `lib/energy-invoice-agent.ts`) is off by default:
-`ENERGY_INVOICE_AI_ENABLED=true` and `ANTHROPIC_API_KEY`. Its prompt describes the
+its platform switch and the club's tick on /admin (POOLSE-137), and `ANTHROPIC_API_KEY`. Its prompt describes the
 *concepts* — the electricity fatura inside the document, the delivery point, the registers,
 the billed lines with their VAT — never a supplier's layout, so Galp or Iberdrola read the
 same way EDP does. Only the document is sent, and a bill carries the holder's name and NIF;
@@ -317,4 +317,4 @@ The page opens on **Importar fatura**, a folded card (*Importar fatura — PDF o
 
 **A meter says what it measures** — *Mede*: electricity, gas or water (`energy_meter.carrier`), on the add and edit forms. An edit that does not send it keeps it.
 
-**Bills are read automatically** (Rui, 22-10-2026): `ENERGY_INVOICE_AI_ENABLED=true` in every deployed environment (`docs/deploy.md`). Each read is a paid call and leaves a row in `energy_invoice_read` — read or not, never for a file refused before the call — and `/admin` → Faturação shows the count for the last six months. The reader uses structured output, not a forced tool call, which the current Opus refuses. It still reads the **electricity** fatura only; a gas bill is typed.
+**Bills are read automatically** (Rui, 22-10-2026): since POOLSE-137 that is `energy_invoice_ai` on at /admin → Plataforma and the club ticked on its page (`docs/deploy.md`). Each read is a paid call and leaves a row in `ai_read` (reader `energy_invoice`) — claimed before the call, finished after, read or not, never for a file refused before the call — counted against the club's monthly cap; `/admin` → Faturação shows the count for the last six months and the club's page its reads and estimated cost. Switched off for the club, the page says so and the form is there; no key or the month's cap used, it says that instead. The reader uses structured output, not a forced tool call, which the current Opus refuses. It still reads the **electricity** fatura only; a gas bill is typed.

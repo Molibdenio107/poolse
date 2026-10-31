@@ -1,3 +1,5 @@
+import { AiReadsController } from '../ai/ai-reads.controller.js';
+import { AI_READERS } from '@poolse/rules';
 import { after, before, test } from 'node:test';
 import { MeetsController } from '../meets/meets.controller.js';
 import { MeetInboxController } from '../meets/meet-inbox.controller.js';
@@ -1004,7 +1006,16 @@ test('the energy dashboard and the read log refuse a guardian and a student (403
   await asEach(async () => {
     const energy = new EnergyInvoicesController();
     await refused('GET energy/summary', 403, () => energy.summary());
-    await refused('POST energy/invoice-reads', 403, () => energy.recordRead({ succeeded: true }));
+  });
+});
+
+test('the AI readers meter refuses a guardian and a student (403) — POOLSE-137', async () => {
+  await asEach(async () => {
+    const meter = new AiReadsController();
+    for (const reader of AI_READERS) {
+      await refused(`POST ai-reads/claim (${reader})`, 403, () => meter.claim({ reader }));
+    }
+    await refused('POST ai-reads/:id/finish', 403, () => meter.finish(NO_SUCH_ID, { succeeded: true }));
   });
 });
 

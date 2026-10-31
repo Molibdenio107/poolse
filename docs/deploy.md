@@ -119,15 +119,16 @@ development, staging and production instances.
    | `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | `/sign-up` |
    | `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | `/dashboard` |
    | `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | `/dashboard` |
-   | `ENERGY_INVOICE_AI_ENABLED` | `true` — energy bills are read automatically (Rui, 22-10-2026, POOLSE-106) |
-   | *(none — /admin → Plataforma)* | the ID photo reader is a switch on /admin, off by default, and needs `ANTHROPIC_API_KEY` on the web app (Rui, 30-10-2026) |
-   | `ANTHROPIC_API_KEY` | the key the bill reader calls with; without it the flag above reads nothing |
+   | *(none — /admin)* | every AI reader is a platform switch on /admin → Plataforma **and** a tick per club on the club's page (POOLSE-137, 31-10-2026); all start off |
+   | `ANTHROPIC_API_KEY` | the key every AI reader calls with; without it nothing is read, whatever the switches say |
 
-   **The bill reader is on by decision, and it costs per bill.** Each PDF read is one call to
-   Anthropic's API, a few cents at the default model, paid whether or not it finds the bill and
-   nothing when nobody imports. `/admin` → Faturação counts the reads per month so the cost
-   stays in view. The other parser flags (`WATER_REPORT_AI_ENABLED`, `PDF_TABLE_AI_ENABLED`,
-   `COLUMN_MATCH_AI_ENABLED`) stay off until somebody decides otherwise.
+   **No AI reader has an environment flag any more** (POOLSE-137). `ENERGY_INVOICE_AI_ENABLED`,
+   `WATER_REPORT_AI_ENABLED`, `PDF_TABLE_AI_ENABLED`, `COLUMN_MATCH_AI_ENABLED` and
+   `ID_DOCUMENT_AI_ENABLED` are read by nothing; delete them from Vercel. The bill reader is on
+   by decision (Rui, 22-10-2026, POOLSE-106), which now means: its platform switch on, and the
+   pilot club ticked. Each read is one call to Anthropic's API, paid whether or not it finds
+   anything; `/admin` → the club shows reads and an estimated cost per reader per month, and an
+   optional monthly cap stops a club's reads before they are made.
 
    No `DATABASE_*` variables here, ever. The web app never talks to the database; it talks
    to the API, which is the only thing holding credentials. A `NEXT_PUBLIC_` variable is
@@ -206,10 +207,10 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       back in. **Deferred for the free pilot** (16 October 2026): MFA needs Clerk Pro, so it ships
       the day a club pays. Until then, use a long unique password and sign in from your own
       machine only.
-- [ ] **The energy bill reader**: `ENERGY_INVOICE_AI_ENABLED=true` and `ANTHROPIC_API_KEY` on
-      Vercel, staging and production (POOLSE-106, Rui 22-10-2026). Check the monthly count on
-      `/admin` → Faturação after the first bills, and the account's spend limit on
-      console.anthropic.com.
+- [ ] **The energy bill reader** (POOLSE-106, Rui 22-10-2026; gates POOLSE-137): `ANTHROPIC_API_KEY`
+      on Vercel, staging and production; `energy_invoice_ai` on at `/admin` → Plataforma; the pilot
+      club ticked for *Leitura de faturas de energia* on its page. Check the club's card after the
+      first bills, and the account's spend limit on console.anthropic.com.
 - [ ] **Stripe**: a live account, one price per interval, the webhook endpoint pointing at
       `POST /webhooks/stripe`, and `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` /
       `STRIPE_PRICE_*` set on the API only. Until then the product runs unsold, by design —
@@ -296,7 +297,7 @@ everything except payment, set the variables and run *Prove it* afterwards.
 | Resend | Free (3,000/month, 100/day), then Pro ~22 | 0 | Go-live | `EMAIL_PROVIDER`, `RESEND_API_KEY`, `EMAIL_FROM`, `INBOUND_DOMAIN`, `RESEND_INBOUND_WEBHOOK_SECRET` |
 | Sentry | Free (Developer) | 0 | Go-live | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` |
 | Cloudflare R2 | Free up to 10 GB | 0 | Go-live | `S3_*` |
-| Anthropic API | Pay as you go, per-feature flags; the energy bill reader is on (POOLSE-106) | ~1–5 | Go-live: bills are read automatically | `ANTHROPIC_API_KEY`, `ENERGY_INVOICE_AI_ENABLED` |
+| Anthropic API | Pay as you go; each reader switched per club on /admin with an optional monthly cap (POOLSE-137); the energy bill reader is on (POOLSE-106) | ~1–5 | Go-live: bills are read automatically | `ANTHROPIC_API_KEY` |
 | Stripe | No monthly fee; ~1.5% + €0.25 per EU card payment | 0 fixed | First paying club | `STRIPE_*` |
 | Apple Developer | €99/year | ~8 | Mobile app (phase 3) | — |
 | Google Play | ~€27 once | 0 | Mobile app (phase 3) | — |

@@ -203,9 +203,10 @@ come from one path either way.
 
 #### Report parsing is off unless it is switched on
 
-Two switches. `WATER_REPORT_AI_ENABLED=true` says the club wants it, `ANTHROPIC_API_KEY`
-says it can work. With either missing, dropping a PDF says **"Report parsing is not enabled
-yet"** — a sentence, not an error — and points at the spreadsheet import and the manual form.
+Three gates (POOLSE-137): the `water_report_ai` platform switch and the club's tick on
+/admin, and `ANTHROPIC_API_KEY`. Off for the club, dropping a PDF says **"Report parsing is not
+enabled yet"** — a sentence, not an error — and points at the spreadsheet import and the manual
+form; no key, or the month's AI reads used up, says that instead.
 
 - **Only the document is sent.** No club name, no tanks, no previous readings.
 - **Nothing extracted is written.** Every value goes through the same validation a

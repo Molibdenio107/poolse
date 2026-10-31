@@ -63,7 +63,11 @@ export type ReadFailure =
   | 'fileEmpty'
   | 'fileUnreadable'
   /** A PDF, at an importer that takes them, with the PDF reader switched off. */
-  | 'pdfDisabled';
+  | 'pdfDisabled'
+  /** The same, with the reader on but no `ANTHROPIC_API_KEY` on this server (POOLSE-137). */
+  | 'pdfNoKey'
+  /** The same, with the club's monthly AI reads used up (POOLSE-137). */
+  | 'pdfCapReached';
 
 /**
  * One cell, as text.
@@ -172,9 +176,13 @@ export async function readSheet(
     if ('error' in read) {
       return {
         error:
-          read.error === 'disabled'
+          read.error === 'off'
             ? 'pdfDisabled'
-            : read.error === 'nothingFound'
+            : read.error === 'noKey'
+              ? 'pdfNoKey'
+              : read.error === 'capReached'
+                ? 'pdfCapReached'
+                : read.error === 'nothingFound'
               ? 'fileEmpty'
               : 'fileUnreadable',
       };

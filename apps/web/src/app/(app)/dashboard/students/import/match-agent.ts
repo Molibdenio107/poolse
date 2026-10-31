@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { anthropicKeyConfigured, metered } from '@/lib/ai-meter';
 import type { ColumnMatch, ColumnShape, ImportField } from '@/lib/sheet';
 
 /**
@@ -55,12 +56,10 @@ interface Assignment {
  * invisibly absent.
  */
 export function agentAvailable(): boolean {
-  // Its own flag, off by default — sweep of 15-10-2026. It ran whenever the key
-  // was set, so switching on any parser switched this metered call on too.
-  return (
-    (process.env['COLUMN_MATCH_AI_ENABLED'] ?? '').trim().toLowerCase() === 'true' &&
-    (process.env['ANTHROPIC_API_KEY'] ?? '').trim() !== ''
-  );
+  // The key only. Whether this club may use it — its platform switch and the
+  // club's tick (POOLSE-137) — is decided at the claim, so a reader that is off
+  // costs one refused request and then the ordinary questions.
+  return anthropicKeyConfigured();
 }
 
 const SYSTEM = [
@@ -115,6 +114,8 @@ export async function matchWithAgent(input: AgentInput): Promise<ColumnMatch[]> 
     ...input.fields.map((entry) => `- ${entry.field} (shown to the operator as "${entry.label}")`),
   ].join('\n');
 
+  let used: Anthropic.Message | null = null;
+  const attempt = async (): Promise<ColumnMatch[]> => {
   try {
     const client = new Anthropic();
 
@@ -163,6 +164,7 @@ export async function matchWithAgent(input: AgentInput): Promise<ColumnMatch[]> 
       // asks two extra questions.
       { timeout: 20_000 },
     );
+    used = response;
 
     const call = response.content.find(
       (block): block is Anthropic.ToolUseBlock =>
@@ -176,6 +178,15 @@ export async function matchWithAgent(input: AgentInput): Promise<ColumnMatch[]> 
     // same thing here: the operator answers the questions themselves.
     return [];
   }
+  };
+
+  // One claim per model call, never per button — POOLSE-137. Off, out of key
+  // or over the cap, the operator answers the questions themselves, as above.
+  const run = await metered('column_match', async () => {
+    const value = await attempt();
+    return { value, succeeded: value.length > 0, response: used };
+  });
+  return 'gate' in run ? [] : run.value;
 }
 
 /**

@@ -5,11 +5,18 @@ import { deliverAlert, recordAlert } from './platform-alert.js';
 /**
  * Platform-wide switches, set from /admin — Rui, 30-10-2026.
  *
- * One today: `id_document_ai`, reading an ID document's photograph with the
- * model. Off by default; the web app still needs `ANTHROPIC_API_KEY` beside it.
+ * One per AI reader (POOLSE-137): each also needs the club's own tick and the
+ * web app's `ANTHROPIC_API_KEY`. Off by default.
  * A new switch is a value here and in the table's CHECK.
  */
-export const PLATFORM_SWITCHES = ['id_document_ai'] as const;
+export const PLATFORM_SWITCHES = [
+  'id_document_ai',
+  // POOLSE-137: the other four AI readers, off until Rui turns one on.
+  'energy_invoice_ai',
+  'water_report_ai',
+  'pdf_table_ai',
+  'column_match_ai',
+] as const;
 export type PlatformSwitchName = (typeof PLATFORM_SWITCHES)[number];
 
 export function isPlatformSwitch(value: unknown): value is PlatformSwitchName {

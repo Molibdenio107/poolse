@@ -7,8 +7,8 @@ import { anthropicKeyConfigured } from '@/lib/id-document-agent';
 import { SwitchToggle } from './switch-toggle';
 
 /**
- * Plataforma — platform-wide switches (Rui, 30-10-2026). One today: reading a
- * student's ID photo with the model. Each row says whether it is on, and
+ * Plataforma — platform-wide switches (Rui, 30-10-2026), one per AI reader
+ * since POOLSE-137; each club also needs its own tick. Each row says whether it is on, and
  * whether this server holds the key it needs, because a switch that is on with
  * no key reads nothing and must not look as though it does.
  */

@@ -1,4 +1,4 @@
-import type { PoolseModule, PoolseSport } from '@poolse/rules';
+import type { AiReader, PoolseModule, PoolseSport } from '@poolse/rules';
 import { auth } from '@clerk/nextjs/server';
 import { cookies } from 'next/headers';
 import type { SkillState } from './skills';
@@ -362,10 +362,16 @@ export interface Me {
    * switch missing from it, is off.
    */
   switches?: Partial<Record<PlatformSwitchName, boolean>>;
+  /**
+   * The AI readers that can run in `memberships[0]`'s club: its tick and the
+   * platform switch both on (POOLSE-137). Absent is none. The key is checked
+   * on the web server, never here.
+   */
+  aiReaders?: AiReader[];
 }
 
 /** The switches /admin flips — `PLATFORM_SWITCHES` on the API. */
-export type PlatformSwitchName = 'id_document_ai';
+export type PlatformSwitchName = 'id_document_ai' | 'energy_invoice_ai' | 'water_report_ai' | 'pdf_table_ai' | 'column_match_ai';
 
 export interface PlatformSwitch {
   name: PlatformSwitchName;
@@ -4111,6 +4117,8 @@ export interface BillingOverview {
   manualPaymentCount: number;
   /** Bills read by the model, per month, newest last — POOLSE-106. */
   energyReads: { month: string; reads: number; unread: number }[];
+  /** POOLSE-137: the same months over every AI reader together. */
+  aiReads: { month: string; reads: number; unread: number }[];
   renewals: RenewalDue[];
   renewalsWindowDays: number;
 }
@@ -5474,4 +5482,29 @@ export interface RecentLesson {
   open: boolean;
   /** The reader answers for this child; else *Dar feedback* is not offered. */
   mayAnswer: boolean;
+}
+
+/** One period on the /admin *Leitura com IA* card — POOLSE-137. */
+export interface PlatformTenantAiPeriod {
+  reads: number;
+  failed: number;
+  /** Estimated euro cents; null when a read used a model with no known price. */
+  estimatedCents: number | null;
+  /** Reads whose tokens were recorded, of `reads`. */
+  measured: number;
+}
+
+export interface PlatformTenantAiReader {
+  reader: AiReader;
+  ticked: boolean;
+  platformOn: boolean;
+  thisMonth: PlatformTenantAiPeriod;
+  lastMonth: PlatformTenantAiPeriod;
+  lastUsedAt: string | null;
+}
+
+export interface PlatformTenantAi {
+  readers: PlatformTenantAiReader[];
+  monthlyCap: number | null;
+  usedThisMonth: number;
 }

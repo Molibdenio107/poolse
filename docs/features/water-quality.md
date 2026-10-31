@@ -58,7 +58,7 @@ A tank's water tab says it in one line above its pills: *own readings every day;
 
 **A colony count written as "<1" or as a word of absence (*Ausência*, *não detetado*) is read as 0**: counts are whole numbers, so both mean exactly none. Any other "<N" is a detection limit, not a count, and the row is refused with the parameter named. Importing is owner and admin, as the readings import is.
 
-The parser (`analysis-report-agent.ts`, behind `WATER_REPORT_AI_ENABLED` and `ANTHROPIC_API_KEY`) asks for the seven organisms, the laboratory and the report reference beside the chemistry, and replies through structured output rather than a forced tool call.
+The parser (`analysis-report-agent.ts`, behind the `water_report` reader's switch and tick on /admin (POOLSE-137) and `ANTHROPIC_API_KEY`) asks for the seven organisms, the laboratory and the report reference beside the chemistry, and replies through structured output rather than a forced tool call.
 
 ## Laboratory results
 

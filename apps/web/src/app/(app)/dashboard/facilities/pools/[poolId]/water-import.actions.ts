@@ -69,6 +69,8 @@ const READ_ERRORS: Record<ReadFailure, string> = {
   fileUnreadable: 'students.import.errorFileUnreadable',
   // The PDF reader is off — said, so a PDF is not mistaken for a broken file.
   pdfDisabled: 'import.pdfDisabled',
+  pdfNoKey: 'import.pdfNoKey',
+  pdfCapReached: 'import.pdfCapReached',
 };
 
 /**
@@ -135,7 +137,7 @@ async function readReport(
 ): Promise<WaterReadState> {
   const parser = analysisReportParser();
   if (!parser.available()) {
-    return { ok: false, reportDisabled: true, fileName: file.name, attempt };
+    return { ok: false, errorKey: 'facilities.waterImport.report.noKey', fileName: file.name, attempt };
   }
 
   const result = await parser.parse({
@@ -147,7 +149,9 @@ async function readReport(
   if ('error' in result) {
     return {
       ok: false,
-      ...(result.error === 'disabled'
+      // Off for this club is the panel that says so; no key and a month used
+      // up are sentences of their own (POOLSE-137).
+      ...(result.error === 'off'
         ? { reportDisabled: true }
         : { errorKey: `facilities.waterImport.report.${result.error}` }),
       fileName: file.name,

@@ -444,7 +444,8 @@ function blankToNull(text: string): string | null {
 /** The parser's contract — the same shape as `AnalysisReportParser`, answering a draft. */
 export type InvoiceParseResult =
   | { draft: InvoiceDraft }
-  | { error: 'disabled' | 'unreadable' | 'nothingFound' };
+  /** `off`, `noKey` and `capReached` mean the call was never made (POOLSE-137). */
+  | { error: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' };
 
 export interface EnergyInvoiceParser {
   available(): boolean;

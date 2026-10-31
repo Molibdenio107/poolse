@@ -339,7 +339,7 @@ const TENANT_TABLES = [
   'energy_invoice_register',
   'energy_invoice',
   // Reads of a bill by the model point at the club alone (POOLSE-106).
-  'energy_invoice_read',
+  'ai_read',
   'facility_climate_month',
   'energy_tariff',
   'energy_reading',

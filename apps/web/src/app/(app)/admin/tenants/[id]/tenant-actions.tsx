@@ -7,13 +7,14 @@ import { SelectField, TextAreaField, TextField, useSeeded } from '@/components/u
 import { Dialog } from '@/components/ui/dialog';
 import { BASE_SPORT, POOLSE_MODULES, type PoolseModule } from '@poolse/rules';
 import { useSavedAction } from '@/lib/saved';
-import type { PlatformTenant, PlatformTenantSport } from '@/lib/api';
+import type { PlatformTenant, PlatformTenantAi, PlatformTenantAiPeriod, PlatformTenantAiReader, PlatformTenantSport } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
-import { formatDate } from '@/lib/date-format';
+import { formatDate, formatStamp } from '@/lib/date-format';
 import { formatCents } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import {
   recordPaymentAction,
+  setAiAction,
   setBillingModeAction,
   setModulesAction,
   setSportsAction,
@@ -59,7 +60,14 @@ function fieldText(t: ReturnType<typeof useTranslations>, key: string | undefine
 
 const INITIAL: FormState = { ok: false };
 
-export function TenantActions({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
+export function TenantActions({
+  tenant,
+  ai = null,
+}: {
+  tenant: PlatformTenant;
+  /** POOLSE-137: the AI readers' ticks and use; null when it could not be read. */
+  ai?: PlatformTenantAi | null;
+}): React.ReactElement {
   const t = useTranslations();
 
   return (
@@ -76,6 +84,7 @@ export function TenantActions({ tenant }: { tenant: PlatformTenant }): React.Rea
         <SuspensionCard tenant={tenant} />
         <ModulesCard tenant={tenant} />
         <SportsCard tenant={tenant} />
+        <AiCard tenant={tenant} ai={ai} />
       </div>
     </section>
   );
@@ -384,6 +393,115 @@ function SportSwitch({ sport }: { sport: PlatformTenantSport }): React.ReactElem
         </span>
       </label>
     </li>
+  );
+}
+
+/**
+ * Leitura com IA — POOLSE-137. One row per reader: the club's tick, its use this
+ * month and last, failures, when it was last used and what it is estimated to
+ * have cost. A reader ticked here but switched off for the platform says so on
+ * its row, so it never looks as though it runs. The cap is one number for all
+ * five. The cost is an estimate from the tokens and the model's list price —
+ * labelled as one, `—` when the model has no price — and never shown to the club.
+ */
+function AiCard({ tenant, ai }: { tenant: PlatformTenant; ai: PlatformTenantAi | null }): React.ReactElement {
+  const t = useTranslations();
+  const [state, dispatch, pending] = useSavedAction(setAiAction, INITIAL);
+
+  if (ai === null) {
+    return (
+      <section className="flex flex-col gap-1 rounded border border-border bg-surface p-4 md:col-span-2">
+        <h3 className="text-sm font-medium">{t('admin.ai.title')}</h3>
+        <p className="text-sm text-foreground-muted">{t('admin.ai.loadFailed')}</p>
+      </section>
+    );
+  }
+
+  return (
+    <div className="md:col-span-2">
+      <Card title={t('admin.ai.title')} hint={t('admin.ai.hint')} action={dispatch} tenantId={tenant.id}>
+        <table className="table-stack w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-foreground-muted">
+              <th className="py-2 pr-3 font-medium">{t('admin.ai.reader')}</th>
+              <th className="py-2 pr-3 font-medium">{t('admin.ai.thisMonth')}</th>
+              <th className="py-2 pr-3 font-medium">{t('admin.ai.lastMonth')}</th>
+              <th className="py-2 pr-3 font-medium">{t('admin.ai.lastUsed')}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {ai.readers.map((row) => (
+              <AiReaderRow key={row.reader} row={row} />
+            ))}
+          </tbody>
+        </table>
+        <p className="text-sm text-foreground-muted">{t('admin.ai.estimateNote')}</p>
+        <TextField
+          name="monthlyCap"
+          label={t('admin.ai.cap')}
+          inputMode="numeric"
+          initial={ai.monthlyCap === null ? '' : String(ai.monthlyCap)}
+          error={fieldText(t, state.fields?.['monthlyCap'])}
+          hint={t('admin.ai.capHint', { used: ai.usedThisMonth })}
+        />
+        <Submit label={t('common.save')} pending={pending} />
+      </Card>
+    </div>
+  );
+}
+
+function AiReaderRow({ row }: { row: PlatformTenantAiReader }): React.ReactElement {
+  const t = useTranslations();
+  const [checked, setChecked] = useSeeded(row.ticked);
+
+  return (
+    <tr className="align-top">
+      <td className="py-2 pr-3" data-label={t('admin.ai.reader')}>
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            name="reader"
+            value={row.reader}
+            checked={checked}
+            onChange={(event) => setChecked(event.target.checked)}
+            className="mt-1 size-4 shrink-0 accent-primary"
+          />
+          <span className="flex flex-col gap-1">
+            <span className="font-medium">{t(`admin.ai.name.${row.reader}`)}</span>
+            <span className="text-foreground-muted">{t(`admin.ai.covers.${row.reader}`)}</span>
+            {!row.platformOn && <span className="text-warning">{t('admin.ai.platformOff')}</span>}
+          </span>
+        </label>
+      </td>
+      <td className="py-2 pr-3" data-label={t('admin.ai.thisMonth')}>
+        <AiPeriod period={row.thisMonth} />
+      </td>
+      <td className="py-2 pr-3" data-label={t('admin.ai.lastMonth')}>
+        <AiPeriod period={row.lastMonth} />
+      </td>
+      <td className="py-2 pr-3" data-label={t('admin.ai.lastUsed')}>
+        {row.lastUsedAt === null ? t('admin.ai.never') : formatStamp(row.lastUsedAt)}
+      </td>
+    </tr>
+  );
+}
+
+function AiPeriod({ period }: { period: PlatformTenantAiPeriod }): React.ReactElement {
+  const t = useTranslations();
+  const locale = useLocale();
+
+  return (
+    <span className="flex flex-col gap-0.5">
+      <span>{t('admin.ai.reads', { count: period.reads, failed: period.failed })}</span>
+      {period.reads > 0 && (
+        <span className="text-foreground-muted">
+          {period.estimatedCents === null
+            ? t('admin.ai.costUnpriced')
+            : t('admin.ai.cost', { amount: formatCents(locale, period.estimatedCents) })}
+          {period.measured < period.reads && ` · ${t('admin.ai.coverage', { measured: period.measured, reads: period.reads })}`}
+        </span>
+      )}
+    </span>
   );
 }
 

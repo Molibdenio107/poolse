@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { anthropicKeyConfigured, metered } from './ai-meter';
 import {
   INVOICE_HEADER_FIELDS,
   LINE_FIELDS,
@@ -21,8 +22,8 @@ import {
  * key, the document block and the prompt, and nothing else. Same three rules
  * as `analysis-report-agent.ts`:
  *
- * - **Optional, off by default.** `ENERGY_INVOICE_AI_ENABLED=true` says the
- *   club wants it; `ANTHROPIC_API_KEY` says it can work. Without both, dropping
+ * - **Optional, off by default.** Its platform switch and the club's tick on
+ *   /admin (POOLSE-137), and `ANTHROPIC_API_KEY`. Without all three, dropping
  *   a PDF says so in a sentence rather than failing. A bill carries the
  *   holder's name, NIF and address, and a club turns this on knowing that the
  *   document goes to the model's API — the feature page says so.
@@ -149,18 +150,17 @@ const HEADER_PROPERTIES = Object.fromEntries(
 
 export class ClaudeEnergyInvoiceParser implements EnergyInvoiceParser {
   available(): boolean {
-    return (
-      (process.env['ENERGY_INVOICE_AI_ENABLED'] ?? '').trim().toLowerCase() === 'true' &&
-      (process.env['ANTHROPIC_API_KEY'] ?? '').trim() !== ''
-    );
+    return anthropicKeyConfigured();
   }
 
   async parse(file: ReportFile): Promise<InvoiceParseResult> {
-    if (!this.available()) return { error: 'disabled' };
+    if (!this.available()) return { error: 'noKey' };
     if (file.bytes.byteLength === 0 || file.bytes.byteLength > MAX_BYTES) {
       return { error: 'unreadable' };
     }
 
+    let used: Anthropic.Beta.BetaMessage | null = null;
+    const attempt = async (): Promise<InvoiceParseResult> => {
     try {
       const client = new Anthropic();
 
@@ -188,6 +188,7 @@ export class ClaudeEnergyInvoiceParser implements EnergyInvoiceParser {
         // A five-page bill with thinking is a bigger read than a lab sheet.
         { timeout: 120_000 },
       );
+      used = response;
 
       if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') {
         return { error: 'unreadable' };
@@ -206,6 +207,14 @@ export class ClaudeEnergyInvoiceParser implements EnergyInvoiceParser {
       // read, and the form beside it still works.
       return { error: 'unreadable' };
     }
+    };
+
+    // Claimed before, finished after, read or not — POOLSE-137.
+    const run = await metered('energy_invoice', async () => {
+      const value = await attempt();
+      return { value, succeeded: !('error' in value), response: used };
+    });
+    return 'gate' in run ? { error: run.gate } : run.value;
   }
 }
 

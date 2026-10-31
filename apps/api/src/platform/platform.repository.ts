@@ -1,5 +1,9 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import {
+  AI_READER_SWITCH,
+  AI_READERS,
+  estimateReadsCents,
+  type AiReader,
   moduleDependencyBreaches,
   POOLSE_MODULES,
   type PoolseModule,
@@ -664,6 +668,9 @@ interface TenantChange {
   disabled_modules?: PoolseModule[];
   /** POOLSE-124: the sports switched on. One click either way — never named. */
   enabled_sports?: PoolseSport[];
+  /** POOLSE-137: the AI readers ticked for the club, and its monthly cap. One click either way. */
+  ai_readers?: AiReader[];
+  ai_monthly_cap?: number | null;
 }
 
 /**
@@ -689,6 +696,8 @@ const AUDITED: Record<string, string> = {
   // An enum array: read as text[], never bare (the slice 4.2 lesson).
   disabled_modules: 'disabled_modules::text[]',
   enabled_sports: 'enabled_sports',
+  ai_readers: 'ai_readers::text[]',
+  ai_monthly_cap: 'ai_monthly_cap',
 };
 
 const AUDITED_KEYS = Object.keys(AUDITED);
@@ -1047,6 +1056,142 @@ export async function setSports(
     }
     return { change: { enabled_sports: [...enabled] } };
   });
+}
+
+/** One reader on a club's *Leitura com IA* card — POOLSE-137. */
+export interface TenantAiReader {
+  reader: AiReader;
+  /** The club's tick. */
+  ticked: boolean;
+  /** The platform switch; a ticked reader with this off does not run. */
+  platformOn: boolean;
+  thisMonth: TenantAiPeriod;
+  lastMonth: TenantAiPeriod;
+  lastUsedAt: string | null;
+}
+
+export interface TenantAiPeriod {
+  reads: number;
+  /** Came back with nothing usable, or claimed and never finished for an hour. */
+  failed: number;
+  /** Estimated euro cents, rounded; null when any read used an unpriced model. */
+  estimatedCents: number | null;
+  /** Reads whose tokens were recorded, of `reads` — the estimate's coverage. */
+  measured: number;
+}
+
+export interface TenantAi {
+  readers: TenantAiReader[];
+  monthlyCap: number | null;
+  /** Every reader together this month, which is what the cap counts. */
+  usedThisMonth: number;
+}
+
+/**
+ * A club's AI readers and their use — POOLSE-137. **One grouped query**, by
+ * reader, Lisbon month and model, never a loop over readers; the cost is
+ * derived from the tokens here and never stored.
+ */
+export async function readTenantAi(organizationId: string): Promise<TenantAi | null> {
+  return withPlatform(async (tx) => {
+    const { rows: org } = await tx.query<{ ai_readers: string[]; ai_monthly_cap: number | null }>(
+      'SELECT ai_readers::text[] AS ai_readers, ai_monthly_cap FROM organization WHERE id = $1',
+      [organizationId],
+    );
+    if (org.length === 0) return null;
+
+    const { rows: switches } = await tx.query<{ name: string; enabled: boolean }>(
+      'SELECT name, enabled FROM platform_switch',
+    );
+    const switchOn = new Map(switches.map((row) => [row.name, row.enabled]));
+
+    const { rows } = await tx.query<{
+      reader: AiReader;
+      period: 'this' | 'last';
+      model: string | null;
+      reads: number;
+      failed: number;
+      measured: number;
+      input_tokens: string | null;
+      output_tokens: string | null;
+      last_used_at: Date | null;
+    }>(
+      `WITH month AS (SELECT date_trunc('month', now() AT TIME ZONE 'Europe/Lisbon') AS start)
+       SELECT r.reader::text AS reader,
+              CASE WHEN r.claimed_at AT TIME ZONE 'Europe/Lisbon' >= month.start THEN 'this' ELSE 'last' END AS period,
+              r.model,
+              count(*)::int AS reads,
+              count(*) FILTER (WHERE r.succeeded IS FALSE
+                                  OR (r.finished_at IS NULL AND r.claimed_at < now() - interval '1 hour'))::int AS failed,
+              count(*) FILTER (WHERE r.input_tokens IS NOT NULL AND r.output_tokens IS NOT NULL)::int AS measured,
+              sum(r.input_tokens) AS input_tokens,
+              sum(r.output_tokens) AS output_tokens,
+              max(r.claimed_at) AS last_used_at
+         FROM ai_read r, month
+        WHERE r.organization_id = $1
+          AND r.claimed_at AT TIME ZONE 'Europe/Lisbon' >= month.start - interval '1 month'
+        GROUP BY 1, 2, 3`,
+      [organizationId],
+    );
+
+    // Last used ever, not only within the two months on the card.
+    const { rows: lastUsed } = await tx.query<{ reader: AiReader; at: Date }>(
+      `SELECT reader::text AS reader, max(claimed_at) AS at FROM ai_read WHERE organization_id = $1 GROUP BY 1`,
+      [organizationId],
+    );
+    const lastUsedAt = new Map(lastUsed.map((row) => [row.reader, row.at.toISOString()]));
+
+    const period = (reader: AiReader, which: 'this' | 'last'): TenantAiPeriod => {
+      const mine = rows.filter((row) => row.reader === reader && row.period === which);
+      const estimate = estimateReadsCents(
+        mine.map((row) => ({
+          model: row.model,
+          // Tokens only where every read in the group recorded them; the rest
+          // are left out of the estimate and out of `measured`.
+          inputTokens: row.measured > 0 ? Number(row.input_tokens ?? 0) : null,
+          outputTokens: row.measured > 0 ? Number(row.output_tokens ?? 0) : null,
+          count: row.measured > 0 ? row.measured : row.reads,
+        })),
+      );
+      return {
+        reads: mine.reduce((sum, row) => sum + row.reads, 0),
+        failed: mine.reduce((sum, row) => sum + row.failed, 0),
+        estimatedCents: estimate.cents === null ? null : Math.round(estimate.cents),
+        measured: estimate.measured,
+      };
+    };
+
+    const ticked = new Set(org[0]!.ai_readers);
+    const readers = AI_READERS.map((reader) => ({
+      reader,
+      ticked: ticked.has(reader),
+      platformOn: switchOn.get(AI_READER_SWITCH[reader]) === true,
+      thisMonth: period(reader, 'this'),
+      lastMonth: period(reader, 'last'),
+      lastUsedAt: lastUsedAt.get(reader) ?? null,
+    }));
+
+    return {
+      readers,
+      monthlyCap: org[0]!.ai_monthly_cap,
+      usedThisMonth: readers.reduce((sum, row) => sum + row.thisMonth.reads, 0),
+    };
+  });
+}
+
+/**
+ * Tick a club's AI readers and set its cap — POOLSE-137. The whole list of what
+ * is on, so the call is idempotent and the trail is the two lists (the
+ * `setSports` shape). Reversible, so no typed name; audited and alerted by
+ * `changeTenant`. No figure of cost is written anywhere.
+ */
+export async function setTenantAi(
+  organizationId: string,
+  readers: readonly AiReader[],
+  monthlyCap: number | null,
+): Promise<TenantChangeResult | null> {
+  const on = AI_READERS.filter((reader) => readers.includes(reader));
+  return changeTenant(organizationId, 'tenant.ai.set', { ai_readers: on, ai_monthly_cap: monthlyCap });
 }
 
 /**
@@ -1416,6 +1561,8 @@ export interface BillingOverview {
    * last. `unread` is the calls that brought nothing back, paid for all the same.
    */
   energyReads: { month: string; reads: number; unread: number }[];
+  /** POOLSE-137: the same six months over every AI reader together. */
+  aiReads: { month: string; reads: number; unread: number }[];
 }
 
 /**
@@ -1504,10 +1651,30 @@ export async function readBillingOverview(): Promise<BillingOverview> {
        )
        SELECT months.month,
               count(r.id)::int AS reads,
-              count(r.id) FILTER (WHERE NOT r.succeeded)::int AS unread
+              -- A claim never finished counts as a failure once it is an hour old.
+              count(r.id) FILTER (WHERE r.succeeded IS FALSE
+                                     OR (r.finished_at IS NULL AND r.claimed_at < now() - interval '1 hour'))::int AS unread
          FROM months
-         LEFT JOIN energy_invoice_read r
-           ON to_char(r.read_at AT TIME ZONE 'Europe/Lisbon', 'YYYY-MM') = months.month
+         LEFT JOIN ai_read r
+           ON r.reader = 'energy_invoice'
+          AND to_char(r.claimed_at AT TIME ZONE 'Europe/Lisbon', 'YYYY-MM') = months.month
+        GROUP BY months.month
+        ORDER BY months.month`,
+    );
+
+    const { rows: allReads } = await tx.query<{ month: string; reads: number; unread: number }>(
+      `WITH months AS (
+         SELECT to_char(date_trunc('month', club_today()) - (n || ' months')::interval, 'YYYY-MM') AS month
+           FROM generate_series(5, 0, -1) AS n
+       )
+       SELECT months.month,
+              count(r.id)::int AS reads,
+              -- A claim never finished counts as a failure once it is an hour old.
+              count(r.id) FILTER (WHERE r.succeeded IS FALSE
+                                     OR (r.finished_at IS NULL AND r.claimed_at < now() - interval '1 hour'))::int AS unread
+         FROM months
+         LEFT JOIN ai_read r
+           ON to_char(r.claimed_at AT TIME ZONE 'Europe/Lisbon', 'YYYY-MM') = months.month
         GROUP BY months.month
         ORDER BY months.month`,
     );
@@ -1524,6 +1691,7 @@ export async function readBillingOverview(): Promise<BillingOverview> {
       manualCentsLast12Months: Number(money[0]?.last_year ?? 0),
       manualPaymentCount: Number(money[0]?.payments ?? 0),
       energyReads: reads,
+      aiReads: allReads,
       renewals: renewals.map((row) => ({
         organizationId: row.id,
         name: row.name,

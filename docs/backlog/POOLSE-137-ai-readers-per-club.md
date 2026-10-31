@@ -56,11 +56,11 @@ extracts or its prompt; a new reader.
    limit (a null ceiling enforces nothing); `0` is not accepted (switch the readers off
    instead). The month is the Lisbon calendar month. The cap is checked **before** the call,
    and the call that would exceed it is not made. Set on the same card, audited.
-   **Open:** one cap per club (default) or one per reader.
+   **Decided (Rui, 31-10-2026):** one cap per club.
 10. **The platform-wide monthly totals on /admin → Faturação keep working** (POOLSE-106's
     *Faturas lidas*), now read from the shared log filtered to `energy_invoice`, plus the same
     total for all readers.
-11. **Open:** where prices live. Default: a constant `AI_MODEL_PRICES` in `@poolse/rules`
+11. **Decided (Rui, 31-10-2026):** where prices live — a constant `AI_MODEL_PRICES` in `@poolse/rules`
     (USD per million input and output tokens per model id, from Anthropic's price list) and one
     USD→EUR constant, both commented with the date they were copied. Not an env var and not a
     table, because only a developer changes them and a table invites editing them per club.

@@ -9,6 +9,7 @@ import {
   type Paginated,
   type TenantClaim,
   type PlatformTenant,
+  type PlatformTenantAi,
   type TenantRequests,
 } from '@/lib/api';
 import { DataTable, type Column } from '@/components/data-table';
@@ -257,7 +258,11 @@ export default async function TenantRequestsPage({
         {
           slug: 'actions',
           labelKey: 'detailTabs.actions',
-          content: () => <TenantActions tenant={club} />,
+          // POOLSE-137: the AI readers' card reads its own use; only when this tab is open.
+          content: async () => {
+            const ai = await apiFetch<PlatformTenantAi>(`/platform/tenants/${club.id}/ai`).catch(() => null);
+            return <TenantActions tenant={club} ai={ai} />;
+          },
         },
         {
           // POOLSE-79: ask the Owner to let support in, or force a window.

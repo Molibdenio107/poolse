@@ -399,8 +399,9 @@ path with one difference: a club stores what is **on** (`organization.enabled_sp
 
 ## Platform switches (30 October 2026)
 
-Rui turns platform-wide features on and off under `/admin` → *Plataforma*. One today:
-`id_document_ai`, reading a student's ID photo for its number and dates.
+Rui turns platform-wide features on and off under `/admin` → *Plataforma*. Five today, one
+per AI reader (POOLSE-137): `id_document_ai`, `energy_invoice_ai`, `water_report_ai`,
+`pdf_table_ai`, `column_match_ai`.
 
 - **Stored** in `platform_switch`, one row per switch, named by a CHECK, off by default.
   Rows are the migration's: no insert, no delete.
@@ -412,6 +413,39 @@ Rui turns platform-wide features on and off under `/admin` → *Plataforma*. One
   switch that cannot be read counts as off.
 - **The key is separate.** The panel says whether this web server holds
   `ANTHROPIC_API_KEY`; switched on with no key, nothing is read.
+
+## AI readers per club — POOLSE-137 (31 October 2026)
+
+Every model call Poolse pays for comes from one of five readers (`AI_READERS` in
+`@poolse/rules`, equal to the `ai_reader` enum by test): `energy_invoice` (Energia →
+*Importar fatura*), `id_document` (a student's *Documentos*), `water_report` (a lab report
+dropped on a pool), `pdf_table` (a PDF given to any list importer) and `column_match`
+(the student importer's column mapping).
+
+- **A reader runs only when three things hold**: its platform switch is on, the club's
+  tick for it is on (`organization.ai_readers`, empty for a new club), and the web app has
+  `ANTHROPIC_API_KEY`. Then `guardAiCall`'s roles and per-person brake apply as before.
+  No reader reads an environment flag.
+- **Claim, then finish.** The web app calls `POST /ai-reads/claim { reader }` (the
+  reader's roles; a PDF table is any role that may import a list) right before the call.
+  Under an advisory lock on the club it checks the switch, the tick and the cap and writes
+  an `ai_read` row, or answers 409 `ai_reader_off` / `ai_cap_reached` and no call is made.
+  `POST /ai-reads/:id/finish` fills in once whether it found something, the model and the
+  tokens. A row never finished counts, and reads as failed after an hour.
+- **The club is told which gate closed**, where the reader would have acted: switched off
+  (platform and club alike — both are Poolse's decision), no key, or the month's reads used.
+  The manual path is always there. `/me.aiReaders` is the effective list for the active club,
+  so a screen can say *desligada* before anybody uploads.
+- **The card on the club's page** (*Leitura com IA*, on Ações) ticks each reader and sets
+  an optional monthly cap for all five together (null = no limit; 0 refused). Saving goes
+  through `changeTenant` (`POST /platform/tenants/:id/ai`, `tenant.ai.set`): audited with
+  before and after, alerted. Each row shows reads and failures this month and last (Lisbon
+  months), last used, and an **estimated** cost — tokens × `AI_MODEL_PRICES`, × `USD_TO_EUR`,
+  derived on read and never stored, `—` for a model with no price, with its coverage when some
+  reads have no tokens. A ticked reader whose platform switch is off says so on its row.
+  The cost is never shown to the club, nor written to a log, a URL or the audit trail.
+- **Faturação** keeps its six months of bill reads, now from `ai_read`, and shows the same
+  six months for every reader together.
 
 ## Support access — POOLSE-79 (12 October 2026)
 

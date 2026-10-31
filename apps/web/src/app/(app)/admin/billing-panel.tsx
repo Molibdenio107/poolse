@@ -76,11 +76,16 @@ export async function BillingPanel({
         is the cost Rui accepted for the pilot, kept in view: six months, every
         month present, and the calls that found nothing said beside them.
       */}
-      <div className="flex flex-col gap-1">
-        <h3 className="text-sm font-medium">{t('admin.billing.energyReadsTitle')}</h3>
-        <p className="text-sm text-foreground-muted">{t('admin.billing.energyReadsHint')}</p>
+      {[
+        { key: 'energy', title: 'admin.billing.energyReadsTitle', hint: 'admin.billing.energyReadsHint', months: overview.energyReads },
+        // POOLSE-137: every AI reader together, the same six months.
+        { key: 'all', title: 'admin.billing.aiReadsTitle', hint: 'admin.billing.aiReadsHint', months: overview.aiReads },
+      ].map((series) => (
+      <div key={series.key} className="flex flex-col gap-1">
+        <h3 className="text-sm font-medium">{t(series.title)}</h3>
+        <p className="text-sm text-foreground-muted">{t(series.hint)}</p>
         <dl className="grid grid-cols-3 gap-x-3 gap-y-1 sm:grid-cols-6">
-          {overview.energyReads.map((month) => (
+          {series.months.map((month) => (
             <div key={month.month} className="flex flex-col">
               <dt className="text-xs text-foreground-muted">
                 {format.dateTime(new Date(`${month.month}-01T12:00:00Z`), 'month')}
@@ -97,6 +102,7 @@ export async function BillingPanel({
           ))}
         </dl>
       </div>
+      ))}
 
       {/*
         Said in visible text rather than left to be assumed. An operator reading

@@ -62,6 +62,8 @@ const READ_ERRORS: Record<ReadFailure, string> = {
   fileUnreadable: 'students.import.errorFileUnreadable',
   // The PDF reader is off — said, so a PDF is not mistaken for a broken file.
   pdfDisabled: 'import.pdfDisabled',
+  pdfNoKey: 'import.pdfNoKey',
+  pdfCapReached: 'import.pdfCapReached',
 };
 
 export interface MatchState {

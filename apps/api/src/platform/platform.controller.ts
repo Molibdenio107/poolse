@@ -5,6 +5,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   UseGuards,
@@ -29,6 +30,9 @@ import {
   readTenantRequests,
   setModules,
   setSports,
+  readTenantAi,
+  setTenantAi,
+  type TenantAi,
   setPlanLimits,
   setSubscriptionStatus,
   setSuspension,
@@ -47,6 +51,8 @@ import {
   readConfirmName,
   readDisabledModules,
   readEnabledSports,
+  readAiReaders,
+  readAiMonthlyCap,
   readCoversFrom,
   readCoversTo,
   readMaxFacilities,
@@ -278,6 +284,27 @@ export class PlatformController {
     @Body() body: { enabled?: unknown },
   ): Promise<TenantChangeResult> {
     return found(await setSports(id, readEnabledSports(body.enabled)));
+  }
+
+  /**
+   * A club's AI readers, their use this month and last, and an estimated cost —
+   * POOLSE-137. Never shown to the club.
+   */
+  @Get('tenants/:id/ai')
+  @PlatformAction('tenant.ai.read')
+  async tenantAi(@Param('id', ParseUUIDPipe) id: string): Promise<TenantAi> {
+    const ai = await readTenantAi(id);
+    if (ai === null) throw new NotFoundException('No such tenant');
+    return ai;
+  }
+
+  /** Tick a club's AI readers and set its monthly cap — POOLSE-137. */
+  @Post('tenants/:id/ai')
+  async setAi(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { readers?: unknown; monthlyCap?: unknown },
+  ): Promise<TenantChangeResult> {
+    return found(await setTenantAi(id, readAiReaders(body.readers), readAiMonthlyCap(body.monthlyCap)));
   }
 
   /**

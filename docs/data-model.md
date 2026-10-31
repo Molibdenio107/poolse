@@ -2859,7 +2859,7 @@ Converting is one migration — `create_hypertable('energy_reading', 'taken_at',
 migrate_data => true)` — with no application change, and its trigger is automated feeds
 (roadmap, "Deferred"). `archived_at` is a column a hypertable carries without complaint.
 
-**Carrier and the read log — POOLSE-106** (`1792058400000_energy-dashboard.sql`). `energy_meter.carrier` is a closed enum, `electricity | gas | water`, default electricity: `kind` says what a meter is *for*, and a gas boiler and a heat pump are both `heating`. The Energia dashboard splits bills by it. `energy_invoice_read` (id, organization_id, read_at, succeeded) is one row per bill the model read, paid for whether or not it found anything: `poolse_app` may only INSERT its own club's rows (no SELECT, UPDATE or DELETE), `poolse_platform` reads every club's and writes none — the `tenant_request_stats` arrangement. It holds no file, supplier or figure; /admin counts it per month.
+**Carrier and the read log — POOLSE-106** (`1792058400000_energy-dashboard.sql`). `energy_meter.carrier` is a closed enum, `electricity | gas | water`, default electricity: `kind` says what a meter is *for*, and a gas boiler and a heat pump are both `heating`. The Energia dashboard splits bills by it. `energy_invoice_read` (id, organization_id, read_at, succeeded) — **folded into `ai_read` by POOLSE-137** — was one row per bill the model read, paid for whether or not it found anything: `poolse_app` may only INSERT its own club's rows (no SELECT, UPDATE or DELETE), `poolse_platform` reads every club's and writes none — the `tenant_request_stats` arrangement. It holds no file, supplier or figure; /admin counts it per month.
 
 **Faturas — 5.3, first half** (`1788516000000_energy-invoices.sql`). `energy_meter` gained
 `cpe` (compact, `^[A-Z]{2}[A-Z0-9]{14,20}$`, unique per tenant among live meters) and
@@ -3020,11 +3020,38 @@ subscription_status
 
 ```
 platform_switch
-  name text pk check (name in ('id_document_ai')), enabled boolean default false,
+  name text pk check (name in ('id_document_ai', 'energy_invoice_ai', 'water_report_ai',
+                                'pdf_table_ai', 'column_match_ai')),   -- POOLSE-137: one per AI reader
+  enabled boolean default false,
   changed_at, changed_by text          -- clerk user id of the last operator
   grants: poolse_app SELECT; poolse_platform SELECT + UPDATE (enabled, changed_at, changed_by)
   rls: enabled; SELECT to both logins, UPDATE to poolse_platform; no insert, no delete
 ```
+
+**AI readers per club — POOLSE-137** (`1794564000000_ai-readers.sql`). `energy_invoice_read`
+is folded into `ai_read` with its history (each row `energy_invoice`, no model, no tokens) and
+dropped.
+
+```
+ai_reader  enum  'energy_invoice' | 'id_document' | 'water_report' | 'pdf_table' | 'column_match'
+                 -- = AI_READERS in @poolse/rules, by test
+
+organization
+  + ai_readers ai_reader[] not null default '{}'   -- the readers ticked ON; read ::text[]
+  + ai_monthly_cap integer check (null or > 0)     -- all readers together, per Lisbon month; null = no limit
+  grants: poolse_platform UPDATE (ai_readers, ai_monthly_cap); poolse_app none
+
+ai_read                                    -- one row per model call, claimed before, finished after
+  id, organization_id, reader ai_reader, claimed_at default now(),
+  finished_at, succeeded boolean, model text, input_tokens int, output_tokens int
+  index (organization_id, claimed_at), (claimed_at)
+  trigger ai_read_finish_once: an UPDATE must set finished_at, and a finished row never changes
+  grants: poolse_app SELECT, INSERT, UPDATE (finished_at, succeeded, model, input_tokens,
+          output_tokens), no DELETE; poolse_platform SELECT
+  rls: tenant policy to poolse_app; SELECT to poolse_platform
+```
+
+The cost is never stored: /admin derives it from the tokens and `AI_MODEL_PRICES`.
 
 **And the third platform book — `platform_alert`, POOLSE-64 slice E1.**
 

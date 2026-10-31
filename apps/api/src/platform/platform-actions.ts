@@ -1,6 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import {
+  AI_READERS,
   BASE_SPORT,
+  isAiReader,
+  type AiReader,
   enabledSports,
   isPoolseModule,
   isPoolseSport,
@@ -303,4 +306,24 @@ export function readEnabledSports(raw: unknown): PoolseSport[] {
     refuse('enabled', 'admin.error.poolAlwaysOn');
   }
   return enabledSports({ enabledSports: raw as PoolseSport[] });
+}
+
+/**
+ * The AI readers to have on — POOLSE-137. The whole list; an unknown key is
+ * refused rather than dropped, so a typo is a sentence and not a silent off.
+ */
+export function readAiReaders(raw: unknown): AiReader[] {
+  if (!Array.isArray(raw) || !raw.every(isAiReader)) refuse('readers', 'admin.error.aiReaderInvalid');
+  return AI_READERS.filter((reader) => (raw as AiReader[]).includes(reader));
+}
+
+/**
+ * The monthly cap: null or empty is no limit, a whole number from 1. A cap of
+ * 0 is refused — switching the readers off is how a club gets no reads.
+ */
+export function readAiMonthlyCap(raw: unknown): number | null {
+  if (raw === null || raw === undefined || String(raw).trim() === '') return null;
+  const value = typeof raw === 'number' ? raw : Number(String(raw).trim());
+  if (!Number.isInteger(value) || value < 1 || value > 1_000_000) refuse('monthlyCap', 'admin.error.aiCapInvalid');
+  return value;
 }

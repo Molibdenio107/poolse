@@ -1,14 +1,15 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 import type { Me } from './api';
+import { aiReaderGate, anthropicKeyConfigured, metered } from './ai-meter';
 
 /**
  * Reads an identification document's photograph — Rui, 30-10-2026: after the
  * photo is uploaded on *Documentos*, the number and dates are filled in.
  *
  * - **Optional, off by default.** The switch on /admin (`id_document_ai`, Rui
- *   30-10-2026, replacing `ID_DOCUMENT_AI_ENABLED`) and an `ANTHROPIC_API_KEY`
- *   both: metered calls stay behind their own flag (CLAUDE.md). Off, the photo
+ *   30-10-2026), the club's own tick there (POOLSE-137) and an
+ *   `ANTHROPIC_API_KEY`: metered calls stay behind their own flag (CLAUDE.md). Off, the photo
  *   is still filed and the fields wait to be typed.
  * - **It proposes, a person confirms.** What it reads fills the form beside the
  *   photo; nothing is saved until somebody presses Guardar.
@@ -25,7 +26,10 @@ export interface IdDocumentDraft {
   validUntil: string | null;
 }
 
-export type IdDocumentRead = { draft: IdDocumentDraft } | { error: 'disabled' | 'unreadable' | 'nothingFound' };
+/** `off`, `noKey` and `capReached` mean the call was never made (POOLSE-137). */
+export type IdDocumentRead =
+  | { draft: IdDocumentDraft }
+  | { error: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' };
 
 const SYSTEM = [
   'You read one photograph or scan of a personal identification document and transcribe four facts.',
@@ -51,27 +55,27 @@ function schema(): Record<string, unknown> {
 }
 
 /** The key is configured on this server — what /admin shows beside the switch. */
-export function anthropicKeyConfigured(): boolean {
-  return (process.env['ANTHROPIC_API_KEY'] ?? '').trim() !== '';
-}
+export { anthropicKeyConfigured };
 
 /**
- * Null when the reader may run: switched on in /admin (as `/me` reports it)
- * and a key to call with. Otherwise which of the two is missing, so the screen
- * can say why nothing was read rather than staying silent.
+ * Null when the reader may run: switched on for the platform and ticked for
+ * this club (as `/me` reports it) and a key to call with. Otherwise which is
+ * missing, so the screen can say why nothing was read rather than staying
+ * silent. The claim still decides, and may answer that the month's cap is used.
  */
-export function idDocumentReaderBlocked(me: Pick<Me, 'switches'>): 'off' | 'noKey' | null {
-  if (me.switches?.id_document_ai !== true) return 'off';
-  return anthropicKeyConfigured() ? null : 'noKey';
+export function idDocumentReaderBlocked(me: Pick<Me, 'aiReaders'>): 'off' | 'noKey' | null {
+  return aiReaderGate('id_document', me);
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Call only after `idDocumentReaderBlocked` said null. */
 export async function readIdDocument(bytes: Buffer, mediaType: string): Promise<IdDocumentRead> {
-  if (!anthropicKeyConfigured()) return { error: 'disabled' };
+  if (!anthropicKeyConfigured()) return { error: 'noKey' };
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_BYTES) return { error: 'unreadable' };
 
+  let used: Anthropic.Beta.BetaMessage | null = null;
+  const attempt = async (): Promise<IdDocumentRead> => {
   try {
     const client = new Anthropic();
     const data = bytes.toString('base64');
@@ -94,6 +98,7 @@ export async function readIdDocument(bytes: Buffer, mediaType: string): Promise<
       },
       { timeout: 60_000 },
     );
+    used = response;
     if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') return { error: 'unreadable' };
     const text = response.content
       .filter((part): part is Anthropic.Beta.BetaTextBlock => part.type === 'text')
@@ -120,4 +125,12 @@ export async function readIdDocument(bytes: Buffer, mediaType: string): Promise<
     // form beside it still works.
     return { error: 'unreadable' };
   }
+  };
+
+  // Claimed before, finished after, read or not — POOLSE-137.
+  const run = await metered('id_document', async () => {
+    const value = await attempt();
+    return { value, succeeded: !('error' in value), response: used };
+  });
+  return 'gate' in run ? { error: run.gate } : run.value;
 }

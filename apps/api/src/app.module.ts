@@ -99,6 +99,7 @@ import { FilesController } from './files/files.controller.js';
 import { AttachmentsController } from './files/attachments.controller.js';
 import { ArchiveController } from './archive/archive.controller.js';
 import { ActivityController } from './activity/activity.controller.js';
+import { AiReadsController } from './ai/ai-reads.controller.js';
 import { SupportGrantsController } from './support/support.controller.js';
 import { PassProductsController, ReceptionController } from './reception/passes.controller.js';
 import { FacilityIncidentsController, IncidentsController } from './safety/incidents.controller.js';
@@ -243,6 +244,8 @@ export const IDENTITY_ONLY_ROUTES = [
     ArchiveController,
     // POOLSE-80 — a record's Atividade, and reverting an edit.
     ActivityController,
+    // POOLSE-137 — the AI readers' meter: claim before a call, finish after.
+    AiReadsController,
     SupportGrantsController,
     // POOLSE-68 — free swim: what a site sells, and reception.
     PassProductsController,

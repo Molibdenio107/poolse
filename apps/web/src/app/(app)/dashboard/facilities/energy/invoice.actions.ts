@@ -4,7 +4,8 @@ import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiFetch, apiPost, type EnergyInvoiceCheck, type EnergyInvoiceDetail, type EnergyInvoiceList } from '@/lib/api';
 import { draftToBody, reportMediaType, type InvoiceDraft } from '@/lib/energy-invoice';
-import { MAX_BYTES, energyInvoiceParser } from '@/lib/energy-invoice-agent';
+import { energyInvoiceParser } from '@/lib/energy-invoice-agent';
+import { readAiReaderGate } from '@/lib/ai-meter';
 import { describeFailure } from '@/lib/form-failure';
 import type { FormState } from '../../actions';
 import { getTranslations } from 'next-intl/server';
@@ -46,31 +47,17 @@ export async function readInvoiceFileAction(
     return { ok: false, errorKey: 'energy.invoice.chooseAFile', attempt };
   }
 
-  const parser = energyInvoiceParser();
-  if (!parser.available()) return { ok: false, disabled: true, fileName: file.name, attempt };
-
   // The bytes go to the model call and no further: nothing is stored. File
-  // storage is the deferred decision the photo controls also wait on.
+  // storage is the deferred decision the photo controls also wait on. Every
+  // call is claimed before and finished after by the parser itself, so it is
+  // counted per club on /admin and against the club's cap (POOLSE-137).
   const bytes = Buffer.from(await file.arrayBuffer());
-  const result = await parser.parse({ name: file.name, mediaType, bytes });
-
-  // Every call the model was sent is counted, found or not — it was paid for
-  // (POOLSE-106, shown per month on /admin). A file the agent refused before
-  // calling, empty or too large, cost nothing and is not. Never awaited past a
-  // failure: a count that did not land must not cost the operator their bill.
-  const called = bytes.byteLength > 0 && bytes.byteLength <= MAX_BYTES && !('error' in result && result.error === 'disabled');
-  if (called) {
-    await apiPost('/energy/invoice-reads', { succeeded: !('error' in result) }).catch(() => undefined);
-  }
+  const result = await energyInvoiceParser().parse({ name: file.name, mediaType, bytes });
 
   if ('error' in result) {
-    if (result.error === 'disabled') return { ok: false, disabled: true, fileName: file.name, attempt };
-    return {
-      ok: false,
-      errorKey: result.error === 'nothingFound' ? 'energy.invoice.nothingFound' : 'energy.invoice.unreadable',
-      fileName: file.name,
-      attempt,
-    };
+    // Switched off for this club: a sentence, not a failure, and the form is there.
+    if (result.error === 'off') return { ok: false, disabled: true, fileName: file.name, attempt };
+    return { ok: false, errorKey: `energy.invoice.${result.error}`, fileName: file.name, attempt };
   }
 
   return { ok: true, draft: result.draft, fileName: file.name, attempt };
@@ -210,7 +197,12 @@ export async function archiveInvoiceAction(_previous: FormState, formData: FormD
   return { ok: true };
 }
 
-/** Whether the import control should be offered at all — read on the server, never in the browser. */
+/**
+ * Whether the import control should be offered at all — read on the server,
+ * never in the browser: the reader ticked for this club and switched on for
+ * the platform (POOLSE-137), and a key here. The month's cap is only known at
+ * the claim, which says so in its own sentence.
+ */
 export async function invoiceImportAvailable(): Promise<boolean> {
-  return energyInvoiceParser().available();
+  return (await readAiReaderGate('energy_invoice')) === null;
 }

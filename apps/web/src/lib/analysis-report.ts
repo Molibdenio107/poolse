@@ -107,16 +107,17 @@ export interface ReportFile {
  * Why a parse produced nothing, in the operator's terms rather than the
  * transport's.
  *
- * `disabled` is deliberately not treated as an error anywhere it is handled: it
- * is the answer to "can this club do this yet", and the screen says so plainly
- * instead of showing a failure.
+ * `off`, `noKey` and `capReached` are deliberately not treated as errors
+ * anywhere they are handled: each is the answer to "can this club do this
+ * now" (POOLSE-137), the call was never made, and the screen says which in a
+ * sentence instead of showing a failure.
  */
-export type ReportFailure = 'disabled' | 'unreadable' | 'nothingFound';
+export type ReportFailure = 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound';
 
 export type ReportResult = { rows: ReportRow[] } | { error: ReportFailure };
 
 export interface AnalysisReportParser {
-  /** Whether asking is worth anything. False means every parse returns `disabled`. */
+  /** Whether this server can ask at all (it has a key). False means every parse returns `noKey`. */
   available(): boolean;
   parse(file: ReportFile): Promise<ReportResult>;
 }

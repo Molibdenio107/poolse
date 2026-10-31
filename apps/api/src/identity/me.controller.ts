@@ -12,6 +12,8 @@ import { ensureAppUser, removeClerkPhoto, updateClerkName, updateClerkPhoto } fr
 import { MAX_FILE_BYTES, sniffType } from '../files/storage.js';
 import { clubToday } from '../common/club-day.js';
 import { readSwitchesForClubs, type PlatformSwitchName } from '../platform/platform-switch.js';
+import { effectiveReadersFor } from '../ai/ai-reads.repository.js';
+import type { AiReader } from '@poolse/rules';
 
 interface MeResponse {
   user: AppUserSummary;
@@ -30,6 +32,13 @@ interface MeResponse {
   requestedOrganizationMissing?: boolean;
   /** Platform-wide switches set from /admin — Rui, 30-10-2026. */
   switches?: Record<PlatformSwitchName, boolean>;
+  /**
+   * The AI readers that can run in `memberships[0]`'s club — its tick and the
+   * platform switch both on (POOLSE-137), so a screen can say *desligada*
+   * before anybody uploads. The key is the web server's own check. Absent or
+   * unreadable is none.
+   */
+  aiReaders?: AiReader[];
 }
 
 /** The requested club first; the rest in their usual order. */
@@ -103,7 +112,10 @@ export class MeController {
     // POOLSE-130: the "último acesso" the club's App access row reads.
     await touchLastSeen(clerkUserId);
 
-    return { user, ...activeFirst(memberships, requested), switches: await readSwitchesForClubs() };
+    const ordered = activeFirst(memberships, requested);
+    const active = ordered.memberships[0];
+    const aiReaders = active === undefined ? [] : await effectiveReadersFor(active.organizationId).catch(() => []);
+    return { user, ...ordered, switches: await readSwitchesForClubs(), aiReaders };
   }
 
   /**

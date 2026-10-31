@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { anthropicKeyConfigured, metered } from './ai-meter';
 
 /**
  * A list in a PDF, read as a spreadsheet — Rui, 12 October 2026.
@@ -12,7 +13,8 @@ import Anthropic from '@anthropic-ai/sdk';
  * has seen the preview.
  *
  * **Off unless switched on**, like every metered call (CLAUDE.md, the free-pilot
- * cost rule): `PDF_TABLE_AI_ENABLED=true` and `ANTHROPIC_API_KEY`. The document
+ * cost rule): the platform switch and the club's tick on /admin (POOLSE-137),
+ * and `ANTHROPIC_API_KEY`. The document
  * is sent as it is and nothing else about the club goes with it.
  *
  * **It transcribes; it never interprets.** The prompt asks for the table as
@@ -82,14 +84,8 @@ export interface PdfTable {
 
 export type PdfTableResult =
   | { tables: PdfTable[] }
-  | { error: 'disabled' | 'unreadable' | 'nothingFound' };
-
-export function pdfTablesAvailable(): boolean {
-  return (
-    (process.env['PDF_TABLE_AI_ENABLED'] ?? '').trim().toLowerCase() === 'true' &&
-    (process.env['ANTHROPIC_API_KEY'] ?? '').trim() !== ''
-  );
-}
+  /** `off`, `noKey` and `capReached` mean the call was never made (POOLSE-137). */
+  | { error: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' };
 
 function strings(value: unknown): string[] | null {
   return Array.isArray(value) && value.every((cell) => typeof cell === 'string')
@@ -115,9 +111,11 @@ function readTables(value: unknown): PdfTable[] {
 }
 
 export async function readPdfTables(bytes: ArrayBuffer): Promise<PdfTableResult> {
-  if (!pdfTablesAvailable()) return { error: 'disabled' };
+  if (!anthropicKeyConfigured()) return { error: 'noKey' };
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_BYTES) return { error: 'unreadable' };
 
+  let used: Anthropic.Beta.BetaMessage | null = null;
+  const attempt = async (): Promise<PdfTableResult> => {
   try {
     const client = new Anthropic();
     // Streamed: a forty-page register is a long answer, and a non-streamed call
@@ -153,6 +151,7 @@ export async function readPdfTables(bytes: ArrayBuffer): Promise<PdfTableResult>
         { timeout: 180_000 },
       )
       .finalMessage();
+    used = response;
 
     if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') {
       return { error: 'unreadable' };
@@ -169,4 +168,12 @@ export async function readPdfTables(bytes: ArrayBuffer): Promise<PdfTableResult>
     // and a spreadsheet still can.
     return { error: 'unreadable' };
   }
+  };
+
+  // Claimed before, finished after, read or not — POOLSE-137.
+  const run = await metered('pdf_table', async () => {
+    const value = await attempt();
+    return { value, succeeded: !('error' in value), response: used };
+  });
+  return 'gate' in run ? { error: run.gate } : run.value;
 }

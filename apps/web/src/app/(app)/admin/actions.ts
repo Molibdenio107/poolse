@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { BASE_SPORT, isPoolseModule, isPoolseSport, POOLSE_MODULES, POOLSE_SPORTS } from '@poolse/rules';
+import { AI_READERS, BASE_SPORT, isPoolseModule, isPoolseSport, POOLSE_MODULES, POOLSE_SPORTS } from '@poolse/rules';
 import { ApiError, apiPost } from '@/lib/api';
 import { describeFailure } from '@/lib/form-failure';
 import { parseCents } from '@/lib/money';
@@ -134,6 +134,28 @@ export async function setModulesAction(
       }
     }
     return describeFailure(error, 'admin.modules.failed');
+  }
+
+  revalidateAdmin(tenantId);
+  return { ok: true };
+}
+
+/**
+ * Tick a club's AI readers and set its monthly cap — POOLSE-137. The whole
+ * list of what is on; the cap is passed as typed, empty meaning no limit, and
+ * the API owns that reading (as on the plan card).
+ */
+export async function setAiAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const tenantId = String(formData.get('tenantId') ?? '');
+  const on = new Set(formData.getAll('reader').map(String));
+
+  try {
+    await apiPost(`/platform/tenants/${tenantId}/ai`, {
+      readers: AI_READERS.filter((reader) => on.has(reader)),
+      monthlyCap: String(formData.get('monthlyCap') ?? ''),
+    });
+  } catch (error) {
+    return describeFailure(error, 'admin.ai.failed');
   }
 
   revalidateAdmin(tenantId);

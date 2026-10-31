@@ -899,7 +899,9 @@
       "newMeterHint": "Nenhum contador tem o CPE desta fatura. Criamos um contador «Geral» com este CPE ao registar.",
       "newMeterSite": "Instalação do novo contador",
       "newMeterNoPreview": "A verificação completa acontece ao registar, quando o contador existir.",
-      "dropHere": "Arraste a fatura (PDF ou fotografia) para qualquer ponto desta página — ou escolha o ficheiro abaixo."
+      "dropHere": "Arraste a fatura (PDF ou fotografia) para qualquer ponto desta página — ou escolha o ficheiro abaixo.",
+      "noKey": "A leitura automática de faturas está ligada, mas falta a chave da API neste servidor. Preencha a fatura à mão no formulário abaixo.",
+      "capReached": "O clube já usou todas as leituras com IA deste mês. Preencha a fatura à mão no formulário abaixo."
     },
     "title": "Energia",
     "subtitle": "Os contadores de cada instalação e as suas leituras.",
@@ -1293,7 +1295,9 @@
         "disabled": "A leitura automática de relatórios ainda não está ativa.",
         "disabledHint": "Peça para a ativar, ou registe o resultado à mão em Registar um resultado. O registo de leituras do clube em .xlsx ou .csv importa-se na mesma.",
         "unreadable": "Não foi possível ler este relatório. Verifique se o ficheiro abre e tente outra vez.",
-        "nothingFound": "Não foram encontrados valores neste relatório."
+        "nothingFound": "Não foram encontrados valores neste relatório.",
+        "noKey": "A leitura automática de relatórios está ligada, mas falta a chave da API neste servidor. Registe o resultado à mão em Registar um resultado.",
+        "capReached": "O clube já usou todas as leituras com IA deste mês. Registe o resultado à mão em Registar um resultado."
       },
       "problem": {
         "dateMissing": "Sem data",
@@ -4493,7 +4497,9 @@
       "manualNeedsPayment": "Registe primeiro um pagamento: uma subscrição paga à mão tem de dizer até quando está paga.",
       "nameMismatch": "O nome não corresponde. Escreva-o como aparece acima.",
       "sportInvalid": "Desporto desconhecido.",
-      "poolAlwaysOn": "A natação não pode ser desligada."
+      "poolAlwaysOn": "A natação não pode ser desligada.",
+      "aiReaderInvalid": "Leitura com IA desconhecida.",
+      "aiCapInvalid": "O limite é um número inteiro a partir de 1, ou vazio para não ter limite."
     },
     "actions": "Ações",
     "suspended": "Suspensa",
@@ -4579,7 +4585,9 @@
       "trials": "{started} períodos experimentais começados · {converted} converteram · {running} a decorrer.",
       "energyReadsTitle": "Faturas de energia lidas automaticamente",
       "energyReadsHint": "Cada leitura é uma chamada paga à API da Anthropic, encontre ou não a fatura.",
-      "energyReadsUnread": "{count, plural, one {# sem resultado} other {# sem resultado}}"
+      "energyReadsUnread": "{count, plural, one {# sem resultado} other {# sem resultado}}",
+      "aiReadsTitle": "Todas as leituras com IA",
+      "aiReadsHint": "As cinco leituras juntas, em todos os clubes. Cada uma é uma chamada paga à API da Anthropic."
     },
     "payments": "Pagamentos recebidos",
     "paymentsHint": "Fora do Stripe. Um pagamento não se edita nem se apaga — uma correção é outro registo.",
@@ -4639,10 +4647,18 @@
     },
     "switches": {
       "name": {
-        "id_document_ai": "Leitura do documento de identificação"
+        "id_document_ai": "Leitura do documento de identificação",
+        "energy_invoice_ai": "Leitura de faturas de energia",
+        "water_report_ai": "Leitura de relatórios de análises",
+        "pdf_table_ai": "Leitura de listas em PDF",
+        "column_match_ai": "Correspondência de colunas"
       },
       "covers": {
-        "id_document_ai": "Ao carregar a fotografia do CC de um aluno, o número e as datas são lidos e propostos no formulário para alguém confirmar. Só a imagem é enviada. Cada leitura tem custo."
+        "id_document_ai": "Ao carregar a fotografia do CC de um aluno, o número e as datas são lidos e propostos no formulário para alguém confirmar. Só a imagem é enviada. Cada leitura tem custo.",
+        "energy_invoice_ai": "Em Energia → Importar fatura, o PDF da fatura é lido e proposto no formulário para alguém confirmar. Cada leitura tem custo. Cada clube precisa também do seu visto na página do clube.",
+        "water_report_ai": "Um relatório de análises em PDF ou fotografia, largado numa piscina, é lido e proposto para alguém confirmar. Cada leitura tem custo. Cada clube precisa também do seu visto na página do clube.",
+        "pdf_table_ai": "Os importadores de listas (alunos, horário, parcerias, salários, inventário, mínimos) aceitam um PDF, transcrito como folha de cálculo. Cada leitura tem custo. Cada clube precisa também do seu visto na página do clube.",
+        "column_match_ai": "Ao importar alunos, as colunas que nenhum sinónimo reconheceu são propostas pelo modelo. Só vão os cabeçalhos e a forma de cada coluna. Cada chamada tem custo. Cada clube precisa também do seu visto na página do clube."
       },
       "on": "Ligado",
       "off": "Desligado",
@@ -4653,6 +4669,39 @@
       "turnOff": "Desligar",
       "failed": "Não foi possível alterar a definição.",
       "invalid": "Valor inválido."
+    },
+    "ai": {
+      "title": "Leitura com IA",
+      "hint": "Que leituras com IA este clube pode usar, quanto as usou e quanto se estima que custaram. O clube não vê esta informação.",
+      "loadFailed": "Não foi possível carregar a leitura com IA deste clube.",
+      "failed": "Não foi possível guardar a leitura com IA.",
+      "reader": "Leitura",
+      "thisMonth": "Este mês",
+      "lastMonth": "Mês passado",
+      "lastUsed": "Última utilização",
+      "never": "Nunca",
+      "platformOff": "Desligada na plataforma: mesmo com o visto, não lê nada.",
+      "reads": "{count, plural, one {# leitura} other {# leituras}} · {failed, plural, one {# falhada} other {# falhadas}}",
+      "cost": "Estimativa: {amount}",
+      "costUnpriced": "Estimativa: —",
+      "coverage": "com base em {measured} de {reads}",
+      "estimateNote": "A estimativa multiplica os tokens de cada leitura pelo preço de tabela do modelo, convertido para euros. Não é uma fatura. “—” quer dizer que o modelo não tem preço conhecido.",
+      "cap": "Limite mensal de leituras",
+      "capHint": "Para as cinco leituras juntas, por mês civil. Vazio: sem limite. Usadas este mês: {used}.",
+      "name": {
+        "energy_invoice": "Leitura de faturas de energia",
+        "id_document": "Leitura do documento de identificação",
+        "water_report": "Leitura de relatórios de análises",
+        "pdf_table": "Leitura de listas em PDF",
+        "column_match": "Correspondência de colunas"
+      },
+      "covers": {
+        "energy_invoice": "Em Energia → Importar fatura, o PDF da fatura é lido e proposto no formulário para alguém confirmar.",
+        "id_document": "Ao carregar a fotografia do CC de um aluno, o número e as datas são lidos e propostos no formulário para alguém confirmar.",
+        "water_report": "Um relatório de análises em PDF ou fotografia, largado numa piscina, é lido e proposto para alguém confirmar.",
+        "pdf_table": "Os importadores de listas (alunos, horário, parcerias, salários, inventário, mínimos) aceitam um PDF, transcrito como folha de cálculo.",
+        "column_match": "Ao importar alunos, as colunas que nenhum sinónimo reconheceu são propostas pelo modelo. Só vão os cabeçalhos e a forma de cada coluna."
+      }
     }
   },
   "suspended": {
@@ -4948,7 +4997,9 @@
       "notAllowed": "Só quem pode importar esta lista pode pedir que o ficheiro seja lido.",
       "tooMany": "Já foram lidos muitos ficheiros nos últimos minutos. Aguarde um pouco e tente de novo."
     },
-    "pdfDisabled": "A leitura de PDF não está ativa nesta instalação. Abra o documento no programa de origem e exporte para Excel ou CSV — ou peça para ativar a leitura de PDF."
+    "pdfDisabled": "A leitura de PDF não está ativa nesta instalação. Abra o documento no programa de origem e exporte para Excel ou CSV — ou peça para ativar a leitura de PDF.",
+    "pdfNoKey": "A leitura de PDF está ligada, mas falta a chave da API neste servidor. Exporte o documento para Excel ou CSV no programa de origem e importe esse ficheiro.",
+    "pdfCapReached": "O clube já usou todas as leituras com IA deste mês. Exporte o documento para Excel ou CSV no programa de origem e importe esse ficheiro."
   },
   "export": {
     "pdf": {
@@ -6495,7 +6546,7 @@
         "rateLimited": "Demasiadas leituras seguidas. Preencha à mão ou tente daqui a pouco.",
         "off": "A leitura automática do documento está desligada. Preencha os dados à mão.",
         "noKey": "A leitura automática está ligada, mas falta a chave da API neste servidor. Preencha os dados à mão.",
-        "disabled": "A leitura automática não está disponível. Preencha os dados à mão."
+        "capReached": "O clube já usou todas as leituras com IA deste mês. Preencha os dados à mão."
       }
     }
   },
@@ -6618,5 +6669,11 @@
     "certificateHint": "Também pode largar o certificado em qualquer ponto da página.",
     "certificateChosen": "Será anexado: {name}",
     "savedNoCertificate": "Exame guardado, mas o certificado não foi anexado. Anexe-o na linha do exame."
+  },
+  "ai": {
+    "error": {
+      "reader": "Leitura desconhecida.",
+      "tokens": "Contagem de tokens inválida."
+    }
   }
 }

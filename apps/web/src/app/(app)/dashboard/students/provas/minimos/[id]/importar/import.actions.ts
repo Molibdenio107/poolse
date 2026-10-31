@@ -69,6 +69,8 @@ const READ_ERRORS: Record<ReadFailure, string> = {
   fileEmpty: 'students.import.errorFileEmpty',
   fileUnreadable: 'students.import.errorFileUnreadable',
   pdfDisabled: 'import.pdfDisabled',
+  pdfNoKey: 'import.pdfNoKey',
+  pdfCapReached: 'import.pdfCapReached',
 };
 
 async function groupsOf(standardId: string): Promise<SheetAgeGroup[] | null> {

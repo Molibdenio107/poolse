@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { anthropicKeyConfigured, metered } from './ai-meter';
 import {
   REPORT_FIELDS,
   readRows,
@@ -17,9 +18,9 @@ import {
  *
  * **Three rules, the same three `match-agent.ts` holds to:**
  *
- * - **It is optional, and off by default.** Two switches, not one:
- *   `WATER_REPORT_AI_ENABLED` says the club wants it, `ANTHROPIC_API_KEY` says
- *   it can work. Without both, dropping a PDF says so in a sentence rather than
+ * - **It is optional, and off by default.** Three gates (POOLSE-137): the
+ *   platform switch and the club's tick on /admin, and `ANTHROPIC_API_KEY`.
+ *   Without all three, dropping a PDF says so in a sentence rather than
  *   failing — a feature that is not turned on is not an error, and a screen that
  *   shows a red box for one teaches people to distrust the red boxes.
  * - **Only the document is sent.** Nothing else about the tenant travels: not
@@ -105,18 +106,17 @@ const SYSTEM = [
 
 export class ClaudeAnalysisReportParser implements AnalysisReportParser {
   available(): boolean {
-    return (
-      (process.env['WATER_REPORT_AI_ENABLED'] ?? '').trim().toLowerCase() === 'true' &&
-      (process.env['ANTHROPIC_API_KEY'] ?? '').trim() !== ''
-    );
+    return anthropicKeyConfigured();
   }
 
   async parse(file: ReportFile): Promise<ReportResult> {
-    if (!this.available()) return { error: 'disabled' };
+    if (!this.available()) return { error: 'noKey' };
     if (file.bytes.byteLength === 0 || file.bytes.byteLength > MAX_BYTES) {
       return { error: 'unreadable' };
     }
 
+    let used: Anthropic.Beta.BetaMessage | null = null;
+    const attempt = async (): Promise<ReportResult> => {
     try {
       const client = new Anthropic();
 
@@ -148,6 +148,7 @@ export class ClaudeAnalysisReportParser implements AnalysisReportParser {
          */
         { timeout: 60_000 },
       );
+      used = response;
 
       if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') {
         return { error: 'unreadable' };
@@ -164,6 +165,14 @@ export class ClaudeAnalysisReportParser implements AnalysisReportParser {
       // could not be read, and the form beside it still works.
       return { error: 'unreadable' };
     }
+    };
+
+    // Claimed before, finished after, read or not — POOLSE-137.
+    const run = await metered('water_report', async () => {
+      const value = await attempt();
+      return { value, succeeded: !('error' in value), response: used };
+    });
+    return 'gate' in run ? { error: run.gate } : run.value;
   }
 }
 

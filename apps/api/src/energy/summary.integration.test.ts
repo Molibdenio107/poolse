@@ -4,7 +4,6 @@ import pg from 'pg';
 import { seedEnergy } from '@poolse/db/seed-energy';
 import { EnergyInvoicesController } from './invoices.controller.js';
 import { EnergyController } from './energy.controller.js';
-import { readBillingOverview } from '../platform/platform.repository.js';
 import { actingAs, closeHarness, expectStatus, withScratchTenant, type ScratchTenant } from '../test/harness.js';
 
 /**
@@ -201,24 +200,5 @@ test("another club's bills are not in the summary", async () => {
         assert.deepEqual(summary.metered, { electricity: 0, gas: 0, water: 0 });
       });
     });
-  });
-});
-
-test('a read is logged by the club and counted on /admin for this month', async () => {
-  await withScratchTenant(async (tenant) => {
-    const before = (await readBillingOverview()).energyReads.at(-1)!;
-    await actingAs(tenant, { roles: ['maintenance'] }, async () => {
-      const api = new EnergyInvoicesController();
-      await api.recordRead({ succeeded: true });
-      await api.recordRead({ succeeded: false });
-    });
-    const after = (await readBillingOverview()).energyReads;
-    assert.equal(after.length, 6, 'six months, every one present');
-    assert.equal(after.at(-1)!.reads - before.reads, 2);
-    assert.equal(after.at(-1)!.unread - before.unread, 1, 'a read that found nothing is still a paid call');
-
-    await actingAs(tenant, { roles: ['instructor'] }, () =>
-      expectStatus(() => new EnergyInvoicesController().recordRead({ succeeded: true }), 403),
-    );
   });
 });
