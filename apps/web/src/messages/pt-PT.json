@@ -69,7 +69,11 @@
       "certificateReplace": "Substituir atestado",
       "certificateSent": "Atestado enviado em {date}.",
       "certificateMissing": "Ainda sem atestado.",
-      "certificatesFailed": "Não foi possível carregar as baixas médicas."
+      "certificatesFailed": "Não foi possível carregar as baixas médicas.",
+      "next": "Próxima: {when} · {name}",
+      "noNext": "Sem aulas marcadas",
+      "noFees": "Não há mensalidades a mostrar.",
+      "noPastLessons": "Ainda não há aulas passadas nem atestados a mostrar."
     },
     "feedback": {
       "title": "Como correu",
@@ -138,7 +142,8 @@
       "owed": "{count, plural, one {# registo de presenças em falta} other {# registos de presenças em falta}}",
       "registerOwed": "Falta marcar as presenças",
       "enrolled": "{enrolled, plural, one {# inscrito} other {# inscritos}}",
-      "enrolledNotComing": "{enrolled, plural, one {# inscrito} other {# inscritos}} · {notComing, plural, one {# não vem} other {# não vêm}}"
+      "enrolledNotComing": "{enrolled, plural, one {# inscrito} other {# inscritos}} · {notComing, plural, one {# não vem} other {# não vêm}}",
+      "emptyToday": "Não tem mais aulas hoje."
     },
     "maintenance": {
       "title": "Manutenção",
@@ -222,6 +227,27 @@
         "no_email": "A sua conta não tem email, por isso o clube não lhe conseguiria responder. Fale com o clube.",
         "too_many": "Já tem 10 pedidos à espera de resposta. Aguarde que o clube responda antes de enviar mais."
       }
+    },
+    "tabs": {
+      "label": "Separadores",
+      "perfil": "Perfil",
+      "familia": {
+        "inicio": "Início",
+        "aulas": "Aulas",
+        "pagamentos": "Pagamentos"
+      },
+      "aulas": {
+        "hoje": "Hoje",
+        "semana": "Semana"
+      }
+    },
+    "profile": {
+      "title": "Perfil",
+      "account": "Conta",
+      "accountHint": "O meu perfil, a conta e sair",
+      "preferences": "Idioma e tema",
+      "homes": "As minhas áreas",
+      "notifications": "Avisos"
     }
   },
   "common": {

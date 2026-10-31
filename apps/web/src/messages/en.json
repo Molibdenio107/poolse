@@ -69,7 +69,11 @@
       "certificateReplace": "Replace certificate",
       "certificateSent": "Certificate sent on {date}.",
       "certificateMissing": "No certificate yet.",
-      "certificatesFailed": "The medical leaves could not be loaded."
+      "certificatesFailed": "The medical leaves could not be loaded.",
+      "next": "Next: {when} · {name}",
+      "noNext": "No lessons booked",
+      "noFees": "There are no fees to show.",
+      "noPastLessons": "There are no past lessons or certificates to show yet."
     },
     "feedback": {
       "title": "How it went",
@@ -138,7 +142,8 @@
       "owed": "{count, plural, one {# register still to take} other {# registers still to take}}",
       "registerOwed": "Attendance still to mark",
       "enrolled": "{enrolled, plural, one {# enrolled} other {# enrolled}}",
-      "enrolledNotComing": "{enrolled, plural, one {# enrolled} other {# enrolled}} · {notComing, plural, one {# not coming} other {# not coming}}"
+      "enrolledNotComing": "{enrolled, plural, one {# enrolled} other {# enrolled}} · {notComing, plural, one {# not coming} other {# not coming}}",
+      "emptyToday": "No more lessons today."
     },
     "maintenance": {
       "title": "Maintenance",
@@ -222,6 +227,27 @@
         "no_email": "Your account has no email, so the club could not reply to you. Please contact the club.",
         "too_many": "You already have 10 requests awaiting a reply. Wait for the club to answer before sending more."
       }
+    },
+    "tabs": {
+      "label": "Tabs",
+      "perfil": "Profile",
+      "familia": {
+        "inicio": "Home",
+        "aulas": "Lessons",
+        "pagamentos": "Payments"
+      },
+      "aulas": {
+        "hoje": "Today",
+        "semana": "Week"
+      }
+    },
+    "profile": {
+      "title": "Profile",
+      "account": "Account",
+      "accountHint": "My profile, the account and signing out",
+      "preferences": "Language and theme",
+      "homes": "My areas",
+      "notifications": "Notifications"
     }
   },
   "common": {

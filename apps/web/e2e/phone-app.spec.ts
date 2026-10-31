@@ -46,7 +46,8 @@ test.describe('as a guardian', () => {
     await poolsideLesson();
     await visit(page, '/app');
     await expect(page).toHaveURL(/\/app\/familia$/);
-    await expect(page.getByRole('heading', { level: 1, name: /^(agenda|schedule)$/i })).toBeVisible();
+    // *Início* since POOLSE-136.
+    await expect(page.getByRole('heading', { level: 1, name: /^(início|home)$/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /abrir o menu|open the menu/i })).toHaveCount(0);
     await expect(page.getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toHaveCount(0);
 
@@ -92,7 +93,8 @@ test.describe('as a guardian', () => {
 
   test('POOLSE-116 — yesterday from Últimas aulas: a face, a few words, sent one-handed', async ({ page }) => {
     const { sessionId } = await poolsideYesterday();
-    await visit(page, '/app/familia');
+    // Past lessons live on *Aulas* since POOLSE-136.
+    await visit(page, '/app/familia/aulas');
     const recent = page.getByRole('heading', { name: /últimas aulas|recent lessons/i });
     await expect(recent).toBeVisible();
     const link = page.locator(`a[href="/app/familia/aulas/${sessionId}"]`).first();
@@ -115,7 +117,7 @@ test.describe('as a guardian', () => {
     await expect(page.getByText(/feedback enviado|feedback sent/i)).toBeVisible({ timeout: 15_000 });
     await noSidewaysScroll(page);
 
-    await visit(page, '/app/familia');
+    await visit(page, '/app/familia/aulas');
     await expect(page.locator(`a[href="/app/familia/aulas/${sessionId}"]`).first()).toContainText(/^.*(bem|good)/i);
   });
 });
@@ -176,7 +178,8 @@ test.describe('push, as a guardian', () => {
         return Promise.resolve('default');
       };
     });
-    await visit(page, '/app/familia');
+    // The push switch lives on *Perfil* since POOLSE-136.
+    await visit(page, '/app/perfil?home=family');
     await expect(page.getByText(/avisos neste telemóvel|notifications on this phone/i)).toBeVisible();
     if (info.project.name === 'iphone') {
       await expect(page.getByText(/adicione a poolse ao ecrã principal|add poolse to your home screen/i)).toBeVisible();
@@ -200,7 +203,9 @@ test.describe('as an instructor', () => {
     const { sessionId } = await poolsideTomorrow();
     await visit(page, '/app');
     await expect(page).toHaveURL(/\/app\/aulas$/);
-    await expect(page.getByRole('heading', { level: 1, name: /^(as minhas aulas|my lessons)$/i })).toBeVisible();
+    // *Hoje* since POOLSE-136; tomorrow's lesson is under *Semana*.
+    await expect(page.getByRole('heading', { level: 1, name: /^(hoje|today)$/i })).toBeVisible();
+    await visit(page, '/app/aulas?semana');
     const lesson = page.locator(`a[href^="/dashboard/calendar/sessions/${sessionId}"]`);
     await expect(lesson).toContainText(/inscrit|enrolled/i);
     await noSidewaysScroll(page);
@@ -209,6 +214,91 @@ test.describe('as an instructor', () => {
       await expect(page).toHaveURL(/\/calendar\/sessions\//, { timeout: 10_000 });
     }).toPass({ timeout: 45_000 });
     await expect(page.getByRole('link', { name: /voltar às minhas aulas|back to my lessons/i })).toBeVisible();
+  });
+});
+
+const bottomBar = (page: Page) => page.locator('nav[data-bottom-bar]');
+
+test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
+  test.use({ storageState: GUARDIAN_SESSION });
+
+  test('QA 1–2 — four tabs, Início current; the fees are on Pagamentos and off the agenda', async ({ page }) => {
+    await poolsideLesson();
+    await visit(page, '/app/familia');
+    const bar = bottomBar(page);
+    await expect(bar).toBeVisible();
+    await expect(bar.getByRole('link')).toHaveCount(4);
+    await expect(bar.getByRole('link', { name: /^(início|home)$/i })).toHaveAttribute('aria-current', 'page');
+    for (const tab of await bar.getByRole('link').all()) {
+      expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+    // Rule 4: the header keeps only the club's name — no backoffice link, no avatar menu.
+    await expect(page.locator('header').getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: /^(mensalidades|monthly fees)$/i })).toHaveCount(0);
+
+    await expect(async () => {
+      if (!page.url().includes('/pagamentos')) await bar.getByRole('link', { name: /^(pagamentos|payments)$/i }).tap({ timeout: 5_000 });
+      await expect(page).toHaveURL(/\/app\/familia\/pagamentos$/, { timeout: 10_000 });
+    }).toPass({ timeout: 45_000 });
+    await expect(bottomBar(page).getByRole('link', { name: /^(pagamentos|payments)$/i })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('heading', { name: /^(mensalidades|monthly fees)$/i })).toBeVisible();
+    await noSidewaysScroll(page);
+  });
+
+  test('the last row is above the bar, and a lesson page has no bar over its Save', async ({ page }) => {
+    const lesson = await poolsideLesson();
+    await visit(page, '/app/familia');
+    const last = page.getByRole('link', { name: /pedir inscrição numa turma|ask for a place in a class/i });
+    await last.scrollIntoViewIfNeeded();
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const row = (await last.boundingBox())!;
+    const bar = (await bottomBar(page).boundingBox())!;
+    expect(row.y + row.height).toBeLessThanOrEqual(bar.y);
+
+    await visit(page, `/app/familia/aulas/${lesson.sessionId}`);
+    await expect(bottomBar(page)).toHaveCount(0);
+  });
+
+  test('Perfil carries the chrome: language and theme, the account, push', async ({ page }) => {
+    await visit(page, '/app/perfil?home=family');
+    await expect(page.getByRole('heading', { level: 1, name: /^(perfil|profile)$/i })).toBeVisible();
+    await expect(bottomBar(page).getByRole('link', { name: /^(perfil|profile)$/i })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByText(/avisos neste telemóvel|notifications on this phone/i)).toBeVisible();
+    await expect(page.getByText(/idioma e tema|language and theme/i)).toBeVisible();
+    // A family-only login is not staff: no way into the backoffice here either.
+    await expect(page.getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toHaveCount(0);
+  });
+});
+
+test.describe('POOLSE-136 — on a laptop, as a guardian', () => {
+  test.use({ storageState: GUARDIAN_SESSION, viewport: { width: 1280, height: 900 } });
+
+  test('QA 7 — the same four tabs as a row under the header, no bottom bar', async ({ page }) => {
+    await visit(page, '/app/familia');
+    await expect(bottomBar(page)).toBeHidden();
+    const top = page.locator('header').getByRole('navigation');
+    await expect(top.getByRole('link')).toHaveCount(4);
+    await expect(top.getByRole('link', { name: /^(início|home)$/i })).toHaveAttribute('aria-current', 'page');
+  });
+});
+
+test.describe('POOLSE-136 — the phone shell, as an instructor', () => {
+  test.skip(E2E_INSTRUCTOR_EMAIL === undefined, NO_INSTRUCTOR);
+  test.use({ storageState: INSTRUCTOR_SESSION });
+
+  test('QA 3–4 — three tabs, Hoje current; Perfil has Abrir o backoffice and the header does not', async ({ page }) => {
+    await visit(page, '/app/aulas');
+    const bar = bottomBar(page);
+    await expect(bar.getByRole('link')).toHaveCount(3);
+    await expect(bar.getByRole('link', { name: /^(hoje|today)$/i })).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('header').getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toHaveCount(0);
+
+    await visit(page, '/app/aulas?semana');
+    await expect(bottomBar(page).getByRole('link', { name: /^(semana|week)$/i })).toHaveAttribute('aria-current', 'page');
+
+    await visit(page, '/app/perfil?home=teaching');
+    await expect(page.getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toBeVisible();
+    await expect(bottomBar(page).getByRole('link')).toHaveCount(3);
   });
 });
 

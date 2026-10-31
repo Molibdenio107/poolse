@@ -781,3 +781,45 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
 .lesson-tint-7 { --tint: var(--level-7); }
 .lesson-tint-8 { --tint: var(--level-8); }
 .lesson-tint-none { --tint: var(--level-none); }
+
+/*
+ * App mode's tab screens — POOLSE-136 (`data-shell="tabs"`, set by app-frame.tsx).
+ * The screen title and the section labels are styled here, by element and one
+ * class, so no page sets a size. Under a finger the phone type scale applies:
+ * body 17, secondary 15, title 22 / 700, labels 13 uppercase; a laptop keeps
+ * the current scale. The maintenance home (`classic`) is untouched.
+ */
+[data-shell='tabs'] {
+  --app-body: 1rem;
+  --app-secondary: 0.875rem;
+  --app-title: 1.25rem;
+  --app-label: 0.75rem;
+}
+@media (pointer: coarse) {
+  [data-shell='tabs'] {
+    --app-body: 17px;
+    --app-secondary: 15px;
+    --app-title: 22px;
+    --app-label: 13px;
+  }
+}
+[data-shell='tabs'] main {
+  font-size: var(--app-body);
+}
+[data-shell='tabs'] main h1 {
+  font-size: var(--app-title);
+  font-weight: 700;
+  line-height: 1.25;
+}
+[data-shell='tabs'] main .text-sm {
+  font-size: var(--app-secondary);
+}
+.app-section-label {
+  padding-top: 0.75rem;
+  padding-bottom: 0.25rem;
+  font-size: var(--app-label, 0.75rem);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgb(var(--foreground-muted));
+}

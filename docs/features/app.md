@@ -160,6 +160,33 @@ says so. Production keys are a go-live item (`docs/deploy.md`).
      record is the assignment on the session and its audit entry (Rui, 27-10-2026). It opens the
      lesson's page.
 
+## The phone shell — POOLSE-136 (31 October 2026)
+
+Each home's own screens wear tabs; everything else in app mode is a screen deeper in.
+
+- **Family:** *Início* (`/app/familia` — a card per child with the next lesson, then the
+  coming lessons as rows, and *Pedir inscrição*), *Aulas* (`/app/familia/aulas` — *Últimas
+  aulas* and the certificates), *Pagamentos* (`/app/familia/pagamentos` — the fee status and
+  where to pay), *Perfil*. Shapes from the handoff: square, circle, triangle, diamond, filled
+  when current. The child chosen on *Início* (`?child=`) travels to *Aulas*.
+- **Instructor:** *Hoje* (`/app/aulas` — registers owed, then today), *Semana*
+  (`/app/aulas?semana` — the whole week, the same read; Rui, 31-10-2026), *Perfil*.
+- ***Perfil*** (`/app/perfil?home=…`): language and theme, the account (Clerk's menu), the
+  switcher between a person's homes, *Abrir o backoffice* for staff, and the push switch. The
+  header on a tab screen carries only the club's name.
+- **Width decides the bar, not the pointer:** below `md` a bar fixed to the bottom (padded by
+  `--safe-bottom`), from `md` a row under the header. A coarse pointer only switches on the
+  phone type scale (17 / 15 / 22 / 13 px).
+- **No bar on a screen deeper in** — a lesson's page, *Pedir inscrição* — which has its own
+  *Voltar*, so no bar ever covers its Save. **The maintenance home keeps its old header** until
+  its own phone view.
+- **Lists are rows**: the agenda and the instructor's lessons are hairline-separated rows, 44 px
+  at least, not cards.
+- **A dialog in app mode is `placement="sheet"`**: a bottom sheet below `md` (scrim, grabber,
+  swipe down to close), centred from `md`. App mode opens no dialog today — *Não vou* stays one
+  tap (POOLSE-90 QA 7) rather than gaining a confirmation.
+- **Multi-sport** is drawn, not built: the hexagon *Modalidades* glyph exists for POOLSE-127.
+
 ## Not yet
 
 - The real-device passes (slice 5): one installed iPhone and one Android, recorded here.

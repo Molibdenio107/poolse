@@ -89,8 +89,12 @@ export function Dialog({
    *
    * `start` is a sheet down the left-hand edge: the phone's menu (POOLSE-88),
    * which slides out from where the sidebar sits on a desk.
+   *
+   * `sheet` is app mode's question (POOLSE-136): below `md` the handoff's bottom
+   * sheet — scrim at .42, top corners, a 40×4 grabber, dismissed by a swipe
+   * down, the scrim or its button; from `md` up the ordinary centred dialog.
    */
-  placement?: 'centre' | 'side' | 'start';
+  placement?: 'centre' | 'side' | 'start' | 'sheet';
   /**
    * The control to start on, when it is not the first one.
    *
@@ -111,6 +115,25 @@ export function Dialog({
   useEffect(() => setMounted(true), []);
 
   const close = useCallback(() => onClose(), [onClose]);
+
+  // A sheet follows a finger dragged down from its top, and lets go past 80px.
+  const [dragY, setDragY] = useState(0);
+  const dragFrom = useRef<number | null>(null);
+  const onGrab = (event: React.PointerEvent): void => {
+    if (placement !== 'sheet') return;
+    dragFrom.current = event.clientY;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  };
+  const onDrag = (event: React.PointerEvent): void => {
+    if (dragFrom.current === null) return;
+    setDragY(Math.max(0, event.clientY - dragFrom.current));
+  };
+  const onRelease = (): void => {
+    if (dragFrom.current === null) return;
+    dragFrom.current = null;
+    if (dragY > 80) close();
+    setDragY(0);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -193,14 +216,16 @@ export function Dialog({
         'fixed inset-0 z-50 flex overflow-y-auto bg-black/40 backdrop-blur-[1px]',
         placement === 'side'
           ? 'items-stretch justify-end p-0 sm:p-4'
-          : placement === 'start'
+          : placement === 'sheet'
+            ? '!bg-black/[0.42] items-end justify-center !p-0 md:items-center md:!p-8'
+            : placement === 'start'
             ? 'items-stretch justify-start p-0'
             : // Full-screen on a phone (POOLSE-88): a box floating 16px in from
               // every edge leaves a keyboard and a form fighting for half a screen.
               'items-start justify-center p-4 max-sm:p-0 sm:items-center sm:p-8',
         // POOLSE-88: nothing under the notch or the home bar.
         'pt-[max(var(--safe-top),theme(spacing.4))] pb-[max(var(--safe-bottom),theme(spacing.4))]',
-        placement === 'centre' ? '' : 'pt-safe-top pb-0',
+        placement === 'centre' || placement === 'sheet' ? '' : 'pt-safe-top pb-0',
       )}
     >
       <div
@@ -211,16 +236,32 @@ export function Dialog({
         {...(description === undefined ? {} : { 'aria-describedby': descriptionId })}
         tabIndex={-1}
         onMouseDown={(event) => event.stopPropagation()}
+        style={dragY > 0 ? { transform: `translateY(${dragY}px)` } : undefined}
         className={cn(
           'w-full border border-border bg-surface p-5 shadow-lg focus:outline-none',
           placement === 'side'
             ? 'max-w-md self-stretch overflow-y-auto pb-[calc(theme(spacing.5)+var(--safe-bottom))] sm:rounded-lg'
-            : placement === 'start'
+            : placement === 'sheet'
+              ? 'max-h-[90dvh] overflow-y-auto rounded-t border-0 px-4 pt-2.5 pb-[calc(30px+var(--safe-bottom))] shadow-card md:max-w-lg md:rounded md:border md:p-5'
+              : placement === 'start'
               ? 'max-w-xs self-stretch overflow-y-auto pb-[calc(theme(spacing.5)+var(--safe-bottom))] pl-[calc(theme(spacing.5)+var(--safe-left))]'
               : 'max-w-lg rounded-lg max-sm:min-h-dvh max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:pt-[calc(theme(spacing.5)+var(--safe-top))] max-sm:pb-[calc(theme(spacing.5)+var(--safe-bottom))]',
           className,
         )}
       >
+        {placement === 'sheet' && (
+          // The grabber, and the place a finger takes hold of the sheet.
+          <div
+            aria-hidden
+            onPointerDown={onGrab}
+            onPointerMove={onDrag}
+            onPointerUp={onRelease}
+            onPointerCancel={onRelease}
+            className="-mx-4 -mt-2.5 mb-2 flex touch-none justify-center pb-2 pt-2.5 md:hidden"
+          >
+            <span className="h-1 w-10 rounded-full bg-foreground/20" />
+          </div>
+        )}
         <div className="mb-4 flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
             <h2 id={titleId} className="text-lg font-medium">

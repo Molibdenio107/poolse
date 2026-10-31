@@ -2,17 +2,12 @@ import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type AppAgenda, type AppAgendaEntry, type FamilyLeave } from '@/lib/api';
-import { outcome } from '@/lib/load-failure';
-import { storageConfigured } from '@/lib/storage-status';
-import { FamilyCertificates } from './certificates';
+import { ApiError, apiFetch, type AppAgenda, type AppAgendaEntry } from '@/lib/api';
 import { describeLoad } from '@/lib/load-failure';
 import { PageError } from '@/components/page-shell';
-import { cn } from '@/lib/utils';
-import { EntryCard, FeeStatus, dayHeading } from './agenda-parts';
-import { RecentLessons } from './feedback';
-import { PushCard } from '../push-card';
-import { UserPlus } from 'lucide-react';
+import { EntryCard, dayHeading } from './agenda-parts';
+import { ChildFilter } from './child-filter';
+import { ChevronRight, UserPlus } from 'lucide-react';
 
 /**
  * The family agenda — POOLSE-90 slice 1 (roadmap 3.3 and 3.6).
@@ -21,8 +16,11 @@ import { UserPlus } from 'lucide-react';
  * date", for every child the reader is a guardian of — or the reader, on the
  * adult path — in one list by day, two weeks ahead, each entry naming its child.
  * A child filter narrows it (`?child=`; a stranger's id is the API's 404).
- * Coming lessons only (Rui, Open 1) — and, under them, *Últimas aulas*: the
- * ones attended in the last week, to say how they went (POOLSE-116).
+ * Coming lessons only (Rui, Open 1).
+ *
+ * *Início* since POOLSE-136: a card per child with the next lesson, then the
+ * coming lessons as rows. Fees moved to *Pagamentos*, past lessons and
+ * certificates to *Aulas*, the push switch to *Perfil* — one task per screen.
  */
 export default async function FamilyAgenda({
   searchParams,
@@ -42,10 +40,6 @@ export default async function FamilyAgenda({
     return <PageError message={t(failure.key)} {...(failure.detail === '' ? {} : { detail: failure.detail })} />;
   }
 
-  // Best-effort: a failed read of the leaves says so and costs the agenda nothing.
-  const leaves = await outcome(apiFetch<{ leaves: FamilyLeave[] }>('/app/medical-leave'));
-  const storageReady = await storageConfigured();
-
   const several = agenda.children.length > 1;
   const nameOf = new Map(agenda.children.map((one) => [one.id, one.name]));
   const water = new Map(agenda.water.map((one) => [one.poolId, one]));
@@ -56,58 +50,63 @@ export default async function FamilyAgenda({
 
   return (
     <>
-      <h1 className="text-xl font-semibold tracking-tight">{t('app.family.title')}</h1>
+      <h1>{t('app.tabs.familia.inicio')}</h1>
 
       {agenda.children.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border p-4 text-sm text-foreground-muted">
-          {t('app.family.nobody')}
-        </p>
+        <p className="text-foreground-muted">{t('app.family.nobody')}</p>
       ) : (
         <>
-          {several && (
-            <nav aria-label={t('app.family.childFilter')} className="flex flex-wrap gap-2">
-              {[{ id: undefined, name: t('app.family.everyone') }, ...agenda.children].map((one) => {
-                const chosen = one.id === child;
+          <ChildFilter base="/app/familia" children={agenda.children} chosen={child} />
+
+          {/* The handoff's child cards: each child and their next lesson, one tap to them alone. */}
+          {child === undefined && (
+            <ul className="flex flex-col gap-2">
+              {agenda.children.map((one) => {
+                const next = agenda.entries.find((entry) => entry.studentId === one.id && entry.status !== 'cancelled');
+                const body = (
+                  <>
+                    <span className="flex min-w-0 flex-col">
+                      <span className="font-semibold">{one.name}</span>
+                      <span className="app-secondary text-sm text-foreground-muted">
+                        {next === undefined
+                          ? t('app.family.noNext')
+                          : t('app.family.next', {
+                              when: `${dayHeading(t, next.localDate)} · ${next.localTime}`,
+                              name: next.className,
+                            })}
+                      </span>
+                    </span>
+                    {several && <ChevronRight className="size-4 shrink-0 text-foreground-muted" aria-hidden />}
+                  </>
+                );
+                const card = 'flex min-h-[64px] items-center justify-between gap-3 rounded bg-surface px-4 py-3 shadow-card';
                 return (
-                  <Link
-                    key={one.id ?? 'all'}
-                    href={one.id === undefined ? '/app/familia' : `/app/familia?child=${one.id}`}
-                    aria-current={chosen ? 'page' : undefined}
-                    className={cn(
-                      'inline-flex h-control items-center justify-center rounded-full border px-4 text-control',
-                      'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                      chosen ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-surface',
+                  <li key={one.id}>
+                    {several ? (
+                      <Link
+                        href={`/app/familia?child=${one.id}`}
+                        className={`${card} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+                      >
+                        {body}
+                        <LinkBusy />
+                      </Link>
+                    ) : (
+                      <div className={card}>{body}</div>
                     )}
-                  >
-                    {one.name}
-                    <LinkBusy />
-                  </Link>
+                  </li>
                 );
               })}
-            </nav>
+            </ul>
           )}
 
-          <FeeStatus children={agenda.children} />
-
-          {leaves.state === 'ok' ? (
-            <FamilyCertificates
-              leaves={leaves.data.leaves.filter((leave) => child === undefined || leave.studentId === child)}
-              names={several ? nameOf : null}
-              storageReady={storageReady}
-            />
-          ) : leaves.state === 'failed' ? (
-            <PageError message={t('app.family.certificatesFailed')} />
-          ) : null}
-
           {agenda.entries.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border p-4 text-sm text-foreground-muted">
-              {t('app.family.empty')}
-            </p>
+            <p className="text-foreground-muted">{t('app.family.empty')}</p>
           ) : (
             [...byDay.entries()].map(([date, entries]) => (
-              <section key={date} className="flex flex-col gap-2">
-                <h2 className="text-base font-semibold">{dayHeading(t, date)}</h2>
-                <ul className="flex flex-col gap-2">
+              <section key={date} className="flex flex-col">
+                <h2 className="app-section-label">{dayHeading(t, date)}</h2>
+                {/* Rows, not cards (rule 6): edge to edge, a hairline between. */}
+                <ul className="flex flex-col divide-y divide-border">
                   {entries.map((entry) => (
                     <li key={`${entry.sessionId}-${entry.studentId}`}>
                       <EntryCard
@@ -115,6 +114,7 @@ export default async function FamilyAgenda({
                         childName={several && child === undefined ? (nameOf.get(entry.studentId) ?? null) : null}
                         water={entry.poolId === null ? null : (water.get(entry.poolId) ?? null)}
                         href={`/app/familia/aulas/${entry.sessionId}`}
+                        row
                       />
                     </li>
                   ))}
@@ -122,15 +122,13 @@ export default async function FamilyAgenda({
               </section>
             ))
           )}
-
-          <RecentLessons recent={agenda.recent} names={several && child === undefined ? nameOf : null} />
         </>
       )}
 
       {/* POOLSE-121: ask the club for a place in a class, for a child or a new one. */}
       <Link
         href="/app/familia/inscrever"
-        className="flex min-h-control items-center justify-between gap-3 rounded-lg bg-surface p-3 shadow-card text-control font-medium hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="flex min-h-control items-center justify-between gap-3 rounded-lg bg-surface p-3 shadow-card text-control font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <span className="flex items-center gap-2">
           <UserPlus className="size-4 text-primary" aria-hidden />
@@ -138,8 +136,6 @@ export default async function FamilyAgenda({
         </span>
         <LinkBusy />
       </Link>
-
-      <PushCard />
     </>
   );
 }

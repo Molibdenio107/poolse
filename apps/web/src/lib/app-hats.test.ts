@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { appHome, familyOnly, hatsOf } from './app-hats.ts';
+import { TABS, appHome, familyOnly, hatsOf, tabFor } from './app-hats.ts';
 
 /**
  * Who lands where in app mode — POOLSE-90, QA 1 and 2. The router, the switcher
@@ -33,4 +33,33 @@ test('a family and nothing else is family-only', () => {
   assert.equal(familyOnly(['guardian']), true);
   assert.equal(familyOnly(['guardian', 'student']), true);
   assert.equal(familyOnly([]), false);
+});
+
+
+// POOLSE-136 — which bar a screen wears, and which tab is current.
+const q = (query = '') => new URLSearchParams(query);
+
+test("a home's own tabs carry the bar; a screen deeper in does not", () => {
+  assert.deepEqual(tabFor('/app/familia', q(), ['family']), { hat: 'family', index: 0 });
+  assert.deepEqual(tabFor('/app/familia/aulas', q('child=x'), ['family']), { hat: 'family', index: 1 });
+  assert.deepEqual(tabFor('/app/familia/pagamentos', q(), ['family']), { hat: 'family', index: 2 });
+  assert.equal(tabFor('/app/familia/aulas/abc', q(), ['family']), null);
+  assert.equal(tabFor('/app/familia/inscrever', q(), ['family']), null);
+  assert.equal(tabFor('/app/manutencao', q(), ['maintenance']), null);
+});
+
+test('Hoje and Semana are one page; Perfil wears the home it was opened from', () => {
+  assert.deepEqual(tabFor('/app/aulas', q(), ['teaching']), { hat: 'teaching', index: 0 });
+  assert.deepEqual(tabFor('/app/aulas', q('semana'), ['teaching']), { hat: 'teaching', index: 1 });
+  assert.deepEqual(tabFor('/app/perfil', q('home=family'), ['teaching', 'family']), { hat: 'family', index: 3 });
+  assert.deepEqual(tabFor('/app/perfil', q(), ['teaching', 'family']), { hat: 'teaching', index: 2 });
+  // Maintenance alone has no tabbed home, so Perfil has no bar to wear.
+  assert.equal(tabFor('/app/perfil', q(), ['maintenance']), null);
+});
+
+test('the family has four tabs and the instructor three, Perfil last', () => {
+  assert.equal(TABS.family.length, 4);
+  assert.equal(TABS.teaching.length, 3);
+  assert.equal(TABS.family.at(-1)?.labelKey, 'app.tabs.perfil');
+  assert.equal(TABS.teaching.at(-1)?.labelKey, 'app.tabs.perfil');
 });

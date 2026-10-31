@@ -7,7 +7,6 @@ import { LinkBusy } from '@/components/link-busy';
 import { PageError } from '@/components/page-shell';
 import { cn } from '@/lib/utils';
 import { dayHeading, endTime } from '../familia/agenda-parts';
-import { PushCard } from '../push-card';
 
 /**
  * The instructor's home — POOLSE-90 slice 2.
@@ -19,8 +18,14 @@ import { PushCard } from '../push-card';
  * the rest of the week. Each lesson opens the existing lesson page (POOLSE-88
  * slice 2) — register, plan, stand-in, cancel — and nothing is copied.
  */
-export default async function TeachingHome(): Promise<React.ReactElement> {
+export default async function TeachingHome({
+  searchParams,
+}: {
+  searchParams: Promise<{ semana?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  // *Hoje* or *Semana* — POOLSE-136 (Rui, 31-10-2026): one read, two tabs.
+  const week = (await searchParams).semana !== undefined;
 
   let lessons: TeachingLesson[];
   try {
@@ -31,21 +36,21 @@ export default async function TeachingHome(): Promise<React.ReactElement> {
   }
 
   const owed = lessons.filter((one) => one.past && !one.cancelled && !one.partner && !one.registerTaken);
-  const coming = lessons.filter((one) => one.dayOffset >= 0 && !one.past);
+  const coming = lessons.filter((one) => one.dayOffset >= 0 && !one.past && (week || one.dayOffset === 0));
   const byDay = new Map<string, TeachingLesson[]>();
   for (const lesson of coming) byDay.set(lesson.localDate, [...(byDay.get(lesson.localDate) ?? []), lesson]);
 
   return (
     <>
-      <h1 className="text-xl font-semibold tracking-tight">{t('app.teaching.title')}</h1>
+      <h1>{t(week ? 'app.tabs.aulas.semana' : 'app.tabs.aulas.hoje')}</h1>
 
-      {owed.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="flex items-center gap-1.5 text-base font-semibold">
+      {!week && owed.length > 0 && (
+        <section className="flex flex-col">
+          <h2 className="app-section-label flex items-center gap-1.5">
             <ClipboardList className="size-4" aria-hidden />
             {t('app.teaching.owed', { count: owed.length })}
           </h2>
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col divide-y divide-border">
             {owed.map((lesson) => (
               <li key={lesson.sessionId}>
                 <LessonCard lesson={lesson} t={t} owed />
@@ -56,14 +61,12 @@ export default async function TeachingHome(): Promise<React.ReactElement> {
       )}
 
       {coming.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border p-4 text-sm text-foreground-muted">
-          {t('app.teaching.empty')}
-        </p>
+        <p className="text-foreground-muted">{t(week ? 'app.teaching.empty' : 'app.teaching.emptyToday')}</p>
       ) : (
         [...byDay.entries()].map(([date, day]) => (
-          <section key={date} className="flex flex-col gap-2">
-            <h2 className="text-base font-semibold">{dayHeading(t, date)}</h2>
-            <ul className="flex flex-col gap-2">
+          <section key={date} className="flex flex-col">
+            <h2 className="app-section-label">{dayHeading(t, date)}</h2>
+            <ul className="flex flex-col divide-y divide-border">
               {day.map((lesson) => (
                 <li key={lesson.sessionId}>
                   <LessonCard lesson={lesson} t={t} owed={false} />
@@ -74,7 +77,6 @@ export default async function TeachingHome(): Promise<React.ReactElement> {
         ))
       )}
 
-      <PushCard />
     </>
   );
 }
@@ -92,8 +94,9 @@ function LessonCard({
     <Link
       href={`/dashboard/calendar/sessions/${lesson.sessionId}?from=${encodeURIComponent('/app/aulas')}`}
       className={cn(
-        'flex items-start gap-3 rounded-lg bg-surface p-3 shadow-card',
-        'hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+        // A row, not a card (POOLSE-136 rule 6): one tap opens the lesson and its register.
+        'flex min-h-[44px] items-start gap-3 py-3',
+        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
       )}
     >
       <div className="flex w-14 shrink-0 flex-col tabular-nums">

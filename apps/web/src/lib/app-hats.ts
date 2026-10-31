@@ -60,3 +60,62 @@ export function familyOnly(roles: readonly string[]): boolean {
   const hats = hatsOf(roles);
   return !hats.staff && hats.homes.includes('family');
 }
+
+
+/**
+ * The bottom tabs of each home — POOLSE-136. Static, beside `HOME_PATH`, so
+ * `hatsOf` already answers which bar a person gets. Maintenance has none: its
+ * home keeps the shell it had (rule 10). *Perfil* names its home in `?home=`, so
+ * the right bar is drawn before anything has hydrated.
+ */
+export type TabGlyph = 'square' | 'circle' | 'triangle' | 'diamond' | 'hexagon';
+
+export interface AppTab {
+  href: string;
+  labelKey: string;
+  glyph: TabGlyph;
+}
+
+export type TabbedHat = Exclude<AppHat, 'maintenance'>;
+
+export const TABS: Record<TabbedHat, AppTab[]> = {
+  family: [
+    { href: '/app/familia', labelKey: 'app.tabs.familia.inicio', glyph: 'square' },
+    // The hexagon *Modalidades* replaces this one when a family has two sports (POOLSE-127).
+    { href: '/app/familia/aulas', labelKey: 'app.tabs.familia.aulas', glyph: 'circle' },
+    { href: '/app/familia/pagamentos', labelKey: 'app.tabs.familia.pagamentos', glyph: 'triangle' },
+    { href: '/app/perfil?home=family', labelKey: 'app.tabs.perfil', glyph: 'diamond' },
+  ],
+  teaching: [
+    { href: '/app/aulas', labelKey: 'app.tabs.aulas.hoje', glyph: 'square' },
+    { href: '/app/aulas?semana', labelKey: 'app.tabs.aulas.semana', glyph: 'circle' },
+    { href: '/app/perfil?home=teaching', labelKey: 'app.tabs.perfil', glyph: 'diamond' },
+  ],
+};
+
+/**
+ * Which bar a screen wears and which tab is current, or null for a screen that
+ * has none — a lesson's page, a form, the maintenance home. Only the tabs' own
+ * addresses carry the bar: a screen deeper in has its own *Voltar*.
+ */
+export function tabFor(
+  pathname: string,
+  search: { has(name: string): boolean; get(name: string): string | null },
+  homes: readonly AppHat[],
+): { hat: TabbedHat; index: number } | null {
+  const path = pathname.replace(/\/$/, '');
+  if (path === '/app/familia') return { hat: 'family', index: 0 };
+  if (path === '/app/familia/aulas') return { hat: 'family', index: 1 };
+  if (path === '/app/familia/pagamentos') return { hat: 'family', index: 2 };
+  if (path === '/app/aulas') return { hat: 'teaching', index: search.has('semana') ? 1 : 0 };
+  if (path === '/app/perfil') {
+    const asked = search.get('home');
+    const hat =
+      asked === 'family' || asked === 'teaching'
+        ? asked
+        : homes.find((one): one is TabbedHat => one !== 'maintenance');
+    if (hat === undefined) return null;
+    return { hat, index: TABS[hat].length - 1 };
+  }
+  return null;
+}

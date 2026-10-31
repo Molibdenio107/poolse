@@ -45,18 +45,21 @@ export async function WaterLine({ water }: { water: AppWater }): Promise<React.R
   );
 }
 
-/** One lesson, as a card. A link to its page unless it is the page. */
+/** One lesson, as a card or a row. A link to its page unless it is the page. */
 export async function EntryCard({
   entry,
   childName,
   water,
   href,
+  row = false,
 }: {
   entry: AppAgendaEntry;
   /** Shown when the agenda holds more than one child. */
   childName: string | null;
   water: AppWater | null;
   href: string | null;
+  /** A row in a list (POOLSE-136, app mode's tabs): edge to edge, no card. */
+  row?: boolean;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const cancelled = entry.status === 'cancelled';
@@ -123,7 +126,7 @@ export async function EntryCard({
     </div>
   );
 
-  const card = 'block rounded-lg bg-surface p-3 shadow-card';
+  const card = row ? 'block min-h-[44px] py-3' : 'block rounded-lg bg-surface p-3 shadow-card';
   return href === null ? (
     <div className={card}>{body}</div>
   ) : (
