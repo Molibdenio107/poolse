@@ -723,9 +723,15 @@ SET LOCAL ROLE poolse_app;
 DO $$
 DECLARE v boolean;
 BEGIN
+  -- Readable, whatever an operator has set it to on this database: the dev
+  -- database's switch is Rui's to flip. "Off by default" is the column's own.
   SELECT enabled INTO v FROM platform_switch WHERE name = 'id_document_ai';
-  IF v IS DISTINCT FROM false THEN
-    RAISE EXCEPTION 'FAIL test 18a: the ID reader switch is not readable and off (%)', v;
+  IF v IS NULL THEN
+    RAISE EXCEPTION 'FAIL test 18a: the ID reader switch is not readable';
+  END IF;
+  IF (SELECT column_default FROM information_schema.columns
+       WHERE table_name = 'platform_switch' AND column_name = 'enabled') IS DISTINCT FROM 'false' THEN
+    RAISE EXCEPTION 'FAIL test 18a: a switch is not off by default';
   END IF;
   RAISE NOTICE 'PASS test 18a: a club reads the switch, off by default';
 
