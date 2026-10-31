@@ -32,9 +32,12 @@ import { subscriptionAlertSentence, type SubscriptionAlertView } from '@/lib/sub
 export function UserMenu({
   canArchive = false,
   subscription = null,
+  profileHref = '/dashboard/profile',
 }: {
   canArchive?: boolean;
   subscription?: SubscriptionAlertView | null;
+  /** App mode's own profile screen (Rui, 31-10-2026); the desk page otherwise. */
+  profileHref?: string;
 }): React.ReactElement {
   const t = useTranslations();
   const alert = subscription?.alert ?? null;
@@ -60,7 +63,7 @@ export function UserMenu({
             />
           )}
           <UserButton.Link
-            href="/dashboard/profile"
+            href={profileHref}
             label={t('profile.title')}
             labelIcon={<UserRound className="size-4" aria-hidden />}
           />

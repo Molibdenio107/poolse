@@ -230,7 +230,6 @@
     },
     "tabs": {
       "label": "Tabs",
-      "perfil": "Profile",
       "familia": {
         "inicio": "Home",
         "aulas": "Lessons",
@@ -239,15 +238,13 @@
       "aulas": {
         "hoje": "Today",
         "semana": "Week"
-      }
+      },
+      "perfil": "Profile"
     },
     "profile": {
-      "title": "Profile",
-      "account": "Account",
-      "accountHint": "My profile, the account and signing out",
-      "preferences": "Language and theme",
+      "preferences": "Preferences",
       "homes": "My areas",
-      "notifications": "Notifications"
+      "signOut": "Sign out"
     }
   },
   "common": {

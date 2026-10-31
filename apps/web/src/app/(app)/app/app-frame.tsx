@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { LinkBusy } from '@/components/link-busy';
 import { TabGlyph } from '@/components/app-tab-glyphs';
+import { PersonAvatar } from '@/components/person-avatar';
 import { TABS, tabFor, type AppHat } from '@/lib/app-hats';
 import { cn } from '@/lib/utils';
 import { AppSwitcher } from './app-switcher';
@@ -27,12 +28,15 @@ import { AppSwitcher } from './app-switcher';
  */
 export function AppFrame({
   organizationName,
+  user,
   homes,
   staff,
   chrome,
   children,
 }: {
   organizationName: string;
+  /** For the photo in the header's corner, which opens *O meu perfil*. */
+  user: { name: string; avatarUrl: string | null };
   homes: AppHat[];
   staff: boolean;
   /** The language, theme and avatar controls — server components, rendered by the layout. */
@@ -58,7 +62,11 @@ export function AppFrame({
       <header className="sticky top-0 z-20 bg-surface pt-safe-top shadow-hairline-b">
         <div className="mx-auto flex h-14 w-full max-w-2xl items-center justify-between gap-3 px-4">
           <span className="min-w-0 truncate text-sm font-semibold">{organizationName}</span>
-          {classic && <div className="flex items-center gap-3">{chrome}</div>}
+          {classic ? (
+            <div className="flex items-center gap-3">{chrome}</div>
+          ) : (
+            <ProfileCorner user={user} />
+          )}
         </div>
         {classic && (homes.length > 1 || staff) && (
           <div className="mx-auto flex w-full max-w-2xl flex-wrap items-center gap-2 px-4 pb-2">
@@ -99,6 +107,30 @@ export function AppFrame({
         </Suspense>
       )}
     </div>
+  );
+}
+
+/**
+ * Your photograph in the header's top-right corner — Rui, 31-10-2026: one tap
+ * opens *O meu perfil*, the same page as the *Perfil* tab, with the tab bar of
+ * the home it was opened from.
+ */
+function ProfileCorner({ user }: { user: { name: string; avatarUrl: string | null } }): React.ReactElement {
+  const t = useTranslations();
+  const pathname = usePathname();
+  const here = pathname.replace(/\/$/, '') === '/app/perfil';
+  // The home it is opened from, so *Perfil*'s tab bar is that home's.
+  const home = pathname.startsWith('/app/aulas') ? 'teaching' : pathname.startsWith('/app/familia') ? 'family' : null;
+  return (
+    <Link
+      href={home === null ? '/app/perfil' : `/app/perfil?home=${home}`}
+      aria-label={t('profile.title')}
+      aria-current={here ? 'page' : undefined}
+      className="-m-1 inline-flex size-11 shrink-0 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    >
+      <PersonAvatar id={user.name} name={user.name} photoUrl={user.avatarUrl} className="size-9 text-sm" />
+      <LinkBusy />
+    </Link>
   );
 }
 

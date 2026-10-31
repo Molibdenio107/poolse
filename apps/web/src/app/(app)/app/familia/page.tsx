@@ -7,6 +7,7 @@ import { describeLoad } from '@/lib/load-failure';
 import { PageError } from '@/components/page-shell';
 import { EntryCard, dayHeading } from './agenda-parts';
 import { ChildFilter } from './child-filter';
+import { PersonAvatar } from '@/components/person-avatar';
 import { ChevronRight, UserPlus } from 'lucide-react';
 
 /**
@@ -65,8 +66,10 @@ export default async function FamilyAgenda({
                 const next = agenda.entries.find((entry) => entry.studentId === one.id && entry.status !== 'cancelled');
                 const body = (
                   <>
-                    <span className="flex min-w-0 flex-col">
-                      <span className="font-semibold">{one.name}</span>
+                    {/* The handoff's child card (POOLSE-140): a 44 px avatar, the name at 700. */}
+                    <PersonAvatar id={one.id} name={one.name} className="size-11 text-sm" />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="app-card-name font-bold">{one.name}</span>
                       <span className="app-secondary text-sm text-foreground-muted">
                         {next === undefined
                           ? t('app.family.noNext')
@@ -79,7 +82,7 @@ export default async function FamilyAgenda({
                     {several && <ChevronRight className="size-4 shrink-0 text-foreground-muted" aria-hidden />}
                   </>
                 );
-                const card = 'flex min-h-[64px] items-center justify-between gap-3 rounded bg-surface px-4 py-3 shadow-card';
+                const card = 'flex min-h-[64px] items-center gap-3 rounded bg-surface px-4 py-3 shadow-card';
                 return (
                   <li key={one.id}>
                     {several ? (

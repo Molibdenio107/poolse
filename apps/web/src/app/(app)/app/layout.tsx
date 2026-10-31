@@ -48,12 +48,16 @@ export default async function AppModeLayout({
   return (
     <AppFrame
       organizationName={membership.organizationName}
+      user={{
+        name: [me.user.firstName, me.user.lastName].filter(Boolean).join(' ') || (me.user.email ?? ''),
+        avatarUrl: me.user.avatarUrl,
+      }}
       homes={hats.homes}
       staff={hats.staff}
       chrome={
         <>
           <PreferenceControls />
-          <UserMenu />
+          <UserMenu profileHref="/app/perfil" />
         </>
       }
     >

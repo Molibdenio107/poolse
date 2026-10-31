@@ -155,6 +155,12 @@ const PAIRS = [
   // POOLSE-138: the ring reads the ink since the fill became the handoff's #4FA3C7.
   ['app-primary-ink', 'surface', 3, 'app-mode focus ring'],
   ['app-primary', 'surface', 3, 'app-mode selected shapes'],
+  // POOLSE-140: the app's own ground and ink, on the tinted page and on a card.
+  ['app-foreground', 'app-background', 4.5, 'app-mode text on the page'],
+  ['app-foreground', 'surface', 4.5, 'app-mode text on a card'],
+  ['app-foreground-muted', 'app-background', 4.5, 'app-mode muted text on the page'],
+  ['app-foreground-muted', 'surface', 4.5, 'app-mode muted text on a card'],
+  ['app-primary-ink', 'app-background', 4.5, 'app-mode links on the tinted page'],
 
   ['border-strong', 'background', 3, 'a form control against the page'],
   ['border-strong', 'surface', 3, 'a form control on a card'],

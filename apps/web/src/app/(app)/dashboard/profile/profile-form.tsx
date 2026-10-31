@@ -29,7 +29,18 @@ const THEMES = ['light', 'dark', 'system'] as const;
  * problems" makes someone hunt for which of six inputs it meant, and on a form
  * this short there is no excuse for it.
  */
-export function ProfileForm({ me }: { me: Me }): React.ReactElement {
+export function ProfileForm({
+  me,
+  withPreferences = true,
+}: {
+  me: Me;
+  /**
+   * The language and theme fields. App mode's *O meu perfil* sets this false and
+   * has its own rows for them (Rui, 31-10-2026); the stored values still travel
+   * with the save, so saving a name never resets them.
+   */
+  withPreferences?: boolean;
+}): React.ReactElement {
   const t = useTranslations();
   const router = useRouter();
   const { user } = useUser();
@@ -115,6 +126,13 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
         <p className="text-sm text-foreground-muted">{t('profile.emailHint')}</p>
       </div>
 
+      {!withPreferences && (
+        <>
+          <input type="hidden" name="locale" value={me.user.locale} />
+          <input type="hidden" name="theme" value={me.user.theme} />
+        </>
+      )}
+      {withPreferences && (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Choice
           name="locale"
@@ -131,6 +149,7 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
           error={errorFor('theme')}
         />
       </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <button

@@ -65,8 +65,9 @@ export function familyOnly(roles: readonly string[]): boolean {
 /**
  * The bottom tabs of each home — POOLSE-136. Static, beside `HOME_PATH`, so
  * `hatsOf` already answers which bar a person gets. Maintenance has none: its
- * home keeps the shell it had (rule 10). *Perfil* names its home in `?home=`, so
- * the right bar is drawn before anything has hydrated.
+ * home keeps the shell it had (rule 10). *Perfil* (the diamond) opens *O meu
+ * perfil*, which the photo in the header's corner opens too (Rui, 31-10-2026);
+ * it names its home in `?home=`, so the right bar is drawn before hydration.
  */
 export type TabGlyph = 'square' | 'circle' | 'triangle' | 'diamond' | 'hexagon';
 

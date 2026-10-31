@@ -99,5 +99,6 @@ export async function saveMessagePreferenceAction(
     return { ok: false, errorKey: 'profile.messages.failed' };
   }
   revalidatePath('/dashboard/profile');
+  revalidatePath('/app/perfil/conta');
   return { ok: true };
 }

@@ -187,6 +187,32 @@ Each home's own screens wear tabs; everything else in app mode is a screen deepe
   tap (POOLSE-90 QA 7) rather than gaining a confirmation.
 - **Multi-sport** is drawn, not built: the hexagon *Modalidades* glyph exists for POOLSE-127.
 
+## The app's own look and profile — POOLSE-140 (31 October 2026)
+
+- **Palette** (light): a tinted ground `243 247 247` under white cards, text `31 63 72`, muted
+  `90 112 120` — `--app-background` / `--app-foreground` / `--app-foreground-muted`, mapped in
+  `[data-surface='app']`; the `<body>` takes the tint too while app mode is on screen. Dark is the
+  backoffice's dark. Every pair is in `check-contrast.mjs`.
+- ***Início*'s child cards** carry a 44 px avatar (`PersonAvatar`, initials) and the name at 700.
+  The handoff's age and sport line wait for data the agenda does not carry (POOLSE-127).
+- ***O meu perfil*** in app mode is `/app/perfil/conta` (Rui, 31-10-2026): photo, name, birth
+  date, phone, language and theme (`ProfileForm`, the desk page's own save), the club's messages
+  opt-out, the clubs list for somebody in several, and the devices signed in. Opened from a row on
+  *Perfil* and from the account menu in app mode (`UserMenu`'s `profileHref`). The owner's parts
+  stay on `/dashboard/profile`.
+
+## *O meu perfil* from the photo in the corner (Rui, 31-10-2026, mockup B)
+
+- The diamond *Perfil* tab opens `/app/perfil`, and so does the person's photo (or initials)
+  in the header's top-right corner. It is a tab screen: the bar stays, *Perfil* current, and
+  there is no *Voltar*. The photo and its buttons are centred and every field is the card's
+  width (`.app-form`).
+- `/app/perfil` is one screen: the profile (photo, name, birth date, phone — `ProfileForm`
+  without its language and theme fields), *Preferências* (*Idioma* and *Tema* as rows opening a
+  bottom sheet, notifications on this phone, the club's messages by email), *Áreas* for staff
+  and two-home people (the switcher, *Abrir o backoffice*), the devices folded, and *Terminar
+  sessão* last. `/app/perfil/conta` redirects to it.
+
 ## Not yet
 
 - The real-device passes (slice 5): one installed iPhone and one Android, recorded here.

@@ -178,8 +178,8 @@ test.describe('push, as a guardian', () => {
         return Promise.resolve('default');
       };
     });
-    // The push switch lives on *Perfil* since POOLSE-136.
-    await visit(page, '/app/perfil?home=family');
+    // The push switch lives on *O meu perfil* (POOLSE-136, Rui 31-10-2026).
+    await visit(page, '/app/perfil');
     await expect(page.getByText(/avisos neste telemóvel|notifications on this phone/i)).toBeVisible();
     if (info.project.name === 'iphone') {
       await expect(page.getByText(/adicione a poolse ao ecrã principal|add poolse to your home screen/i)).toBeVisible();
@@ -259,14 +259,41 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
     await expect(bottomBar(page)).toHaveCount(0);
   });
 
-  test('Perfil carries the chrome: language and theme, the account, push', async ({ page }) => {
-    await visit(page, '/app/perfil?home=family');
-    await expect(page.getByRole('heading', { level: 1, name: /^(perfil|profile)$/i })).toBeVisible();
-    await expect(bottomBar(page).getByRole('link', { name: /^(perfil|profile)$/i })).toHaveAttribute('aria-current', 'page');
+  test('O meu perfil opens from the Perfil tab and from the photo, with its preferences and a way out (Rui, 31-10-2026)', async ({ page }) => {
+    await visit(page, '/app/familia');
+    const corner = page.locator('header').getByRole('link', { name: /^(o meu perfil|my profile)$/i });
+    await expect(corner).toBeVisible();
+    expect((await corner.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await expect(async () => {
+      if (!page.url().includes('/app/perfil')) await corner.tap({ timeout: 5_000 });
+      await expect(page).toHaveURL(/\/app\/perfil/, { timeout: 10_000 });
+    }).toPass({ timeout: 45_000 });
+    await expect(page.getByRole('heading', { level: 1, name: /^(o meu perfil|my profile)$/i })).toBeVisible();
+    await expect(page.getByLabel(/nome próprio|first name/i)).toBeVisible();
     await expect(page.getByText(/avisos neste telemóvel|notifications on this phone/i)).toBeVisible();
-    await expect(page.getByText(/idioma e tema|language and theme/i)).toBeVisible();
-    // A family-only login is not staff: no way into the backoffice here either.
+    await expect(page.getByRole('button', { name: /terminar sessão|sign out/i })).toBeVisible();
+    // A tab screen: the bar stays with Perfil current, and there is no Voltar.
+    await expect(bottomBar(page).getByRole('link', { name: /^(perfil|profile)$/i })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('link', { name: /^(voltar|back)$/i })).toHaveCount(0);
+    // The diamond tab is the same page.
+    await visit(page, '/app/familia');
+    await expect(bottomBar(page).getByRole('link', { name: /^(perfil|profile)$/i })).toHaveAttribute('href', '/app/perfil?home=family');
+    // A family-only login is not staff: no way into the backoffice here.
     await expect(page.getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toHaveCount(0);
+    await noSidewaysScroll(page);
+  });
+
+  test('Idioma opens a bottom sheet of the languages, the current one ticked', async ({ page }) => {
+    await visit(page, '/app/perfil');
+    await page.getByRole('button', { name: /^(idioma|language)/i }).tap();
+    const sheet = page.getByRole('dialog', { name: /^(idioma|language)$/i });
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByRole('button', { pressed: true })).toHaveCount(1);
+    const box = (await sheet.boundingBox())!;
+    // A sheet from the bottom, not a box in the middle.
+    expect(box.y + box.height).toBeGreaterThanOrEqual((page.viewportSize()!.height) - 2);
+    await page.keyboard.press('Escape');
+    await expect(sheet).toHaveCount(0);
   });
 });
 
@@ -286,7 +313,7 @@ test.describe('POOLSE-136 — the phone shell, as an instructor', () => {
   test.skip(E2E_INSTRUCTOR_EMAIL === undefined, NO_INSTRUCTOR);
   test.use({ storageState: INSTRUCTOR_SESSION });
 
-  test('QA 3–4 — three tabs, Hoje current; Perfil has Abrir o backoffice and the header does not', async ({ page }) => {
+  test('QA 3–4 — two tabs, Hoje current; O meu perfil has Abrir o backoffice and the header does not', async ({ page }) => {
     await visit(page, '/app/aulas');
     const bar = bottomBar(page);
     await expect(bar.getByRole('link')).toHaveCount(3);

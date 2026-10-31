@@ -103,6 +103,13 @@
     --app-primary: 79 163 199;
     --app-primary-foreground: 17 24 28;
     --app-primary-ink: 14 116 144;
+    /*
+     * The app's own ground and ink — POOLSE-140, from the handoff: a tinted page
+     * under white cards, text in the app's dark teal, a muted tone to match.
+     */
+    --app-background: 243 247 247;
+    --app-foreground: 31 63 72;
+    --app-foreground-muted: 90 112 120;
     --app-accent: 251 146 60;
     --app-accent-foreground: 28 25 23;
     --app-accent-ink: 194 65 12;
@@ -339,6 +346,10 @@
 
     --app-primary: 56 189 248;
     --app-primary-foreground: 8 47 73;
+    /* Dark app mode is the backoffice's dark ground (POOLSE-140: the handoff lists the same values). */
+    --app-background: 13 18 21;
+    --app-foreground: 230 236 239;
+    --app-foreground-muted: 148 162 172;
     --app-primary-ink: 103 232 249;
     --app-accent: 251 146 60;
     --app-accent-foreground: 28 25 23;
@@ -631,9 +642,21 @@
   font-family: var(--font-app), ui-sans-serif, system-ui, sans-serif;
   --primary: var(--app-primary);
   --primary-foreground: var(--app-primary-foreground);
+  /* POOLSE-140: the app's ground and ink. Cards stay `--surface`, white on the tint. */
+  --background: var(--app-background);
+  --foreground: var(--app-foreground);
+  --foreground-muted: var(--app-foreground-muted);
   --primary-ink: var(--app-primary-ink);
   /* The ink, not the fill: #4FA3C7 is 2.8:1 on white, under a ring's 3:1 (POOLSE-138). */
   --ring: var(--app-primary-ink);
+}
+
+/*
+ * The page under app mode takes its tint too (POOLSE-140), so the bounce at
+ * either end of a phone's scroll shows the app's ground, not the backoffice's.
+ */
+body:has([data-surface='app']) {
+  background-color: rgb(var(--app-background));
 }
 
 /*
@@ -811,6 +834,10 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
   font-weight: 700;
   line-height: 1.25;
 }
+/* A child's name on Início's card — the handoff's 17 px under a finger (POOLSE-140). */
+[data-shell='tabs'] main .app-card-name {
+  font-size: var(--app-body);
+}
 [data-shell='tabs'] main .text-sm {
   font-size: var(--app-secondary);
 }
@@ -822,4 +849,36 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: rgb(var(--foreground-muted));
+}
+
+/*
+ * App mode's *O meu perfil*: every field the card's width, so the name, the
+ * date and the phone line up as one column (Rui, 31-10-2026).
+ */
+.app-form .max-w-field {
+  max-width: none;
+}
+
+/*
+ * iOS Safari draws a date or time field with its own native look, which sizes
+ * to its content, centres the text and is shorter when empty — so it never
+ * matched the fields above and below it (Rui, 31-10-2026, O meu perfil). Off
+ * on iOS only (`-webkit-touch-callout` exists nowhere else), so the field's own
+ * width class (`w-full` in `CONTROL_BASE`) and the control height apply as on
+ * every other field; the native picker still opens.
+ */
+@supports (-webkit-touch-callout: none) {
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: var(--control-h);
+  }
+  input[type='date']::-webkit-date-and-time-value,
+  input[type='time']::-webkit-date-and-time-value,
+  input[type='datetime-local']::-webkit-date-and-time-value {
+    min-height: 1.5em;
+    text-align: left;
+  }
 }
