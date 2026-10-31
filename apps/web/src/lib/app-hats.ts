@@ -112,7 +112,9 @@ export function tabFor(
   if (path === '/app/perfil') {
     const asked = search.get('home');
     const hat =
-      asked === 'family' || asked === 'teaching'
+      // Only a home this person has: a teaching-only reader asking for the
+      // family's bar would get tabs that lead to refusals.
+      (asked === 'family' || asked === 'teaching') && homes.includes(asked)
         ? asked
         : homes.find((one): one is TabbedHat => one !== 'maintenance');
     if (hat === undefined) return null;

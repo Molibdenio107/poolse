@@ -62,7 +62,7 @@ test.describe('as a guardian', () => {
 
     const filter = page.getByRole('navigation', { name: /mostrar as aulas de|show the lessons of/i });
     await expect(filter.getByRole('link')).toHaveCount(3);
-    const cards = page.locator(`a[href="/app/familia/aulas/${lesson.sessionId}"]`);
+    const cards = page.locator(`a[href^="/app/familia/aulas/${lesson.sessionId}"]`);
     await expect(cards).toHaveCount(2);
     await expect(cards.filter({ hasText: 'Ana Poolside' })).toHaveCount(1);
     await expect(cards.filter({ hasText: 'Bruno Poolside' })).toHaveCount(1);
@@ -71,7 +71,7 @@ test.describe('as a guardian', () => {
     }
 
     await visit(page, `/app/familia?child=${lesson.studentIds[0]}`);
-    await expect(page.locator(`a[href="/app/familia/aulas/${lesson.sessionId}"]`)).toHaveCount(1);
+    await expect(page.locator(`a[href^="/app/familia/aulas/${lesson.sessionId}"]`)).toHaveCount(1);
 
     // Carla is a poolside child too, but not this guardian's.
     const response = await page.goto(`/app/familia?child=${lesson.studentIds[2]}`);
@@ -81,7 +81,7 @@ test.describe('as a guardian', () => {
   test("the lesson's page opens from the agenda, with the plan or a sentence saying there is none", async ({ page }) => {
     const lesson = await poolsideLesson();
     await visit(page, '/app/familia');
-    const card = page.locator(`a[href="/app/familia/aulas/${lesson.sessionId}"]`).first();
+    const card = page.locator(`a[href^="/app/familia/aulas/${lesson.sessionId}"]`).first();
     await expect(async () => {
       if (!page.url().includes('/aulas/')) await card.tap({ timeout: 5_000 });
       await expect(page).toHaveURL(/\/app\/familia\/aulas\//, { timeout: 10_000 });
@@ -97,7 +97,7 @@ test.describe('as a guardian', () => {
     await visit(page, '/app/familia/aulas');
     const recent = page.getByRole('heading', { name: /últimas aulas|recent lessons/i });
     await expect(recent).toBeVisible();
-    const link = page.locator(`a[href="/app/familia/aulas/${sessionId}"]`).first();
+    const link = page.locator(`a[href^="/app/familia/aulas/${sessionId}"]`).first();
     await expect(link).toContainText(/dar feedback|give feedback/i);
     await expect(async () => {
       if (!page.url().includes('/aulas/')) await link.tap({ timeout: 5_000 });
@@ -118,7 +118,7 @@ test.describe('as a guardian', () => {
     await noSidewaysScroll(page);
 
     await visit(page, '/app/familia/aulas');
-    await expect(page.locator(`a[href="/app/familia/aulas/${sessionId}"]`).first()).toContainText(/^.*(bem|good)/i);
+    await expect(page.locator(`a[href^="/app/familia/aulas/${sessionId}"]`).first()).toContainText(/^.*(bem|good)/i);
   });
 });
 
@@ -141,7 +141,7 @@ test.describe('as a guardian, before a lesson', () => {
 
     await visit(page, '/app/familia');
     await expect(
-      page.locator(`a[href="/app/familia/aulas/${sessionId}"]`).filter({ hasText: 'Ana Poolside' }),
+      page.locator(`a[href^="/app/familia/aulas/${sessionId}"]`).filter({ hasText: 'Ana Poolside' }),
     ).toContainText(/avisou que não vem|said they are not coming/i);
   });
 });

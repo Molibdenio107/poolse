@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { PHONE_SESSION } from './session';
 
 /**
  * Salários, in a browser — POOLSE-58, QA layer 3.
@@ -101,19 +102,19 @@ test.describe('an owner', () => {
     'Set E2E_EMAIL and E2E_PASSWORD to a Clerk test user to run the signed-in walk-through.',
   );
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/sign-in', { waitUntil: 'domcontentloaded' });
-    await page.getByLabel(/e-?mail/i).fill(email!);
-    await page.getByLabel(/palavra-passe|password/i).first().fill(password!); // Clerk's Show password shares the word
-    await page.getByRole('button', { name: /^(continuar|continue)$/i }).click(); // exact: not "Continuar com Google"
-    await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
-  });
+  // The owner's session from auth.setup.ts, as the other desk specs use it:
+  // signing in through Clerk per test spent the whole 30 s on its device check.
+  test.use({ storageState: PHONE_SESSION, viewport: { width: 1280, height: 900 } });
 
   test('sees the menu item, the coverage line and a dash where hours are unknown', async ({
     page,
   }) => {
-    await page.getByRole('link', { name: /sal[áa]rios/i }).first().click();
-    await page.waitForURL(new RegExp(SALARIES));
+    // Salários sits under Instalações → Staff, which opens its branch. Two
+    // cold pages on a dev server take longer than the default budget.
+    test.setTimeout(90_000);
+    await page.goto('/dashboard/facilities/staff', { waitUntil: 'domcontentloaded' });
+    await page.locator('aside').getByRole('link', { name: /sal[áa]rios/i }).click();
+    await page.waitForURL(new RegExp(SALARIES), { timeout: 60_000 });
 
     // The coverage sentence is financials.md §6 on screen: a total over partial
     // data must say how partial.
@@ -144,7 +145,9 @@ test.describe('an owner', () => {
     await page.getByRole('button').first().click();
 
     for (const url of seen) {
-      expect(url, `an amount reached the URL: ${url}`).not.toMatch(/\d{3,}/);
+      // The path and the query: the port in localhost:3000 is not an amount.
+      const { pathname, search } = new URL(url);
+      expect(`${pathname}${search}`, `an amount reached the URL: ${url}`).not.toMatch(/\d{3,}/);
     }
   });
 });

@@ -5,6 +5,7 @@ import type { FamilyFeedback, RecentLesson } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { LinkBusy } from '@/components/link-busy';
 import { MoodFace } from '@/components/mood';
+import { withFrom } from '@/lib/back';
 import { dayHeading } from './agenda-parts';
 import { FeedbackForm } from './feedback-form';
 
@@ -85,10 +86,13 @@ export async function FeedbackPanel({
 export async function RecentLessons({
   recent,
   names,
+  from,
 }: {
   recent: RecentLesson[];
   /** Each child's name, when the agenda shows several. */
   names: Map<string, string> | null;
+  /** The page listing them, so a lesson's Voltar comes back here (POOLSE-91). */
+  from?: string;
 }): Promise<React.ReactElement | null> {
   if (recent.length === 0) return null;
   const t = await getTranslations();
@@ -101,7 +105,7 @@ export async function RecentLessons({
           return (
             <li key={`${lesson.sessionId}-${lesson.studentId}`}>
               <Link
-                href={`/app/familia/aulas/${lesson.sessionId}`}
+                href={from === undefined ? `/app/familia/aulas/${lesson.sessionId}` : withFrom(`/app/familia/aulas/${lesson.sessionId}`, from)}
                 className="flex min-h-control items-center justify-between gap-3 rounded-lg bg-surface px-3 py-2 hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary shadow-card"
               >
                 <span className="flex min-w-0 flex-col">

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
+import { withFrom } from '@/lib/back';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type AppAgenda, type AppAgendaEntry } from '@/lib/api';
@@ -116,7 +117,7 @@ export default async function FamilyAgenda({
                         entry={entry}
                         childName={several && child === undefined ? (nameOf.get(entry.studentId) ?? null) : null}
                         water={entry.poolId === null ? null : (water.get(entry.poolId) ?? null)}
-                        href={`/app/familia/aulas/${entry.sessionId}`}
+                        href={withFrom(`/app/familia/aulas/${entry.sessionId}`, child === undefined ? '/app/familia' : `/app/familia?child=${encodeURIComponent(child)}`)}
                         row
                       />
                     </li>

@@ -3,15 +3,16 @@ import {
   Body,
   ConflictException,
   Controller,
+  ForbiddenException,
   NotFoundException,
   Param,
   ParseUUIDPipe,
   Post,
 } from '@nestjs/common';
-import { isAiReader, type AiReader } from '@poolse/rules';
+import { isAiReader, type AiReader, type PoolseModule } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole, type MemberRole } from '../tenant/roles.js';
-import { CoreRoute } from '../tenant/modules.js';
+import { CoreRoute, moduleIsOn } from '../tenant/modules.js';
 import { AiClaimRefusedError, claimRead, finishRead } from './ai-reads.repository.js';
 
 /**
@@ -25,6 +26,17 @@ const READER_ROLES: Record<AiReader, readonly MemberRole[]> = {
   water_report: ['owner', 'admin'],
   pdf_table: ['owner', 'admin', 'maintenance', 'instructor'],
   column_match: ['owner', 'admin'],
+};
+
+/**
+ * The module whose screen a reader serves, where it serves one. A module the
+ * club has switched off hides and refuses (POOLSE-87), so its reader must not
+ * spend a call whose result could not be saved. The ID, PDF table and column
+ * readers serve core screens.
+ */
+const READER_MODULE: Partial<Record<AiReader, PoolseModule>> = {
+  energy_invoice: 'energy',
+  water_report: 'water_quality',
 };
 
 /** Large enough for any one call; a figure past it is a bug or a lie. */
@@ -50,6 +62,10 @@ export class AiReadsController {
     if (!isAiReader(body.reader)) throw new BadRequestException({ fields: { reader: 'ai.error.reader' } });
     const reader = body.reader;
     requireRole(...READER_ROLES[reader]);
+    const module = READER_MODULE[reader];
+    if (module !== undefined && !moduleIsOn(module)) {
+      throw new ForbiddenException({ code: 'module_disabled', module });
+    }
     const { organizationId } = currentTenant();
     try {
       return await claimRead(organizationId, reader);

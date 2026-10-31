@@ -1,5 +1,6 @@
 'use server';
 
+import { readAiReaderGate } from '@/lib/ai-meter';
 import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiPost, type ImportResult } from '@/lib/api';
@@ -86,6 +87,9 @@ const READ_ERRORS: Record<ReadFailure, string> = {
 export async function matchSheet(sheet: Sheet): Promise<MatchResult> {
   const base = matchColumns(sheet);
   if (base.unmatched.length === 0 || !agentAvailable()) return base;
+  // The club's tick and the platform switch, read before the quota is spent:
+  // a club that never ticked the reader costs nothing at all (POOLSE-137).
+  if ((await readAiReaderGate('column_match')) !== null) return base;
   // An export of a 'use server' file is a public endpoint: the model is asked
   // only for somebody who may import the register, and within their quota.
   if ((await guardAiCall(AI_ROLES.students)) !== null) return base;

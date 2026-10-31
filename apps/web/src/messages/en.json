@@ -59,6 +59,7 @@
       "everyone": "Everyone",
       "empty": "There are no lessons in the next two weeks.",
       "backToAgenda": "Back to the agenda",
+      "backToLessons": "Back to the lessons",
       "alsoComing": "{count, plural, one {# of your children is in this lesson.} other {# of your children are in this lesson.}}",
       "planTitle": "Lesson plan",
       "noPlan": "The instructor has not written this lesson's plan yet.",

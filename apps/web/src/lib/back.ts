@@ -52,6 +52,8 @@ const APP_MODE_ROOT = '/app';
  * string in a URL, and wrong the moment somebody changes locale mid-journey.
  */
 const LABELS: readonly (readonly [string, string])[] = [
+  ['/app/familia/aulas', 'app.family.backToLessons'],
+  ['/app/familia', 'app.family.backToAgenda'],
   ['/app/aulas', 'app.teaching.backTo'],
   ['/app/manutencao', 'app.maintenance.backTo'],
   ['/dashboard/facilities/staff/vacations', 'vacations.backToVacations'],

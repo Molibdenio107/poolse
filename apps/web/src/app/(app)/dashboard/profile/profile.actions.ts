@@ -47,8 +47,15 @@ export async function saveProfileAction(
   _previous: ProfileState,
   form: FormData,
 ): Promise<ProfileState> {
-  const locale = text(form, 'locale');
-  const theme = text(form, 'theme');
+  // App mode's *O meu perfil* sets language and theme with their own rows
+  // (`PreferenceRows`), so its form carries neither: the save then sends what
+  // this browser shows now — its cookie — and only the snapshot from the page
+  // load if there is none, so a name saved a second after *Escuro* never puts
+  // the old theme back.
+  const store = await cookies();
+  const asked = form.has('theme');
+  const locale = text(form, 'locale') || store.get(LOCALE_COOKIE)?.value || text(form, 'localeNow');
+  const theme = text(form, 'theme') || store.get(THEME_COOKIE)?.value || text(form, 'themeNow');
 
   try {
     const saved = await apiPut<Me>('/me/profile', {
@@ -60,7 +67,6 @@ export async function saveProfileAction(
       theme,
     });
 
-    const store = await cookies();
     if (isLocale(saved.user.locale)) {
       store.set(LOCALE_COOKIE, saved.user.locale, localeCookieOptions);
     }
@@ -72,7 +78,7 @@ export async function saveProfileAction(
     // every page below it is now stale, not just this one.
     revalidatePath('/', 'layout');
 
-    return { ok: true, theme: saved.user.theme };
+    return asked ? { ok: true, theme: saved.user.theme } : { ok: true };
   } catch (error) {
     if (error instanceof ApiError && Object.keys(error.fields).length > 0) {
       return { ok: false, fields: error.fields };
@@ -99,6 +105,6 @@ export async function saveMessagePreferenceAction(
     return { ok: false, errorKey: 'profile.messages.failed' };
   }
   revalidatePath('/dashboard/profile');
-  revalidatePath('/app/perfil/conta');
+  revalidatePath('/app/perfil');
   return { ok: true };
 }

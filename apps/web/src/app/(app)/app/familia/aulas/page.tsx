@@ -37,7 +37,11 @@ export default async function FamilyLessons({
   const several = agenda.children.length > 1;
   const nameOf = new Map(agenda.children.map((one) => [one.id, one.name]));
 
-  const recent = await RecentLessons({ recent: agenda.recent, names: several && child === undefined ? nameOf : null });
+  const recent = await RecentLessons({
+    recent: agenda.recent,
+    names: several && child === undefined ? nameOf : null,
+    from: `/app/familia/aulas${query}`,
+  });
   const certificates =
     leaves.state === 'ok'
       ? await FamilyCertificates({

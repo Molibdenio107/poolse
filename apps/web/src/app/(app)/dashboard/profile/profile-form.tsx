@@ -128,8 +128,8 @@ export function ProfileForm({
 
       {!withPreferences && (
         <>
-          <input type="hidden" name="locale" value={me.user.locale} />
-          <input type="hidden" name="theme" value={me.user.theme} />
+          <input type="hidden" name="localeNow" value={me.user.locale} />
+          <input type="hidden" name="themeNow" value={me.user.theme} />
         </>
       )}
       {withPreferences && (

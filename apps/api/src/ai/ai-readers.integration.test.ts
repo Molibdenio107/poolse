@@ -173,6 +173,18 @@ test('QA 8: an instructor may not claim a bill read, and may claim a PDF table',
   });
 });
 
+test('a reader whose module the club switched off is refused before any call', async () => {
+  await withScratchTenant(async (tenant) => {
+    await tick(tenant, ['energy_invoice']);
+    await owner.query(`UPDATE organization SET disabled_modules = '{energy}' WHERE id = $1`, [tenant.organizationId]);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await expectStatus(() => meter.claim({ reader: 'energy_invoice' }), 403);
+    });
+    const { rows } = await owner.query('SELECT 1 FROM ai_read WHERE organization_id = $1', [tenant.organizationId]);
+    assert.equal(rows.length, 0, 'a refused claim writes nothing');
+  });
+});
+
 test('QA 9 + 11: an operator sets the ticks and cap, audited and alerted; an unpriced model costs —', async () => {
   await withScratchTenant(async (tenant) => {
     await asOperator(async (clerkUserId) => {

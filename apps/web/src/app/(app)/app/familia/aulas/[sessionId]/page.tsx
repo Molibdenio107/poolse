@@ -6,6 +6,7 @@ import { ArrowLeft, CalendarCheck, NotebookPen } from 'lucide-react';
 import { ApiError, apiFetch, type AppLesson } from '@/lib/api';
 import type { LessonPlan } from '../../../../dashboard/calendar/lesson-plan.actions';
 import { describeLoad } from '@/lib/load-failure';
+import { backTarget } from '@/lib/back';
 import { PageError } from '@/components/page-shell';
 import { EntryCard, dayHeading } from '../../agenda-parts';
 import { FeedbackPanel } from '../../feedback';
@@ -21,11 +22,16 @@ import { NoticeToggle } from '../../notice-toggle';
  */
 export default async function FamilyLesson({
   params,
+  searchParams,
 }: {
   params: Promise<{ sessionId: string }>;
+  searchParams: Promise<{ from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { sessionId } = await params;
+  // Voltar goes back to where the lesson was opened — Início or Aulas, with its
+  // child filter (POOLSE-91) — and to Início when it was opened from nowhere.
+  const back = backTarget((await searchParams).from, '/app/familia');
 
   let lesson: AppLesson;
   try {
@@ -45,11 +51,11 @@ export default async function FamilyLesson({
   return (
     <>
       <Link
-        href="/app/familia"
+        href={back.href}
         className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline coarse:-my-3 coarse:py-3 coarse:pr-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <ArrowLeft className="size-4" aria-hidden />
-        {t('app.family.backToAgenda')}
+        {t(back.labelKey)}
         <LinkBusy />
       </Link>
 

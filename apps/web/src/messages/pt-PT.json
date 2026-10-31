@@ -59,6 +59,7 @@
       "everyone": "Todos",
       "empty": "Não há aulas nas próximas duas semanas.",
       "backToAgenda": "Voltar à agenda",
+      "backToLessons": "Voltar às aulas",
       "alsoComing": "{count, plural, one {# dos seus educandos está nesta aula.} other {# dos seus educandos estão nesta aula.}}",
       "planTitle": "Plano da aula",
       "noPlan": "O professor ainda não escreveu o plano desta aula.",

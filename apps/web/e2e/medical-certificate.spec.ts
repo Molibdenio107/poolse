@@ -119,7 +119,8 @@ test.describe('a guardian in the app', () => {
   test.use({ storageState: GUARDIAN_SESSION, viewport: { width: 360, height: 740 } });
 
   test('QA 3 — sends the atestado for their own child, and is never offered another child’s leave', async ({ page }) => {
-    await visit(page, '/app/familia');
+    // On *Aulas* since POOLSE-140: an absence is about lessons.
+    await visit(page, '/app/familia/aulas');
     const section = page.locator('section', { has: page.getByRole('heading', { name: /atestados médicos|medical certificates/i }) });
     await expect(section).toBeVisible();
     await expect(section.getByRole('listitem')).toHaveCount(1);

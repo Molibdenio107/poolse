@@ -55,6 +55,8 @@ test('Hoje and Semana are one page; Perfil wears the home it was opened from', (
   assert.deepEqual(tabFor('/app/perfil', q(), ['teaching', 'family']), { hat: 'teaching', index: 2 });
   // Maintenance alone has no tabbed home, so Perfil has no bar to wear.
   assert.equal(tabFor('/app/perfil', q(), ['maintenance']), null);
+  // A home the reader does not have is ignored, never drawn.
+  assert.deepEqual(tabFor('/app/perfil', q('home=family'), ['teaching']), { hat: 'teaching', index: 2 });
 });
 
 test('the family has four tabs and the instructor three, Perfil last (Rui, 31-10-2026)', () => {

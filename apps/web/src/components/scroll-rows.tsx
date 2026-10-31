@@ -36,8 +36,11 @@ export function ScrollRows(): null {
     for (const row of rows) {
       const current = row.querySelector<HTMLElement>(CURRENT);
       if (current !== null && row.scrollWidth > row.clientWidth + 1) {
-        // Only the row moves, never the page.
-        const left = current.offsetLeft - row.offsetLeft - (row.clientWidth - current.offsetWidth) / 2;
+        // Only the row moves, never the page. Measured on screen rather than by
+        // offsetLeft, which is relative to whichever ancestor is positioned —
+        // the row itself for the top bar's sections, the page for a tab list.
+        const offset = current.getBoundingClientRect().left - row.getBoundingClientRect().left + row.scrollLeft;
+        const left = offset - (row.clientWidth - current.offsetWidth) / 2;
         row.scrollLeft = Math.max(0, left);
       }
       mark(row);
