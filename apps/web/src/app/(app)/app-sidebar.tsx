@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -103,8 +103,10 @@ export function AppSidebar({
     // Poolse mark; a hairline rather than a border on the right.
     <aside className="hidden bg-surface shadow-hairline-r md:sticky md:top-app-bar md:block md:h-[calc(100dvh-3.5rem-var(--safe-top))] md:w-60 md:shrink-0">
       <div className="flex h-full flex-col overflow-y-auto px-2.5 py-4">
-        {section !== null && section !== 'site' && <SportHeader sport={section} />}
-        <SidebarNav sections={itemsOf(sections, section)} pathname={pathname} badges={badges} sport={sport} />
+        <SectionFade section={section}>
+          {section !== null && section !== 'site' && <SportHeader sport={section} />}
+          <SidebarNav sections={itemsOf(sections, section)} pathname={pathname} badges={badges} sport={sport} />
+        </SectionFade>
       </div>
     </aside>
   );
@@ -160,27 +162,73 @@ function SportHeader({ sport }: { sport: PoolseSport }): React.ReactElement {
   );
 }
 
+/** The club, as the first section shows it: its logo if it has one, and its name. */
+export interface ClubBrand {
+  name: string | null;
+  logoFileId: string | null;
+}
+
+/** The club's logo and name — the brand slot's own content (POOLSE-139). */
+function ClubIdentity({ club }: { club: ClubBrand }): React.ReactElement {
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      {club.logoFileId !== null && (
+        // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id
+        <img src={`/files/${club.logoFileId}`} alt="" className="h-8 w-auto max-w-32 object-contain" />
+      )}
+      {club.name !== null && <span className="truncate text-sm font-medium">{club.name}</span>}
+    </span>
+  );
+}
+
 /**
- * The section tabs: in the top bar's middle on a desk (`placement="bar"`), and
- * as a row at the top of the phone's menu sheet (`placement="menu"`). Links, so
- * they work before hydration. The current one carries `aria-current` and a 3 px
- * bar — the primary under *Instalação*, the sport's colour under a sport, whose
- * tab also takes its wash. A section that is not current carries the attention
- * dot when something inside it needs doing (POOLSE-120).
+ * The section tabs: in the top bar on a desk (`placement="bar"`), and as a row
+ * at the top of the phone's menu sheet (`placement="menu"`). Links, so they
+ * work before hydration. The first section is the club itself — its logo and
+ * its name (Rui, 31-10-2026), then a tab per sport with its icon and name.
+ *
+ * The current one carries `aria-current`. In the bar its 3 px underline is one
+ * element that slides to the tab you chose and takes its colour — the primary
+ * under the club, the sport's own under a sport — and a sport's tab fades into
+ * its wash (Rui, 31-10-2026: "the transitions should be smooth"). The bar lives
+ * in the layout, which stays mounted between pages, so the line moves from the
+ * old tab rather than appearing under the new one. Reduced motion: it jumps.
+ *
+ * A section that is not current carries the attention dot when something inside
+ * it needs doing (POOLSE-120).
  */
 function SectionLinks({
   sections,
   section,
   badges,
   placement,
+  club,
 }: {
   sections: Item[];
   section: NavSection | null;
   badges: Badges;
   placement: 'bar' | 'menu';
+  club: ClubBrand;
 }): React.ReactElement | null {
   const t = useTranslations();
   const groups = groupsOf(sections);
+  const row = useRef<HTMLElement>(null);
+  const [line, setLine] = useState<{ left: number; width: number; animate: boolean } | null>(null);
+  // The tab just clicked, so the line leaves at the click rather than when the
+  // next page has arrived; forgotten once the address says which section it is.
+  const [chosen, setChosen] = useState<NavSection | null>(null);
+  useEffect(() => setChosen(null), [section]);
+  const target = chosen ?? section;
+
+  // Measure the target tab whenever it changes; animate every move but the
+  // first, so a page load draws the line in place.
+  useLayoutEffect(() => {
+    if (placement !== 'bar' || row.current === null || target === null) return;
+    const tab = row.current.querySelector<HTMLElement>(`[data-section='${target}']`);
+    if (tab === null) return;
+    setLine((before) => ({ left: tab.offsetLeft, width: tab.offsetWidth, animate: before !== null }));
+  }, [target, placement, club.name]);
+
   if (section === null || groups.length === 0) return null;
   const site = sections.filter((item) => item.sport === undefined);
   const waiting = (items: Item[]): number =>
@@ -188,6 +236,7 @@ function SectionLinks({
       (sum, item) => sum + (item.badge === undefined ? 0 : (badges[item.badge] ?? 0)) + childCount(item, badges),
       0,
     );
+  const lineSport = target === 'site' || target === null ? null : target;
 
   const tab = (
     key: string,
@@ -201,22 +250,27 @@ function SectionLinks({
     <Link
       key={key}
       href={href}
+      data-section={key}
+      onClick={() => setChosen(key as NavSection)}
       aria-current={current ? 'page' : undefined}
       {...(sport === null ? {} : { 'data-sport': sport })}
       className={cn(
-        'relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap px-3 text-[13px] transition-colors',
+        'relative inline-flex min-w-0 shrink-0 items-center gap-2 whitespace-nowrap px-3 text-[13px]',
+        'transition-[background-color,color] duration-300 ease-out motion-reduce:transition-none',
         'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary',
         placement === 'menu' ? 'min-h-11 rounded-sm' : 'h-full',
         current ? 'font-semibold text-foreground' : 'font-medium text-foreground-muted hover:text-foreground',
         current && sport !== null && 'bg-[rgb(var(--sport-wash)/var(--wash-a))]',
-        current &&
+        // The phone's row keeps a bar under each current tab; the desk's slides (below).
+        placement === 'menu' &&
+          current &&
           (sport === null
             ? 'after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:bg-primary'
             : 'after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:bg-[rgb(var(--sport-wash))]'),
       )}
     >
       {icon}
-      {label}
+      <span className={cn(sport === null && 'max-w-[14rem] truncate')}>{label}</span>
       {!current && dot > 0 && (
         <span className="attention-dot">
           <span className="sr-only">{t('attention.menuBadge', { count: dot })}</span>
@@ -226,16 +280,33 @@ function SectionLinks({
     </Link>
   );
 
+  const clubIcon =
+    club.logoFileId !== null ? (
+      // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id
+      <img src={`/files/${club.logoFileId}`} alt="" className="size-5 shrink-0 rounded-sm object-contain" />
+    ) : (
+      <SiteIcon />
+    );
+
   return (
     <nav
+      ref={row}
       aria-label={t('nav.sections')}
       data-scroll-row
       className={cn(
-        'flex items-stretch',
+        'relative flex items-stretch',
         placement === 'bar' ? 'h-full min-w-0 overflow-x-auto' : 'mb-3 flex-wrap gap-1 border-b border-border pb-2',
       )}
     >
-      {tab('site', '/dashboard', t('nav.site'), <SiteIcon />, section === 'site', null, section === 'site' ? 0 : waiting(site))}
+      {tab(
+        'site',
+        '/dashboard',
+        club.name ?? t('nav.site'),
+        clubIcon,
+        section === 'site',
+        null,
+        section === 'site' ? 0 : waiting(site),
+      )}
       <span aria-hidden className={cn('w-px shrink-0 self-center bg-foreground/10', placement === 'bar' ? 'mx-1 h-5' : 'hidden')} />
       {groups.map((group) =>
         tab(
@@ -248,29 +319,57 @@ function SectionLinks({
           section === group.sport ? 0 : waiting(group.children ?? []),
         ),
       )}
+      {placement === 'bar' && line !== null && (
+        <span
+          aria-hidden
+          {...(lineSport === null ? {} : { 'data-sport': lineSport })}
+          className={cn(
+            'pointer-events-none absolute bottom-0 h-[3px]',
+            lineSport === null ? 'bg-primary' : 'bg-[rgb(var(--sport-wash))]',
+            line.animate && 'transition-[left,width,background-color] duration-300 ease-out motion-reduce:transition-none',
+          )}
+          style={{ left: line.left, width: line.width }}
+        />
+      )}
     </nav>
   );
 }
 
-/** The top bar's sections — POOLSE-141. Nothing for a club with one sport. */
-export function SectionTabs({
+/**
+ * The top bar's left half after Poolse's mark — POOLSE-141 (Rui, 31-10-2026).
+ * With two or more sports, on a desk: the sections, the club being the first
+ * of them. Otherwise — one sport, or a phone, whose sections are in the menu
+ * sheet — the club's logo and name, as POOLSE-139 put them.
+ */
+export function ClubBrandOrSections({
   roles,
   kind,
   modules,
   sports = [BASE_SPORT],
   badges = {},
+  club,
 }: {
   roles: readonly string[];
   kind: OrganizationKind;
   modules: readonly PoolseModule[];
   sports?: readonly PoolseSport[];
   badges?: Badges;
-}): React.ReactElement | null {
+  club: ClubBrand;
+}): React.ReactElement {
   const pathname = usePathname();
   const sport = useCurrentSport(sports);
   const sections = visibleSections({ roles, kind, modules, sports });
+  const section = sectionOf(sections, pathname, sport);
+  if (section === null) return <ClubIdentity club={club} />;
   return (
-    <SectionLinks sections={sections} section={sectionOf(sections, pathname, sport)} badges={badges} placement="bar" />
+    <>
+      <span className="contents md:hidden">
+        <ClubIdentity club={club} />
+      </span>
+      <div className="hidden min-w-0 self-stretch md:ml-4 md:flex">
+        <SectionLinks sections={sections} section={section} badges={badges} placement="bar" club={club} />
+      </div>
+    </>
   );
 }
 
@@ -299,6 +398,30 @@ export function SportShell({
   const washed = section !== null && section !== 'site';
   return (
     <div {...(washed ? { 'data-sport': section } : {})} className={cn(className, washed && 'sport-shell')}>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * The sidebar's list for a section, faded in when the section changes and only
+ * then (Rui, 31-10-2026): a page load or a move inside one section draws it
+ * still, because a list that animates on every click is a list that flickers.
+ */
+function SectionFade({ section, children }: { section: NavSection | null; children: React.ReactNode }): React.ReactElement {
+  // Once the section has changed, every later remount (the key below) fades in,
+  // the way back to the first section included.
+  const seen = useRef<{ last: NavSection | null; moved: boolean }>({ last: section, moved: false });
+  if (seen.current.last !== section) seen.current = { last: section, moved: true };
+  const moved = seen.current.moved;
+  return (
+    <div
+      key={section ?? 'all'}
+      className={cn(
+        'flex flex-1 flex-col',
+        moved && 'duration-300 ease-out animate-in fade-in slide-in-from-left-1 motion-reduce:animate-none',
+      )}
+    >
       {children}
     </div>
   );
@@ -358,12 +481,14 @@ export function MobileMenu({
   modules,
   sports = [BASE_SPORT],
   badges = {},
+  club = { name: null, logoFileId: null },
 }: {
   roles: readonly string[];
   kind: OrganizationKind;
   modules: readonly PoolseModule[];
   sports?: readonly PoolseSport[];
   badges?: Badges;
+  club?: ClubBrand;
 }): React.ReactElement {
   const t = useTranslations();
   const pathname = usePathname();
@@ -394,7 +519,7 @@ export function MobileMenu({
         placement="start"
       >
         {/* POOLSE-141: with two sports, the sections first, then the current one's entries. */}
-        <SectionLinks sections={sections} section={section} badges={badges} placement="menu" />
+        <SectionLinks sections={sections} section={section} badges={badges} placement="menu" club={club} />
         {section !== null && section !== 'site' && <SportHeader sport={section} />}
         <SidebarNav
           sections={itemsOf(sections, section)}

@@ -5,7 +5,7 @@ import { LinkBusy } from '@/components/link-busy';
 import { LogoMark } from '@/components/logo-mark';
 import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
 import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
-import { AppSidebar, MobileMenu, SectionTabs, SportShell, type Badges } from '../app-sidebar';
+import { AppSidebar, ClubBrandOrSections, MobileMenu, SportShell, type Badges } from '../app-sidebar';
 import type { SubscriptionAlertView } from '@/lib/subscription-alert';
 import { modulesOf } from '@/lib/modules';
 import { PreferenceControls } from '../preference-controls';
@@ -243,13 +243,23 @@ export default async function DashboardLayout({
           and name at their own size, because that part of the corner belongs to
           the customer. The logo is set under Faturação → Definições (12 October 2026).
         */}
-        <div className="flex min-w-0 items-center gap-2">
-          <MobileMenu roles={roles} kind={kind} modules={modules} sports={sports} badges={badges} />
+        <div className="flex min-w-0 flex-1 items-center gap-2 self-stretch">
+          <MobileMenu
+            roles={roles}
+            kind={kind}
+            modules={modules}
+            sports={sports}
+            badges={badges}
+            club={{ name: organizationName, logoFileId }}
+          />
           {/*
             Poolse's mark, moved here from the top of the sidebar — POOLSE-139,
             the handoff's top bar. The club's own logo and name keep their place
             right beside it, at their own size: that part of the corner is still
             the customer's. Not on a phone, where the club's name needs the room.
+            With two sports, on a desk, the club becomes the first section tab
+            instead and the sports follow it, left-aligned (POOLSE-141, Rui
+            31-10-2026).
           */}
           <Link href="/dashboard" className="hidden shrink-0 items-center gap-2 sm:flex" aria-label={t('app.name')}>
             <LogoMark />
@@ -257,18 +267,14 @@ export default async function DashboardLayout({
             <LinkBusy />
           </Link>
           <span aria-hidden className="hidden h-5 w-px bg-foreground/10 sm:block" />
-          {logoFileId !== null && (
-            // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id
-            <img src={`/files/${logoFileId}`} alt="" className="h-8 w-auto max-w-32 object-contain" />
-          )}
-          {organizationName !== null && (
-            <span className="truncate text-sm font-medium">{organizationName}</span>
-          )}
-        </div>
-
-        {/* POOLSE-141: Instalação and a tab per sport, only with two or more sports. */}
-        <div className="hidden min-w-0 flex-1 self-stretch justify-center md:flex">
-          <SectionTabs roles={roles} kind={kind} modules={modules} sports={sports} badges={badges} />
+          <ClubBrandOrSections
+            roles={roles}
+            kind={kind}
+            modules={modules}
+            sports={sports}
+            badges={badges}
+            club={{ name: organizationName, logoFileId }}
+          />
         </div>
 
         <div className="flex items-center gap-3">

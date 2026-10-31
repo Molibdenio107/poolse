@@ -328,8 +328,13 @@ Every verdict is the existing one: `excursions`/`resolveBands`, `gradeLabResult`
 
 ## Sections for a club with two sports — POOLSE-141 (31 October 2026)
 
-- With two or more sports on, the top bar's middle carries *Instalação* and one tab per sport
-  (`SectionTabs` in `app-sidebar.tsx`). A sport's own pages (its *Turmas* and *Calendário*,
+- With two or more sports on, the top bar carries the club's own tab and one tab per sport,
+  left-aligned after Poolse's mark (`ClubBrandOrSections` in `app-sidebar.tsx`). The club's tab is
+  its logo (else a building) and its name, and it replaces the logo and name that otherwise sit
+  beside the mark (Rui, 31-10-2026); on a phone and with one sport they stay where they were.
+  The underline is one bar that slides to the clicked tab at the click and takes its colour; the
+  sidebar's list fades in on a change of section, never on a page load; reduced motion jumps.
+  A sport's own pages (its *Turmas* and *Calendário*,
   POOLSE-125's groups, `?sport=`) are that sport's section; every other page is *Instalação*.
   Derived from the address (`sectionOf`), never stored.
 - The sidebar lists only the current section: the shared pages, or the sport's header (its
