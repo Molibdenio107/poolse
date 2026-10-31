@@ -80,7 +80,7 @@ export default async function EmailPreferencePage({
           {(lang === 'en' || lang === 'pt') && <input type="hidden" name="lang" value={lang} />}
           <button
             type="submit"
-            className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground hover:bg-primary/90"
+            className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground hover:bg-primary/90 font-semibold"
           >
             {t(page.optedOut ? 'emailPreference.optIn' : 'emailPreference.optOut')}
           </button>

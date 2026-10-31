@@ -264,7 +264,7 @@ export function MessageComposer({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted bg-surface shadow-card"
               >
                 {t('common.cancel')}
               </button>

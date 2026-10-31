@@ -565,7 +565,7 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
       <button
         type="button"
         onClick={() => onPick({ ...BLANK, name: query.trim() })}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
       >
         <UserPlus className="size-4" aria-hidden />
         {t('students.guardianAddNew')}

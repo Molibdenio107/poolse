@@ -398,7 +398,7 @@ function OverrideDialog({
         >
           {t('skills.overrideConfirm')}
         </button>
-        <button type="button" onClick={onCancel} className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border">
+        <button type="button" onClick={onCancel} className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-surface shadow-card">
           {t('common.cancel')}
         </button>
       </div>

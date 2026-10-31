@@ -61,7 +61,7 @@ export default async function ReceptionPage({
                 className={
                   site.id === chosen.id
                     ? 'inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground'
-                    : 'inline-flex h-control items-center justify-center rounded-sm border border-border px-4 text-control hover:bg-surface-muted'
+                    : 'inline-flex h-control items-center justify-center rounded-sm px-4 text-control hover:bg-surface-muted bg-surface shadow-card'
                 }
               >
                 {site.name}

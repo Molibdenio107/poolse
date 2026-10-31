@@ -739,7 +739,7 @@ export function CalendarWeek({
                     type="button"
                     disabled={busy || partnerDays.length === 0}
                     onClick={() => void placePartner()}
-                    className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {t('partnerDays.place', { count: partnerDays.length })}
                   </button>

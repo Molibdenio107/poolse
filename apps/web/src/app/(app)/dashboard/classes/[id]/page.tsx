@@ -111,7 +111,7 @@ export default async function ClassPage({
         loaded.canMarkSkills && (
         <FromLink
           href={`/dashboard/classes/${id}/skills`}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded-sm border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
         >
           {t('skills.title')}
         </FromLink>

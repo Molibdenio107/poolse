@@ -652,7 +652,7 @@ function WeekLink({ week, label }: { week: string; label: string }): React.React
   return (
     <FromLink
       href={`/dashboard/calendar?week=${week}`}
-      className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
     >
       {label}
     </FromLink>

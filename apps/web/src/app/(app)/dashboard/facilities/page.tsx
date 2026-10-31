@@ -91,7 +91,7 @@ export default async function FacilitiesPage({
             ) : (
               <FromLink
                 href="/dashboard/facilities/new"
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-border hover:bg-surface-muted"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm hover:bg-surface-muted bg-surface shadow-card"
               >
                 {t('facilities.addSite')}
               </FromLink>
@@ -177,7 +177,7 @@ export default async function FacilitiesPage({
                       <FromLink
                         href={`/dashboard/facilities/${facility.id}`}
                         aria-label={t('facilities.openSite', { name: facility.name })}
-                        className="inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border px-4 text-control hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        className="inline-flex h-control items-center justify-center gap-2 rounded-sm px-4 text-control hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
                       >
                         {t('facilities.open')}
                       </FromLink>
@@ -266,7 +266,7 @@ export default async function FacilitiesPage({
                 {data.canManage && (
                   <FromLink
                     href={`/dashboard/facilities/pools/new?facilityId=${facility.id}`}
-                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-border hover:bg-surface-muted"
+                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm hover:bg-surface-muted bg-surface shadow-card"
                   >
                     {t('facilities.addPool')}
                   </FromLink>

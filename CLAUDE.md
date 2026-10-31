@@ -383,7 +383,7 @@ refusals go here too**, rather than into a bar above a grid that is taller than 
 
 **Something slow says so in the corner, and the signal comes from where the work starts.** POOLSE-98. `lib/busy.ts` is the store (`beginBusy`/`endBusy`, `useBusyWhile`, `trackBusy`) and `BusyIndicator` in the `(app)` layout is the one corner: past 400 ms, at least 300 ms. `useSavedAction` and `FromLink` (through `LinkBusy`) already report, so a new form or link needs nothing; a plain `Link` under `(app)` carries `<LinkBusy />`, a file the app serves is a `DownloadLink`, and a bar stuck to the bottom of the screen carries `data-bottom-bar`. `docs/features/loading.md`.
 
-**The look is tokens, from the design handoff** (POOLSE-138, `docs/features/look.md`). Poppins headings by element, Montserrat body, Quicksand in app mode, all from `lib/fonts.ts` on `<body>`. A card is `rounded bg-surface shadow-card` — no border; dark mode draws its hairline from `.dark .shadow-card` — and a list, table wrapper, fieldset or drop zone keeps its border. A control is `rounded-sm` (2 px), a card `rounded` (4 px), a lesson block `rounded-chip` (6 px). Sport washes exist and stay off until a page sets `data-sport`.
+**The look is tokens, from the design handoff** (POOLSE-138, `docs/features/look.md`). Poppins headings by element, Montserrat body, Quicksand in app mode, all from `lib/fonts.ts` on `<body>`. A card is `rounded bg-surface shadow-card` — no border; dark mode draws its hairline from `.dark .shadow-card` — and a list, table wrapper, fieldset or drop zone keeps its border. A control is `rounded-sm` (2 px), a card `rounded` (4 px), a lesson block `rounded-chip` (6 px). Sport washes exist and stay off until a page sets `data-sport`. **The frame is the handoff's (POOLSE-139):** a full-width top bar (Poolse's `LogoMark`, then the club's own logo and name) above the sidebar, hairlines (`shadow-hairline-b` / `-r`) instead of borders, 38 px sidebar rows, 30 px page titles; a secondary button is `bg-surface shadow-card` with no border, a primary one 600. Control height and text size are unchanged.
 
 **Every button and every form control is one size: `h-control` (36px) and `text-control` (15px).** Rui's call, 11 October 2026 — inputs, selects, tab pills and every button, row actions included, `inline-flex h-control items-center justify-center px-4 text-control`; colour and border vary, size does not. Field labels stay `text-sm`. The only exceptions are icon-only buttons (a close X, the calendar block's ⋯), which are small squares because they sit inside tight spaces. A new button that invents `px-2 py-1 text-xs` is the drift this rule was written to undo.
 
@@ -1043,11 +1043,14 @@ calendar mounts one per day-and-lane (168) and derives the minute from the point
 Drag state changes on the *snapped* value, so a render happens once per step rather than
 once per frame, and every transition is off while a drag is live.
 
-**Eight level tints, solid, measured in both themes.** `--level-1…8` plus `--level-none` in
-`globals.css`. Solid blocks with white text rather than a wash of the surface: the same eight
-hues washed at 15% sit ΔE 4.5 apart, which is about one just-noticeable difference and means
-the colour is doing no work. Solid they are ΔE 26.7 apart, white text is ≥4.6:1, and the dark
-set is solved against the dark card rather than being the light set at another opacity.
+**Eight level tints, measured in both themes, and always shown at full strength somewhere.** `--level-1…8` plus `--level-none` in
+`globals.css`. Washed at 15% the eight hues sit ΔE 4.5 apart — about one just-noticeable
+difference — so a wash alone does no work; solid they are ΔE 26.7 apart. **Since POOLSE-139
+(Rui, 31-10-2026, reversing solid fills) a calendar block is the handoff's chip** — the tint at
+16% over the card with ink text (`.lesson-chip` + `lesson-tint-N`, from `chipClass()`), and
+the tint at full strength as a 3 px left bar, so levels side by side still differ. Legend
+swatches stay solid (`tintClass`). A partnership's block keeps its own colour and `inkFor` text.
+The dark set is solved against the dark card rather than being the light set at another opacity.
 **`--person-1…6` is the same idea for the vacation team map** and was six hex literals until
 23-09-2026, three of them carrying white text below AA — a hex literal in a component is the one
 thing `contrast:check` cannot see, because it reads the tokens. **A new fill earns a line in that

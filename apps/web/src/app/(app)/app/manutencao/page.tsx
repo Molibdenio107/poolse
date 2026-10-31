@@ -39,7 +39,7 @@ export default async function MaintenanceHomePage(): Promise<React.ReactElement>
         <h1 className="text-xl font-semibold tracking-tight">{t('app.maintenance.title')}</h1>
         <Link
           href="/app/manutencao/reportar"
-          className="inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border bg-surface px-4 text-control font-medium hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-surface px-4 text-control font-medium hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary shadow-card"
         >
           <Plus className="size-4" aria-hidden />
           {t('app.maintenance.report')}
@@ -155,7 +155,7 @@ export default async function MaintenanceHomePage(): Promise<React.ReactElement>
               <li key={pool.id}>
                 <Link
                   href={`/dashboard/facilities/pools/${pool.id}?tab=water&from=${encodeURIComponent('/app/manutencao')}`}
-                  className="flex min-h-control items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2 hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  className="flex min-h-control items-center justify-between gap-3 rounded-lg bg-surface px-3 py-2 hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary shadow-card"
                 >
                   <span className="flex flex-col">
                     <span className="font-medium">{pool.name}</span>

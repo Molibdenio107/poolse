@@ -15,7 +15,7 @@ const INITIAL: FormState = { ok: false };
 const PRIMARY =
   'inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60';
 const BUTTON =
-  'inline-flex h-control items-center justify-center rounded-sm border border-border px-4 text-control hover:bg-surface-muted disabled:opacity-60';
+  'inline-flex h-control items-center justify-center rounded-sm px-4 text-control hover:bg-surface-muted disabled:opacity-60 bg-surface shadow-card';
 
 /**
  * Publish a new version — POOLSE-73. Seeded with the version in force, because

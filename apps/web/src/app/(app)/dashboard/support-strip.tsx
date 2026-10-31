@@ -59,7 +59,7 @@ export function SupportSessionBanner({
         <button
           type="submit"
           disabled={ending}
-          className={`${BUTTON} border-primary bg-primary text-primary-foreground hover:bg-primary/90`}
+          className={`${BUTTON} border-primary bg-primary text-primary-foreground hover:bg-primary/90 font-semibold`}
         >
           {ending ? t('common.working') : t('support.endNow')}
         </button>

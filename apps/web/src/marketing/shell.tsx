@@ -60,7 +60,7 @@ export function MarketingShell({
             />
             <Link
               href="/sign-in"
-              className="inline-flex h-control items-center justify-center px-4 text-control rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary border border-border hover:bg-surface-muted"
+              className="inline-flex h-control items-center justify-center px-4 text-control rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary hover:bg-surface-muted bg-surface shadow-card"
             >
               {t('auth.signIn')}
             </Link>

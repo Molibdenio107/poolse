@@ -144,7 +144,7 @@ export function PageShell({
               <Header title={title} subtitle={subtitle} actions={actions} subtitleBelowOnPhone={width !== 'wide'} />
             </div>
             {subtitle !== undefined && width !== 'wide' && (
-              <p className="-mt-page-gap pt-1 text-sm text-foreground-muted md:hidden">{subtitle}</p>
+              <p className="-mt-page-gap pt-1 text-[13px] text-foreground-muted md:hidden">{subtitle}</p>
             )}
           </>
         ) : (
@@ -191,11 +191,11 @@ function Header({
           has to be allowed to be long without making this page taller than the
           one beside it.
         */}
-        <h1 className="line-clamp-1 text-xl font-semibold tracking-tight md:line-clamp-2 md:text-2xl">
+        <h1 className="line-clamp-1 text-[22px] font-semibold leading-snug tracking-tight md:line-clamp-2 md:text-[30px]">
           {title}
         </h1>
         {subtitle !== undefined && (
-          <p className={cn('line-clamp-2 text-sm text-foreground-muted', subtitleBelowOnPhone && 'max-md:hidden')}>
+          <p className={cn('line-clamp-2 text-[13px] text-foreground-muted', subtitleBelowOnPhone && 'max-md:hidden')}>
             {subtitle}
           </p>
         )}

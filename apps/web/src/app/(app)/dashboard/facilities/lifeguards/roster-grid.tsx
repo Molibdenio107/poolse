@@ -223,7 +223,7 @@ export function RosterGrid({
           disabled={phoneIndex <= 0}
           onClick={() => setPhoneDay(days[phoneIndex - 1]!)}
           aria-label={t('roster.previousDay')}
-          className="inline-flex h-control w-control items-center justify-center rounded-sm border border-border disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control w-control items-center justify-center rounded-sm disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
         >
           <ChevronLeft aria-hidden className="size-4" />
         </button>
@@ -236,7 +236,7 @@ export function RosterGrid({
           disabled={phoneIndex >= days.length - 1}
           onClick={() => setPhoneDay(days[phoneIndex + 1]!)}
           aria-label={t('roster.nextDay')}
-          className="inline-flex h-control w-control items-center justify-center rounded-sm border border-border disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control w-control items-center justify-center rounded-sm disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
         >
           <ChevronRight aria-hidden className="size-4" />
         </button>

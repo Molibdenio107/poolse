@@ -136,7 +136,7 @@ export default async function PeoplePage({
       back={backProp(back, t)}
       actions={<FromLink
           href="/dashboard/facilities/staff/duplicates"
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded-sm border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
         >
           {t('people.duplicates')}
         </FromLink>}
@@ -283,7 +283,7 @@ export default async function PeoplePage({
                 <p className="text-sm text-foreground-muted">{t('search.noResultsHint')}</p>
                 <FromLink
                   href={role === null ? '/dashboard/facilities/staff' : `/dashboard/facilities/staff?role=${role}`}
-                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
                 >
                   {t('search.clearSearch')}
                 </FromLink>

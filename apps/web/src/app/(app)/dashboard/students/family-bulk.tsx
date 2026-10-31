@@ -99,7 +99,7 @@ export function FamilyBulkInvite({ search, levelId }: { search: string; levelId:
               <button
                 type="submit"
                 disabled={sending || over || figures.byEmail === 0}
-                className={`${BUTTON} bg-primary text-primary-foreground hover:bg-primary/90`}
+                className={`${BUTTON} bg-primary text-primary-foreground hover:bg-primary/90 font-semibold`}
               >
                 {sending ? t('common.working') : t('familyBulk.send', { count: figures.byEmail })}
               </button>

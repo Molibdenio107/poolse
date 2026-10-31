@@ -285,7 +285,7 @@ export function Reinvite({
           <button
             type="submit"
             disabled={cancelling}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm disabled:opacity-60 bg-surface shadow-card"
           >
             {cancelling ? t('common.working') : t('staff.reinviteCancel')}
           </button>
@@ -304,7 +304,7 @@ export function Reinvite({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
         >
           {t('staff.reinvite')}
         </button>
@@ -344,7 +344,7 @@ export function Reinvite({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-surface shadow-card"
         >
           {t('common.cancel')}
         </button>

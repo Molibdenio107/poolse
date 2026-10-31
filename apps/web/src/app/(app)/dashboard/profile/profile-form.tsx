@@ -107,7 +107,7 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
           <button
             type="button"
             onClick={() => openUserProfile()}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border transition-colors hover:border-primary/50 hover:text-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm transition-colors hover:border-primary/50 hover:text-primary bg-surface shadow-card"
           >
             {t('profile.changeEmail')}
           </button>

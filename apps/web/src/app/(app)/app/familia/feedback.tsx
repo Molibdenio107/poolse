@@ -102,7 +102,7 @@ export async function RecentLessons({
             <li key={`${lesson.sessionId}-${lesson.studentId}`}>
               <Link
                 href={`/app/familia/aulas/${lesson.sessionId}`}
-                className="flex min-h-control items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2 hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="flex min-h-control items-center justify-between gap-3 rounded-lg bg-surface px-3 py-2 hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary shadow-card"
               >
                 <span className="flex min-w-0 flex-col">
                   <span className="font-medium">

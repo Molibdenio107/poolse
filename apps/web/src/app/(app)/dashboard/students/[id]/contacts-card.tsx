@@ -74,7 +74,7 @@ export async function ContactsCard({
                 <a
                   href={`mailto:${person.email}`}
                   aria-label={t('students.emailName', { name: person.name })}
-                  className="inline-flex h-control min-w-0 max-w-full items-center justify-center px-4 text-control gap-1.5 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+                  className="inline-flex h-control min-w-0 max-w-full items-center justify-center px-4 text-control gap-1.5 rounded-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary bg-surface shadow-card"
                 >
                   <Mail className="size-4 shrink-0" aria-hidden />
                   <span className="truncate">{person.email}</span>

@@ -117,7 +117,7 @@ export function OutstandingList({
             type="button"
             disabled={ticked.size === 0}
             onClick={() => setReminding(true)}
-            className="inline-flex min-h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 py-1 text-control text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+            className="inline-flex min-h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 py-1 text-control text-primary-foreground hover:bg-primary/90 disabled:opacity-60 font-semibold"
           >
             <Mail aria-hidden className="size-4" />
             {t('invoices.reminders.open', { count: ticked.size })}

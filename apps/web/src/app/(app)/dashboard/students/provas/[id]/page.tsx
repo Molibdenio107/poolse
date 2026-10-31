@@ -72,7 +72,7 @@ export default async function MeetPage({
             href={`/dashboard/students/provas/${meet.id}/print?print=1`}
             target="_blank"
             rel="noopener"
-            className="inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border px-4 text-control transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center gap-2 rounded-sm px-4 text-control transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
           >
             <Printer aria-hidden className="size-4" />
             {t('meets.print.button')}

@@ -234,7 +234,7 @@ export function QualificationsPanel({
                     type="button"
                     disabled={pending}
                     onClick={() => archive(record.id)}
-                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted disabled:opacity-60"
+                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted disabled:opacity-60 bg-surface shadow-card"
                   >
                     {t('qualifications.archive')}
                   </button>

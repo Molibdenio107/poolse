@@ -20,7 +20,7 @@ import {
 const INITIAL: FormState = { ok: false };
 
 const BUTTON =
-  'inline-flex h-control items-center justify-center rounded-sm border border-border px-4 text-control hover:bg-surface-muted';
+  'inline-flex h-control items-center justify-center rounded-sm px-4 text-control hover:bg-surface-muted bg-surface shadow-card';
 const PRIMARY =
   'inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60';
 

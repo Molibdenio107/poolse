@@ -217,7 +217,7 @@ export function TurmaPicker({
             type="button"
             onClick={reopen}
             aria-label={t('turmaPicker.changeLabel', { name: chosen.name })}
-            className="inline-flex h-control items-center justify-center rounded-sm border border-border px-4 text-control hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center rounded-sm px-4 text-control hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
           >
             {t('turmaPicker.change')}
           </button>

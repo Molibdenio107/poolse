@@ -1,4 +1,8 @@
 import * as Sentry from '@sentry/nextjs';
+import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
+import { LinkBusy } from '@/components/link-busy';
+import { LogoMark } from '@/components/logo-mark';
 import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
 import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import { AppSidebar, MobileMenu, type Badges } from '../app-sidebar';
@@ -195,6 +199,8 @@ export default async function DashboardLayout({
   // A support window that ended, with this browser still pointed at its club.
   if (clubGone) return <SupportEndedNotice />;
 
+  const t = await getTranslations();
+
   const [badges, subscription] =
     suspended === null ? await Promise.all([menuBadges(roles, modules), subscriptionWarning(roles)]) : [{}, null];
 
@@ -221,75 +227,95 @@ export default async function DashboardLayout({
 
   return (
     // POOLSE-88: clear of a landscape phone's rounded corners and notch.
-    <div className="flex min-h-dvh flex-col pl-safe-left pr-safe-right md:flex-row">
+    <div className="flex min-h-dvh flex-col pl-safe-left pr-safe-right">
       {/*
-        Hidden on paper - round 4. The water-quality report is a real document
-        an operator sends to the camara, and a printout with the navigation and
-        the avatar menu down the side is not one. Nothing else in the app is
-        printed today; when something is, it inherits this for free.
+        The handoff's shell — POOLSE-139: the top bar spans the window and the
+        sidebar starts beneath it. Still sticky at the top, still `h-app-bar`,
+        so every `top-app-bar` offset below it is unchanged.
       */}
-      <div className="contents print:hidden">
-        <AppSidebar roles={roles} kind={kind} modules={modules} sports={sports} badges={badges} />
-      </div>
-
       {/*
-        `min-w-0` is not decoration. Without it a flex child refuses to shrink
-        below its content, and one wide table anywhere in the app pushes the
-        whole page sideways instead of scrolling inside its own container.
+        `h-app-bar` includes the notch and `pt-safe-top` pads the bar clear of
+        it, so the bar's own content is always 3.5rem tall — POOLSE-88.
       */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <header className="sticky top-0 z-20 flex h-app-bar items-center justify-between gap-3 bg-surface px-4 pt-safe-top shadow-hairline-b md:px-[18px] print:hidden">
         {/*
-          `h-app-bar` includes the notch and `pt-safe-top` pads the bar clear of
-          it, so the bar's own content is always 3.5rem tall — POOLSE-88.
+          The brand slot — Poolse's mark first (POOLSE-139), then the club's logo
+          and name at their own size, because that part of the corner belongs to
+          the customer. The logo is set under Faturação → Definições (12 October 2026).
         */}
-        <header className="sticky top-0 z-20 flex h-app-bar items-center justify-between gap-3 border-b border-border bg-surface px-4 pt-safe-top md:px-6 print:hidden">
+        <div className="flex min-w-0 items-center gap-2">
+          <MobileMenu roles={roles} kind={kind} modules={modules} sports={sports} badges={badges} />
           {/*
-            The brand slot — the club's logo and name, never Poolse's own mark,
-            because this corner belongs to the customer. The logo is set under
-            Faturação → Definições (12 October 2026).
+            Poolse's mark, moved here from the top of the sidebar — POOLSE-139,
+            the handoff's top bar. The club's own logo and name keep their place
+            right beside it, at their own size: that part of the corner is still
+            the customer's. Not on a phone, where the club's name needs the room.
           */}
-          <div className="flex min-w-0 items-center gap-2">
-            <MobileMenu roles={roles} kind={kind} modules={modules} sports={sports} badges={badges} />
-            {logoFileId !== null && (
-              // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id
-              <img src={`/files/${logoFileId}`} alt="" className="h-8 w-auto max-w-32 object-contain" />
-            )}
-            {organizationName !== null && (
-              <span className="truncate text-sm font-medium">{organizationName}</span>
-            )}
-          </div>
+          <Link href="/dashboard" className="hidden shrink-0 items-center gap-2 sm:flex" aria-label={t('app.name')}>
+            <LogoMark />
+            <span className="hidden font-heading text-[15px] font-semibold sm:inline">{t('app.name')}</span>
+            <LinkBusy />
+          </Link>
+          <span aria-hidden className="hidden h-5 w-px bg-foreground/10 sm:block" />
+          {logoFileId !== null && (
+            // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id
+            <img src={`/files/${logoFileId}`} alt="" className="h-8 w-auto max-w-32 object-contain" />
+          )}
+          {organizationName !== null && (
+            <span className="truncate text-sm font-medium">{organizationName}</span>
+          )}
+        </div>
 
-          <div className="flex items-center gap-3">
-            {/* POOLSE-118: Ctrl+K, or this button, to go anywhere the menu goes. */}
-            <CommandPalette roles={roles} kind={kind} modules={modules} sports={sports} />
-            <PreferenceControls />
-            <UserMenu canArchive={roles.includes('owner') || roles.includes('admin')} subscription={subscription} />
-          </div>
-        </header>
+        <div className="flex items-center gap-3">
+          {/* POOLSE-118: Ctrl+K, or this button, to go anywhere the menu goes. */}
+          <CommandPalette roles={roles} kind={kind} modules={modules} sports={sports} />
+          <PreferenceControls />
+          <UserMenu canArchive={roles.includes('owner') || roles.includes('admin')} subscription={subscription} />
+        </div>
+      </header>
+
+      <div className="flex min-w-0 flex-1 flex-col md:flex-row">
+        {/*
+          Hidden on paper - round 4. The water-quality report is a real document
+          an operator sends to the camara, and a printout with the navigation and
+          the avatar menu down the side is not one. Nothing else in the app is
+          printed today; when something is, it inherits this for free.
+        */}
+        <div className="contents print:hidden">
+          <AppSidebar roles={roles} kind={kind} modules={modules} sports={sports} badges={badges} />
+        </div>
 
         {/*
-          Above the page, below the app bar — a standing condition rather than
-          something that just happened, and it must not scroll away with the
-          content. Inside the shell, deliberately: unlike a suspension the
-          navigation still works and every screen behind it still reads.
+          `min-w-0` is not decoration. Without it a flex child refuses to shrink
+          below its content, and one wide table anywhere in the app pushes the
+          whole page sideways instead of scrolling inside its own container.
         */}
-        {support !== null && (
-          <SupportSessionBanner
-            organizationId={support.organizationId}
-            organizationName={support.organizationName}
-            expiresAt={support.expiresAt}
-          />
-        )}
-        {supportStatus !== null && (
-          <ClubSupportStrip
-            isOwner={roles.includes('owner')}
-            liveUntil={supportStatus.live?.expiresAt ?? null}
-            pendingRequests={supportStatus.pendingRequests}
-          />
-        )}
+        <div className="flex min-w-0 flex-1 flex-col">
 
-        {/* Nothing under the home bar — POOLSE-88. */}
-        <div className="min-w-0 flex-1 pb-safe-bottom">{children}</div>
+          {/*
+            Above the page, below the app bar — a standing condition rather than
+            something that just happened, and it must not scroll away with the
+            content. Inside the shell, deliberately: unlike a suspension the
+            navigation still works and every screen behind it still reads.
+          */}
+          {support !== null && (
+            <SupportSessionBanner
+              organizationId={support.organizationId}
+              organizationName={support.organizationName}
+              expiresAt={support.expiresAt}
+            />
+          )}
+          {supportStatus !== null && (
+            <ClubSupportStrip
+              isOwner={roles.includes('owner')}
+              liveUntil={supportStatus.live?.expiresAt ?? null}
+              pendingRequests={supportStatus.pendingRequests}
+            />
+          )}
+
+          {/* Nothing under the home bar — POOLSE-88. */}
+          <div className="min-w-0 flex-1 pb-safe-bottom">{children}</div>
+        </div>
       </div>
     </div>
   );

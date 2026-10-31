@@ -20,7 +20,7 @@ const INITIAL: FormState = { ok: false };
 const LINK =
   'rounded text-primary underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 const QUIET =
-  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border text-foreground-muted hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';
 
 /**
  * *Como obter os resultados* — POOLSE-114 BA 6.

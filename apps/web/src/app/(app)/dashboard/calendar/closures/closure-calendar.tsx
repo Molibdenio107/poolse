@@ -556,7 +556,7 @@ function ClosureForm({
   const BUTTON =
     'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60';
   const BUTTON_QUIET =
-    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border';
+    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-surface shadow-card';
   const sendable = warning?.step === 'confirm' && warning.preview.addressCount > 0;
   const reached =
     warning?.step === 'confirm'
@@ -1022,7 +1022,7 @@ function EditClosureDialog({
   const BUTTON =
     'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60';
   const BUTTON_QUIET =
-    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border';
+    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-surface shadow-card';
 
   return (
     <Dialog

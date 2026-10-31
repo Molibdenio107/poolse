@@ -98,7 +98,7 @@ export function RegisterForm({ register }: { register: Register & { organization
           <button
             type="button"
             onClick={() => setAll('present')}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border transition-colors hover:border-primary/50 hover:text-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm transition-colors hover:border-primary/50 hover:text-primary bg-surface shadow-card"
           >
             {t('attendance.allPresent')}
           </button>

@@ -37,10 +37,10 @@ import { formatDate } from '@/lib/date-format';
 const EMPTY: FormState = { ok: false };
 
 const BUTTON =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded bg-primary font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded bg-primary font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const QUIET =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';
 
 type Loaded =
   | { state: 'loading' }

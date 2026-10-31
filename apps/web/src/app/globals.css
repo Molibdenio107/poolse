@@ -752,3 +752,32 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
   background-color: rgb(var(--background));
   background-image: linear-gradient(rgb(var(--sport-wash) / var(--wash-a)) 0 0);
 }
+
+/*
+ * A turma's block on the calendar — POOLSE-139 (Rui, 31-10-2026). The handoff's
+ * chip: the level's tint washed at 16 % over the card, ink text, and the tint at
+ * full strength — a 3 px bar on the left (inside the block's width, so
+ * nothing it is positioned by moves) — so two
+ * levels side by side still differ at a glance. Plain CSS, outside a layer, because
+ * `chipClass()` builds the class name at run time. The handoff's 8 px dot is not
+ * drawn: in a lane column it left no room for the name, and the bar already
+ * carries the colour (Rui asked for the calendar to change in looks only).
+ */
+.lesson-chip {
+  background: linear-gradient(rgb(var(--tint) / 0.16) 0 0), rgb(var(--surface));
+  border-left: 3px solid rgb(var(--tint));
+  color: rgb(var(--foreground));
+}
+.lesson-chip > p:not(:first-child) {
+  color: rgb(var(--foreground-muted));
+  opacity: 1;
+}
+.lesson-tint-1 { --tint: var(--level-1); }
+.lesson-tint-2 { --tint: var(--level-2); }
+.lesson-tint-3 { --tint: var(--level-3); }
+.lesson-tint-4 { --tint: var(--level-4); }
+.lesson-tint-5 { --tint: var(--level-5); }
+.lesson-tint-6 { --tint: var(--level-6); }
+.lesson-tint-7 { --tint: var(--level-7); }
+.lesson-tint-8 { --tint: var(--level-8); }
+.lesson-tint-none { --tint: var(--level-none); }

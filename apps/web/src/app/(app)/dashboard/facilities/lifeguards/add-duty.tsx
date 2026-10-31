@@ -10,7 +10,7 @@ import { addDutyAction } from './roster.actions';
 import type { FormState } from '../../actions';
 
 const QUIET =
-  'inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';
 const PRIMARY =
   'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 

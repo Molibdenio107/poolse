@@ -23,7 +23,7 @@ function fieldText(t: ReturnType<typeof useTranslations>, key: string | undefine
 const INITIAL: FormState = { ok: false };
 
 const PRIMARY =
-  'inline-flex h-control items-center justify-center gap-2 self-start rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center gap-2 self-start rounded-sm bg-primary px-4 text-control font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 const DANGER =
   'inline-flex h-control items-center justify-center gap-2 self-start rounded-sm border border-danger/50 px-4 text-control font-medium text-danger hover:bg-danger/10 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger';
 

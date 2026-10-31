@@ -48,7 +48,7 @@ export function DocumentUpload({
       <button
         type="button"
         disabled
-        className="inline-flex h-control items-center justify-center px-4 text-control cursor-not-allowed gap-2 rounded-sm border border-border bg-surface text-foreground-muted opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control cursor-not-allowed gap-2 rounded-sm bg-surface text-foreground-muted opacity-60 shadow-card"
       >
         <FileText className="size-4" aria-hidden />
         {label}

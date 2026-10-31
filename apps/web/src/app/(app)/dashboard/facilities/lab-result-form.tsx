@@ -12,7 +12,7 @@ import { archiveLabResultAction, recordLabResultAction } from './lab.actions';
 const INITIAL: FormState = { ok: false };
 
 const BUTTON =
-  'inline-flex h-control items-center justify-center rounded-sm border border-border px-4 text-control hover:bg-surface-muted disabled:opacity-60';
+  'inline-flex h-control items-center justify-center rounded-sm px-4 text-control hover:bg-surface-muted disabled:opacity-60 bg-surface shadow-card';
 
 /**
  * Record a laboratory report — POOLSE-72.

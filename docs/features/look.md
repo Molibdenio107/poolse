@@ -37,3 +37,23 @@ tickets (POOLSE-125/127, 136).
 - **Sport washes** (`--sport-*`, `--wash-a`, `[data-sport]`, `.sport-shell`) are in
   `globals.css` from `docs/design/tokens.css` and inert: nothing sets `data-sport` yet, so a
   pool club renders exactly as before. Atmosphere only, never a button, text or primary.
+
+## The frame — POOLSE-139 (31 October 2026)
+
+- **Top bar** (`(app)/dashboard/layout.tsx`): full width, above the sidebar, 56 px with the
+  notch, card background and a bottom hairline (`shadow-hairline-b`). Left: Poolse's
+  `LogoMark` and name (from `sm`; a phone keeps the room for the club's name), a divider, then
+  the club's logo and name at their own size. Right: palette, language and theme, avatar. The
+  middle is empty for a pool-only club; it is where POOLSE-125's sport tabs go.
+- **Sidebar** (`app-sidebar.tsx`): 240 px under the bar, sticky at `top-app-bar`, right
+  hairline; rows 38 px (44 under a finger), 2 px corners, 13 px text, 19 px icons; the current
+  page on the muted fill at 600. The phone menu draws the same rows.
+- **Page header** (`PageShell`): title 22 px on a phone, 30 px on a desk, Poppins 600;
+  subtitle 13 px. *Voltar* is unchanged; no breadcrumb for a single-sport club.
+- **Buttons:** secondary is `bg-surface shadow-card`, no border; primary 600. Height and text
+  size stay `h-control` / `text-control`.
+- **Calendar blocks:** the handoff's chip — the level tint at 16 % over the card, ink text,
+  and a 3 px solid bar in the tint (`.lesson-chip`). Classes only: nothing about the grid's
+  geometry, dragging or the markup changed (Rui asked for looks only). The handoff's 8 px dot
+  and 13 px title were dropped because a lane column is too narrow for the name with them; the
+  toolbar's grouping and the 64 px time column were left as they were.

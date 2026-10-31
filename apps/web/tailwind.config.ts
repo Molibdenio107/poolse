@@ -281,6 +281,12 @@ export default {
       /* A card is lifted, not outlined; dark mode adds a hairline to it (globals.css). */
       boxShadow: {
         card: 'var(--shadow-card)',
+        /*
+         * The handoff's hairlines (POOLSE-139): the top bar's bottom edge and the
+         * sidebar's right edge, drawn as a shadow so no border colour is invented.
+         */
+        'hairline-b': '0 1px 0 rgb(var(--foreground) / 0.07)',
+        'hairline-r': '1px 0 0 rgb(var(--foreground) / 0.07)',
       },
       /* The handoff's typefaces, loaded by next/font in lib/fonts.ts. */
       fontFamily: {

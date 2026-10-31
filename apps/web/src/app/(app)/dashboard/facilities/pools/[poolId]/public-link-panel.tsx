@@ -30,7 +30,7 @@ export interface PublicLinkView {
   svg: string | null;
 }
 
-const BUTTON =  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted disabled:opacity-60';
+const BUTTON =  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted disabled:opacity-60 bg-surface shadow-card';
 const PRIMARY =  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60';
 
 export function PublicLinkPanel({

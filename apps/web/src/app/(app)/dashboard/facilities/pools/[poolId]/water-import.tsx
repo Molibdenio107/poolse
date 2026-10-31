@@ -62,10 +62,10 @@ const ACCEPTED = ['.xlsx', '.csv', ...Object.keys(REPORT_MEDIA_TYPES)];
 const ACCEPT_ATTRIBUTE = [...ACCEPTED, 'text/csv'].join(',');
 
 const BUTTON =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const BUTTON_QUIET =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';
 
 function isAccepted(file: File): boolean {
   const name = file.name.toLowerCase();

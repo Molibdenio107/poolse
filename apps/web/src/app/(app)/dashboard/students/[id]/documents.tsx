@@ -35,7 +35,7 @@ const INITIAL: FormState = { ok: false };
 
 const BUTTON =
   'inline-flex h-control items-center justify-center gap-2 rounded-sm px-4 text-control disabled:opacity-60';
-const PRIMARY = `${BUTTON} bg-primary text-primary-foreground hover:bg-primary/90`;
+const PRIMARY = `${BUTTON} bg-primary text-primary-foreground hover:bg-primary/90 font-semibold`;
 const SECONDARY = `${BUTTON} border border-border bg-surface hover:bg-surface-muted`;
 const CARD = 'flex flex-col gap-3 rounded bg-surface p-5 shadow-card';
 const HEADING = 'text-sm font-medium uppercase tracking-wider text-foreground-muted';
@@ -449,7 +449,7 @@ export function IdentificationSection({
             type="button"
             disabled={!storageReady || pending}
             onClick={() => input.current?.click()}
-            className="inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border bg-surface px-4 text-control hover:bg-surface-muted disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-surface px-4 text-control hover:bg-surface-muted disabled:opacity-60 shadow-card"
           >
             <Camera className="size-4" aria-hidden />
             {pending ? t('documents.idPhoto.reading') : photo === null ? t('documents.idPhoto.upload') : t('documents.idPhoto.replace')}

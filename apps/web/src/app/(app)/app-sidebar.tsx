@@ -57,8 +57,13 @@ function isInSection(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-const LINK = 'flex items-center gap-2 rounded px-3 py-2 text-sm whitespace-nowrap transition-colors';
-const ACTIVE = 'bg-primary/15 font-medium text-primary';
+/*
+ * The handoff's rows — POOLSE-139: 38 px, 2 px corners, 13 px text, a 19 px
+ * icon, and the current page on the muted fill at 600. Under a finger the row
+ * is still 44 px (`coarse:`), which wins over the handoff's 38.
+ */
+const LINK = 'flex min-h-[38px] items-center gap-2.5 rounded-sm px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors coarse:min-h-control';
+const ACTIVE = 'bg-surface-muted font-semibold text-foreground';
 const IDLE = 'text-foreground-muted hover:bg-surface-muted hover:text-foreground';
 
 export function AppSidebar({
@@ -92,13 +97,10 @@ export function AppSidebar({
    * scrolling sideways across the top of a phone is a menu nobody can read.
    */
   return (
-    <aside className="hidden border-r border-border bg-surface md:sticky md:top-0 md:block md:h-dvh md:w-60 md:shrink-0">
-      <div className="flex h-full flex-col gap-6 p-5">
-        <Link href="/dashboard" className="px-3 text-lg font-semibold tracking-tight text-primary">
-          {t('app.name')}
-          <LinkBusy />
-        </Link>
-
+    // Under the full-width top bar since POOLSE-139, which now carries the
+    // Poolse mark; a hairline rather than a border on the right.
+    <aside className="hidden bg-surface shadow-hairline-r md:sticky md:top-app-bar md:block md:h-[calc(100dvh-3.5rem-var(--safe-top))] md:w-60 md:shrink-0">
+      <div className="flex h-full flex-col overflow-y-auto px-2.5 py-4">
         <SidebarNav sections={sections} pathname={pathname} badges={badges} sport={sport} />
       </div>
     </aside>
@@ -181,7 +183,7 @@ export function MobileMenu({
         onClick={() => setOpen(true)}
         aria-label={t('nav.openMenu')}
         aria-expanded={open}
-        className="inline-flex h-control w-control shrink-0 items-center justify-center rounded-sm border border-border bg-surface text-foreground hover:bg-surface-muted md:hidden"
+        className="inline-flex h-control w-control shrink-0 items-center justify-center rounded-sm bg-surface text-foreground hover:bg-surface-muted md:hidden shadow-card"
       >
         <Menu aria-hidden className="size-5" />
       </button>
@@ -288,7 +290,7 @@ function NavItem({
           active ? ACTIVE : IDLE,
         )}
       >
-        {item.icon !== undefined && <EntityIcon kind={item.icon} />}
+        {item.icon !== undefined && <EntityIcon kind={item.icon} className="size-[19px]" />}
         {t(item.key)}
         {/*
           A small soft dot, never a number — Rui, 28-10-2026: discreet, in the

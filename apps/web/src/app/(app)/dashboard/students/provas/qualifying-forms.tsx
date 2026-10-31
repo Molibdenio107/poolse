@@ -34,11 +34,11 @@ const THIS_YEAR = Number(today().slice(0, 4));
 
 const INITIAL: FormState = { ok: false };
 const PRIMARY =
-  'inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground hover:bg-primary/90 disabled:opacity-60';
+  'inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground hover:bg-primary/90 disabled:opacity-60 font-semibold';
 const SECONDARY =
-  'inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:bg-surface-muted';
+  'inline-flex h-control items-center justify-center rounded px-4 text-control hover:bg-surface-muted bg-surface shadow-card';
 const DANGER =
-  'inline-flex h-control items-center justify-center rounded border border-border px-4 text-control text-foreground-muted hover:border-danger/50 hover:text-danger';
+  'inline-flex h-control items-center justify-center rounded px-4 text-control text-foreground-muted hover:border-danger/50 hover:text-danger bg-surface shadow-card';
 const COURSES: Course[] = ['scm', 'lcm'];
 
 function fieldError(t: ReturnType<typeof useTranslations>, state: FormState, field: string): string | undefined {

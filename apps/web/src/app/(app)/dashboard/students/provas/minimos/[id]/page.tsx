@@ -295,7 +295,7 @@ function TimesToolbar({
   t: (key: string, values?: Record<string, string | number>) => string;
 }): React.ReactElement {
   const quiet =
-    'inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control hover:bg-surface-muted';
+    'inline-flex h-control items-center justify-center gap-2 rounded px-4 text-control hover:bg-surface-muted bg-surface shadow-card';
   return (
     <div className="flex flex-wrap gap-2">
       <FromLink href={`${path}/importar`} className={quiet}>

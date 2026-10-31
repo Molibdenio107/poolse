@@ -60,7 +60,7 @@ export function TransferOwnership({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm border border-border text-foreground-muted hover:bg-surface-muted hover:text-foreground"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm text-foreground-muted hover:bg-surface-muted hover:text-foreground bg-surface shadow-card"
       >
         {t('transfer.open')}
       </button>
@@ -100,7 +100,7 @@ export function TransferOwnership({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border text-foreground-muted hover:bg-surface-muted"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:bg-surface-muted bg-surface shadow-card"
         >
           {t('common.cancel')}
         </button>

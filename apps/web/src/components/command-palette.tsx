@@ -164,7 +164,7 @@ export function CommandPalette({
         onClick={() => setOpen(true)}
         aria-label={t('palette.open')}
         aria-haspopup="dialog"
-        className="inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border bg-surface px-3 text-control text-foreground-muted hover:bg-surface-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary max-md:w-control max-md:px-0"
+        className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-surface px-3 text-control text-foreground-muted hover:bg-surface-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary max-md:w-control max-md:px-0 shadow-card"
       >
         <Search aria-hidden className="size-4 shrink-0" />
         <span className="hidden md:inline">{t('palette.search')}</span>

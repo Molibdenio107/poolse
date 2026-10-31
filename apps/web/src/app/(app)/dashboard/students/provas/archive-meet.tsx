@@ -31,7 +31,7 @@ export function ArchiveMeetButton({
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border text-foreground-muted hover:border-danger/50 hover:text-danger"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger bg-surface shadow-card"
       >
         {t('meets.archive')}
       </button>
@@ -50,7 +50,7 @@ export function ArchiveMeetButton({
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border text-foreground-muted hover:bg-surface-muted"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:bg-surface-muted bg-surface shadow-card"
             >
               {t('common.cancel')}
             </button>

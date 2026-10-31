@@ -16,9 +16,9 @@ import {
 const INITIAL: FormState = { ok: false };
 
 const PRIMARY =
-  'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 const SECONDARY =
-  'inline-flex h-control items-center justify-center gap-2 rounded-sm border border-border bg-surface px-4 text-control font-medium hover:border-primary/50 hover:text-primary disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-surface px-4 text-control font-medium hover:border-primary/50 hover:text-primary disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary shadow-card';
 
 /**
  * Acesso de suporte — POOLSE-79, under *O meu perfil*. Owner only: the club's

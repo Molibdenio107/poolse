@@ -111,7 +111,7 @@ export function AgeOutlook({
                     type="button"
                     onClick={() => propose(level.levelId)}
                     disabled={pending}
-                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
                   >
                     {busyLevel === level.levelId
                       ? t('advancement.outlook.proposing')

@@ -1641,6 +1641,17 @@ function NowLine({
 }
 
 /** The eight level tints, and the neutral for everything without one. */
+/**
+ * A turma's block on the grid — POOLSE-139 (Rui, 31-10-2026, reversing
+ * POOLSE-55's solid fill): the level's tint washed at 16 % over the card, with
+ * a solid 3 px bar and a solid dot in the same tint (`.lesson-chip`, globals.css),
+ * so two levels side by side still differ at full strength. The legend's
+ * swatch keeps the solid `tintClass`.
+ */
+function chipClass(tint: number | null): string {
+  return `lesson-chip lesson-tint-${tint !== null && tint >= 1 && tint <= 8 ? tint : 'none'}`;
+}
+
 function tintClass(tint: number | null): string {
   switch (tint) {
     case 1:
@@ -1788,7 +1799,7 @@ function Block({
   const tint =
     booking.subjectType === 'parceria' && booking.partnerColour !== null
       ? undefined
-      : tintClass(levelTint(booking, order));
+      : chipClass(levelTint(booking, order));
 
   const anyDrag = dragging !== null;
 
@@ -1873,7 +1884,10 @@ function Block({
       */
       data-booking={booking.id}
       className={cn(
-        'group/block pointer-events-auto absolute overflow-hidden rounded-chip px-1.5 py-1 text-left text-white',
+        // A partnership's block keeps its own colour and white text; a turma's
+        // is the handoff's chip (POOLSE-139): a wash, a solid bar and a dot.
+        'group/block pointer-events-auto absolute overflow-hidden rounded-chip px-1.5 py-1 text-left',
+        tint === undefined && 'text-white',
         'ring-1 ring-border',
         // A keyboard tab stop (dnd-kit's attributes make it one), so it shows
         // where focus is before Space picks it up.
@@ -1914,11 +1928,13 @@ function Block({
         willChange: isDragging ? 'transform' : undefined,
       }}
     >
-      <p className="truncate pr-6 text-[0.75rem] font-medium leading-tight">{booking.name}</p>
+      {/* 12 px, not the handoff's 13: a lane column is narrow and the name must still show. */}
+      <p className="truncate pr-6 text-[0.75rem] font-semibold leading-tight">{booking.name}</p>
       {(card.attention ?? 0) > 0 && (
-        // The shared dot in white: the palette's colour would vanish on the
-        // block's own tint. The card says what it is in words.
-        <span className="attention-dot absolute right-1.5 top-1.5 !bg-white">
+        // The shared dot: in white on a partnership's own colour, where the
+        // palette's would vanish; as it is on a turma's washed chip. The card
+        // says what it is in words.
+        <span className={cn('attention-dot absolute right-1.5 top-1.5', tint === undefined && '!bg-white')}>
           <span className="sr-only">{t('attention.dot', { count: card.attention ?? 0 })}</span>
         </span>
       )}

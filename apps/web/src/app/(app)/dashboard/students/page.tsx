@@ -251,7 +251,7 @@ export default async function StudentsPage({
             {filtering && (
               <FromLink
                 href="/dashboard/students"
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
               >
                 {t('students.clear')}
               </FromLink>
@@ -315,7 +315,7 @@ export default async function StudentsPage({
                     <p className="text-sm text-foreground-muted">{t('search.noResultsHint')}</p>
                     <FromLink
                       href={levelId.trim() === '' ? '/dashboard/students' : `/dashboard/students?levelId=${levelId.trim()}`}
-                      className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded-sm border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
                     >
                       {t('search.clearSearch')}
                     </FromLink>

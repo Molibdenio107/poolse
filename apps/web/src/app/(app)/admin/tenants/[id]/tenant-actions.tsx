@@ -140,7 +140,7 @@ function Submit({
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
         tone === 'danger'
           ? 'bg-destructive text-destructive-foreground outline-danger hover:bg-destructive/90'
-          : 'bg-primary text-primary-foreground outline-primary hover:bg-primary/90',
+          : 'bg-primary text-primary-foreground outline-primary hover:bg-primary/90 font-semibold',
       )}
     >
       {icon}

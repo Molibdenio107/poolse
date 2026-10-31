@@ -82,7 +82,7 @@ function Fields({
         {choices.map((one) => (
           <label
             key={one.id}
-            className="flex min-h-control items-center gap-3 rounded-lg border border-border bg-surface px-3"
+            className="flex min-h-control items-center gap-3 rounded-lg bg-surface px-3 shadow-card"
           >
             <input
               type="radio"

@@ -48,7 +48,7 @@ export function InviteStudent({ organizationName }: { organizationName: string }
         aria-expanded={open}
         aria-controls="invite-student"
         onClick={() => setOpen((was) => !was)}
-        className={`${BUTTON} self-start bg-primary text-primary-foreground hover:bg-primary/90`}
+        className={`${BUTTON} self-start bg-primary text-primary-foreground hover:bg-primary/90 font-semibold`}
       >
         <UserPlus className="size-4" aria-hidden />
         {t('inviteStudent.open')}
@@ -102,7 +102,7 @@ export function InviteStudent({ organizationName }: { organizationName: string }
               </p>
             )}
             <div className="flex flex-wrap gap-2">
-              <button type="submit" disabled={pending} className={`${BUTTON} bg-primary text-primary-foreground hover:bg-primary/90`}>
+              <button type="submit" disabled={pending} className={`${BUTTON} bg-primary text-primary-foreground hover:bg-primary/90 font-semibold`}>
                 {pending ? t('common.working') : t('inviteStudent.submit')}
               </button>
               <button

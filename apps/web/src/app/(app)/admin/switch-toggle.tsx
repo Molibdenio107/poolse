@@ -52,7 +52,7 @@ export function SwitchToggle({
           'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-primary',
           enabled
             ? 'border border-border bg-surface hover:bg-surface-muted'
-            : 'bg-primary text-primary-foreground hover:bg-primary/90',
+            : 'bg-primary text-primary-foreground hover:bg-primary/90 font-semibold',
         )}
       >
         {t(enabled ? 'admin.switches.turnOff' : 'admin.switches.turnOn')}

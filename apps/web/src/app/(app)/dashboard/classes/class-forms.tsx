@@ -367,7 +367,7 @@ export function RemoveSlotButton({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60 bg-surface shadow-card"
       >
         {pending ? t('common.working') : t('classes.removeSlot')}
       </button>
@@ -548,7 +548,7 @@ export function EnrolForm({
           name="waiting"
           value="true"
           disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border hover:bg-surface-muted disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted disabled:opacity-60 bg-surface shadow-card"
         >
           {t('classes.addToWaiting')}
         </button>
@@ -591,7 +591,7 @@ export function EndEnrollmentButton({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60 bg-surface shadow-card"
       >
         {pending ? t('common.working') : t('classes.remove')}
       </button>
@@ -621,7 +621,7 @@ export function ArchiveClassButton({
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border text-foreground-muted hover:border-danger/50 hover:text-danger"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger bg-surface shadow-card"
       >
         {t('classes.archive')}
       </button>
@@ -643,7 +643,7 @@ export function ArchiveClassButton({
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border text-foreground-muted hover:bg-surface-muted"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:bg-surface-muted bg-surface shadow-card"
             >
               {t('common.cancel')}
             </button>
@@ -800,7 +800,7 @@ function LevelChoice({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex h-control items-center justify-center px-4 text-control w-fit gap-1 rounded-sm border border-border font-medium transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control w-fit gap-1 rounded-sm font-medium transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
         >
           {t('classes.newLevel')}
           <span aria-hidden>+</span>
@@ -868,7 +868,7 @@ function LevelChoice({
                 setOpen(false);
                 setError(null);
               }}
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-border"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-surface shadow-card"
             >
               {t('common.cancel')}
             </button>
