@@ -10,6 +10,7 @@ import { EntityIcon, type EntityKind } from '@/components/entity-icon';
 import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import type { OrganizationKind } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
+import { SiteIcon, SportIcon } from '@/components/sport-icon';
 import { cn } from '@/lib/utils';
 import {
   pathOf,
@@ -90,6 +91,7 @@ export function AppSidebar({
    * standing. Never inherited: Instalações and Staff have different audiences.
    */
   const sections = visibleSections({ roles, kind, modules, sports });
+  const section = sectionOf(sections, pathname, sport);
 
   /*
    * From `md` up only — POOLSE-88. Below it the same list lives in a sheet
@@ -101,12 +103,206 @@ export function AppSidebar({
     // Poolse mark; a hairline rather than a border on the right.
     <aside className="hidden bg-surface shadow-hairline-r md:sticky md:top-app-bar md:block md:h-[calc(100dvh-3.5rem-var(--safe-top))] md:w-60 md:shrink-0">
       <div className="flex h-full flex-col overflow-y-auto px-2.5 py-4">
-        <SidebarNav sections={sections} pathname={pathname} badges={badges} sport={sport} />
+        {section !== null && section !== 'site' && <SportHeader sport={section} />}
+        <SidebarNav sections={itemsOf(sections, section)} pathname={pathname} badges={badges} sport={sport} />
       </div>
     </aside>
   );
 }
 
+
+/*
+ * Sections — POOLSE-141, the handoff's top bar. With two or more sports the
+ * menu is *Instalação* (every shared page) and one section per sport (its
+ * Turmas and Calendário, POOLSE-125's groups). Which one is current is derived
+ * from the address and never stored: a sport's own page is that sport's
+ * section (`?sport=`, else the first, as POOLSE-125 reads it), every other page
+ * is *Instalação*. With one sport there are no sections and nothing changes.
+ */
+export type NavSection = 'site' | PoolseSport;
+
+/** The sport groups POOLSE-125 built — present only with two or more sports. */
+function groupsOf(sections: Item[]): Item[] {
+  const groups = sections.filter((section) => section.sport !== undefined && section.children !== undefined);
+  return groups.length >= 2 ? groups : [];
+}
+
+function sectionOf(sections: Item[], pathname: string, sport: PoolseSport): NavSection | null {
+  const groups = groupsOf(sections);
+  if (groups.length === 0) return null;
+  const inSport = groups.some((group) =>
+    (group.children ?? []).some((child) => {
+      const path = pathOf(child.href);
+      return pathname === path || pathname.startsWith(`${path}/`);
+    }),
+  );
+  return inSport ? sport : 'site';
+}
+
+/** What the sidebar lists for a section: the shared pages, or one sport's entries. */
+function itemsOf(sections: Item[], section: NavSection | null): Item[] {
+  if (section === null) return sections;
+  if (section === 'site') return sections.filter((item) => item.sport === undefined);
+  return groupsOf(sections).find((group) => group.sport === section)?.children ?? [];
+}
+
+/** The handoff's sport header at the top of a sport's sidebar: its colour, icon and name. */
+function SportHeader({ sport }: { sport: PoolseSport }): React.ReactElement {
+  const t = useTranslations();
+  return (
+    <div
+      data-sport={sport}
+      className="mb-2 flex min-h-11 items-center gap-2.5 rounded-sm border-l-4 border-l-[rgb(var(--sport-wash))] bg-[rgb(var(--sport-wash)/var(--wash-a))] px-3 font-heading text-sm font-semibold"
+    >
+      <SportIcon sport={sport} />
+      {t(`sport.name.${sport}`)}
+    </div>
+  );
+}
+
+/**
+ * The section tabs: in the top bar's middle on a desk (`placement="bar"`), and
+ * as a row at the top of the phone's menu sheet (`placement="menu"`). Links, so
+ * they work before hydration. The current one carries `aria-current` and a 3 px
+ * bar — the primary under *Instalação*, the sport's colour under a sport, whose
+ * tab also takes its wash. A section that is not current carries the attention
+ * dot when something inside it needs doing (POOLSE-120).
+ */
+function SectionLinks({
+  sections,
+  section,
+  badges,
+  placement,
+}: {
+  sections: Item[];
+  section: NavSection | null;
+  badges: Badges;
+  placement: 'bar' | 'menu';
+}): React.ReactElement | null {
+  const t = useTranslations();
+  const groups = groupsOf(sections);
+  if (section === null || groups.length === 0) return null;
+  const site = sections.filter((item) => item.sport === undefined);
+  const waiting = (items: Item[]): number =>
+    items.reduce(
+      (sum, item) => sum + (item.badge === undefined ? 0 : (badges[item.badge] ?? 0)) + childCount(item, badges),
+      0,
+    );
+
+  const tab = (
+    key: string,
+    href: string,
+    label: string,
+    icon: React.ReactNode,
+    current: boolean,
+    sport: PoolseSport | null,
+    dot: number,
+  ): React.ReactElement => (
+    <Link
+      key={key}
+      href={href}
+      aria-current={current ? 'page' : undefined}
+      {...(sport === null ? {} : { 'data-sport': sport })}
+      className={cn(
+        'relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap px-3 text-[13px] transition-colors',
+        'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary',
+        placement === 'menu' ? 'min-h-11 rounded-sm' : 'h-full',
+        current ? 'font-semibold text-foreground' : 'font-medium text-foreground-muted hover:text-foreground',
+        current && sport !== null && 'bg-[rgb(var(--sport-wash)/var(--wash-a))]',
+        current &&
+          (sport === null
+            ? 'after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:bg-primary'
+            : 'after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:bg-[rgb(var(--sport-wash))]'),
+      )}
+    >
+      {icon}
+      {label}
+      {!current && dot > 0 && (
+        <span className="attention-dot">
+          <span className="sr-only">{t('attention.menuBadge', { count: dot })}</span>
+        </span>
+      )}
+      <LinkBusy />
+    </Link>
+  );
+
+  return (
+    <nav
+      aria-label={t('nav.sections')}
+      data-scroll-row
+      className={cn(
+        'flex items-stretch',
+        placement === 'bar' ? 'h-full min-w-0 overflow-x-auto' : 'mb-3 flex-wrap gap-1 border-b border-border pb-2',
+      )}
+    >
+      {tab('site', '/dashboard', t('nav.site'), <SiteIcon />, section === 'site', null, section === 'site' ? 0 : waiting(site))}
+      <span aria-hidden className={cn('w-px shrink-0 self-center bg-foreground/10', placement === 'bar' ? 'mx-1 h-5' : 'hidden')} />
+      {groups.map((group) =>
+        tab(
+          group.sport!,
+          group.href,
+          t(`sport.name.${group.sport!}`),
+          <SportIcon sport={group.sport!} />,
+          section === group.sport,
+          group.sport!,
+          section === group.sport ? 0 : waiting(group.children ?? []),
+        ),
+      )}
+    </nav>
+  );
+}
+
+/** The top bar's sections — POOLSE-141. Nothing for a club with one sport. */
+export function SectionTabs({
+  roles,
+  kind,
+  modules,
+  sports = [BASE_SPORT],
+  badges = {},
+}: {
+  roles: readonly string[];
+  kind: OrganizationKind;
+  modules: readonly PoolseModule[];
+  sports?: readonly PoolseSport[];
+  badges?: Badges;
+}): React.ReactElement | null {
+  const pathname = usePathname();
+  const sport = useCurrentSport(sports);
+  const sections = visibleSections({ roles, kind, modules, sports });
+  return (
+    <SectionLinks sections={sections} section={sectionOf(sections, pathname, sport)} badges={badges} placement="bar" />
+  );
+}
+
+/**
+ * A sport section's content wears its wash — POOLSE-141, the handoff's
+ * `.sport-shell`. Shared pages never do; with one sport, nothing does.
+ */
+export function SportShell({
+  roles,
+  kind,
+  modules,
+  sports = [BASE_SPORT],
+  className,
+  children,
+}: {
+  roles: readonly string[];
+  kind: OrganizationKind;
+  modules: readonly PoolseModule[];
+  sports?: readonly PoolseSport[];
+  className?: string;
+  children: React.ReactNode;
+}): React.ReactElement {
+  const pathname = usePathname();
+  const sport = useCurrentSport(sports);
+  const section = sectionOf(visibleSections({ roles, kind, modules, sports }), pathname, sport);
+  const washed = section !== null && section !== 'site';
+  return (
+    <div {...(washed ? { 'data-sport': section } : {})} className={cn(className, washed && 'sport-shell')}>
+      {children}
+    </div>
+  );
+}
 
 /** `?sport=` when it names one of the club's sports, else the first — POOLSE-125 rule 3. */
 function useCurrentSport(sports: readonly PoolseSport[]): PoolseSport {
@@ -173,6 +369,8 @@ export function MobileMenu({
   const pathname = usePathname();
   const sport = useCurrentSport(sports);
   const [open, setOpen] = useState(false);
+  const sections = visibleSections({ roles, kind, modules, sports });
+  const section = sectionOf(sections, pathname, sport);
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -195,8 +393,11 @@ export function MobileMenu({
         closeLabel={t('common.close')}
         placement="start"
       >
+        {/* POOLSE-141: with two sports, the sections first, then the current one's entries. */}
+        <SectionLinks sections={sections} section={section} badges={badges} placement="menu" />
+        {section !== null && section !== 'site' && <SportHeader sport={section} />}
         <SidebarNav
-          sections={visibleSections({ roles, kind, modules, sports })}
+          sections={itemsOf(sections, section)}
           pathname={pathname}
           badges={badges}
           sport={sport}

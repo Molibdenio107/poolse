@@ -5,7 +5,7 @@ import { LinkBusy } from '@/components/link-busy';
 import { LogoMark } from '@/components/logo-mark';
 import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
 import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
-import { AppSidebar, MobileMenu, type Badges } from '../app-sidebar';
+import { AppSidebar, MobileMenu, SectionTabs, SportShell, type Badges } from '../app-sidebar';
 import type { SubscriptionAlertView } from '@/lib/subscription-alert';
 import { modulesOf } from '@/lib/modules';
 import { PreferenceControls } from '../preference-controls';
@@ -266,6 +266,11 @@ export default async function DashboardLayout({
           )}
         </div>
 
+        {/* POOLSE-141: Instalação and a tab per sport, only with two or more sports. */}
+        <div className="hidden min-w-0 flex-1 self-stretch justify-center md:flex">
+          <SectionTabs roles={roles} kind={kind} modules={modules} sports={sports} badges={badges} />
+        </div>
+
         <div className="flex items-center gap-3">
           {/* POOLSE-118: Ctrl+K, or this button, to go anywhere the menu goes. */}
           <CommandPalette roles={roles} kind={kind} modules={modules} sports={sports} />
@@ -314,7 +319,9 @@ export default async function DashboardLayout({
           )}
 
           {/* Nothing under the home bar — POOLSE-88. */}
-          <div className="min-w-0 flex-1 pb-safe-bottom">{children}</div>
+          <SportShell roles={roles} kind={kind} modules={modules} sports={sports} className="min-w-0 flex-1 pb-safe-bottom">
+            {children}
+          </SportShell>
         </div>
       </div>
     </div>

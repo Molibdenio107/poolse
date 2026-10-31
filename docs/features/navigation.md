@@ -325,3 +325,17 @@ A small circle says **something here needs doing**, and it clears when it is don
 | A *Não vou* on a lesson still to come, or feedback this week | the lesson's teacher; owner and admin see all | the lesson's block on the calendar (and a line on its card), *Calendário* |
 
 Every verdict is the existing one: `excursions`/`resolveBands`, `gradeLabResult`, the maintenance module's `TASK_STATE`, and the Pedidos count. A guardian or a student gets an empty map, not a 403. **The menu shows a small dot, never a number** (Rui, 28-10-2026), *Recebidos* included; the count is said only to a screen reader. A closed section shows the dot when an entry under it has one. Every circle, the tab dots and the *Recebidos* dot included, is `.attention-dot`: a 6 px ball in the primary colour that blinks gently (one breath every 2.4 s) for as long as it is there, and is still under reduced motion (Rui, 28-10-2026). The words are on the item; the circle's own sentence is for a screen reader (`AttentionDot`).
+
+## Sections for a club with two sports — POOLSE-141 (31 October 2026)
+
+- With two or more sports on, the top bar's middle carries *Instalação* and one tab per sport
+  (`SectionTabs` in `app-sidebar.tsx`). A sport's own pages (its *Turmas* and *Calendário*,
+  POOLSE-125's groups, `?sport=`) are that sport's section; every other page is *Instalação*.
+  Derived from the address (`sectionOf`), never stored.
+- The sidebar lists only the current section: the shared pages, or the sport's header (its
+  colour bar, wash, icon and name) and its entries. The phone's menu sheet shows the sections as
+  a row above the list.
+- A sport section's content wears its wash (`SportShell`, `.sport-shell`); shared pages never do.
+- A section that is not current carries the attention dot when something inside needs doing.
+- One sport: no tabs, no header, no wash — nothing changes. `SportIcon` stands in for the
+  handoff's Material Symbols.

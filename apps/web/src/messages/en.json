@@ -2742,7 +2742,9 @@
   "nav": {
     "label": "Main navigation",
     "openMenu": "Open the menu",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "site": "Site",
+    "sections": "Sections"
   },
   "dashboard": {
     "subtitle": "Who is signed in, with which roles, and where.",
