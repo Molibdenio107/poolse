@@ -6486,8 +6486,9 @@
       "tooLong": "Too long.",
       "type": "Unknown document type.",
       "typeRequired": "Choose the document type.",
-      "cc": "Not a valid Cartão de Cidadão number.",
-      "order": "The expiry date cannot be before the issue date."
+      "cc": "Not a valid Cartão de Cidadão number. Write it as the card prints it under “N.º Documento”: 8 digits, the check digit, two letters and a digit (e.g. 12345678 9 ZZ1).",
+      "order": "The expiry date cannot be before the issue date.",
+      "ccStored": "The number on file is not a whole Cartão de Cidadão number. Write it as the card prints it under “N.º Documento” (e.g. 12345678 9 ZZ1)."
     },
     "toast": {
       "filed": "Signed document filed."
@@ -6509,7 +6510,8 @@
       "issuedOn": "Issued on",
       "issuedOnHint": "The Cartão de Cidadão carries no issue date: leave it empty.",
       "validUntil": "Valid until",
-      "numberOnGeneral": "ID document number"
+      "numberOnGeneral": "ID document number",
+      "numberOnGeneralHint": "For information: kept as typed. The document type and the FPN check are on the Documents tab."
     },
     "fpn": {
       "title": "FPN declaration",

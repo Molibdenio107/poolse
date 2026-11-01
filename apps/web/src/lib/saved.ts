@@ -135,7 +135,7 @@ function failureMessage(t: Translator, state: unknown): string | null {
   let message: string;
   try {
     message =
-      failed.errorKey === undefined
+      failed.errorKey === undefined || failed.errorKey === 'common.checkTheFields'
         ? // Which fields, and what is wrong with each (Rui, 01-11-2026): "check
           // the fields" alone named nothing on a long form.
           [t('common.checkTheFields'), ...fieldSentences(t, failed.fields, failed.values)].join(' ')

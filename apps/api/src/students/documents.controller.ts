@@ -24,6 +24,7 @@ import {
   readIdDocumentFull,
   saveDocumentFields,
   saveFpnClubSettings,
+  StoredNumberNotCcError,
   type BoletimPrint,
   type FpnDiscipline,
   type FpnPrint,
@@ -103,9 +104,6 @@ export class StudentDocumentsController {
         } else if (number.length > 30) {
           throw new BadRequestException({ code: 'too_long', message: 'Number too long', fields: { idDocumentNumber: 'documents.error.tooLong' } });
         }
-        if (type === null) {
-          throw new BadRequestException({ code: 'type_required', message: 'Choose the document type', fields: { idDocumentType: 'documents.error.typeRequired' } });
-        }
         doc.number = number;
       } else if (body['idDocumentClear'] === true) {
         doc.number = null;
@@ -124,9 +122,17 @@ export class StudentDocumentsController {
       edit.disciplines = [...new Set(raw as FpnDiscipline[])];
     }
 
-    if (!(await saveDocumentFields(currentTenant().organizationId, studentId, edit))) {
-      throw new NotFoundException('No such student');
+    let saved: boolean;
+    try {
+      saved = await saveDocumentFields(currentTenant().organizationId, studentId, edit);
+    } catch (error) {
+      // "Cartão de Cidadão" chosen for a number typed on Geral that is not one.
+      if (error instanceof StoredNumberNotCcError) {
+        throw new BadRequestException({ code: 'invalid_cc', message: error.message, fields: { idDocumentNumber: 'documents.error.ccStored' } });
+      }
+      throw error;
     }
+    if (!saved) throw new NotFoundException('No such student');
     return { saved: true };
   }
 

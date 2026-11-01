@@ -196,7 +196,10 @@ export async function updateStudentAction(
         await apiPatch(
           `/students/${studentId}/documents`,
           {
-            idDocumentType: text('idDocumentType'),
+            // A number typed here is information, so it carries no type: the
+            // type, and the check of a Cartão de Cidadão, are Documentos' (Rui,
+            // 01-11-2026). Only the number can move on this tab.
+            idDocumentType: moved.includes('idDocumentNumber') ? '' : text('idDocumentType'),
             idDocumentIssuedOn: text('idDocumentIssuedOn'),
             idDocumentValidUntil: text('idDocumentValidUntil'),
             ...(moved.includes('idDocumentNumber')

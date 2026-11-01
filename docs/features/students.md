@@ -289,6 +289,14 @@ FPN's *Anexo 2* filled from the record (`documentos/fpn`, always Portuguese, `li
 files the signed scan per season in `student_document`, older copies kept. The club's *Associação* and
 *Sigla FPN* are set in the same section (`PATCH /fpn-settings`). Owner and admin.
 
+**The ID number is information on *Geral* and official on *Documentos*** (Rui, 01-11-2026). On *Geral* the
+number is asked alone, with no type and no check, and stored as typed: changing it there clears the
+type, because a number typed there is unverified. On *Documentos* the type is chosen, and a Cartão de
+Cidadão is judged as the whole number the card prints under *N.º Documento*: 8 digits, the check digit,
+two letters and a digit (`isValidCcNumber`). Choosing *Cartão de Cidadão* for a number already on file
+judges that number too (`documents.error.ccStored`), and the refusal says what is expected, under the
+field and in the toast.
+
 **The ID document's photograph** (Rui, 30-10-2026) is filed on *Identificação* as a `student_document`
 of kind `id_document` (no season, older ones kept), chosen or dropped anywhere on the page. With
 the *Leitura do documento* switch on /admin → Plataforma (`platform_switch.id_document_ai`, off by default) and an API key, `lib/id-document-agent.ts` reads the type, number and dates

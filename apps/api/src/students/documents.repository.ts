@@ -1,4 +1,5 @@
 import { withOrg, type Tx } from '@poolse/db';
+import { isValidCcNumber } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
 import { decryptSensitive, encryptSensitive } from '../sensitive/cipher.js';
 import { displayName } from '../people/names.js';
@@ -147,6 +148,13 @@ export interface IdDocumentEdit {
 }
 
 /** The ID document and the disciplines, one save. Fields named, never valued. */
+/** The number on file is not a whole Cartão de Cidadão number, so the type cannot be "cc". */
+export class StoredNumberNotCcError extends Error {
+  constructor() {
+    super('The number on file is not a valid Cartão de Cidadão number');
+  }
+}
+
 export async function saveDocumentFields(
   organizationId: string,
   studentId: string,
@@ -163,6 +171,17 @@ export async function saveDocumentFields(
     if (edit.idDocument !== undefined) {
       const doc = edit.idDocument;
       if (doc.number === undefined) {
+        // Choosing "Cartão de Cidadão" for a number already on file — one typed
+        // on Geral, which takes it as information — is when that number is
+        // judged (Rui, 01-11-2026): the type vouches for the number.
+        if (doc.type === 'cc') {
+          const stored = await tx.query<{ n: string | null }>(
+            'SELECT id_document_number_encrypted AS n FROM student WHERE id = $1',
+            [studentId],
+          );
+          const number = decryptSensitive(stored.rows[0]?.n ?? null);
+          if (number !== null && !isValidCcNumber(number)) throw new StoredNumberNotCcError();
+        }
         await tx.query(
           `UPDATE student SET id_document_type = CASE WHEN id_document_number_encrypted IS NULL THEN NULL ELSE coalesce($2, id_document_type) END,
                   id_document_issued_on = $3::date, id_document_valid_until = $4::date
@@ -170,7 +189,8 @@ export async function saveDocumentFields(
           [studentId, doc.type, doc.issuedOn, doc.validUntil],
         );
       } else {
-        const sealed = doc.number === null || doc.type === null ? null : encryptSensitive(doc.number);
+        // A number may stand without its type: Geral records it as typed.
+        const sealed = doc.number === null ? null : encryptSensitive(doc.number);
         await tx.query(
           `UPDATE student SET id_document_type = $2, id_document_number_encrypted = $3,
                   id_document_issued_on = $4::date, id_document_valid_until = $5::date

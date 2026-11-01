@@ -667,7 +667,10 @@ function IdentityFields({
 
 /**
  * The ID document on the General tab — Rui, 30-10-2026: the same fields as
- * *Documentos*, so a number typed in either place is the one both show. The
+ * *Documentos*, so a number typed in either place is the one both show. Here
+ * it is **information** (Rui, 01-11-2026): no type, no check, stored as typed;
+ * *Documentos* is where the type is chosen and a Cartão de Cidadão is judged,
+ * for the FPN's declaration. The
  * number is the full one, read for owner and admin only (each read is in the
  * activity log); the originals ride along hidden, so a save that changed none
  * of them writes nothing to the document.
@@ -700,6 +703,7 @@ function IdDocumentFields({
         initial={doc.number ?? ''}
         autoComplete="off"
         maxLength={30}
+        hint={t('documents.idDocument.numberOnGeneralHint')}
         className="max-w-none"
         {...fieldError('idDocumentNumber')}
       />

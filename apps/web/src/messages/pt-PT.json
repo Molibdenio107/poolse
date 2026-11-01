@@ -6486,8 +6486,9 @@
       "tooLong": "Demasiado longo.",
       "type": "Tipo de documento desconhecido.",
       "typeRequired": "Escolha o tipo de documento.",
-      "cc": "Não é um número de Cartão de Cidadão válido.",
-      "order": "A validade não pode ser anterior à data de emissão."
+      "cc": "Não é um número de Cartão de Cidadão válido. Escreva-o como aparece no cartão em «N.º Documento»: 8 algarismos, o algarismo de controlo, duas letras e um algarismo (ex.: 12345678 9 ZZ1).",
+      "order": "A validade não pode ser anterior à data de emissão.",
+      "ccStored": "O número registado não é um número de Cartão de Cidadão completo. Escreva-o como aparece no cartão em «N.º Documento» (ex.: 12345678 9 ZZ1)."
     },
     "toast": {
       "filed": "Documento assinado arquivado."
@@ -6509,7 +6510,8 @@
       "issuedOn": "Emitido em",
       "issuedOnHint": "O Cartão de Cidadão não tem data de emissão: deixe em branco.",
       "validUntil": "Válido até",
-      "numberOnGeneral": "Nº do documento de identificação"
+      "numberOnGeneral": "Nº do documento de identificação",
+      "numberOnGeneralHint": "Informativo: fica como o escrever. O tipo de documento e a validação para a FPN estão no separador Documentos."
     },
     "fpn": {
       "title": "Declaração FPN",

@@ -164,3 +164,37 @@ test('POOLSE-134 — the boletim reads the record, a minor names the guardian, a
     assert.equal(JSON.stringify(print).includes('123456789'), false, 'the SNS number never prints');
   });
 });
+
+test('01-11-2026 — a number typed on Geral is information; choosing Cartão de Cidadão is what judges it', async () => {
+  await withScratchTenant(async (tenant) => {
+    const admin = await addMember(tenant, 'Carla', 'Admin', ['admin']);
+    const asAdmin = <T>(fn: () => Promise<T>): Promise<T> =>
+      actingAs(tenant, { membershipId: admin, roles: ['admin'] }, fn);
+    const routes = new StudentDocumentsController();
+    const [student] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name) VALUES ($1, 'Rui', 'Fonseca') RETURNING id`,
+      [tenant.organizationId],
+    );
+    const id = student!.id;
+
+    // Geral sends the number with no type: kept as typed, unchecked.
+    await asAdmin(() => routes.save(id, { idDocumentType: '', idDocumentNumber: '13818775' }));
+    const informative = await asAdmin(() => routes.read(id));
+    assert.equal(informative.idDocument.hasNumber, true);
+    assert.equal(informative.idDocument.type, null);
+
+    // Choosing Cartão de Cidadão for it judges the number on file — and says so under the number.
+    const refused = await asAdmin(() => routes.save(id, { idDocumentType: 'cc' })).then(
+      () => null,
+      (error: unknown) => error as { getResponse?: () => { fields?: Record<string, string> } },
+    );
+    assert.equal(refused?.getResponse?.().fields?.['idDocumentNumber'], 'documents.error.ccStored');
+    assert.equal((await asAdmin(() => routes.read(id))).idDocument.type, null, 'nothing changed');
+
+    // Typed with the type chosen, an 8-digit number is not a card number.
+    await asAdmin(() => expectStatus(() => routes.save(id, { idDocumentType: 'cc', idDocumentNumber: '13818775' }), 400));
+    // The whole card number passes, and the type sticks.
+    await asAdmin(() => routes.save(id, { idDocumentType: 'cc', idDocumentNumber: CC }));
+    assert.equal((await asAdmin(() => routes.read(id))).idDocument.type, 'cc');
+  });
+});

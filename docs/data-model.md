@@ -307,7 +307,9 @@ privileges by name (`poolse_app`), so a definer caller does not rewrite insert-o
 locality, postal_code `0000-000`, parent_one_name, parent_two_name, marital_status enum, profession,
 education, birthplace, nationality ISO alpha-2, sns_number nine digits), the ID document
 (id_document_type cc|bi|passport|other, id_document_number_encrypted — ciphertext by CHECK —,
-id_document_issued_on, id_document_valid_until) and `fpn_disciplines fpn_discipline[]`; all cleared on
+id_document_issued_on, id_document_valid_until; since 1 November 2026 a number may stand without a
+type — typed on *Geral* as information — while a type still needs a number,
+`student_id_document_type_needs_number`) and `fpn_disciplines fpn_discipline[]`; all cleared on
 anonymisation by `student_anonymised_clears_licence`. `organization.fpn_association` and
 `fpn_club_code` (column-granted). `student_document` (student, kind fpn_declaration |
 fpn_declaration_minor | socio_form, season_id null only for socio_form, file_id, filed_by, replaced_at /
