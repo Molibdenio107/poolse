@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -148,6 +148,94 @@ export function useSuccessKey(state: { ok?: boolean }): number {
   return key;
 }
 
+/**
+ * A field's label, and the mark that says it is required — 1 November 2026
+ * (Rui: "it does not say what is mandatory"). The asterisk is the mark; the
+ * control's own `required` is what a screen reader announces, so the mark is
+ * hidden from it rather than said twice. `FormValidation` strips it back off
+ * when it names the field in a toast.
+ */
+function FieldLabel({
+  htmlFor,
+  required,
+  children,
+}: {
+  htmlFor: string;
+  required: boolean | undefined;
+  children: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <label htmlFor={htmlFor} className="text-sm text-foreground-muted">
+      {children}
+      {required === true && (
+        <span aria-hidden className="text-danger">
+          {' *'}
+        </span>
+      )}
+    </label>
+  );
+}
+
+/** What a field says when the browser judges it invalid — `common.validation.*`, already translated. */
+export interface ValidationMessages {
+  required: string;
+  length: string;
+  range: string;
+  format: string;
+  invalid: string;
+}
+
+/**
+ * The words, handed down rather than looked up: a field is used on public pages
+ * too, which translate on the server and have no intl provider. The app layout
+ * provides them from the catalogue and the public registration page from its own
+ * translator; with neither, the browser's own message is the fallback.
+ */
+const ValidationText = createContext<ValidationMessages | null>(null);
+export function ValidationMessagesProvider({
+  messages,
+  children,
+}: {
+  messages: ValidationMessages;
+  children: React.ReactNode;
+}): React.ReactElement {
+  return <ValidationText.Provider value={messages}>{children}</ValidationText.Provider>;
+}
+
+/** Which of those messages fits, from the browser's own judgement of the control. */
+export function validityKey(validity: ValidityState): keyof ValidationMessages {
+  if (validity.valueMissing) return 'required';
+  if (validity.tooLong || validity.tooShort) return 'length';
+  if (validity.rangeUnderflow || validity.rangeOverflow || validity.stepMismatch) return 'range';
+  if (validity.typeMismatch || validity.patternMismatch || validity.badInput) return 'format';
+  return 'invalid';
+}
+
+/**
+ * A field's own refusal, said under it before the server is asked — 1 November
+ * 2026. A required box left empty used to be caught by the browser's bubble:
+ * gone in two seconds, in the browser's language, pointing at one field of
+ * several. Now the field says it in its own words, in place, until it is
+ * edited; the server's message (`error`), when there is one, wins.
+ */
+function useOwnRefusal(error: string | undefined): {
+  shown: string | undefined;
+  onInvalid: (event: React.FormEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  clear: () => void;
+} {
+  const words = useContext(ValidationText);
+  const [own, setOwn] = useState<string | undefined>(undefined);
+  return {
+    shown: error ?? own,
+    onInvalid: (event) => {
+      event.preventDefault();
+      const control = event.currentTarget;
+      setOwn(words === null ? control.validationMessage : words[validityKey(control.validity)]);
+    },
+    clear: () => setOwn(undefined),
+  };
+}
+
 interface Common {
   name: string;
   label: string;
@@ -210,18 +298,20 @@ export function TextField({
 }): React.ReactElement {
   const id = useId();
   const [value, setValue] = useSeeded(initial);
+  const refusal = useOwnRefusal(error);
+  const shown = refusal.shown;
 
   // The error is listed first so a screen reader says what is wrong before it
   // says what was expected.
-  const describedBy = [error === undefined ? null : `${id}-error`, hint === undefined ? null : `${id}-hint`]
+  const describedBy = [shown === undefined ? null : `${id}-error`, hint === undefined ? null : `${id}-hint`]
     .filter(Boolean)
     .join(' ');
 
   return (
     <div className={cn(FIELD, 'max-w-field', className)}>
-      <label htmlFor={id} className="text-sm text-foreground-muted">
+      <FieldLabel htmlFor={id} required={required}>
         {label}
-      </label>
+      </FieldLabel>
       <input
         id={id}
         name={name}
@@ -229,25 +319,28 @@ export function TextField({
         value={value}
         onChange={(event) => {
           setValue(event.target.value);
+          refusal.clear();
           onValueChange?.(event.target.value);
         }}
         required={required}
+        onInvalid={refusal.onInvalid}
+        data-field=""
         autoComplete={autoComplete}
         placeholder={placeholder}
         maxLength={maxLength}
         inputMode={inputMode}
-        aria-invalid={error === undefined ? undefined : true}
+        aria-invalid={shown === undefined ? undefined : true}
         aria-describedby={describedBy === '' ? undefined : describedBy}
-        className={cn(CONTROL_LINE, error !== undefined && INVALID, inputClassName)}
+        className={cn(CONTROL_LINE, shown !== undefined && INVALID, inputClassName)}
       />
       {hint !== undefined && (
         <p id={`${id}-hint`} className="text-sm text-foreground-muted">
           {hint}
         </p>
       )}
-      {error !== undefined && (
+      {shown !== undefined && (
         <p id={`${id}-error`} className="text-sm text-danger">
-          {error}
+          {shown}
         </p>
       )}
     </div>
@@ -276,16 +369,18 @@ export function TextAreaField({
 }): React.ReactElement {
   const id = useId();
   const [value, setValue] = useSeeded(initial);
+  const refusal = useOwnRefusal(error);
+  const shown = refusal.shown;
 
-  const describedBy = [error === undefined ? null : `${id}-error`, hint === undefined ? null : `${id}-hint`]
+  const describedBy = [shown === undefined ? null : `${id}-error`, hint === undefined ? null : `${id}-hint`]
     .filter(Boolean)
     .join(' ');
 
   return (
     <div className={cn(FIELD, 'max-w-form', className)}>
-      <label htmlFor={id} className="text-sm text-foreground-muted">
+      <FieldLabel htmlFor={id} required={required}>
         {label}
-      </label>
+      </FieldLabel>
       <textarea
         id={id}
         name={name}
@@ -293,23 +388,26 @@ export function TextAreaField({
         value={value}
         onChange={(event) => {
           setValue(event.target.value);
+          refusal.clear();
           onValueChange?.(event.target.value);
         }}
         required={required}
+        onInvalid={refusal.onInvalid}
+        data-field=""
         placeholder={placeholder}
         maxLength={maxLength}
-        aria-invalid={error === undefined ? undefined : true}
+        aria-invalid={shown === undefined ? undefined : true}
         aria-describedby={describedBy === '' ? undefined : describedBy}
-        className={cn(CONTROL_BLOCK, error !== undefined && INVALID)}
+        className={cn(CONTROL_BLOCK, shown !== undefined && INVALID)}
       />
       {hint !== undefined && (
         <p id={`${id}-hint`} className="text-sm text-foreground-muted">
           {hint}
         </p>
       )}
-      {error !== undefined && (
+      {shown !== undefined && (
         <p id={`${id}-error`} className="text-sm text-danger">
-          {error}
+          {shown}
         </p>
       )}
     </div>
@@ -341,28 +439,33 @@ export function SelectField({
 }): React.ReactElement {
   const id = useId();
   const [value, setValue] = useSeeded(initial);
+  const refusal = useOwnRefusal(error);
+  const shown = refusal.shown;
 
-  const describedBy = [error === undefined ? null : `${id}-error`, hint === undefined ? null : `${id}-hint`]
+  const describedBy = [shown === undefined ? null : `${id}-error`, hint === undefined ? null : `${id}-hint`]
     .filter(Boolean)
     .join(' ');
 
   return (
     <div className={cn(FIELD, 'max-w-field', className)}>
-      <label htmlFor={id} className="text-sm text-foreground-muted">
+      <FieldLabel htmlFor={id} required={required}>
         {label}
-      </label>
+      </FieldLabel>
       <select
         id={id}
         name={name}
         value={value}
         onChange={(event) => {
           setValue(event.target.value);
+          refusal.clear();
           onValueChange?.(event.target.value);
         }}
         required={required}
-        aria-invalid={error === undefined ? undefined : true}
+        onInvalid={refusal.onInvalid}
+        data-field=""
+        aria-invalid={shown === undefined ? undefined : true}
         aria-describedby={describedBy === '' ? undefined : describedBy}
-        className={cn(CONTROL_LINE, error !== undefined && INVALID)}
+        className={cn(CONTROL_LINE, shown !== undefined && INVALID)}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -375,9 +478,9 @@ export function SelectField({
           {hint}
         </p>
       )}
-      {error !== undefined && (
+      {shown !== undefined && (
         <p id={`${id}-error`} className="text-sm text-danger">
-          {error}
+          {shown}
         </p>
       )}
     </div>

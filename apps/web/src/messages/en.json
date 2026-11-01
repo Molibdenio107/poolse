@@ -282,7 +282,15 @@
     "pageFailedHint": "It may be a momentary server failure. Try again; if it keeps happening, let us know.",
     "tryAgain": "Try again",
     "noAnswer": "Poolse did not answer. Try again in a moment.",
-    "pageNotFound": "Page not found"
+    "pageNotFound": "Page not found",
+    "validation": {
+      "required": "This field is required.",
+      "length": "The length is not valid.",
+      "range": "The value is outside the allowed range.",
+      "format": "The format is not valid.",
+      "invalid": "Invalid value.",
+      "toast": "Fix the marked fields: {fields}."
+    }
   },
   "pagination": {
     "label": "Pagination",

@@ -7,6 +7,8 @@ import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { formats } from '../../i18n';
 import { ToastProvider } from '../../components/ui/toast';
 import { FormResetGuard } from '../../components/form-reset-guard';
+import { FormValidation } from '../../components/form-validation';
+import { ValidationMessagesProvider } from '../../components/ui/field';
 import { DetailsAnimator } from '../../components/details-animator';
 import { ScrollRows } from '../../components/scroll-rows';
 import { BusyIndicator } from '../../components/busy-indicator';
@@ -99,6 +101,16 @@ export default async function AppLayout({
 }): Promise<React.ReactElement> {
   const locale = await getLocale();
   const messages = await getMessages();
+  const v = await getTranslations('common.validation');
+  // What a field says when the browser judges it invalid (01-11-2026): handed
+  // to `ui/field.tsx` rather than looked up, as public pages have no provider.
+  const validation = {
+    required: v('required'),
+    length: v('length'),
+    range: v('range'),
+    format: v('format'),
+    invalid: v('invalid'),
+  };
 
   return (
     <ClerkProvider localization={clerkLocalization(locale)}>
@@ -147,7 +159,11 @@ export default async function AppLayout({
               every screen and a message raised from inside a dialog is not
               unmounted with it.
             */}
-            <ToastProvider>{children}</ToastProvider>
+            <ToastProvider>
+              <ValidationMessagesProvider messages={validation}>{children}</ValidationMessagesProvider>
+              {/* Every form names what is missing, under the field and in a toast (01-11-2026). */}
+              <FormValidation />
+            </ToastProvider>
             {/* A refused save must not untick a box or move a select. */}
             <FormResetGuard />
             <DetailsAnimator />

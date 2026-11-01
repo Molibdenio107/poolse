@@ -136,7 +136,9 @@ function failureMessage(t: Translator, state: unknown): string | null {
   try {
     message =
       failed.errorKey === undefined
-        ? t('common.checkTheFields')
+        ? // Which fields, and what is wrong with each (Rui, 01-11-2026): "check
+          // the fields" alone named nothing on a long form.
+          [t('common.checkTheFields'), ...fieldSentences(t, failed.fields, failed.values)].join(' ')
         : // With the refusal's own figures — a key with placeholders and no
           // values throws, and fell through to the generic sentence below.
           t(failed.errorKey as never, failed.values as never);
@@ -147,6 +149,30 @@ function failureMessage(t: Translator, state: unknown): string | null {
   // Never the API's own words — `visibleDetail` says which shapes and why.
   const detail = visibleDetail(failed.detail);
   return detail === null ? message : `${message} — ${detail}`;
+}
+
+/**
+ * Each refused field's own sentence, once each and at most three — the same
+ * words printed under the fields, so the toast and the form agree. A key the
+ * catalogue does not know is skipped rather than shown raw.
+ */
+function fieldSentences(
+  t: Translator,
+  fields: unknown,
+  values: Record<string, string | number> | undefined,
+): string[] {
+  if (fields === null || typeof fields !== 'object') return [];
+  const sentences: string[] = [];
+  for (const key of new Set(Object.values(fields as Record<string, unknown>))) {
+    if (typeof key !== 'string') continue;
+    try {
+      sentences.push(t(key as never, values as never));
+    } catch {
+      continue;
+    }
+    if (sentences.length === 3) break;
+  }
+  return sentences;
 }
 
 /**

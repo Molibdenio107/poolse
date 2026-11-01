@@ -282,7 +282,15 @@
     "pageFailedHint": "Pode ser uma falha momentânea do servidor. Tente de novo; se continuar a acontecer, avise-nos.",
     "tryAgain": "Tentar de novo",
     "noAnswer": "O Poolse não respondeu. Tente de novo dentro de momentos.",
-    "pageNotFound": "Página não encontrada"
+    "pageNotFound": "Página não encontrada",
+    "validation": {
+      "required": "Campo obrigatório.",
+      "length": "O comprimento não é válido.",
+      "range": "O valor está fora do intervalo permitido.",
+      "format": "O formato não é válido.",
+      "invalid": "Valor inválido.",
+      "toast": "Corrija os campos assinalados: {fields}."
+    }
   },
   "pagination": {
     "label": "Paginação",

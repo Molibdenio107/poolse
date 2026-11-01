@@ -121,6 +121,17 @@ function withFields(error: unknown, errorKey: string): FormState {
   return failure(error, errorKey);
 }
 
+/**
+ * Both names are required: the sentence says so, and each empty one is marked
+ * under its own field (01-11-2026) — the browser normally stops this first.
+ */
+function nameRequired(body: Record<string, unknown>): FormState | null {
+  const fields: Record<string, string> = {};
+  if (!body['firstName']) fields['firstName'] = 'common.validation.required';
+  if (!body['lastName']) fields['lastName'] = 'common.validation.required';
+  return Object.keys(fields).length === 0 ? null : { ok: false, errorKey: 'students.nameRequired', fields };
+}
+
 export async function createStudentAction(
   _previous: FormState,
   formData: FormData,
@@ -130,9 +141,8 @@ export async function createStudentAction(
     ...studentBody(formData),
     guardians: guardiansFrom(formData),
   };
-  if (!body['firstName'] || !body['lastName']) {
-    return { ok: false, errorKey: 'students.nameRequired' };
-  }
+  const missingName = nameRequired(body);
+  if (missingName !== null) return missingName;
 
   const unacknowledged = unacknowledgedAgeMismatch(formData);
   if (unacknowledged !== null) return unacknowledged;
@@ -162,9 +172,8 @@ export async function updateStudentAction(
     ...studentBody(formData),
     guardians: guardiansFrom(formData),
   };
-  if (!body['firstName'] || !body['lastName']) {
-    return { ok: false, errorKey: 'students.nameRequired' };
-  }
+  const missingName = nameRequired(body);
+  if (missingName !== null) return missingName;
 
   const unacknowledged = unacknowledgedAgeMismatch(formData);
   if (unacknowledged !== null) return unacknowledged;
