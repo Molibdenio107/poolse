@@ -1,3 +1,4 @@
+import { DISCIPLINE_FIELDS, type BoletimField } from '@poolse/rules';
 import { cn } from '@/lib/utils';
 
 /**
@@ -5,7 +6,7 @@ import { cn } from '@/lib/utils';
  * where a placement goes, shared by the editor and the print, so what the club
  * placed on screen is what comes out on paper:
  *
- * - **x and y are fractions of the page.** y is the text's baseline, so the
+ * - **x and y are fractions of the page.** y is the text's baseline (a tick box's centre), so the
  *   word sits on the form's printed line whatever the size.
  * - **Size is in points of an A4 page**, drawn in container-query units: the
  *   sheet is a size container, 100cqw is the page's width (595.28 pt), and the
@@ -13,15 +14,20 @@ import { cn } from '@/lib/utils';
  */
 export const A4_WIDTH_PT = 595.28;
 
-export function placementStyle(p: { x: number; y: number; sizePt: number }): React.CSSProperties {
+export function placementStyle(p: { field: BoletimField; x: number; y: number; sizePt: number }): React.CSSProperties {
   return {
     left: `${p.x * 100}%`,
     top: `${p.y * 100}%`,
     fontSize: `calc(${p.sizePt} / ${A4_WIDTH_PT} * 100cqw)`,
-    // The box's bottom on the line: a descender may dip below it, as handwriting does.
-    transform: 'translateY(-100%)',
+    // A tick box's point is its centre, so its X is centred on it; text sits
+    // with its bottom on the line, a descender dipping below as handwriting does.
+    transform: isTick(p.field) ? 'translate(-50%, -50%)' : 'translateY(-100%)',
     lineHeight: 1,
   };
+}
+
+function isTick(field: BoletimField): boolean {
+  return (DISCIPLINE_FIELDS as readonly BoletimField[]).includes(field);
 }
 
 /** The sheet: the form's image, full width, with whatever sits on it. */

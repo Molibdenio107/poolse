@@ -65,6 +65,8 @@ export interface FpnPrint {
   association: string | null;
   clubCode: string | null;
   place: string | null;
+  /** The club's own copy of this form, adult or minor (POOLSE-142); null for Poolse's. */
+  template?: { fileId: string; fields: import('@poolse/rules').BoletimPlacement[] } | null;
 }
 
 export interface FpnFormText {

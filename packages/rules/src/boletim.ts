@@ -44,6 +44,22 @@ export const BOLETIM_FIELDS = [
   'today_month',
   'today_year',
   'today_year_short',
+  // The FPN declaration's own (POOLSE-142, second half).
+  'signer_name',
+  'season',
+  'fpn_association',
+  'fpn_club_code',
+  'fpn_place',
+  'id_document_type',
+  'id_document_issued_on',
+  'id_document_valid_until',
+  'discipline_pura',
+  'discipline_open_water',
+  'discipline_water_polo',
+  'discipline_artistic',
+  'discipline_adapted',
+  'discipline_masters',
+  'discipline_diving',
 ] as const;
 
 export type BoletimField = (typeof BOLETIM_FIELDS)[number];
@@ -55,8 +71,56 @@ export function isBoletimField(value: unknown): value is BoletimField {
 /** The fields whose value is read only when a template places them (rule 5). */
 export const GUARDED_BOLETIM_FIELDS: ReadonlySet<BoletimField> = new Set(['id_document_number', 'sns_number']);
 
-/** The editor's groups, in the order a paper form usually asks. */
-export const BOLETIM_FIELD_GROUPS: readonly { key: string; fields: readonly BoletimField[] }[] = [
+/**
+ * A club's own forms (POOLSE-142): the boletim de sócio and the FPN's
+ * declaration, adult and minor — spelled as `student_document.kind` spells the
+ * signed copies. One live template per club and kind.
+ */
+export const TEMPLATE_KINDS = ['socio_form', 'fpn_declaration', 'fpn_declaration_minor'] as const;
+export type TemplateKind = (typeof TEMPLATE_KINDS)[number];
+
+export function isTemplateKind(value: unknown): value is TemplateKind {
+  return typeof value === 'string' && (TEMPLATE_KINDS as readonly string[]).includes(value);
+}
+
+export interface FieldGroup {
+  key: string;
+  fields: readonly BoletimField[];
+}
+
+/** The modalidades' boxes, in the FPN's order — an X where the student's record ticks it. */
+export const DISCIPLINE_FIELDS = [
+  'discipline_pura',
+  'discipline_open_water',
+  'discipline_water_polo',
+  'discipline_artistic',
+  'discipline_adapted',
+  'discipline_masters',
+  'discipline_diving',
+] as const satisfies readonly BoletimField[];
+
+/** The FPN declaration's groups: what Poolse's own Anexo 2 already prints, no more. */
+const FPN_FIELD_GROUPS: readonly FieldGroup[] = [
+  { key: 'person', fields: ['signer_name', 'name'] },
+  { key: 'contact', fields: ['address_line', 'locality', 'postal_code'] },
+  { key: 'documents', fields: ['id_document_type', 'id_document_number', 'id_document_issued_on', 'id_document_valid_until'] },
+  { key: 'fpn', fields: ['season', 'fpn_association', 'fpn_club_code', 'fpn_place'] },
+  { key: 'disciplines', fields: DISCIPLINE_FIELDS },
+  { key: 'today', fields: ['today', 'today_day', 'today_month', 'today_year', 'today_year_short'] },
+];
+
+/** The editor's groups for a kind, in the order its paper form usually asks. */
+export function fieldGroupsFor(kind: TemplateKind): readonly FieldGroup[] {
+  return kind === 'socio_form' ? BOLETIM_FIELD_GROUPS : FPN_FIELD_GROUPS;
+}
+
+/** Every field a kind may place — the API refuses any other on save. */
+export function fieldsFor(kind: TemplateKind): ReadonlySet<BoletimField> {
+  return new Set(fieldGroupsFor(kind).flatMap((group) => group.fields));
+}
+
+/** The boletim's groups, in the order a paper form usually asks. */
+export const BOLETIM_FIELD_GROUPS: readonly FieldGroup[] = [
   { key: 'person', fields: ['name', 'parent_one_name', 'parent_two_name', 'marital_status', 'profession', 'education'] },
   { key: 'birth', fields: ['birth_date', 'birth_day', 'birth_month', 'birth_year', 'birthplace', 'nationality'] },
   { key: 'contact', fields: ['address_line', 'locality', 'postal_code', 'phone', 'email'] },
@@ -120,12 +184,31 @@ export interface BoletimData {
   /** `YYYY-MM-DD`. */
   socioSince: string | null;
   guardian: { name: string; phone: string | null; email: string | null; relationship: string | null } | null;
+  /** The FPN declaration's own, absent on a boletim. Words already in Portuguese. */
+  fpn?: {
+    signerName: string | null;
+    season: string | null;
+    association: string | null;
+    clubCode: string | null;
+    place: string | null;
+    idDocumentType: string | null;
+    /** `YYYY-MM-DD`. */
+    issuedOn: string | null;
+    validUntil: string | null;
+    /** The student's own ticks (`FPN_DISCIPLINES` keys). */
+    disciplines: readonly string[];
+  };
 }
 
 /** `YYYY-MM-DD` as the boletim writes a whole date: dd-MM-yyyy, the product's one shape. */
 function wholeDate(iso: string): string {
   const [year, month, day] = iso.split('-');
   return `${day}-${month}-${year}`;
+}
+
+/** A date on the FPN's own form is dd/MM/yyyy, as that form writes it (POOLSE-132). */
+function fpnDate(iso: string | null): string | null {
+  return iso === null || !/^\d{4}-\d{2}-\d{2}$/.test(iso) ? null : wholeDate(iso).replaceAll('-', '/');
 }
 
 function part(iso: string | null, which: 'day' | 'month' | 'year' | 'yearShort'): string | null {
@@ -210,6 +293,31 @@ export function boletimValue(field: BoletimField, data: BoletimData, today: stri
       return part(today, 'year');
     case 'today_year_short':
       return part(today, 'yearShort');
+    case 'signer_name':
+      return blank(data.fpn?.signerName);
+    case 'season':
+      return blank(data.fpn?.season);
+    case 'fpn_association':
+      return blank(data.fpn?.association);
+    case 'fpn_club_code':
+      return blank(data.fpn?.clubCode);
+    case 'fpn_place':
+      return blank(data.fpn?.place);
+    case 'id_document_type':
+      return blank(data.fpn?.idDocumentType);
+    case 'id_document_issued_on':
+      return fpnDate(data.fpn?.issuedOn ?? null);
+    case 'id_document_valid_until':
+      return fpnDate(data.fpn?.validUntil ?? null);
+    case 'discipline_pura':
+    case 'discipline_open_water':
+    case 'discipline_water_polo':
+    case 'discipline_artistic':
+    case 'discipline_adapted':
+    case 'discipline_masters':
+    case 'discipline_diving':
+      // A tick on the student's own Documentos tab, never derived from a level.
+      return data.fpn?.disciplines.includes(field.slice('discipline_'.length)) === true ? 'X' : null;
   }
 }
 

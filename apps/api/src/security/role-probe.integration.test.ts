@@ -40,7 +40,7 @@ import {
   StudentInvitationsController,
 } from '../students/family-invitations.controller.js';
 import { BoletimController, FpnSettingsController, StudentDocumentsController } from '../students/documents.controller.js';
-import { BoletimTemplateController } from '../students/boletim-template.controller.js';
+import { DocumentTemplatesController } from '../students/boletim-template.controller.js';
 import { MedicalExamsController } from '../students/medical-exams.controller.js';
 import { MaintenanceController } from '../maintenance/maintenance.controller.js';
 import { FacilityIncidentsController, IncidentsController } from '../safety/incidents.controller.js';
@@ -863,11 +863,11 @@ test('student documents and FPN settings refuse a guardian and a student (403)',
     await refused('PATCH fpn-settings', 403, () => new FpnSettingsController().save({ association: 'X' }));
     await refused('GET students/:id/boletim', 403, () => new BoletimController().print(fixture.aliceId));
     // POOLSE-142 — the club's own boletim template.
-    const template = new BoletimTemplateController();
-    await refused('GET settings/boletim-template', 403, () => template.read());
-    await refused('PUT settings/boletim-template', 403, () => template.set({ fileId: NO_SUCH_ID }));
-    await refused('PUT settings/boletim-template/fields', 403, () => template.place({ fields: [] }));
-    await refused('DELETE settings/boletim-template', 403, () => template.remove());
+    const template = new DocumentTemplatesController();
+    await refused('GET settings/document-templates/:kind', 403, () => template.read('socio_form'));
+    await refused('PUT settings/document-templates/:kind', 403, () => template.set('fpn_declaration', { fileId: NO_SUCH_ID }));
+    await refused('PUT settings/document-templates/:kind/fields', 403, () => template.place('socio_form', { fields: [] }));
+    await refused('DELETE settings/document-templates/:kind', 403, () => template.remove('fpn_declaration_minor'));
   });
 });
 

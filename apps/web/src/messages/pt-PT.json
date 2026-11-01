@@ -4679,7 +4679,7 @@
         "water_report_ai": "Leitura de relatórios de análises",
         "pdf_table_ai": "Leitura de listas em PDF",
         "column_match_ai": "Correspondência de colunas",
-        "boletim_template_ai": "Posições no boletim de sócio"
+        "boletim_template_ai": "Posições nos formulários do clube"
       },
       "covers": {
         "id_document_ai": "Ao carregar a fotografia do CC de um aluno, o número e as datas são lidos e propostos no formulário para alguém confirmar. Só a imagem é enviada. Cada leitura tem custo.",
@@ -4687,7 +4687,7 @@
         "water_report_ai": "Um relatório de análises em PDF ou fotografia, largado numa piscina, é lido e proposto para alguém confirmar. Cada leitura tem custo. Cada clube precisa também do seu visto na página do clube.",
         "pdf_table_ai": "Os importadores de listas (alunos, horário, parcerias, salários, inventário, mínimos) aceitam um PDF, transcrito como folha de cálculo. Cada leitura tem custo. Cada clube precisa também do seu visto na página do clube.",
         "column_match_ai": "Ao importar alunos, as colunas que nenhum sinónimo reconheceu são propostas pelo modelo. Só vão os cabeçalhos e a forma de cada coluna. Cada chamada tem custo. Cada clube precisa também do seu visto na página do clube.",
-        "boletim_template_ai": "Em Dados do clube, o boletim do próprio clube é lido e a IA propõe onde vai cada dado, para alguém acertar e guardar. Só vai a imagem do formulário. Cada leitura tem custo."
+        "boletim_template_ai": "Em Instalações → Documentos, o boletim e a declaração FPN do próprio clube são lidos e a IA propõe onde vai cada dado, para alguém acertar e guardar. Só vai a imagem do formulário. Cada leitura tem custo."
       },
       "on": "Ligado",
       "off": "Desligado",
@@ -4723,7 +4723,7 @@
         "water_report": "Leitura de relatórios de análises",
         "pdf_table": "Leitura de listas em PDF",
         "column_match": "Correspondência de colunas",
-        "boletim_template": "Posições no boletim de sócio"
+        "boletim_template": "Posições nos formulários do clube"
       },
       "covers": {
         "energy_invoice": "Em Energia → Importar fatura, o PDF da fatura é lido e proposto no formulário para alguém confirmar.",
@@ -4731,7 +4731,7 @@
         "water_report": "Um relatório de análises em PDF ou fotografia, largado numa piscina, é lido e proposto para alguém confirmar.",
         "pdf_table": "Os importadores de listas (alunos, horário, parcerias, salários, inventário, mínimos) aceitam um PDF, transcrito como folha de cálculo.",
         "column_match": "Ao importar alunos, as colunas que nenhum sinónimo reconheceu são propostas pelo modelo. Só vão os cabeçalhos e a forma de cada coluna.",
-        "boletim_template": "Em Dados do clube, a IA propõe onde vai cada dado no boletim do próprio clube, para alguém acertar e guardar."
+        "boletim_template": "Em Instalações → Documentos, a IA propõe onde vai cada dado no boletim e na declaração FPN do próprio clube, para alguém acertar e guardar."
       }
     }
   },
@@ -6712,7 +6712,6 @@
     "next": "Mostrar os seguintes"
   },
   "boletimTemplate": {
-    "title": "Boletim de sócio do clube",
     "hint": "O formulário em papel do próprio clube, preenchido com os dados de cada aluno quando se imprime o boletim. É do clube e vale para todas as instalações. Carregue um PDF ou uma fotografia de uma página A4; depois indique onde vai cada dado.",
     "upload": "Carregar o boletim",
     "replace": "Substituir o boletim",
@@ -6722,7 +6721,6 @@
     "firstPageOnly": "O PDF tem mais de uma página: foi usada só a primeira.",
     "howTo": "Escolha um dado na lista e clique na linha do boletim onde deve ser escrito. Arraste um dado colocado para o acertar.",
     "armed": "Clique na linha do boletim onde deve ficar «{field}».",
-    "alt": "Boletim de sócio do clube",
     "placedLabel": "{field}, colocado no boletim",
     "smaller": "Diminuir o tamanho",
     "bigger": "Aumentar o tamanho",
@@ -6737,7 +6735,6 @@
     "replaceTitle": "Substituir o boletim?",
     "replaceExplain": "{count, plural, one {O dado colocado será retirado} other {Os # dados colocados serão retirados}}: as posições de outro formulário não servem neste. Terá de os voltar a colocar.",
     "replaceConfirm": "Substituir",
-    "removeTitle": "Remover o boletim do clube?",
     "removeExplain": "Os alunos voltam a imprimir o boletim do Poolse. As posições guardadas são retiradas com ele.",
     "removeConfirm": "Remover",
     "printClubForm": "Imprimir no boletim do clube",
@@ -6749,7 +6746,9 @@
       "documents": "Documentos",
       "socio": "Sócio",
       "guardian": "Encarregado de educação",
-      "today": "Data de hoje"
+      "today": "Data de hoje",
+      "fpn": "Federação e época",
+      "disciplines": "Modalidades (um X se assinalada)"
     },
     "field": {
       "name": "Nome",
@@ -6782,7 +6781,22 @@
       "today_day": "Dia de hoje",
       "today_month": "Mês de hoje (por extenso)",
       "today_year": "Ano de hoje",
-      "today_year_short": "Ano de hoje (dois algarismos)"
+      "today_year_short": "Ano de hoje (dois algarismos)",
+      "signer_name": "Nome de quem assina",
+      "season": "Época",
+      "fpn_association": "Associação",
+      "fpn_club_code": "Clube (código FPN)",
+      "fpn_place": "Local",
+      "id_document_type": "Tipo de documento",
+      "id_document_issued_on": "Emitido em",
+      "id_document_valid_until": "Válido até",
+      "discipline_pura": "Natação pura",
+      "discipline_open_water": "Águas abertas",
+      "discipline_water_polo": "Polo aquático",
+      "discipline_artistic": "Natação artística",
+      "discipline_adapted": "Natação adaptada",
+      "discipline_masters": "Masters",
+      "discipline_diving": "Saltos"
     },
     "ai": {
       "propose": "Propor posições com IA",
@@ -6797,6 +6811,29 @@
         "notAllowed": "Não tem permissão para usar a leitura com IA.",
         "rateLimited": "Demasiadas leituras com IA seguidas. Tente daqui a alguns minutos."
       }
-    }
+    },
+    "tab": "Documentos",
+    "sectionNav": "Formulários do clube",
+    "section": {
+      "boletim": "Boletim de sócio",
+      "fpn": "Declaração FPN"
+    },
+    "fpnFormNav": "Versão da declaração",
+    "fpnForm": {
+      "adult": "Maiores",
+      "minor": "Menores"
+    },
+    "kind": {
+      "socio_form": "Boletim de sócio do clube",
+      "fpn_declaration": "Declaração FPN — maiores",
+      "fpn_declaration_minor": "Declaração FPN — menores"
+    },
+    "hintFpn": "A cópia do clube da Declaração de Consentimento Informado da FPN (Anexo 2), preenchida com os dados de cada aluno quando se imprime a declaração. As modalidades levam um X onde estão assinaladas no separador Documentos do aluno. É do clube e vale para todas as instalações.",
+    "removeFpn": "Remover a declaração",
+    "removeTitleKind": "Remover «{form}»?",
+    "removeExplainFpn": "Os alunos voltam a imprimir a declaração do Poolse. As posições guardadas são retiradas com ela.",
+    "removedFpn": "Declaração removida. Os alunos voltam a imprimir a declaração do Poolse.",
+    "printClubFpn": "Imprimir na declaração do clube",
+    "printPoolseFpn": "Imprimir na declaração do Poolse"
   }
 }

@@ -1,7 +1,7 @@
 import { RegulationPanel, type ComplaintsSettingsView, type RegulationVersionView } from './regulation-panel';
 import { PaymentInstructionsPanel, TaxPanel } from './tax-panel';
 import { LogoPanel } from './logo-panel';
-import { BoletimTemplatePanel } from './boletim-template-panel';
+import { DocumentsTab } from './boletim-template-panel';
 import { SeriesPanel } from './series-panel';
 import { listSeries } from '../../faturacao/invoices.actions';
 import { readTaxSettings } from './club.actions';
@@ -105,12 +105,12 @@ export default async function FacilityPage({
   searchParams,
 }: {
   params: Promise<{ facilityId: string }>;
-  searchParams: Promise<{ tab?: string | string[]; from?: string; section?: string }>;
+  searchParams: Promise<{ tab?: string | string[]; from?: string; section?: string; form?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { facilityId } = await params;
   const storageReady = await storageConfigured();
-  const { tab, from, section } = await searchParams;
+  const { tab, from, section, form } = await searchParams;
   // Back to where the link was followed from, when it says — the `withFrom`
   // links from the dashboard, Energia and Turmas. October 2026 sweep.
   const origin = readFrom(from);
@@ -578,11 +578,21 @@ export default async function FacilityPage({
                 */}
                 {books?.state === 'failed' && <PageError message={t(books.failure.key)} />}
                 {books?.state === 'ok' && <SeriesPanel facilityId={facilityId} series={books.data.series} />}
-                {/* The club's own boletim de sócio (POOLSE-142). */}
-                <BoletimTemplatePanel />
               </div>
             );
           },
+        },
+        {
+          /*
+            The club's own paper forms — POOLSE-142 (Rui, 01-11-2026): the
+            boletim de sócio and the FPN declaration, each filled for every
+            student when it is printed from the record. The club's, like
+            Dados do clube; owner and admin, as the endpoints are.
+          */
+          slug: 'documents',
+          labelKey: 'boletimTemplate.tab',
+          visible: loaded.canManage,
+          content: () => <DocumentsTab path={path} from={from} section={section} form={form} />,
         },
         {
           slug: 'photos',

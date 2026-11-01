@@ -1,11 +1,12 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
-import { BOLETIM_FIELDS, placementsFromGrid, type BoletimField, type BoletimPlacement } from '@poolse/rules';
+import { fieldsFor, placementsFromGrid, type BoletimField, type BoletimPlacement, type TemplateKind } from '@poolse/rules';
 import { anthropicKeyConfigured, metered } from './ai-meter';
 
 /**
- * Proposes where each Poolse field goes on a club's own boletim — POOLSE-142
- * slice B (Rui, 01-11-2026: "the AI places the fields").
+ * Proposes where each Poolse field goes on a club's own form — POOLSE-142
+ * slice B (Rui, 01-11-2026: "the AI places the fields"): the boletim de sócio
+ * or the FPN declaration, each offered only its own fields (`fieldsFor`).
  *
  * - **Gated like every reader** (POOLSE-137): the `boletim_template_ai` switch
  *   on /admin, the club's tick, the monthly cap and a key. Off, the manual
@@ -55,20 +56,43 @@ const MEANING: Record<BoletimField, string> = {
   today_month: 'the month of signing in words (the month blank of that line)',
   today_year: 'the full year of signing, where the form leaves a whole year blank',
   today_year_short: 'the last two digits of the year of signing, where the form prints "20" before the blank',
+  signer_name: 'the name of the person signing the declaration (on a minor\'s form, the parent or guardian: "Eu, ...")',
+  season: 'the sports season ("época", e.g. 2026/2027)',
+  fpn_association: 'the regional swimming association ("Associação")',
+  fpn_club_code: 'the club\'s name or FPN code ("Clube")',
+  fpn_place: 'the place written before the date of signing ("Local")',
+  id_document_type: 'the kind of identity document (Cartão de Cidadão, BI, passaporte), where the form leaves it to be written',
+  id_document_issued_on: 'the identity document\'s issue date ("emitido em")',
+  id_document_valid_until: 'the identity document\'s expiry date ("válido até")',
+  discipline_pura: 'the tick box for "Natação Pura"',
+  discipline_open_water: 'the tick box for "Águas Abertas"',
+  discipline_water_polo: 'the tick box for "Polo Aquático"',
+  discipline_artistic: 'the tick box for "Natação Artística" (Sincronizada)',
+  discipline_adapted: 'the tick box for "Natação Adaptada"',
+  discipline_masters: 'the tick box for "Masters"',
+  discipline_diving: 'the tick box for "Saltos"',
 };
 
-const SYSTEM = [
-  'You look at one scanned page of a Portuguese club\'s membership form ("Proposta de Sócio", "Boletim de sócio") and say where a clerk would write each piece of data.',
-  'Coordinates are on a 0–1000 grid over the whole image: x from the left edge, y from the top edge.',
-  'For each field the form asks for, give the point where the handwriting starts: x just after the printed label (at the start of the blank line), y on the blank line itself (the baseline the writing sits on).',
-  'Only fields the form actually asks for. Never invent a blank. Skip a field the form does not have; skip boxes to tick and the club\'s own sections (approval, direction signatures, "Admitido em sessão").',
-  'Ignore anything already handwritten or typed in the blanks: place the field where it would be written.',
-  'A field may appear twice only if the form asks for it twice.',
-  'The fields:',
-  ...BOLETIM_FIELDS.map((field) => `- ${field}: ${MEANING[field]}`),
-].join('\n');
+/** The instructions for one kind of form, naming only that form's fields. */
+function systemFor(kind: TemplateKind): string {
+  const fields = [...fieldsFor(kind)];
+  return [
+    kind === 'socio_form'
+      ? 'You look at one scanned page of a Portuguese club\'s membership form ("Proposta de Sócio", "Boletim de sócio") and say where a clerk would write each piece of data.'
+      : 'You look at one scanned page of the Portuguese Swimming Federation\'s informed-consent declaration ("Declaração de Consentimento Informado", Anexo 2) as a club prints it, and say where a clerk would write each piece of data.',
+    'Coordinates are on a 0–1000 grid over the whole image: x from the left edge, y from the top edge.',
+    'For each field the form asks for, give the point where the handwriting starts: x just after the printed label (at the start of the blank line), y on the blank line itself (the baseline the writing sits on).',
+    kind === 'socio_form'
+      ? 'Only fields the form actually asks for. Never invent a blank. Skip a field the form does not have; skip boxes to tick and the club\'s own sections (approval, direction signatures, "Admitido em sessão").'
+      : 'Only fields the form actually asks for. Never invent a blank. Skip a field the form does not have. A modalidade\'s tick box is a field: its point is the centre of the box, where an X is printed.',
+    'Ignore anything already handwritten or typed in the blanks: place the field where it would be written.',
+    'A field may appear twice only if the form asks for it twice.',
+    'The fields:',
+    ...fields.map((field) => `- ${field}: ${MEANING[field]}`),
+  ].join('\n');
+}
 
-function schema(): Record<string, unknown> {
+function schema(kind: TemplateKind): Record<string, unknown> {
   return {
     type: 'object',
     additionalProperties: false,
@@ -81,7 +105,7 @@ function schema(): Record<string, unknown> {
           additionalProperties: false,
           required: ['field', 'x', 'y'],
           properties: {
-            field: { type: 'string', enum: [...BOLETIM_FIELDS] },
+            field: { type: 'string', enum: [...fieldsFor(kind)] },
             x: { type: 'integer' },
             y: { type: 'integer' },
           },
@@ -97,7 +121,7 @@ export type BoletimLayoutRead =
   | { error: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' };
 
 /** Call only after the gate (`readAiReaderGate('boletim_template')`) said null. */
-export async function readBoletimLayout(bytes: Buffer, mediaType: string): Promise<BoletimLayoutRead> {
+export async function readBoletimLayout(bytes: Buffer, mediaType: string, kind: TemplateKind): Promise<BoletimLayoutRead> {
   if (!anthropicKeyConfigured()) return { error: 'noKey' };
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_BYTES) return { error: 'unreadable' };
   if (mediaType !== 'image/jpeg' && mediaType !== 'image/png' && mediaType !== 'image/webp') return { error: 'unreadable' };
@@ -112,7 +136,7 @@ export async function readBoletimLayout(bytes: Buffer, mediaType: string): Promi
           betas: ['server-side-fallback-2026-07-01'],
           fallbacks: 'default',
           max_tokens: 4096,
-          system: SYSTEM,
+          system: systemFor(kind),
           messages: [
             {
               role: 'user',
@@ -122,7 +146,7 @@ export async function readBoletimLayout(bytes: Buffer, mediaType: string): Promi
               ],
             },
           ],
-          output_config: { format: { type: 'json_schema', schema: schema() } },
+          output_config: { format: { type: 'json_schema', schema: schema(kind) } },
         },
         { timeout: 90_000 },
       );
@@ -133,7 +157,9 @@ export async function readBoletimLayout(bytes: Buffer, mediaType: string): Promi
         .map((part) => part.text)
         .join('');
       if (text.trim() === '') return { error: 'nothingFound' };
-      const placements = placementsFromGrid(JSON.parse(text), MAX_PLACEMENTS);
+      // Only this form's fields, whatever the model answered.
+      const offered = fieldsFor(kind);
+      const placements = placementsFromGrid(JSON.parse(text), MAX_PLACEMENTS).filter((p) => offered.has(p.field));
       return placements.length === 0 ? { error: 'nothingFound' } : { placements };
     } catch {
       // Rate limited, timed out, a key that is wrong: the manual editor still works.

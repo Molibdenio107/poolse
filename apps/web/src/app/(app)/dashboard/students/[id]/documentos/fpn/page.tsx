@@ -15,6 +15,9 @@ import {
 import { PageError } from '@/components/page-shell';
 import { PrintButton } from '@/components/print-button';
 import { AutoPrint } from '@/components/auto-print';
+import { BoletimSheet, placementStyle } from '@/components/boletim-sheet';
+import { fileUrl } from '@/lib/files';
+import { boletimValue, type BoletimData, type BoletimPlacement } from '@poolse/rules';
 
 /**
  * The FPN's *Anexo 2 — Declaração de Consentimento Informado*, filled from the
@@ -38,7 +41,7 @@ export default async function FpnDeclarationPrintPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ season?: string; minor?: string; print?: string }>;
+  searchParams: Promise<{ season?: string; minor?: string; print?: string; form?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { id } = await params;
@@ -59,6 +62,20 @@ export default async function FpnDeclarationPrintPage({
   const data = loaded.data;
   const form = fpnFormFor(data.seasonName);
   const season = fpnSeasonLabel(data.seasonName);
+  const here = `/dashboard/students/${id}/documentos/fpn?${request.toString()}`;
+  // The club's own copy of this form, when it has one placed (POOLSE-142).
+  const template = data.template ?? null;
+  const clubForm = template !== null && template.fields.length > 0;
+  if (clubForm && query.form !== 'poolse') {
+    return (
+      <ClubFpnForm
+        data={{ ...data, template }}
+        season={season}
+        autoPrint={query.print === '1'}
+        poolseHref={`${here}&form=poolse`}
+      />
+    );
+  }
 
   /** The FPN's own date shape on its own form. */
   const paperDate = (iso: string | null): string | null =>
@@ -97,6 +114,13 @@ export default async function FpnDeclarationPrintPage({
       `}</style>
 
       {query.print === '1' && <AutoPrint />}
+      {clubForm && (
+        <p className="mb-4 print:hidden">
+          <a href={here} className="text-sm text-primary underline-offset-2 hover:underline">
+            {t('boletimTemplate.printClubFpn')}
+          </a>
+        </p>
+      )}
 
       <div className="mb-6 print:hidden">
         <PrintButton label={t('export.pdf.printLabel')} />
@@ -165,3 +189,84 @@ function Box({ ticked }: { ticked: boolean }): React.ReactElement {
     </span>
   );
 }
+
+/**
+ * The club's own copy of the FPN's form, filled in — POOLSE-142. The same
+ * rule as the club's boletim (`BoletimSheet` / `placementStyle`): the image is
+ * the page, each placed field written at its spot, the modalidades an X where
+ * the student's own Documentos tab ticks them. Portuguese whatever the reader's
+ * language, and the ID's dates with slashes, as the FPN's form writes them.
+ */
+async function ClubFpnForm({
+  data,
+  season,
+  autoPrint,
+  poolseHref,
+}: {
+  data: FpnPrint & { template: { fileId: string; fields: BoletimPlacement[] } };
+  season: string | null;
+  autoPrint: boolean;
+  poolseHref: string;
+}): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const pt = await getTranslations({ locale: 'pt-PT' });
+  const values: BoletimData = {
+    name: data.studentName,
+    parentOneName: null,
+    parentTwoName: null,
+    birthDate: null,
+    maritalStatus: null,
+    profession: null,
+    education: null,
+    birthplace: null,
+    nationality: null,
+    addressLine: data.addressLine,
+    locality: data.locality,
+    postalCode: data.postalCode,
+    phone: null,
+    email: null,
+    taxNumber: null,
+    idDocumentNumber: data.idDocumentNumber,
+    snsNumber: null,
+    socioNumber: null,
+    socioSince: null,
+    guardian: null,
+    fpn: {
+      signerName: data.signerName === '' ? null : data.signerName,
+      season,
+      association: data.association,
+      clubCode: data.clubCode,
+      place: data.place,
+      idDocumentType: data.idDocumentType === null ? null : pt(`documents.idDocument.types.${data.idDocumentType}`),
+      issuedOn: data.issuedOn,
+      validUntil: data.validUntil,
+      disciplines: data.disciplines,
+    },
+  };
+  const day = today();
+
+  return (
+    <main className="mx-auto max-w-[210mm] bg-white text-black print:max-w-none">
+      <style>{'@page { size: A4 portrait; margin: 0; }'}</style>
+      {autoPrint && <AutoPrint />}
+      <div className="flex flex-wrap items-center gap-4 p-6 print:hidden">
+        <PrintButton label={t('export.pdf.printLabel')} />
+        <a href={poolseHref} className="text-sm text-primary underline-offset-2 hover:underline">
+          {t('boletimTemplate.printPoolseFpn')}
+        </a>
+      </div>
+      <BoletimSheet imageUrl={fileUrl(data.template.fileId)!} alt={t(`boletimTemplate.kind.${data.minor ? 'fpn_declaration_minor' : 'fpn_declaration'}`)} className="w-[210mm]">
+        {data.template.fields.map((placement, index) => {
+          const text = boletimValue(placement.field, values, day);
+          if (text === null) return null;
+          return (
+            <span key={index} style={placementStyle(placement)} className="absolute whitespace-nowrap">
+              {text}
+            </span>
+          );
+        })}
+      </BoletimSheet>
+    </main>
+  );
+}
+

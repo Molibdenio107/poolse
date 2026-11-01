@@ -49,7 +49,22 @@ BEGIN
   IF NOT ok THEN RAISE EXCEPTION 'FAIL test 2: a club held two live templates'; END IF;
   UPDATE boletim_template SET archived_at = now() WHERE id = v_t;
   INSERT INTO boletim_template (organization_id, file_id) VALUES ('f1420000-0000-0000-0000-000000000001', f.fa);
-  RAISE NOTICE 'PASS test 2: one live template per club; an archived one leaves room';
+  INSERT INTO boletim_template (organization_id, kind, file_id) VALUES ('f1420000-0000-0000-0000-000000000001', 'fpn_declaration', f.fa);
+  INSERT INTO boletim_template (organization_id, kind, file_id) VALUES ('f1420000-0000-0000-0000-000000000001', 'fpn_declaration_minor', f.fa);
+  ok := false;
+  BEGIN
+    INSERT INTO boletim_template (organization_id, kind, file_id) VALUES ('f1420000-0000-0000-0000-000000000001', 'fpn_declaration', f.fa);
+  EXCEPTION WHEN unique_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 2: a club held two live FPN declarations of one kind'; END IF;
+  ok := false;
+  BEGIN
+    INSERT INTO boletim_template (organization_id, kind, file_id) VALUES ('f1420000-0000-0000-0000-000000000001', 'id_document', f.fa);
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 2: an ID photograph was filed as a form to print'; END IF;
+  UPDATE boletim_template SET archived_at = now() WHERE kind <> 'socio_form' AND archived_at IS NULL;
+  RAISE NOTICE 'PASS test 2: one live template per club and kind; an archived one leaves room';
 
   ok := false;
   BEGIN

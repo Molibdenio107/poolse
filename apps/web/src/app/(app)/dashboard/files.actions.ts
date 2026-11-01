@@ -143,7 +143,11 @@ function studentDocumentCopy(
 
 function attachRoute(target: FileTarget): { method: 'POST' | 'PUT'; path: string } | null {
   if (target === 'logo') return { method: 'PUT', path: '/settings/logo' };
-  if (target === 'boletim-template') return { method: 'PUT', path: '/settings/boletim-template' };
+  // A club's own form, by kind (POOLSE-142); the API refuses a kind it does not know.
+  if (target.startsWith('document-template:')) {
+    const kind = target.slice('document-template:'.length);
+    return /^[a-z_]+$/.test(kind) ? { method: 'PUT', path: `/settings/document-templates/${kind}` } : null;
+  }
   const [kind, first = '', second = ''] = target.split(':');
   if (!ID.test(first)) return null;
   switch (kind) {

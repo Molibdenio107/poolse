@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import type { BoletimPlacement } from '@poolse/rules';
+import { isTemplateKind, type BoletimPlacement, type TemplateKind } from '@poolse/rules';
 import { apiDelete, apiFetch, apiFileResponse, apiPut } from '@/lib/api';
 import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
 import { readAiReaderGate } from '@/lib/ai-meter';
@@ -10,22 +10,26 @@ import { describeFailure } from '@/lib/form-failure';
 import { outcome, type Outcome } from '@/lib/load-failure';
 import type { FormState } from '../../actions';
 
-/** The club's own boletim de sócio — POOLSE-142. */
+/** A club's own form — POOLSE-142: the boletim de sócio or the FPN declaration. */
 export interface BoletimTemplate {
   id: string;
+  kind: TemplateKind;
   fileId: string;
   fields: BoletimPlacement[];
 }
 
-export async function readBoletimTemplate(): Promise<Outcome<{ template: BoletimTemplate | null }>> {
-  return outcome(apiFetch<{ template: BoletimTemplate | null }>('/settings/boletim-template'));
+export async function readBoletimTemplate(kind: TemplateKind): Promise<Outcome<{ template: BoletimTemplate | null }>> {
+  return outcome(apiFetch<{ template: BoletimTemplate | null }>(`/settings/document-templates/${kind}`));
 }
 
 /**
  * The placements, saved as a set. They travel as one JSON field because the
- * editor holds them as a list, not as form boxes; the API judges every one.
+ * editor holds them as a list, not as form boxes; the API judges every one,
+ * and refuses a field this kind of form does not offer.
  */
 export async function saveBoletimFieldsAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const kind = formData.get('kind');
+  if (!isTemplateKind(kind)) return { ok: false, errorKey: 'boletimTemplate.saveFailed' };
   let fields: unknown;
   try {
     fields = JSON.parse(String(formData.get('fields') ?? '[]'));
@@ -33,11 +37,11 @@ export async function saveBoletimFieldsAction(_previous: FormState, formData: Fo
     return { ok: false, errorKey: 'boletimTemplate.saveFailed' };
   }
   try {
-    await apiPut('/settings/boletim-template/fields', { fields });
+    await apiPut(`/settings/document-templates/${kind}/fields`, { fields });
   } catch (error) {
     return describeFailure(error, 'boletimTemplate.saveFailed');
   }
-  // Every site's *Dados do clube* shows the club's one template.
+  // Every site's *Documentos* tab shows the club's one form of each kind.
   revalidatePath('/dashboard/facilities', 'layout');
   return { ok: true };
 }
@@ -51,34 +55,36 @@ export interface ProposalState {
 }
 
 /**
- * The model proposes where each field goes on the club's form — POOLSE-142
- * slice B. Nothing is saved: the editor loads the proposal for a person to
- * adjust and save. The form is read back from storage through the API, which
- * checks the reader may open it.
+ * The model proposes where each field goes on one of the club's forms —
+ * POOLSE-142 slice B. Nothing is saved: the editor loads the proposal for a
+ * person to adjust and save. The form is read back from storage through the
+ * API, which checks the reader may open it.
  */
-export async function proposeBoletimFieldsAction(_previous: ProposalState): Promise<ProposalState> {
+export async function proposeBoletimFieldsAction(_previous: ProposalState, kind: TemplateKind): Promise<ProposalState> {
+  if (!isTemplateKind(kind)) return { ok: false, note: 'unreadable' };
   const blocked = await readAiReaderGate('boletim_template');
   if (blocked !== null) return { ok: false, note: blocked };
   const refused = await guardAiCall(AI_ROLES.boletimTemplate);
   if (refused !== null) return { ok: false, note: refused === 'notAllowed' ? 'notAllowed' : 'rateLimited' };
 
-  const loaded = await readBoletimTemplate();
+  const loaded = await readBoletimTemplate(kind);
   if (loaded.state !== 'ok' || loaded.data.template === null) return { ok: false, note: 'unreadable' };
   const file = await apiFileResponse(`/files/${loaded.data.template.fileId}`);
   if (!file.ok) return { ok: false, note: 'unreadable' };
   const mediaType = (file.headers.get('content-type') ?? '').split(';')[0]!.trim();
-  const read = await readBoletimLayout(Buffer.from(await file.arrayBuffer()), mediaType);
+  const read = await readBoletimLayout(Buffer.from(await file.arrayBuffer()), mediaType, kind);
   if ('error' in read) return { ok: false, note: read.error };
   return { ok: true, proposal: read.placements };
 }
 
-/** Takes the template away: the print goes back to Poolse's own boletim. */
-export async function removeBoletimTemplateAction(_previous: FormState): Promise<FormState> {
+/** Takes the form away: the print goes back to Poolse's own. */
+export async function removeBoletimTemplateAction(_previous: FormState, kind: TemplateKind): Promise<FormState> {
+  if (!isTemplateKind(kind)) return { ok: false, errorKey: 'boletimTemplate.saveFailed' };
   try {
-    await apiDelete('/settings/boletim-template');
+    await apiDelete(`/settings/document-templates/${kind}`);
   } catch (error) {
     return describeFailure(error, 'boletimTemplate.saveFailed');
   }
   revalidatePath('/dashboard/facilities', 'layout');
-  return { ok: true, toastKey: 'boletimTemplate.removed' };
+  return { ok: true, toastKey: kind === 'socio_form' ? 'boletimTemplate.removed' : 'boletimTemplate.removedFpn' };
 }

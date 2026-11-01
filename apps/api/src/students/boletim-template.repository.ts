@@ -1,25 +1,28 @@
 import { withOrg, type Tx } from '@poolse/db';
-import type { BoletimField, BoletimPlacement } from '@poolse/rules';
+import type { BoletimField, BoletimPlacement, TemplateKind } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
 import { WrongFileError } from '../files/attachments.repository.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 
 /**
- * A club's own boletim de sócio — POOLSE-142. One live template per club (an
- * image of one A4 page) and its placements. Replacing the template archives the
+ * A club's own forms — POOLSE-142: the boletim de sócio and the FPN's
+ * declaration (adult and minor), by `kind`. One live template per club and
+ * kind (an image of one A4 page) and its placements. Replacing the template archives the
  * old one and its placements; saving placements archives the live set and
  * inserts the new one. Nothing is edited in place or deleted, by grant.
  */
 export interface BoletimTemplate {
   id: string;
+  kind: TemplateKind;
   fileId: string;
   fields: BoletimPlacement[];
 }
 
-/** The live template and its live placements, in `tx`. */
-export async function liveTemplateIn(tx: Tx): Promise<BoletimTemplate | null> {
+/** The kind's live template and its live placements, in `tx`. */
+export async function liveTemplateIn(tx: Tx, kind: TemplateKind): Promise<BoletimTemplate | null> {
   const { rows } = await tx.query<{ id: string; file_id: string }>(
-    `SELECT id, file_id FROM boletim_template WHERE archived_at IS NULL`,
+    `SELECT id, file_id FROM boletim_template WHERE kind = $1 AND archived_at IS NULL`,
+    [kind],
   );
   const template = rows[0];
   if (template === undefined) return null;
@@ -31,18 +34,20 @@ export async function liveTemplateIn(tx: Tx): Promise<BoletimTemplate | null> {
   );
   return {
     id: template.id,
+    kind,
     fileId: template.file_id,
     fields: placed.rows.map((row) => ({ field: row.field, x: Number(row.x), y: Number(row.y), sizePt: Number(row.size_pt) })),
   };
 }
 
-export async function readTemplate(organizationId: string): Promise<BoletimTemplate | null> {
-  return withOrg(organizationId, (tx) => liveTemplateIn(tx));
+export async function readTemplate(organizationId: string, kind: TemplateKind): Promise<BoletimTemplate | null> {
+  return withOrg(organizationId, (tx) => liveTemplateIn(tx, kind));
 }
 
-async function archiveLive(tx: Tx): Promise<string | null> {
+async function archiveLive(tx: Tx, kind: TemplateKind): Promise<string | null> {
   const { rows } = await tx.query<{ id: string }>(
-    `UPDATE boletim_template SET archived_at = now() WHERE archived_at IS NULL RETURNING id`,
+    `UPDATE boletim_template SET archived_at = now() WHERE kind = $1 AND archived_at IS NULL RETURNING id`,
+    [kind],
   );
   const old = rows[0]?.id ?? null;
   if (old !== null) {
@@ -59,7 +64,7 @@ async function archiveLive(tx: Tx): Promise<string | null> {
  * or — with `fileId` null — removes the template, so the print falls back to
  * Poolse's own boletim.
  */
-export async function setTemplate(organizationId: string, fileId: string | null): Promise<void> {
+export async function setTemplate(organizationId: string, kind: TemplateKind, fileId: string | null): Promise<void> {
   await withOrg(organizationId, async (tx) => {
     if (fileId !== null) {
       const file = await tx.query(
@@ -68,29 +73,34 @@ export async function setTemplate(organizationId: string, fileId: string | null)
       );
       if (file.rowCount === 0) throw new WrongFileError();
     }
-    const replaced = await archiveLive(tx);
+    const replaced = await archiveLive(tx, kind);
     if (fileId !== null) {
       await tx.query(
-        `INSERT INTO boletim_template (organization_id, file_id, created_by) VALUES ($1, $2, $3)`,
-        [organizationId, fileId, currentTenant().membershipId],
+        `INSERT INTO boletim_template (organization_id, kind, file_id, created_by) VALUES ($1, $2, $3, $4)`,
+        [organizationId, kind, fileId, currentTenant().membershipId],
       );
     }
     await recordAudit(tx, {
       action: fileId === null ? 'organization.boletim_template_removed' : 'organization.boletim_template_set',
       entityType: 'organization',
       entityId: organizationId,
-      data: { fileId, replaced },
+      data: { kind, fileId, replaced },
     });
   });
 }
 
 /** Saves the placements as a set. False when the club has no live template. */
-export async function savePlacements(organizationId: string, fields: readonly BoletimPlacement[]): Promise<boolean> {
+export async function savePlacements(
+  organizationId: string,
+  kind: TemplateKind,
+  fields: readonly BoletimPlacement[],
+): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
     // Locks the live template, so two saves at once cannot both archive the
     // same set and leave two sets live.
     const { rows } = await tx.query<{ id: string }>(
-      `SELECT id FROM boletim_template WHERE archived_at IS NULL FOR UPDATE`,
+      `SELECT id FROM boletim_template WHERE kind = $1 AND archived_at IS NULL FOR UPDATE`,
+      [kind],
     );
     const template = rows[0];
     if (template === undefined) return false;
@@ -117,7 +127,7 @@ export async function savePlacements(organizationId: string, fields: readonly Bo
       action: 'organization.boletim_template_fields_saved',
       entityType: 'organization',
       entityId: organizationId,
-      data: { templateId: template.id, fields: fields.map((f) => f.field) },
+      data: { kind, templateId: template.id, fields: fields.map((f) => f.field) },
     });
     return true;
   });

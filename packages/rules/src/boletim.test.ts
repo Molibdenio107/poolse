@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BOLETIM_FIELDS, boletimValue, parseBoletimPlacement, placementsFromGrid, type BoletimData } from './boletim.js';
+import { BOLETIM_FIELDS, TEMPLATE_KINDS, boletimValue, fieldsFor, parseBoletimPlacement, placementsFromGrid, type BoletimData } from './boletim.js';
 
 /** POOLSE-142 — what a club's own boletim writes on each line. */
 
@@ -73,4 +73,36 @@ test('a proposed layout on the 0–1000 grid becomes page fractions, and nonsens
   ]);
   assert.deepEqual(placementsFromGrid(null), []);
   assert.equal(placementsFromGrid({ placements: Array.from({ length: 80 }, (_, i) => ({ field: 'name', x: i * 10, y: 500 })) }).length, 60);
+});
+
+test('the FPN declaration prints the student\'s own ticks and its dates with slashes', () => {
+  const fpn = {
+    ...DATA,
+    fpn: {
+      signerName: 'Eva Lopes',
+      season: '2026/2027',
+      association: 'ANNP',
+      clubCode: 'GCST',
+      place: 'Santo Tirso',
+      idDocumentType: 'Cartão de Cidadão',
+      issuedOn: null,
+      validUntil: '2031-09-24',
+      disciplines: ['pura', 'masters'],
+    },
+  };
+  assert.equal(boletimValue('discipline_pura', fpn, '2026-11-01'), 'X');
+  assert.equal(boletimValue('discipline_masters', fpn, '2026-11-01'), 'X');
+  assert.equal(boletimValue('discipline_diving', fpn, '2026-11-01'), null);
+  assert.equal(boletimValue('discipline_pura', DATA, '2026-11-01'), null, 'a boletim has no ticks');
+  assert.equal(boletimValue('id_document_valid_until', fpn, '2026-11-01'), '24/09/2031');
+  assert.equal(boletimValue('id_document_issued_on', fpn, '2026-11-01'), null);
+  assert.equal(boletimValue('signer_name', fpn, '2026-11-01'), 'Eva Lopes');
+});
+
+test('each kind offers its own fields', () => {
+  assert.equal(fieldsFor('socio_form').has('sns_number'), true);
+  assert.equal(fieldsFor('socio_form').has('discipline_pura'), false);
+  assert.equal(fieldsFor('fpn_declaration').has('discipline_pura'), true);
+  assert.equal(fieldsFor('fpn_declaration_minor').has('sns_number'), false, 'the FPN form never asks for the SNS number');
+  assert.deepEqual([...TEMPLATE_KINDS], ['socio_form', 'fpn_declaration', 'fpn_declaration_minor']);
 });

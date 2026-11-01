@@ -280,6 +280,8 @@ export interface FpnPrint {
   association: string | null;
   clubCode: string | null;
   place: string | null;
+  /** The club's own copy of this form, adult or minor (POOLSE-142), or null for Poolse's. */
+  template: BoletimTemplate | null;
 }
 
 /**
@@ -355,6 +357,7 @@ export async function fpnPrint(
       association: row.association,
       clubCode: row.club_code,
       place: row.place,
+      template: await liveTemplateIn(tx, minor ? 'fpn_declaration_minor' : 'fpn_declaration'),
     };
   });
 }
@@ -487,7 +490,7 @@ async function placedSecrets(
   tx: Tx,
   studentId: string,
 ): Promise<{ template: BoletimTemplate | null; idDocumentNumber: string | null; snsNumber: string | null }> {
-  const template = await liveTemplateIn(tx);
+  const template = await liveTemplateIn(tx, 'socio_form');
   const placed = new Set((template?.fields ?? []).map((f) => f.field));
   let idDocumentNumber: string | null = null;
   let snsNumber: string | null = null;

@@ -29,8 +29,8 @@ export type FileTarget =
   | `student-document:${string}:${string}:${string}`
   | 'own-photo'
   | 'logo'
-  /** The club's own boletim de sócio, an image of its paper form (POOLSE-142). */
-  | 'boletim-template';
+  /** `document-template:<kind>` — a club's own form, an image of its paper (POOLSE-142). */
+  | `document-template:${'socio_form' | 'fpn_declaration' | 'fpn_declaration_minor'}`;
 
 export type FilePurpose =
   | 'policy_document'
@@ -49,7 +49,6 @@ export type FilePurpose =
 export function purposeOf(target: FileTarget): FilePurpose {
   if (target === 'logo') return 'logo';
   if (target === 'own-photo') return 'own_photo';
-  if (target === 'boletim-template') return 'boletim_template';
   const kind = target.split(':')[0];
   switch (kind) {
     case 'facility-photo':
@@ -68,6 +67,8 @@ export function purposeOf(target: FileTarget): FilePurpose {
       return 'staff_photo';
     case 'student-document':
       return 'student_document';
+    case 'document-template':
+      return 'boletim_template';
     default:
       return 'qualification_document';
   }

@@ -72,7 +72,7 @@ import { SensitiveController } from './sensitive/sensitive.controller.js';
 import { RecordsController } from './students/records.controller.js';
 import { LevelsController, StudentsController } from './students/students.controller.js';
 import { BoletimController, FpnSettingsController, StudentDocumentsController } from './students/documents.controller.js';
-import { BoletimTemplateController } from './students/boletim-template.controller.js';
+import { DocumentTemplatesController } from './students/boletim-template.controller.js';
 import { MedicalExamsController } from './students/medical-exams.controller.js';
 import {
   FamilyInvitationsBulkController,
@@ -281,7 +281,7 @@ export const IDENTITY_ONLY_ROUTES = [
     StudentDocumentsController,
     FpnSettingsController,
     BoletimController,
-    BoletimTemplateController,
+    DocumentTemplatesController,
     MedicalExamsController,
     FamilyInvitationsBulkController,
     LevelsController,

@@ -1,7 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BOLETIM_FIELDS } from '@poolse/rules';
-import { BoletimTemplateController } from './boletim-template.controller.js';
+import { DocumentTemplatesController } from './boletim-template.controller.js';
 import { BoletimController, StudentDocumentsController } from './documents.controller.js';
 import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant } from '../test/harness.js';
 
@@ -30,7 +30,7 @@ test('POOLSE-142 — template, placements and the guarded numbers', async () => 
     const instructor = await addMember(tenant, 'Ana', 'Ribeiro', ['instructor']);
     const asAdmin = <T>(fn: () => Promise<T>): Promise<T> =>
       actingAs(tenant, { membershipId: admin, roles: ['admin'] }, fn);
-    const routes = new BoletimTemplateController();
+    const routes = new DocumentTemplatesController();
 
     const file = async (purpose: string): Promise<string> => {
       const [row] = await tenant.sql<{ id: string }>(
@@ -60,13 +60,13 @@ test('POOLSE-142 — template, placements and the guarded numbers', async () => 
 
     // QA 4: an instructor is refused every route.
     await actingAs(tenant, { membershipId: instructor, roles: ['instructor'] }, async () => {
-      await expectStatus(() => routes.read(), 403);
-      await expectStatus(() => routes.place({ fields: [] }), 403);
+      await expectStatus(() => routes.read('socio_form'), 403);
+      await expectStatus(() => routes.place('socio_form', { fields: [] }), 403);
     });
 
     // No template: Poolse's boletim, and neither number is read.
-    assert.equal((await asAdmin(() => routes.read())).template, null);
-    await expectStatus(() => asAdmin(() => routes.place({ fields: [] })), 404);
+    assert.equal((await asAdmin(() => routes.read('socio_form'))).template, null);
+    await expectStatus(() => asAdmin(() => routes.place('socio_form', { fields: [] })), 404);
     let print = await asAdmin(() => new BoletimController().print(id));
     assert.equal(print.template, null);
     assert.equal(print.idDocumentNumber, null);
@@ -74,14 +74,14 @@ test('POOLSE-142 — template, placements and the guarded numbers', async () => 
     assert.equal(await reads(), 0);
 
     // A file of another purpose is not a template.
-    await expectStatus(() => asAdmin(() => routes.set({ fileId: 'x' })), 400);
-    await expectStatus(async () => asAdmin(async () => routes.set({ fileId: await file('logo') })), 400);
+    await expectStatus(() => asAdmin(() => routes.set('socio_form', { fileId: 'x' })), 400);
+    await expectStatus(async () => asAdmin(async () => routes.set('socio_form', { fileId: await file('logo') })), 400);
 
     // QA 1–2: upload, place, print.
     const first = await file('boletim_template');
-    await asAdmin(() => routes.set({ fileId: first }));
+    await asAdmin(() => routes.set('socio_form', { fileId: first }));
     await asAdmin(() =>
-      routes.place({
+      routes.place('socio_form', {
         fields: [
           { field: 'name', x: 0.2, y: 0.18 },
           { field: 'locality', x: 0.2, y: 0.31, sizePt: 10 },
@@ -89,7 +89,7 @@ test('POOLSE-142 — template, placements and the guarded numbers', async () => 
         ],
       }),
     );
-    const live = (await asAdmin(() => routes.read())).template!;
+    const live = (await asAdmin(() => routes.read('socio_form'))).template!;
     assert.equal(live.fileId, first);
     assert.deepEqual(
       live.fields.map((f) => [f.field, f.sizePt]),
@@ -102,13 +102,13 @@ test('POOLSE-142 — template, placements and the guarded numbers', async () => 
 
     // QA 6: off the page, unknown or oversized is refused, and nothing changes.
     for (const bad of [{ field: 'name', x: 1.2, y: 0.5 }, { field: 'curling', x: 0.1, y: 0.1 }, { field: 'name', x: 0.1, y: 0.1, sizePt: 50 }]) {
-      await expectStatus(() => asAdmin(() => routes.place({ fields: [bad] })), 400);
+      await expectStatus(() => asAdmin(() => routes.place('socio_form', { fields: [bad] })), 400);
     }
-    assert.equal((await asAdmin(() => routes.read())).template!.fields.length, 3);
+    assert.equal((await asAdmin(() => routes.read('socio_form'))).template!.fields.length, 3);
 
     // QA 3: placed, both numbers print — the ID read audited.
     await asAdmin(() =>
-      routes.place({ fields: [{ field: 'id_document_number', x: 0.2, y: 0.6 }, { field: 'sns_number', x: 0.7, y: 0.6 }] }),
+      routes.place('socio_form', { fields: [{ field: 'id_document_number', x: 0.2, y: 0.6 }, { field: 'sns_number', x: 0.7, y: 0.6 }] }),
     );
     print = await asAdmin(() => new BoletimController().print(id));
     assert.equal(print.idDocumentNumber, CC);
@@ -121,11 +121,36 @@ test('POOLSE-142 — template, placements and the guarded numbers', async () => 
     assert.equal(saved!.n, 2, 'a save replaces the set');
 
     // QA 5: a new template drops the placements; removing it falls back.
-    await asAdmin(async () => routes.set({ fileId: await file('boletim_template') }));
-    assert.deepEqual((await asAdmin(() => routes.read())).template!.fields, []);
-    await asAdmin(() => routes.remove());
-    assert.equal((await asAdmin(() => routes.read())).template, null);
+    await asAdmin(async () => routes.set('socio_form', { fileId: await file('boletim_template') }));
+    assert.deepEqual((await asAdmin(() => routes.read('socio_form'))).template!.fields, []);
+    await asAdmin(() => routes.remove('socio_form'));
+    assert.equal((await asAdmin(() => routes.read('socio_form'))).template, null);
     print = await asAdmin(() => new BoletimController().print(id));
     assert.equal(print.template, null);
+
+    // The FPN declaration: its own fields, one template per version, each
+    // reaching only its own print.
+    const adult = await file('boletim_template');
+    await asAdmin(() => routes.set('fpn_declaration', { fileId: adult }));
+    await expectStatus(
+      () => asAdmin(() => routes.place('fpn_declaration', { fields: [{ field: 'sns_number', x: 0.1, y: 0.1 }] })),
+      400,
+    );
+    await asAdmin(() =>
+      routes.place('fpn_declaration', {
+        fields: [
+          { field: 'signer_name', x: 0.2, y: 0.2 },
+          { field: 'discipline_masters', x: 0.1, y: 0.5 },
+        ],
+      }),
+    );
+    await expectStatus(() => asAdmin(() => routes.read('curling')), 404);
+    const docs = new StudentDocumentsController();
+    const fpnAdult = await asAdmin(() => docs.print(id, undefined, undefined));
+    assert.equal(fpnAdult.template?.fileId, adult);
+    assert.deepEqual(fpnAdult.template?.fields.map((f) => f.field), ['signer_name', 'discipline_masters']);
+    const fpnMinor = await asAdmin(() => docs.print(id, undefined, '1'));
+    assert.equal(fpnMinor.template, null, "the minors' form has its own template, not yet uploaded");
+    assert.equal((await asAdmin(() => routes.read('socio_form'))).template, null, 'the boletim is untouched');
   });
 });

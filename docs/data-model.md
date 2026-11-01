@@ -4190,4 +4190,5 @@ being inlined. `test/restorable.sql` rebuilds every expression and partial index
 
   Placements are saved as a set: the live set is archived and the new one inserted. There is no UPDATE but
   `archived_at`, and no DELETE.
+- `boletim_template.kind` (since the second half, 1 November 2026) is `socio_form`, `fpn_declaration` or `fpn_declaration_minor` by CHECK, spelled as `student_document.kind`. There is one live template per club **and kind**. The tables keep their first names.
 - `boletim_field` is the closed list Poolse fills. It equals `BOLETIM_FIELDS` in `@poolse/rules`, by test.

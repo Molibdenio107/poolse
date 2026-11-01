@@ -318,7 +318,7 @@ through the student sheet (`socios=1`), no second pipeline.
 
 ### The club's own boletim — POOLSE-142
 
-On a site's *Dados do clube* (owner and admin), a club uploads its own paper form as a PDF or an image. A PDF's
+On a site's **Documentos** tab (owner and admin) a club keeps its own paper forms, one section at a time. *Boletim de sócio* holds the club's membership form. *Declaração FPN* holds the club's copy of the FPN's Anexo 2, in two versions (*Maiores* / *Menores*), because the federation prints two forms (Rui, 01-11-2026). Each form is uploaded as a PDF or an image. A PDF's
 first page is drawn to a JPEG in the browser (`lib/page-image.ts`, pdf.js), so the stored file (purpose
 `boletim_template`, office only) is always an image.
 
@@ -333,6 +333,8 @@ editor and the print, so what is placed is what prints.
 *Imprimir preenchido* then uses the club's form. It is written in Portuguese whatever the reader's language
 (`boletimValue` in `@poolse/rules`: split dates, the month in words, the year's last two digits). Poolse's own form
 is one link away.
+
+The FPN declaration offers its own fields: the signer (the guardian on a minor's), the season, the club's association, FPN code and place, and the ID document's type, number and dates. It also offers one box per modalidade, which prints an X centred on the box where the student's own *Documentos* tab ticks it. The ticks are never taken from a level. Each kind offers only its own fields (`fieldsFor`, refused otherwise), and the student's *Documentos* print uses the club's adult or minor form when it is placed, with Poolse's one link away.
 
 **The ID number and the SNS number are read only when the template places them**, and the ID read is audited
 (`student.id_document_read`). Replacing the form drops its placements, and the screen asks first. Removing it

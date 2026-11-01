@@ -4,12 +4,13 @@ import { Minus, Plus, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BOLETIM_FIELD_GROUPS,
   BOLETIM_SIZE_DEFAULT,
   BOLETIM_SIZE_MAX,
   BOLETIM_SIZE_MIN,
+  fieldGroupsFor,
   type BoletimField,
   type BoletimPlacement,
+  type TemplateKind,
 } from '@poolse/rules';
 import { BoletimSheet, placementStyle } from '@/components/boletim-sheet';
 import { Dialog } from '@/components/ui/dialog';
@@ -46,15 +47,18 @@ const plain = (placed: readonly Placed[]): BoletimPlacement[] =>
 const clamp = (v: number): number => Math.min(1, Math.max(0, Math.round(v * 10000) / 10000));
 
 /**
- * The club's own boletim — POOLSE-142. Upload the form (a PDF's first page is
+ * A club's own form — POOLSE-142: the boletim de sócio, or the FPN declaration
+ * for adults or for minors (`kind`), each with its own fields. Upload the form (a PDF's first page is
  * drawn to an image here, in the browser), then arm a field in the list and
  * click its line on the form. A placed field is dragged, nudged with the arrow
  * keys, resized, or removed; the set is saved as one.
  */
 export function BoletimTemplateEditor({
+  kind,
   template,
   storageReady,
 }: {
+  kind: TemplateKind;
   template: BoletimTemplate | null;
   storageReady: boolean;
 }): React.ReactElement {
@@ -105,7 +109,7 @@ export function BoletimTemplateEditor({
       const { blob, pages } = await pageImage(file);
       setOnlyFirst(pages > 1);
       const form = new FormData();
-      form.set('target', 'boletim-template');
+      form.set('target', `document-template:${kind}`);
       form.set('file', new File([blob], 'boletim.jpg', { type: 'image/jpeg' }));
       startTransition(() => upload(form));
     } catch {
@@ -234,7 +238,7 @@ export function BoletimTemplateEditor({
             disabled={proposing}
             onClick={() => {
               setProposedCount(null);
-              startTransition(() => propose());
+              startTransition(() => propose(kind));
             }}
           >
             <Sparkles aria-hidden className="size-4" />
@@ -244,7 +248,7 @@ export function BoletimTemplateEditor({
         {template !== null && (
           <button type="button" className={SECONDARY} disabled={removing} onClick={() => setConfirmRemove(true)}>
             <Trash2 aria-hidden className="size-4" />
-            {t('boletimTemplate.remove')}
+            {t(kind === 'socio_form' ? 'boletimTemplate.remove' : 'boletimTemplate.removeFpn')}
           </button>
         )}
       </div>
@@ -272,7 +276,7 @@ export function BoletimTemplateEditor({
             >
               {/* A click on the form places the armed field; the keyboard places nothing, it moves what is placed. */}
               <div onClick={placeHere}>
-                <BoletimSheet imageUrl={imageUrl} alt={t('boletimTemplate.alt')}>
+                <BoletimSheet imageUrl={imageUrl} alt={t(`boletimTemplate.kind.${kind}`)}>
                   {placed.map((p) => (
                     <button
                       key={p.key}
@@ -319,7 +323,7 @@ export function BoletimTemplateEditor({
               </div>
             )}
 
-            {BOLETIM_FIELD_GROUPS.map((group) => (
+            {fieldGroupsFor(kind).map((group) => (
               <fieldset key={group.key} className="flex flex-col gap-1">
                 <legend className="mb-1 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                   {t(`boletimTemplate.group.${group.key}`)}
@@ -355,6 +359,7 @@ export function BoletimTemplateEditor({
 
       {imageUrl !== null && (
         <form action={save} className="flex flex-wrap items-center gap-3" data-bottom-bar>
+          <input type="hidden" name="kind" value={kind} />
           <input type="hidden" name="fields" value={JSON.stringify(plain(placed))} />
           <button type="submit" className={PRIMARY} disabled={saving || !dirty}>
             {saving ? t('common.working') : t('boletimTemplate.save')}
@@ -394,10 +399,10 @@ export function BoletimTemplateEditor({
       <Dialog
         open={confirmRemove}
         onClose={() => setConfirmRemove(false)}
-        title={t('boletimTemplate.removeTitle')}
+        title={t('boletimTemplate.removeTitleKind', { form: t(`boletimTemplate.kind.${kind}`) })}
         closeLabel={t('common.close')}
       >
-        <p className="text-sm">{t('boletimTemplate.removeExplain')}</p>
+        <p className="text-sm">{t(kind === 'socio_form' ? 'boletimTemplate.removeExplain' : 'boletimTemplate.removeExplainFpn')}</p>
         <div className="mt-4 flex flex-wrap justify-end gap-2">
           <button type="button" className={SECONDARY} onClick={() => setConfirmRemove(false)}>
             {t('common.cancel')}
@@ -407,7 +412,7 @@ export function BoletimTemplateEditor({
             className={PRIMARY}
             onClick={() => {
               setConfirmRemove(false);
-              startTransition(() => remove(undefined));
+              startTransition(() => remove(kind));
             }}
           >
             {t('boletimTemplate.removeConfirm')}

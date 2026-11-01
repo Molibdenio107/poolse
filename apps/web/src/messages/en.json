@@ -4679,7 +4679,7 @@
         "water_report_ai": "Lab report reading",
         "pdf_table_ai": "Reading lists from PDF",
         "column_match_ai": "Column matching",
-        "boletim_template_ai": "Positions on the membership form"
+        "boletim_template_ai": "Positions on the club's forms"
       },
       "covers": {
         "id_document_ai": "When a student's ID card photo is uploaded, its number and dates are read and proposed in the form for someone to confirm. Only the image is sent. Each read has a cost.",
@@ -4687,7 +4687,7 @@
         "water_report_ai": "A lab report as a PDF or photo, dropped on a pool, is read and proposed for somebody to confirm. Each read has a cost. Each club also needs its own tick on its page.",
         "pdf_table_ai": "The list importers (students, timetable, partnerships, salaries, inventory, entry times) take a PDF, transcribed as a spreadsheet. Each read has a cost. Each club also needs its own tick on its page.",
         "column_match_ai": "When importing students, columns no synonym recognised are proposed by the model. Only the headings and the shape of each column are sent. Each call has a cost. Each club also needs its own tick on its page.",
-        "boletim_template_ai": "On Club details, the club's own form is read and the AI proposes where each detail goes, for somebody to adjust and save. Only the form's image is sent. Each read has a cost."
+        "boletim_template_ai": "On Facilities → Documents, the club's own membership form and FPN declaration are read and the AI proposes where each detail goes, for somebody to adjust and save. Only the form's image is sent. Each read has a cost."
       },
       "on": "On",
       "off": "Off",
@@ -4723,7 +4723,7 @@
         "water_report": "Lab report reading",
         "pdf_table": "Reading lists from PDF",
         "column_match": "Column matching",
-        "boletim_template": "Positions on the membership form"
+        "boletim_template": "Positions on the club's forms"
       },
       "covers": {
         "energy_invoice": "Under Energy → Import bill, the bill PDF is read and proposed on the form for somebody to confirm.",
@@ -4731,7 +4731,7 @@
         "water_report": "A lab report as a PDF or photo, dropped on a pool, is read and proposed for somebody to confirm.",
         "pdf_table": "The list importers (students, timetable, partnerships, salaries, inventory, entry times) take a PDF, transcribed as a spreadsheet.",
         "column_match": "When importing students, columns no synonym recognised are proposed by the model. Only the headings and the shape of each column are sent.",
-        "boletim_template": "On Club details, the AI proposes where each detail goes on the club's own form, for somebody to adjust and save."
+        "boletim_template": "On Facilities → Documents, the AI proposes where each detail goes on the club's own membership form and FPN declaration, for somebody to adjust and save."
       }
     }
   },
@@ -6712,7 +6712,6 @@
     "next": "Show more"
   },
   "boletimTemplate": {
-    "title": "The club's membership form",
     "hint": "The club's own paper form, filled in with each student's details when their boletim is printed. It belongs to the club and applies to every site. Upload a PDF or a photo of one A4 page, then show where each detail goes.",
     "upload": "Upload the form",
     "replace": "Replace the form",
@@ -6722,7 +6721,6 @@
     "firstPageOnly": "The PDF has more than one page: only the first was used.",
     "howTo": "Choose a detail in the list and click the line on the form where it should be written. Drag a placed detail to adjust it.",
     "armed": "Click the line on the form where “{field}” should go.",
-    "alt": "The club's membership form",
     "placedLabel": "{field}, placed on the form",
     "smaller": "Smaller",
     "bigger": "Bigger",
@@ -6737,7 +6735,6 @@
     "replaceTitle": "Replace the form?",
     "replaceExplain": "{count, plural, one {The placed detail will be taken off} other {The # placed details will be taken off}}: positions on another form do not fit this one. You will need to place them again.",
     "replaceConfirm": "Replace",
-    "removeTitle": "Remove the club's form?",
     "removeExplain": "Students print Poolse's boletim again. The saved positions go with it.",
     "removeConfirm": "Remove",
     "printClubForm": "Print on the club's form",
@@ -6749,7 +6746,9 @@
       "documents": "Documents",
       "socio": "Member",
       "guardian": "Guardian",
-      "today": "Today's date"
+      "today": "Today's date",
+      "fpn": "Federation and season",
+      "disciplines": "Modalidades (an X if ticked)"
     },
     "field": {
       "name": "Name",
@@ -6782,7 +6781,22 @@
       "today_day": "Day today",
       "today_month": "Month today (in words)",
       "today_year": "Year today",
-      "today_year_short": "Year today (two digits)"
+      "today_year_short": "Year today (two digits)",
+      "signer_name": "Name of the signer",
+      "season": "Season",
+      "fpn_association": "Association",
+      "fpn_club_code": "Club (FPN code)",
+      "fpn_place": "Place",
+      "id_document_type": "Document type",
+      "id_document_issued_on": "Issued on",
+      "id_document_valid_until": "Valid until",
+      "discipline_pura": "Swimming",
+      "discipline_open_water": "Open water",
+      "discipline_water_polo": "Water polo",
+      "discipline_artistic": "Artistic swimming",
+      "discipline_adapted": "Adapted swimming",
+      "discipline_masters": "Masters",
+      "discipline_diving": "Diving"
     },
     "ai": {
       "propose": "Propose positions with AI",
@@ -6797,6 +6811,29 @@
         "notAllowed": "You aren't allowed to use AI reading.",
         "rateLimited": "Too many AI reads in a row. Try again in a few minutes."
       }
-    }
+    },
+    "tab": "Documents",
+    "sectionNav": "The club's forms",
+    "section": {
+      "boletim": "Membership form",
+      "fpn": "FPN declaration"
+    },
+    "fpnFormNav": "Declaration version",
+    "fpnForm": {
+      "adult": "Adults",
+      "minor": "Minors"
+    },
+    "kind": {
+      "socio_form": "The club's membership form",
+      "fpn_declaration": "FPN declaration — adults",
+      "fpn_declaration_minor": "FPN declaration — minors"
+    },
+    "hintFpn": "The club's copy of the FPN's informed-consent declaration (Annex 2), filled in with each student's details when the declaration is printed. Each modalidade gets an X where it is ticked on the student's Documents tab. It belongs to the club and applies to every site.",
+    "removeFpn": "Remove the declaration",
+    "removeTitleKind": "Remove “{form}”?",
+    "removeExplainFpn": "Students print Poolse's declaration again. The saved positions go with it.",
+    "removedFpn": "Declaration removed. Students print Poolse's declaration again.",
+    "printClubFpn": "Print on the club's declaration",
+    "printPoolseFpn": "Print on Poolse's declaration"
   }
 }

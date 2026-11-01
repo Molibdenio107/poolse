@@ -249,7 +249,7 @@ async function ClubForm({
           {t('boletimTemplate.printPoolseForm')}
         </a>
       </div>
-      <BoletimSheet imageUrl={fileUrl(template.fileId)!} alt={t('boletimTemplate.alt')} className="w-[210mm]">
+      <BoletimSheet imageUrl={fileUrl(template.fileId)!} alt={t('boletimTemplate.kind.socio_form')} className="w-[210mm]">
         {template.fields.map((placement, index) => {
           const text = boletimValue(placement.field, values, day);
           if (text === null) return null;
