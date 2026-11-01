@@ -100,15 +100,16 @@ export function SlotsPanel({
               aria-selected={candidate === group}
               onClick={() => setGroup(candidate)}
               className={cn(
-                'inline-flex h-control items-center justify-center rounded-sm border px-4 text-control transition-colors',
+                'inline-flex h-control items-center justify-center gap-1 rounded-sm px-4 text-control transition-colors',
                 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                // The section pills' look (01-11-2026): a sub-menu is one style everywhere.
                 candidate === group
-                  ? 'border-primary bg-primary/15 font-medium text-primary'
-                  : 'border-border hover:border-primary/50 hover:text-primary',
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-surface shadow-card hover:bg-surface-muted',
               )}
             >
               {t(`slots.group.${candidate}`)}{' '}
-              <span className="tabular-nums text-foreground-muted">({count})</span>
+              <span className={cn('tabular-nums', candidate !== group && 'text-foreground-muted')}>({count})</span>
             </button>
           );
         })}

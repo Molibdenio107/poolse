@@ -273,7 +273,10 @@ clarify, and may never be the only place a piece of information appears.
 Where a page or a record tab stacks independent sections, a row of pills (`SectionPills`,
 `?section=`) shows one at a time, so the reader scrolls as little as possible. The pills keep the
 page's other query parameters (tab, site, search, filters) and drop `page`. A section the reader
-cannot see is not offered, and one pill alone is not drawn. Where:
+cannot see is not offered, and one pill alone is not drawn. A pill is the handoff's secondary (card fill and
+shadow, no border) and the current one the primary fill (01-11-2026). A row too wide for its box —
+these pills on a phone, a record's tab strip, the top bar's sections — has no scrollbar and shows
+a ‹ or › (`ScrollArrows`) on each side with more past it. Where:
 
 | Screen | Pills |
 |---|---|

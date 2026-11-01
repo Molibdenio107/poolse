@@ -11,6 +11,7 @@ import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import type { OrganizationKind } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { LogoMark } from '@/components/logo-mark';
+import { ScrollArrows } from '@/components/scroll-arrows';
 import { SiteIcon, SportIcon } from '@/components/sport-icon';
 import { cn } from '@/lib/utils';
 import {
@@ -317,49 +318,52 @@ function SectionLinks({
     );
 
   return (
-    <nav
-      ref={row}
-      aria-label={t('nav.sections')}
-      data-scroll-row
-      className={cn(
-        'relative flex items-stretch',
-        placement === 'bar' ? 'h-full min-w-0 overflow-x-auto' : 'mb-3 flex-wrap gap-1 border-b border-border pb-2',
-      )}
-    >
-      {tab(
-        'site',
-        '/dashboard',
-        club.name ?? t('nav.site'),
-        clubIcon,
-        section === 'site',
-        null,
-        section === 'site' ? 0 : waiting(site),
-      )}
-      <span aria-hidden className={cn('w-px shrink-0 self-center bg-foreground/10', placement === 'bar' ? 'mx-1 h-5' : 'hidden')} />
-      {groups.map((group) =>
-        tab(
-          group.sport!,
-          group.href,
-          t(`sport.name.${group.sport!}`),
-          <SportIcon sport={group.sport!} />,
-          section === group.sport,
-          group.sport!,
-          section === group.sport ? 0 : waiting(group.children ?? []),
-        ),
-      )}
-      {placement === 'bar' && line !== null && (
-        <span
-          aria-hidden
-          {...(lineSport === null ? {} : { 'data-sport': lineSport })}
-          className={cn(
-            'pointer-events-none absolute bottom-0 h-[3px]',
-            lineSport === null ? 'bg-primary' : 'bg-[rgb(var(--sport-wash))]',
-            line.animate && 'transition-[left,width,background-color] duration-300 ease-out motion-reduce:transition-none',
-          )}
-          style={{ left: line.left, width: line.width }}
-        />
-      )}
-    </nav>
+    // The arrows and the hidden scrollbar (01-11-2026): eight sports overflow a laptop.
+    <ScrollArrows className={placement === 'bar' ? 'flex h-full min-w-0' : undefined}>
+      <nav
+        ref={row}
+        aria-label={t('nav.sections')}
+        data-scroll-row
+        className={cn(
+          'relative flex items-stretch',
+          placement === 'bar' ? 'h-full min-w-0 overflow-x-auto' : 'mb-3 flex-wrap gap-1 border-b border-border pb-2',
+        )}
+      >
+        {tab(
+          'site',
+          '/dashboard',
+          club.name ?? t('nav.site'),
+          clubIcon,
+          section === 'site',
+          null,
+          section === 'site' ? 0 : waiting(site),
+        )}
+        <span aria-hidden className={cn('w-px shrink-0 self-center bg-foreground/10', placement === 'bar' ? 'mx-1 h-5' : 'hidden')} />
+        {groups.map((group) =>
+          tab(
+            group.sport!,
+            group.href,
+            t(`sport.name.${group.sport!}`),
+            <SportIcon sport={group.sport!} />,
+            section === group.sport,
+            group.sport!,
+            section === group.sport ? 0 : waiting(group.children ?? []),
+          ),
+        )}
+        {placement === 'bar' && line !== null && (
+          <span
+            aria-hidden
+            {...(lineSport === null ? {} : { 'data-sport': lineSport })}
+            className={cn(
+              'pointer-events-none absolute bottom-0 h-[3px]',
+              lineSport === null ? 'bg-primary' : 'bg-[rgb(var(--sport-wash))]',
+              line.animate && 'transition-[left,width,background-color] duration-300 ease-out motion-reduce:transition-none',
+            )}
+            style={{ left: line.left, width: line.width }}
+          />
+        )}
+      </nav>
+    </ScrollArrows>
   );
 }
 

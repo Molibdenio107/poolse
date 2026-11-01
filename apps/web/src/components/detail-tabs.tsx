@@ -13,6 +13,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArrows } from '@/components/scroll-arrows';
 import { resolveTab, tabHref, type TabBadge } from '@/lib/detail-tabs';
 import { cn } from '@/lib/utils';
 import { useBusyWhile } from '@/lib/busy';
@@ -242,28 +243,30 @@ export function DetailTabStrip(): React.ReactElement {
   }, [value]);
 
   return (
-    <TabsList aria-label={t('detailTabs.label')} className="-mx-1 px-1 py-1">
-      {tabs.map((tab) => (
-        <TabsTrigger
-          key={tab.slug}
-          value={tab.slug}
-          ref={tab.slug === value ? activeRef : undefined}
-        >
-          {t(tab.labelKey)}
-          {tab.badge?.kind === 'count' && (
-            <span className="rounded-full bg-surface-muted px-1.5 text-xs tabular-nums text-foreground-muted">
-              {tab.badge.value}
-            </span>
-          )}
-          {tab.badge?.kind === 'dot' && (
-            <>
-              <span aria-hidden className="attention-dot" />
-              <span className="sr-only">{t(tab.badge.labelKey)}</span>
-            </>
-          )}
-        </TabsTrigger>
-      ))}
-    </TabsList>
+    <ScrollArrows>
+      <TabsList aria-label={t('detailTabs.label')} className="-mx-1 px-1 py-1">
+        {tabs.map((tab) => (
+          <TabsTrigger
+            key={tab.slug}
+            value={tab.slug}
+            ref={tab.slug === value ? activeRef : undefined}
+          >
+            {t(tab.labelKey)}
+            {tab.badge?.kind === 'count' && (
+              <span className="rounded-full bg-surface-muted px-1.5 text-xs tabular-nums text-foreground-muted">
+                {tab.badge.value}
+              </span>
+            )}
+            {tab.badge?.kind === 'dot' && (
+              <>
+                <span aria-hidden className="attention-dot" />
+                <span className="sr-only">{t(tab.badge.labelKey)}</span>
+              </>
+            )}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </ScrollArrows>
   );
 }
 

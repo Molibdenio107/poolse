@@ -30,7 +30,7 @@ export const TabsList = forwardRef<
         // Scrolls sideways rather than wrapping: a strip that wraps on a phone
         // changes height between pages, and the sticky header jumps with it.
         // `relative`: a badge's sr-only label is anchored here, not to the page.
-        'relative flex items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:thin]',
+        'relative flex items-center gap-1 overflow-x-auto whitespace-nowrap',
         className,
       )}
       {...props}

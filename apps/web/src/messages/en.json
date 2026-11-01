@@ -6702,5 +6702,9 @@
       "reader": "Unknown reader.",
       "tokens": "Invalid token count."
     }
+  },
+  "scrollRow": {
+    "previous": "Show earlier",
+    "next": "Show more"
   }
 }

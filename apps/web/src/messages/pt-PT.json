@@ -6702,5 +6702,9 @@
       "reader": "Leitura desconhecida.",
       "tokens": "Contagem de tokens inválida."
     }
+  },
+  "scrollRow": {
+    "previous": "Mostrar os anteriores",
+    "next": "Mostrar os seguintes"
   }
 }

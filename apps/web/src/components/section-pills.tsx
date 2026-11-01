@@ -1,4 +1,5 @@
 import { FromLink } from '@/components/from-link';
+import { ScrollArrows } from '@/components/scroll-arrows';
 import { StickyUnderHeader } from '@/components/sticky-under-header';
 import { cn } from '@/lib/utils';
 
@@ -46,33 +47,36 @@ export function SectionPills({
     // frozen part of a small screen stays a header and not half the page.
     <StickyUnderHeader>
       {/* `data-scroll-row`: a chip row that scrolls on purpose, like the tab strip. */}
-      <nav aria-label={label} data-scroll-row className="flex flex-wrap gap-2 max-md:-m-1 max-md:flex-nowrap max-md:overflow-x-auto max-md:p-1">
-        {items.map((item) => {
-          const on = item.key === current;
-          return (
-            <FromLink
-              key={item.key}
-              href={item.href}
-              aria-current={on ? 'page' : undefined}
-              scroll={false}
-              className={cn(
-                'inline-flex h-control shrink-0 items-center justify-center gap-2 rounded-sm px-4 text-control',
-                'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                on
-                  ? 'bg-primary text-primary-foreground'
-                  : 'border border-border hover:bg-surface-muted',
-              )}
-            >
-              {item.label}
-              {item.count !== undefined && (
-                <span className={cn('tabular-nums text-sm', on ? 'opacity-90' : 'text-foreground-muted')}>
-                  {item.count}
-                </span>
-              )}
-            </FromLink>
-          );
-        })}
-      </nav>
+      <ScrollArrows>
+        <nav aria-label={label} data-scroll-row className="flex flex-wrap gap-2 max-md:-m-1 max-md:flex-nowrap max-md:overflow-x-auto max-md:p-1">
+          {items.map((item) => {
+            const on = item.key === current;
+            return (
+              <FromLink
+                key={item.key}
+                href={item.href}
+                aria-current={on ? 'page' : undefined}
+                scroll={false}
+                className={cn(
+                  'inline-flex h-control shrink-0 items-center justify-center gap-2 rounded-sm px-4 text-control',
+                  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                  on
+                    ? 'bg-primary text-primary-foreground'
+                    : // The handoff's secondary: the card's fill and lift, no border (01-11-2026).
+                      'bg-surface shadow-card hover:bg-surface-muted',
+                )}
+              >
+                {item.label}
+                {item.count !== undefined && (
+                  <span className={cn('tabular-nums text-sm', on ? 'opacity-90' : 'text-foreground-muted')}>
+                    {item.count}
+                  </span>
+                )}
+              </FromLink>
+            );
+          })}
+        </nav>
+      </ScrollArrows>
     </StickyUnderHeader>
   );
 }

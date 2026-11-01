@@ -913,10 +913,27 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
 }
 
 /*
- * A row that scrolls sideways fades at its right edge until you reach the end
- * (sweep 31-10-2026, `ScrollRows`): the hint that there is more past the edge.
+ * A row that scrolls sideways has no scrollbar and fades under an arrow at
+ * whichever edge has more past it (`ScrollArrows`, Rui 01-11-2026; the fade
+ * itself is the sweep of 31-10-2026).
  */
-[data-overflowing]:not([data-at-end]) {
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
-  mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+[data-scroll-row],
+[role='tablist'] {
+  scrollbar-width: none;
+}
+[data-scroll-row]::-webkit-scrollbar,
+[role='tablist']::-webkit-scrollbar {
+  display: none;
+}
+[data-more-end] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+}
+[data-more-start] {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 3rem), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 3rem), transparent);
+}
+[data-more-start][data-more-end] {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 3rem, #000 calc(100% - 3rem), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 3rem, #000 calc(100% - 3rem), transparent);
 }
