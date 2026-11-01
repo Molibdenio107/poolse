@@ -2,7 +2,8 @@ import { BadRequestException, ServiceUnavailableException } from '@nestjs/common
 import type { FilePurpose } from './files.repository.js';
 import { MAX_FILE_BYTES, sniffType, storageConfigured, WORD } from './storage.js';
 
-const IMAGE_ONLY = new Set<FilePurpose>(['facility_photo', 'pool_photo', 'logo', 'student_photo', 'staff_photo']);
+// A boletim template is stored as an image: a PDF is drawn to one in the browser (POOLSE-142).
+const IMAGE_ONLY = new Set<FilePurpose>(['facility_photo', 'pool_photo', 'logo', 'student_photo', 'staff_photo', 'boletim_template']);
 
 /**
  * What an uploaded body is, or the refusal — one judgement for `POST /files`

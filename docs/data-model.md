@@ -4177,3 +4177,17 @@ with an empty `search_path`, so a function used by one must call our other funct
 `public.<name>()`: `closure_span` → `closure_half_day_cut`, `name_sort_key` → `surname_units` →
 `strip_accents`. Qualified rather than `SET search_path`, which would stop the SQL functions
 being inlined. `test/restorable.sql` rebuilds every expression and partial index that way.
+
+### A club's own boletim — POOLSE-142, 1 November 2026
+
+- `boletim_template` is the club's paper form, as an image (`file_id`, purpose `boletim_template`). There is one live
+  template per club (partial unique index). It is insert-only bar `archived_at`; replacing it archives the old one
+  and its placements.
+- `boletim_template_field` is one placement:
+  - `field boletim_field`;
+  - `x` / `y numeric(5,4)`, fractions of the page (the text's baseline start, 0–1 by CHECK);
+  - `size_pt numeric(4,1)`, 6–24 by CHECK.
+
+  Placements are saved as a set: the live set is archived and the new one inserted. There is no UPDATE but
+  `archived_at`, and no DELETE.
+- `boletim_field` is the closed list Poolse fills. It equals `BOLETIM_FIELDS` in `@poolse/rules`, by test.

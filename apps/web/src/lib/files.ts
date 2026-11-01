@@ -28,7 +28,9 @@ export type FileTarget =
   /** `student-document:<student>:<kind>:<season>` — a signed FPN declaration (POOLSE-132). */
   | `student-document:${string}:${string}:${string}`
   | 'own-photo'
-  | 'logo';
+  | 'logo'
+  /** The club's own boletim de sócio, an image of its paper form (POOLSE-142). */
+  | 'boletim-template';
 
 export type FilePurpose =
   | 'policy_document'
@@ -41,11 +43,13 @@ export type FilePurpose =
   | 'student_photo'
   | 'staff_photo'
   | 'own_photo'
-  | 'student_document';
+  | 'student_document'
+  | 'boletim_template';
 
 export function purposeOf(target: FileTarget): FilePurpose {
   if (target === 'logo') return 'logo';
   if (target === 'own-photo') return 'own_photo';
+  if (target === 'boletim-template') return 'boletim_template';
   const kind = target.split(':')[0];
   switch (kind) {
     case 'facility-photo':

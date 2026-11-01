@@ -143,6 +143,7 @@ function studentDocumentCopy(
 
 function attachRoute(target: FileTarget): { method: 'POST' | 'PUT'; path: string } | null {
   if (target === 'logo') return { method: 'PUT', path: '/settings/logo' };
+  if (target === 'boletim-template') return { method: 'PUT', path: '/settings/boletim-template' };
   const [kind, first = '', second = ''] = target.split(':');
   if (!ID.test(first)) return null;
   switch (kind) {

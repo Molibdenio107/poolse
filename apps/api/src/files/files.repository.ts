@@ -28,7 +28,8 @@ export type FilePurpose =
   | 'incident_attachment'
   | 'medical_certificate'
   | 'meet_results'
-  | 'student_document';
+  | 'student_document'
+  | 'boletim_template';
 
 /**
  * Health data, sealed at rest — POOLSE-109. The bucket holds ciphertext, the
@@ -79,6 +80,9 @@ export const RULES: Record<FilePurpose, { write: readonly MemberRole[] | null; r
   // POOLSE-132: a signed FPN declaration or boletim de sócio — the office's
   // file. It carries an ID number and a signature, so not a coach's.
   student_document: { write: OFFICE, read: OFFICE },
+  // POOLSE-142: the club's own boletim, an image of its paper form. The office
+  // configures it and prints it; a family never reads the blank.
+  boletim_template: { write: OFFICE, read: OFFICE },
 };
 
 export interface StoredFile {

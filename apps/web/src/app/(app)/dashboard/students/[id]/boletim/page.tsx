@@ -8,6 +8,9 @@ import { countryName } from '@/lib/countries';
 import { PageError } from '@/components/page-shell';
 import { PrintButton } from '@/components/print-button';
 import { AutoPrint } from '@/components/auto-print';
+import { BoletimSheet, placementStyle } from '@/components/boletim-sheet';
+import { fileUrl } from '@/lib/files';
+import { boletimValue, type BoletimPlacement } from '@poolse/rules';
 
 /** What `GET /students/:id/boletim` returns — POOLSE-134. */
 interface BoletimPrint {
@@ -32,6 +35,11 @@ interface BoletimPrint {
   nationality: string | null;
   minor: boolean;
   guardian: { name: string; phone: string | null; email: string | null; relationship: string | null } | null;
+  /** The club's own form (POOLSE-142), or null for Poolse's. */
+  template: { fileId: string; fields: BoletimPlacement[] } | null;
+  /** Present only when the club's form places it. */
+  idDocumentNumber: string | null;
+  snsNumber: string | null;
 }
 
 /**
@@ -47,12 +55,12 @@ export default async function BoletimPrintPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ print?: string }>;
+  searchParams: Promise<{ print?: string; form?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
   const { id } = await params;
-  const { print } = await searchParams;
+  const { print, form } = await searchParams;
 
   const loaded = await outcome(apiFetch<BoletimPrint>(`/students/${id}/boletim`));
   if (loaded.state === 'failed' && loaded.status === 404) notFound();
@@ -64,6 +72,8 @@ export default async function BoletimPrintPage({
     );
   }
   const data = loaded.data;
+  const clubForm = data.template !== null && data.template.fields.length > 0;
+  if (clubForm && form !== 'poolse') return <ClubForm data={data} id={id} autoPrint={print === '1'} />;
   const marital = data.maritalStatus === null ? null : t(`students.identity.marital.${data.maritalStatus}`);
   const address = [data.addressLine, [data.postalCode, data.locality].filter(Boolean).join(' ')]
     .filter((part) => part !== null && part !== '')
@@ -93,8 +103,13 @@ export default async function BoletimPrintPage({
 
       {print === '1' && <AutoPrint />}
 
-      <div className="mb-6 print:hidden">
+      <div className="mb-6 flex flex-wrap items-center gap-4 print:hidden">
         <PrintButton label={t('export.pdf.printLabel')} />
+        {clubForm && (
+          <a href={`/dashboard/students/${id}/boletim`} className="text-sm text-primary underline-offset-2 hover:underline">
+            {t('boletimTemplate.printClubForm')}
+          </a>
+        )}
       </div>
 
       <header className="flex items-baseline justify-between gap-4 border-b border-black pb-3">
@@ -179,4 +194,72 @@ export default async function BoletimPrintPage({
 function Blank({ value }: { value: string | null }): React.ReactElement {
   if (value === null || value.trim() === '') return <span>______________________________</span>;
   return <span>{value}</span>;
+}
+
+
+/**
+ * The club's own form, filled in — POOLSE-142. The image is the page (A4, no
+ * margin: the scan carries its own), each placed field written at its spot by
+ * `placementStyle`, the rule the editor uses. A paper form of a Portuguese club
+ * is Portuguese whoever prints it, so the words are pt-PT, as the Anexo 2's are.
+ */
+async function ClubForm({
+  data,
+  id,
+  autoPrint,
+}: {
+  data: BoletimPrint;
+  id: string;
+  autoPrint: boolean;
+}): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const pt = await getTranslations({ locale: 'pt-PT' });
+  const template = data.template!;
+  const values = {
+    name: data.name,
+    parentOneName: data.parentOneName,
+    parentTwoName: data.parentTwoName,
+    birthDate: data.birthDate,
+    maritalStatus: data.maritalStatus === null ? null : pt(`students.identity.marital.${data.maritalStatus}`),
+    profession: data.profession,
+    education: data.education,
+    birthplace: data.birthplace,
+    nationality: data.nationality === null ? null : countryName(data.nationality, 'pt-PT'),
+    addressLine: data.addressLine,
+    locality: data.locality,
+    postalCode: data.postalCode,
+    phone: data.contactPhone,
+    email: data.contactEmail,
+    taxNumber: data.taxNumber,
+    idDocumentNumber: data.idDocumentNumber,
+    snsNumber: data.snsNumber,
+    socioNumber: data.socioNumber,
+    socioSince: data.socioSince,
+    guardian: data.guardian,
+  };
+  const day = today();
+
+  return (
+    <main className="mx-auto max-w-[210mm] bg-white text-black print:max-w-none">
+      <style>{'@page { size: A4 portrait; margin: 0; }'}</style>
+      {autoPrint && <AutoPrint />}
+      <div className="flex flex-wrap items-center gap-4 p-6 print:hidden">
+        <PrintButton label={t('export.pdf.printLabel')} />
+        <a href={`/dashboard/students/${id}/boletim?form=poolse`} className="text-sm text-primary underline-offset-2 hover:underline">
+          {t('boletimTemplate.printPoolseForm')}
+        </a>
+      </div>
+      <BoletimSheet imageUrl={fileUrl(template.fileId)!} alt={t('boletimTemplate.alt')} className="w-[210mm]">
+        {template.fields.map((placement, index) => {
+          const text = boletimValue(placement.field, values, day);
+          if (text === null) return null;
+          return (
+            <span key={index} style={placementStyle(placement)} className="absolute whitespace-nowrap">
+              {text}
+            </span>
+          );
+        })}
+      </BoletimSheet>
+    </main>
+  );
 }

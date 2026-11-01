@@ -40,6 +40,7 @@ import {
   StudentInvitationsController,
 } from '../students/family-invitations.controller.js';
 import { BoletimController, FpnSettingsController, StudentDocumentsController } from '../students/documents.controller.js';
+import { BoletimTemplateController } from '../students/boletim-template.controller.js';
 import { MedicalExamsController } from '../students/medical-exams.controller.js';
 import { MaintenanceController } from '../maintenance/maintenance.controller.js';
 import { FacilityIncidentsController, IncidentsController } from '../safety/incidents.controller.js';
@@ -861,6 +862,12 @@ test('student documents and FPN settings refuse a guardian and a student (403)',
     await refused('GET students/:id/documents/id-document', 403, () => docs.idDocument(fixture.aliceId));
     await refused('PATCH fpn-settings', 403, () => new FpnSettingsController().save({ association: 'X' }));
     await refused('GET students/:id/boletim', 403, () => new BoletimController().print(fixture.aliceId));
+    // POOLSE-142 — the club's own boletim template.
+    const template = new BoletimTemplateController();
+    await refused('GET settings/boletim-template', 403, () => template.read());
+    await refused('PUT settings/boletim-template', 403, () => template.set({ fileId: NO_SUCH_ID }));
+    await refused('PUT settings/boletim-template/fields', 403, () => template.place({ fields: [] }));
+    await refused('DELETE settings/boletim-template', 403, () => template.remove());
   });
 });
 

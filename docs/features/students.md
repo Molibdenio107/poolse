@@ -316,6 +316,30 @@ columns, never the SNS number; a minor names the primary guardian) and the signe
 `student_document` (kind `socio_form`, no season), older ones kept. The sócios list exports and imports
 through the student sheet (`socios=1`), no second pipeline.
 
+### The club's own boletim — POOLSE-142
+
+On a site's *Dados do clube* (owner and admin), a club uploads its own paper form as a PDF or an image. A PDF's
+first page is drawn to a JPEG in the browser (`lib/page-image.ts`, pdf.js), so the stored file (purpose
+`boletim_template`, office only) is always an image.
+
+The club then places Poolse's fields on it:
+- arm a field in the list and click its line on the form;
+- drag it, or nudge it with the arrow keys, and size it from 6 to 24 pt;
+- *Guardar posições* saves the set. A field may be placed twice.
+
+Positions are fractions of the page, and sizes are points of A4. `BoletimSheet` / `placementStyle` draw both the
+editor and the print, so what is placed is what prints.
+
+*Imprimir preenchido* then uses the club's form. It is written in Portuguese whatever the reader's language
+(`boletimValue` in `@poolse/rules`: split dates, the month in words, the year's last two digits). Poolse's own form
+is one link away.
+
+**The ID number and the SNS number are read only when the template places them**, and the ID read is audited
+(`student.id_document_read`). Replacing the form drops its placements, and the screen asks first. Removing it
+returns to Poolse's form.
+
+The AI proposing the positions is slice B, not built yet.
+
 ## Levels
 
 Senior levels sit in the **same ladder** as everything else, ordered by the same `sort_order`

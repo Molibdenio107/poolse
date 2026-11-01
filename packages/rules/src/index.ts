@@ -412,3 +412,4 @@ export * from './sports.js';
 export * from './payment.js';
 export * from './identity.js';
 export * from './ai.js';
+export * from './boletim.js';

@@ -2,6 +2,7 @@ import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { decryptSensitive, encryptSensitive } from '../sensitive/cipher.js';
 import { displayName } from '../people/names.js';
+import { liveTemplateIn, type BoletimTemplate } from './boletim-template.repository.js';
 
 /**
  * *Documentos* on a student's record — POOLSE-132 (Rui, 30-10-2026).
@@ -389,12 +390,19 @@ export interface BoletimPrint {
   nationality: string | null;
   minor: boolean;
   guardian: { name: string; phone: string | null; email: string | null; relationship: string | null } | null;
+  /** The club's own form and its placements (POOLSE-142), or null for Poolse's. */
+  template: BoletimTemplate | null;
+  /** Read only when the club's template places it; the read is audited. */
+  idDocumentNumber: string | null;
+  /** Read only when the club's template places it (owner and admin, as the route). */
+  snsNumber: string | null;
 }
 
 /**
  * Everything the boletim de sócio prints — POOLSE-134. The record's own fields
  * and the sócio columns, nothing held by the form. The SNS number is never
- * printed; for a minor, the primary guardian.
+ * printed on Poolse's own form; a club's template may place it (POOLSE-142).
+ * For a minor, the primary guardian.
  */
 export async function boletimPrint(organizationId: string, studentId: string): Promise<BoletimPrint | null> {
   return withOrg(organizationId, async (tx) => {
@@ -465,8 +473,43 @@ export async function boletimPrint(organizationId: string, studentId: string): P
       nationality: row.nationality,
       minor: row.minor === true,
       guardian: row.minor === true ? row.guardian : null,
+      ...(await placedSecrets(tx, studentId)),
     };
   });
+}
+
+/**
+ * The club's template, and the two numbers a boletim prints only when that
+ * template places them (POOLSE-142 rule 5): the ID number decrypted, with the
+ * read written to the audit log as the Anexo 2's is, and the SNS number.
+ */
+async function placedSecrets(
+  tx: Tx,
+  studentId: string,
+): Promise<{ template: BoletimTemplate | null; idDocumentNumber: string | null; snsNumber: string | null }> {
+  const template = await liveTemplateIn(tx);
+  const placed = new Set((template?.fields ?? []).map((f) => f.field));
+  let idDocumentNumber: string | null = null;
+  let snsNumber: string | null = null;
+  if (placed.has('id_document_number') || placed.has('sns_number')) {
+    const { rows } = await tx.query<{ id_number: string | null; sns_number: string | null }>(
+      'SELECT id_document_number_encrypted AS id_number, sns_number FROM student WHERE id = $1',
+      [studentId],
+    );
+    if (placed.has('id_document_number')) {
+      idDocumentNumber = decryptSensitive(rows[0]?.id_number ?? null);
+      if (idDocumentNumber !== null) {
+        await recordAudit(tx, {
+          action: 'student.id_document_read',
+          entityType: 'student',
+          entityId: studentId,
+          data: { purpose: 'boletim_template' },
+        });
+      }
+    }
+    if (placed.has('sns_number')) snsNumber = rows[0]?.sns_number ?? null;
+  }
+  return { template, idDocumentNumber, snsNumber };
 }
 
 export interface IdDocumentFull {

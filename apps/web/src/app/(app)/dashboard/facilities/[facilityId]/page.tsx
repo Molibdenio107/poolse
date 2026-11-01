@@ -1,6 +1,7 @@
 import { RegulationPanel, type ComplaintsSettingsView, type RegulationVersionView } from './regulation-panel';
 import { PaymentInstructionsPanel, TaxPanel } from './tax-panel';
 import { LogoPanel } from './logo-panel';
+import { BoletimTemplatePanel } from './boletim-template-panel';
 import { SeriesPanel } from './series-panel';
 import { listSeries } from '../../faturacao/invoices.actions';
 import { readTaxSettings } from './club.actions';
@@ -577,6 +578,8 @@ export default async function FacilityPage({
                 */}
                 {books?.state === 'failed' && <PageError message={t(books.failure.key)} />}
                 {books?.state === 'ok' && <SeriesPanel facilityId={facilityId} series={books.data.series} />}
+                {/* The club's own boletim de sócio (POOLSE-142). */}
+                <BoletimTemplatePanel />
               </div>
             );
           },
