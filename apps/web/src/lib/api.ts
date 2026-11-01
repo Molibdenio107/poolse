@@ -4509,7 +4509,8 @@ export interface DashboardWidget {
 }
 
 export interface DashboardBand {
-  id: 'management' | 'operational' | 'personal';
+  /** `summary` is the handoff's dashboard on top (multi-sport Slice 2), laid out rather than ranked. */
+  id: 'summary' | 'management' | 'operational' | 'personal';
   order: number;
   widgets: DashboardWidget[];
 }
@@ -4626,6 +4627,48 @@ export interface OccupancyTodayWidgetData {
   withoutInstructor: number;
   /** The busiest moment in one tank. `capacity` null is "not measured". */
   peak: { poolId: string; poolName: string; swimmers: number; capacity: number | null } | null;
+  /* What the summary's `sum.today` reads from the same statement (multi-sport Slice 2). */
+  done: number;
+  bySport: { sport: PoolseSport; count: number }[];
+  present: number;
+  marked: number;
+  expectedSoFar: number;
+  /** People in the water per local hour, 0–23. */
+  hours: number[];
+  nowHour: number;
+}
+
+/** `sum.insights` — up to three things that deserve attention, from the AI once it is wired. */
+export interface InsightsWidgetData {
+  insights: {
+    category: 'energy' | 'fees' | 'classes' | 'water' | 'people';
+    sport: PoolseSport | null;
+    headline: string;
+    body: string;
+    href: string;
+    actionLabel: string;
+    recommended: boolean;
+  }[];
+}
+
+/** `sum.collected` — fees collected this month, pass sales left out. */
+export interface CollectedWidgetData {
+  cents: number;
+  payments: number;
+  /** `YYYY-MM`. */
+  month: string;
+}
+
+/** `sum.recintos` — every tank's latest key readings, judged. */
+export interface RecintosWidgetData {
+  pools: {
+    poolId: string;
+    poolName: string;
+    facilityId: string;
+    takenAt: string | null;
+    state: 'ok' | 'warn' | 'due' | 'none';
+    readings: { metric: PoolMetric; value: number; unit: string; out: boolean }[];
+  }[];
 }
 
 /** `mgmt.waterquality.alerts` — tanks out of range or due an analysis. */

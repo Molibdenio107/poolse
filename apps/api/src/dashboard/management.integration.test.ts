@@ -266,6 +266,18 @@ test('66.2b occupancy — today, at the site, without the cancelled class', asyn
       { swimmers: today!.data.peak?.swimmers, capacity: today!.data.peak?.capacity },
       { swimmers: 2, capacity: 10 },
     );
+
+    // Multi-sport Slice 2's summary reads the same statement: the lesson is the
+    // pool's, its two swimmers fill the 12:00 hour (12:00–12:45) and no other,
+    // and the cancelled one is nowhere.
+    const summary = card<OccupancyToday>(page, 'sum.today');
+    assert.equal(summary?.state, 'ok');
+    assert.deepEqual(summary!.data.bySport, [{ sport: 'pool', count: 1 }]);
+    assert.equal(summary!.data.hours.length, 24);
+    assert.equal(summary!.data.hours[12], 2);
+    assert.equal(summary!.data.hours[11], 0);
+    assert.equal(summary!.data.hours[13], 0, 'the 14:00 lesson was cancelled, and 12:45 ends before 13:00');
+    assert.equal(summary!.data.marked, 0);
   });
 });
 

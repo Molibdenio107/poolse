@@ -1,0 +1,301 @@
+import { getLocale, getTranslations } from 'next-intl/server';
+import { isMultiSport, type PoolseSport } from '@poolse/rules';
+import { FromLink } from '@/components/from-link';
+import { Badge, type BadgeTone } from '@/components/ui/badge';
+import { sportNameKey } from '@/components/sport-icon';
+import { SportChip } from '@/components/sport-chip';
+import { apiFetch } from '@/lib/api';
+import type {
+  CollectedWidgetData,
+  InsightsWidgetData,
+  Me,
+  DashboardWidget,
+  OccupancyTodayWidgetData,
+  RecintosWidgetData,
+} from '@/lib/api';
+import { formatCents } from '@/lib/money';
+import { formatReading } from '@/lib/pool-metrics';
+import { cn } from '@/lib/utils';
+
+/**
+ * The summary on top of the dashboard — multi-sport Slice 2 (Rui, 01-11-2026),
+ * the handoff's *01 Dashboard*: a row of four figures, then today hour by hour
+ * beside the tanks as they are now. The cards below are unchanged.
+ *
+ * Every figure is a widget's own (`sum.today`, `sum.collected`, `sum.recintos`)
+ * — the same reads the cards use, never a second definition — and a widget the
+ * reader may not see or the club has switched off is simply absent, as in every
+ * band. The handoff's insight cards wait for the AI and draw nothing until then:
+ * an empty box would say "nothing deserves attention", which is not known.
+ *
+ * Colour never carries a figure alone: each tile's line says it in words, a
+ * chart bar has its value in a list beside it, and a tank's state is a badge.
+ */
+const CHART_FROM = 7;
+const CHART_TO = 21; // inclusive: 15 bars, the handoff's
+
+export async function SummaryBand({ widgets }: { widgets: DashboardWidget[] }): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const locale = await getLocale();
+  // The club's sports, to split today's lessons by sport only where there are
+  // two — the layout's own `/me`, which Next answers once per render.
+  const sports: readonly PoolseSport[] = await apiFetch<Me>('/me').then(
+    (me) => me.memberships[0]?.sports ?? [],
+    () => [],
+  );
+  const find = (id: string): DashboardWidget | undefined => widgets.find((w) => w.id === id);
+  const todayWidget = find('sum.today');
+  const collectedWidget = find('sum.collected');
+  const recintosWidget = find('sum.recintos');
+  const today = todayWidget?.state === 'ok' ? (todayWidget.data as OccupancyTodayWidgetData) : null;
+  const collected = collectedWidget?.state === 'ok' ? (collectedWidget.data as CollectedWidgetData) : null;
+  const recintos = recintosWidget?.state === 'ok' ? (recintosWidget.data as RecintosWidgetData) : null;
+  // Nothing until the AI writes some — never an empty box (see `summaryInsights`).
+  const insightsWidget = find('sum.insights');
+  const insights = insightsWidget?.state === 'ok' ? (insightsWidget.data as InsightsWidgetData).insights : [];
+  const failed = t('dashboard.widgetFailed');
+
+  return (
+    <div className="flex flex-col gap-page-gap">
+      {insights.length > 0 && (
+        <div className="grid grid-cols-1 gap-page-gap lg:grid-cols-3">
+          {insights.map((insight) => (
+            <section key={insight.headline} className="flex flex-col gap-2 rounded bg-surface p-5 shadow-card">
+              <span className="flex flex-wrap items-center gap-2">
+                <Badge tone="pending">{t(`dashboard.summary.category.${insight.category}`)}</Badge>
+                {insight.sport !== null && isMultiSport(sports) && <SportChip sport={insight.sport} />}
+              </span>
+              <h3 className="font-heading text-[19px] font-semibold leading-snug">{insight.headline}</h3>
+              <p className="text-[13px] text-foreground-muted">{insight.body}</p>
+              <FromLink
+                href={insight.href}
+                className={cn(
+                  'mt-auto inline-flex h-control items-center justify-center self-start rounded-sm px-4 text-control',
+                  insight.recommended
+                    ? 'bg-primary font-semibold text-primary-foreground'
+                    : 'bg-surface text-foreground shadow-card hover:bg-surface-muted',
+                )}
+              >
+                {insight.actionLabel}
+              </FromLink>
+            </section>
+          ))}
+        </div>
+      )}
+      {/* The KPI row. */}
+      <div className="grid grid-cols-2 gap-page-gap lg:grid-cols-4">
+        {todayWidget !== undefined && (
+          <>
+            <Tile
+              label={t('dashboard.summary.lessons')}
+              value={todayWidget.state === 'error' ? '—' : String(today?.classes ?? 0)}
+              href="/dashboard/calendar"
+              sub={
+                todayWidget.state === 'error'
+                  ? { text: failed, tone: 'muted' }
+                  : today === null
+                    ? { text: t('dashboard.summary.noLessons'), tone: 'muted' }
+                    : isMultiSport(sports) && today.bySport.length > 0
+                      ? {
+                          text: today.bySport.map((s) => `${t(sportNameKey(s.sport))} ${s.count}`).join(' · '),
+                          tone: 'muted',
+                        }
+                      : { text: t('dashboard.summary.lessonsDone', { done: today.done }), tone: 'muted' }
+              }
+            />
+            <Tile
+              label={t('dashboard.summary.attendance')}
+              value={today === null || today.marked === 0 ? '—' : String(today.present)}
+              href="/dashboard/calendar"
+              sub={
+                today === null || today.expectedSoFar === 0
+                  ? { text: t('dashboard.summary.attendanceNotYet'), tone: 'muted' }
+                  : today.marked === 0
+                    ? { text: t('dashboard.summary.attendanceUnmarked', { expected: today.expectedSoFar }), tone: 'late' }
+                    : { text: t('dashboard.summary.attendanceOf', { expected: today.expectedSoFar }), tone: 'ok' }
+              }
+            />
+          </>
+        )}
+        {collectedWidget !== undefined && (
+          <Tile
+            label={t('dashboard.summary.collected')}
+            value={collected === null ? '—' : formatCents(locale, collected.cents)}
+            href="/dashboard/faturacao"
+            sub={
+              collected === null
+                ? { text: failed, tone: 'muted' }
+                : { text: t('dashboard.summary.payments', { count: collected.payments }), tone: 'muted' }
+            }
+          />
+        )}
+        {todayWidget !== undefined && (
+          <Tile
+            label={t('dashboard.summary.noInstructor')}
+            value={today === null ? '0' : String(today.withoutInstructor)}
+            href="/dashboard/calendar"
+            sub={
+              today !== null && today.withoutInstructor > 0
+                ? { text: t('dashboard.summary.noInstructorToday'), tone: 'late' }
+                : { text: t('dashboard.summary.allCovered'), tone: 'ok' }
+            }
+          />
+        )}
+      </div>
+
+      {(todayWidget !== undefined || recintosWidget !== undefined) && (
+        <div className="grid grid-cols-1 gap-page-gap lg:grid-cols-3">
+          {todayWidget !== undefined && (
+            <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card lg:col-span-2">
+              <h3 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('dashboard.summary.byHour')}
+              </h3>
+              {today === null ? (
+                <p className="text-sm text-foreground-muted">
+                  {todayWidget.state === 'error' ? failed : t('dashboard.summary.noLessons')}
+                </p>
+              ) : (
+                <HourChart hours={today.hours} nowHour={today.nowHour} />
+              )}
+            </section>
+          )}
+          {recintosWidget !== undefined && (
+            <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
+              <h3 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('dashboard.summary.recintos')}
+              </h3>
+              {recintos === null ? (
+                <p className="text-sm text-foreground-muted">
+                  {recintosWidget.state === 'error' ? failed : t('dashboard.summary.noTanks')}
+                </p>
+              ) : (
+                <ul className="flex flex-col divide-y divide-border">
+                  {recintos.pools.map((pool) => (
+                    <li key={pool.poolId} className="flex flex-col gap-1 py-2 first:pt-0 last:pb-0">
+                      <span className="flex flex-wrap items-center justify-between gap-2">
+                        <FromLink
+                          href={`/dashboard/facilities/pools/${pool.poolId}?tab=water`}
+                          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                        >
+                          {pool.poolName}
+                        </FromLink>
+                        <Badge tone={TANK_TONE[pool.state]}>{t(`dashboard.summary.tank.${pool.state}`)}</Badge>
+                      </span>
+                      {pool.readings.length > 0 && (
+                        <span className="font-mono text-xs tabular-nums text-foreground-muted">
+                          {pool.readings.map((reading, index) => (
+                            <span key={reading.metric} className={cn(reading.out && 'font-semibold text-warning')}>
+                              {index > 0 && ' · '}
+                              {t(`facilities.metric.${reading.metric}`)} {formatReading(reading.value, locale)}
+                              {reading.unit === '' || reading.unit === 'pH' ? '' : ` ${reading.unit}`}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const TANK_TONE: Record<RecintosWidgetData['pools'][number]['state'], BadgeTone> = {
+  ok: 'ok',
+  warn: 'late',
+  due: 'pending',
+  none: 'muted',
+};
+
+/** A figure, its name and a line saying what it means — the handoff's KPI tile. */
+function Tile({
+  label,
+  value,
+  sub,
+  href,
+}: {
+  label: string;
+  value: string;
+  sub: { text: string; tone: 'ok' | 'late' | 'muted' };
+  href: string;
+}): React.ReactElement {
+  return (
+    <FromLink
+      href={href}
+      className="flex flex-col gap-1 rounded bg-surface p-4 shadow-card hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+    >
+      <span className="text-xs text-foreground-muted">{label}</span>
+      <span className="font-heading text-[30px] font-semibold leading-tight tabular-nums">{value}</span>
+      <span
+        className={cn(
+          'text-xs',
+          sub.tone === 'ok' ? 'text-success' : sub.tone === 'late' ? 'text-warning' : 'text-foreground-muted',
+        )}
+      >
+        {sub.text}
+      </span>
+    </FromLink>
+  );
+}
+
+/**
+ * Today hour by hour, 07:00–21:00: the hours gone muted, this hour solid in
+ * the primary ink, the hours to come at half strength — two shades rather than
+ * the handoff's ink-and-fill, which are one colour in the dark theme. The
+ * figures are in a list beside the bars for a screen reader, and each bar's own
+ * value is drawn over it.
+ */
+async function HourChart({ hours, nowHour }: { hours: number[]; nowHour: number }): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const range = Array.from({ length: CHART_TO - CHART_FROM + 1 }, (_, i) => CHART_FROM + i);
+  const max = Math.max(1, ...range.map((h) => hours[h] ?? 0));
+  return (
+    <div className="flex flex-col gap-2">
+      <ol aria-label={t('dashboard.summary.byHour')} className="flex h-40 items-end gap-1">
+        {range.map((h) => {
+          const people = hours[h] ?? 0;
+          const when = h < nowHour ? 'past' : h === nowHour ? 'now' : 'next';
+          return (
+            <li key={h} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
+              <span className="sr-only">{t('dashboard.summary.hourLine', { hour: h, people })}</span>
+              {people > 0 && (
+                <span aria-hidden className="text-[10px] tabular-nums text-foreground-muted">
+                  {people}
+                </span>
+              )}
+              <span
+                aria-hidden
+                style={{ height: `${Math.max(people > 0 ? 4 : 1, (people / max) * 100)}%` }}
+                className={cn(
+                  'w-full rounded-t-[2px]',
+                  when === 'past' ? 'bg-foreground/15' : when === 'now' ? 'bg-[rgb(var(--primary-ink))]' : 'bg-primary/45',
+                )}
+              />
+              <span aria-hidden className="text-[10px] tabular-nums text-foreground-muted">
+                {String(h).padStart(2, '0')}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground-muted">
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden className="size-2.5 rounded-[2px] bg-foreground/15" />
+          {t('dashboard.summary.legendPast')}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden className="size-2.5 rounded-[2px] bg-[rgb(var(--primary-ink))]" />
+          {t('dashboard.summary.legendNow')}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden className="size-2.5 rounded-[2px] bg-primary/45" />
+          {t('dashboard.summary.legendNext')}
+        </span>
+      </p>
+    </div>
+  );
+}

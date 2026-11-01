@@ -341,3 +341,21 @@ so the card's three states are proven by the API's own state assertions and by t
 than by a render test; adding one is its own decision. Widget customisation is out of scope for
 the whole ticket; if it is ever wanted it is one `dashboard_widget_prefs` table keyed on the
 person, and the registry already makes that small.
+
+## The summary band — multi-sport Slice 2 (1 November 2026)
+
+The handoff's *01 Dashboard* sits on top of the cards, which are unchanged below it (Rui: summary on top, cards
+below). It is a band like the others: `summary` is first in `BANDS`, its widgets are registry declarations, and
+it is for owner and admin in a business tenant, following the site selector.
+
+It is **laid out, not ranked** (`FIXED_BANDS`). Its widgets keep their declared order, none is cut, and an empty
+one keeps its place, so the tiles stand where the reader learned to look.
+
+| Widget | What it draws | Read |
+|---|---|---|
+| `sum.insights` | Up to three insight cards: a category badge, a sport chip when the insight is about one sport, a headline, a body and one action. Primary only on the recommended one. | `InsightSource`. Today `NO_INSIGHTS`, so the widget is empty and **nothing is drawn**; an empty box would claim nothing deserves attention. The AI that writes them is a later ticket that replaces the source. |
+| `sum.today` | Three KPI tiles and the hourly chart. **Aulas hoje** (how many are done; by sport where `isMultiSport`). **Presenças** (present against the active enrolments of the lessons started so far, "nada marcado" in amber when none are marked). **Sem professor atribuído** (today, the booking's `instructor_status`). Then *Hoje, hora a hora*, people in the water per hour 07–21: past muted, now solid ink, to come at half strength, a value over each bar and a spoken line per hour. | `readOccupancyToday`, the *Hoje* card's own statement, extended with `done`, `bySport`, `present`, `marked`, `expectedSoFar`, `hours[24]` and `nowHour`. |
+| `sum.collected` | The **Cobrado no mês** tile (module invoicing). | `readCollectedMonth`: payments this club month on fee documents. **Pass sales are left out**, never summed with mensalidades. |
+| `sum.recintos` | *Recintos · estado agora*: each tank, a state badge (within limits, out of limits, analysis overdue, no analyses) and pH, free chlorine and temperature, an out-of-range one in amber (module water quality). | `readPoolWater`, judged by `excursions` / `resolveBands`, as the water card is. |
+
+Each tile links to its page (Calendário, Faturação), and each tank to its water tab.

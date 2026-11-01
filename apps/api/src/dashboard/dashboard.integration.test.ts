@@ -54,13 +54,20 @@ test('66.1 — an owner gets both bands, in order, each widget once', async () =
 
     assert.deepEqual(
       page.bands.map((band) => band.id),
-      ['management', 'operational'],
+      ['summary', 'management', 'operational'],
       'the personal band is absent, not empty — the owner holds no role in it',
     );
     assert.deepEqual(
       page.bands.map((band) => band.order),
-      [0, 1],
+      [0, 1, 2],
     );
+
+    // Multi-sport Slice 2: the summary, laid out — nothing scheduled is an empty
+    // tile in its place, and nothing collected is a figure, never absent.
+    assert.deepEqual(page.bands[0]!.widgets.map((w) => w.id), ['sum.insights', 'sum.today', 'sum.collected', 'sum.recintos']);
+    assert.equal(card(page, 'sum.insights')?.state, 'empty', 'no AI yet: no insight, and no box claiming there is nothing');
+    assert.equal(card(page, 'sum.today')?.state, 'empty');
+    assert.deepEqual((card(page, 'sum.collected')?.data as { cents: number }).cents, 0);
 
     const all = ids(page);
     assert.equal(new Set(all).size, all.length, 'no widget twice');

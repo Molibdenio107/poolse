@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import {
   BANDS,
   BAND_CAP,
+  FIXED_BANDS,
   widgetsFor,
   type Band,
   type ResolverContext,
@@ -244,14 +245,16 @@ export async function composeDashboard(
        *
        * Then the reader's leading working role (`leadRank`), then priority.
        */
-      .sort(
-        (a, b) =>
-          Number(a.card.state === 'empty') - Number(b.card.state === 'empty') ||
-          a.lead - b.lead ||
-          b.card.priority - a.card.priority ||
-          a.card.id.localeCompare(b.card.id),
+      .sort((a, b) =>
+        // A laid-out band keeps its declared order and every widget (FIXED_BANDS).
+        FIXED_BANDS.has(band)
+          ? b.card.priority - a.card.priority || a.card.id.localeCompare(b.card.id)
+          : Number(a.card.state === 'empty') - Number(b.card.state === 'empty') ||
+            a.lead - b.lead ||
+            b.card.priority - a.card.priority ||
+            a.card.id.localeCompare(b.card.id),
       )
-      .slice(0, BAND_CAP)
+      .slice(0, FIXED_BANDS.has(band) ? undefined : BAND_CAP)
       .map(({ card }) => card)
       // A trailing line comes after the cards, outside the cap — POOLSE-103 C.
       .concat(

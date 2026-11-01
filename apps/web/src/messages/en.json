@@ -2777,7 +2777,8 @@
     "band": {
       "management": "Management",
       "operational": "Operations",
-      "personal": "Personal"
+      "personal": "Personal",
+      "summary": "Today's summary"
     },
     "widget": {
       "subscription": {
@@ -2953,6 +2954,40 @@
     "scope": {
       "label": "Site",
       "all": "All sites"
+    },
+    "summary": {
+      "lessons": "Lessons today",
+      "noLessons": "No lessons today.",
+      "lessonsDone": "{done, plural, =0 {None taught yet} one {# taught} other {# taught}}",
+      "attendance": "Attendance",
+      "attendanceNotYet": "No lesson has started yet.",
+      "attendanceUnmarked": "{expected} expected so far, nothing marked",
+      "attendanceOf": "of {expected} expected so far",
+      "collected": "Collected this month",
+      "payments": "{count, plural, =0 {No payments yet} one {# fee payment} other {# fee payments}}",
+      "noInstructor": "Without an instructor",
+      "noInstructorToday": "Today's lessons to sort out",
+      "allCovered": "Every lesson today has an instructor",
+      "byHour": "Today, hour by hour",
+      "hourLine": "{hour, number}:00: {people, plural, =0 {nobody} one {# person} other {# people}} in the water",
+      "legendPast": "Past",
+      "legendNow": "Now",
+      "legendNext": "Next",
+      "recintos": "Facilities · right now",
+      "noTanks": "No tanks at the sites yet.",
+      "tank": {
+        "ok": "Within limits",
+        "warn": "Out of limits",
+        "due": "Analysis overdue",
+        "none": "No analyses"
+      },
+      "category": {
+        "energy": "Energy",
+        "fees": "Fees",
+        "classes": "Classes",
+        "water": "Water",
+        "people": "People"
+      }
     }
   },
   "marketing": {

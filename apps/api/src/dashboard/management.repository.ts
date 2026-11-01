@@ -127,6 +127,23 @@ export interface OccupancyToday {
    * nothing is in a tank today. `capacity` null is "not measured", never zero.
    */
   peak: { poolId: string; poolName: string; swimmers: number; capacity: number | null } | null;
+  /*
+   * What the dashboard's summary reads (multi-sport Slice 2, 01-11-2026) from
+   * the same statement — never a second definition of "today's lessons".
+   */
+  /** Lessons already over. */
+  done: number;
+  /** Lessons per sport, by the turma's recinto (POOLSE-122); `pool` without one. */
+  bySport: { sport: string; count: number }[];
+  /** Presences marked on today's lessons, and every mark. */
+  present: number;
+  marked: number;
+  /** People expected in the lessons that have started — a turma's active enrolments. */
+  expectedSoFar: number;
+  /** People in the water per local hour, 0–23, by enrolment as `swimmers` counts. */
+  hours: number[];
+  /** The hour it is now, at the first site in scope — the chart's "now" bar. */
+  nowHour: number;
 }
 
 /**
@@ -164,6 +181,13 @@ export async function readOccupancyToday(
       swimmers: number;
       without_instructor: number;
       peak: OccupancyToday['peak'];
+      done: number;
+      by_sport: OccupancyToday['bySport'];
+      present: number;
+      marked: number;
+      expected_so_far: number;
+      hours: number[];
+      now_hour: number | null;
     }>(
       `WITH today AS (
          SELECT cs.id, cs.pool_id, cs.starts_at, cs.ends_at,
@@ -184,7 +208,15 @@ export async function readOccupancyToday(
                           cg.instructor_membership_id,
                           sch.instructor_membership_id) IS NULL
                  AND coalesce(sch.instructor_status::text, 'to_define') IN ('to_define', 'uncovered'))
-                  AS without_instructor
+                  AS without_instructor,
+                coalesce(pa.sport_id, 'pool') AS sport,
+                cs.ends_at <= now() AS done,
+                coalesce(cs.class_group_id, sch.class_group_id) IS NOT NULL AND cs.starts_at <= now() AS started_class,
+                -- Minutes from local midnight, for the hour-by-hour profile.
+                (extract(epoch FROM (cs.starts_at AT TIME ZONE coalesce(f.timezone, 'Europe/Lisbon'))::time) / 60)::int
+                  AS start_min,
+                least(1440, (extract(epoch FROM (cs.starts_at AT TIME ZONE coalesce(f.timezone, 'Europe/Lisbon'))::time) / 60)::int
+                            + extract(epoch FROM (cs.ends_at - cs.starts_at))::int / 60) AS end_min
            FROM class_session cs
            LEFT JOIN class_group cg
                   ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
@@ -194,6 +226,8 @@ export async function readOccupancyToday(
                   ON pg.id = sch.partner_group_id AND pg.organization_id = sch.organization_id
            LEFT JOIN pool p
                   ON p.id = cs.pool_id AND p.organization_id = cs.organization_id
+           LEFT JOIN playing_area pa
+                  ON pa.id = cg.playing_area_id AND pa.organization_id = cg.organization_id
            JOIN facility f
              ON f.id = coalesce(p.facility_id, sch.facility_id)
             AND f.organization_id = cs.organization_id
@@ -220,7 +254,21 @@ export async function readOccupancyToday(
        peak AS (
          SELECT pool_id, max(swimmers)::int AS swimmers FROM load GROUP BY pool_id
        )
-       SELECT (SELECT count(*) FROM today)::int                                    AS classes,
+       SELECT (SELECT count(*) FROM today WHERE done)::int                         AS done,
+              (SELECT coalesce(json_agg(json_build_object('sport', sport, 'count', n) ORDER BY n DESC, sport), '[]'::json)
+                 FROM (SELECT sport, count(*)::int AS n FROM today GROUP BY sport) s)  AS by_sport,
+              (SELECT count(*) FILTER (WHERE a.status = 'present') FROM attendance a
+                WHERE a.class_session_id IN (SELECT id FROM today))::int           AS present,
+              (SELECT count(*) FROM attendance a
+                WHERE a.class_session_id IN (SELECT id FROM today))::int           AS marked,
+              (SELECT coalesce(sum(swimmers), 0) FROM today WHERE started_class)::int AS expected_so_far,
+              (SELECT array_agg(coalesce((SELECT sum(t.swimmers) FROM today t
+                                           WHERE t.start_min < (h + 1) * 60 AND t.end_min > h * 60), 0)::int
+                                ORDER BY h)
+                 FROM generate_series(0, 23) h)                                      AS hours,
+              (SELECT extract(hour FROM now() AT TIME ZONE coalesce(fx.timezone, 'Europe/Lisbon'))::int
+                 FROM facility fx WHERE fx.id = ANY($1::uuid[]) ORDER BY fx.created_at LIMIT 1) AS now_hour,
+              (SELECT count(*) FROM today)::int                                    AS classes,
               (SELECT coalesce(sum(swimmers), 0) FROM today)::int                  AS swimmers,
               (SELECT count(*) FROM today WHERE without_instructor)::int           AS without_instructor,
               (SELECT json_build_object('poolId', po.id, 'poolName', po.name,
@@ -239,7 +287,52 @@ export async function readOccupancyToday(
       swimmers: row.swimmers,
       withoutInstructor: row.without_instructor,
       peak: row.peak,
+      done: row.done,
+      bySport: row.by_sport,
+      present: row.present,
+      marked: row.marked,
+      expectedSoFar: row.expected_so_far,
+      hours: row.hours,
+      nowHour: row.now_hour ?? 0,
     };
+  });
+}
+
+/**
+ * Fees collected this calendar month at the club's own date — the summary's
+ * *Cobrado no mês* (multi-sport Slice 2, 01-11-2026). Payments recorded against
+ * documents at these sites, not since removed. **Pass sales are left out**: a
+ * free-swim pass is its own revenue and is never summed with mensalidades
+ * (POOLSE-68), so a document carrying a pass line does not count. Money that
+ * was paid, so `actual`, and a total over every such payment, so complete.
+ */
+export interface CollectedMonth {
+  cents: number;
+  payments: number;
+  /** `YYYY-MM`, the club's month. */
+  month: string;
+}
+
+export async function readCollectedMonth(
+  organizationId: string,
+  facilityIds: readonly string[],
+): Promise<CollectedMonth> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ cents: number; payments: number; month: string }>(
+      `SELECT coalesce(sum(p.amount_cents), 0)::int AS cents,
+              count(p.id)::int AS payments,
+              to_char(club_today(), 'YYYY-MM') AS month
+         FROM invoice_payment p
+         JOIN invoice i ON i.id = p.invoice_id AND i.organization_id = p.organization_id
+        WHERE p.archived_at IS NULL
+          AND i.facility_id = ANY($1::uuid[])
+          AND date_trunc('month', p.paid_on) = date_trunc('month', club_today())
+          AND NOT EXISTS (SELECT 1 FROM invoice_line l
+                           WHERE l.invoice_id = i.id AND l.organization_id = i.organization_id
+                             AND l.pass_id IS NOT NULL)`,
+      [facilityIds],
+    );
+    return rows[0]!;
   });
 }
 

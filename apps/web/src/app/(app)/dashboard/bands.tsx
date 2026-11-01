@@ -4,6 +4,7 @@ import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
 import type { Dashboard } from '@/lib/api';
 import { renderWidget } from './widgets';
+import { SummaryBand } from './summary-band';
 
 /**
  * The dashboard as bands — POOLSE-66, slice 2a.
@@ -37,6 +38,7 @@ export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<Re
   const bands = await Promise.all(
     dashboard.bands.map(async (band) => ({
       id: band.id,
+      widgets: band.widgets,
       cards: await Promise.all(
         band.widgets.map(async (widget) => ({
           id: widget.id,
@@ -79,11 +81,16 @@ export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<Re
             </nav>
           )}
 
-          <div className="grid grid-cols-1 gap-page-gap lg:grid-cols-3">
-            {band.cards.map((card) => (
-              <Fragment key={card.id}>{card.element}</Fragment>
-            ))}
-          </div>
+          {/* The summary is laid out, not a grid of cards (multi-sport Slice 2). */}
+          {band.id === 'summary' ? (
+            <SummaryBand widgets={band.widgets} />
+          ) : (
+            <div className="grid grid-cols-1 gap-page-gap lg:grid-cols-3">
+              {band.cards.map((card) => (
+                <Fragment key={card.id}>{card.element}</Fragment>
+              ))}
+            </div>
+          )}
         </section>
       ))}
     </>

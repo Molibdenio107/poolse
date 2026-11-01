@@ -2777,7 +2777,8 @@
     "band": {
       "management": "Gestão",
       "operational": "Operação",
-      "personal": "Pessoal"
+      "personal": "Pessoal",
+      "summary": "Resumo de hoje"
     },
     "widget": {
       "subscription": {
@@ -2953,6 +2954,40 @@
     "scope": {
       "label": "Instalação",
       "all": "Todas as instalações"
+    },
+    "summary": {
+      "lessons": "Aulas hoje",
+      "noLessons": "Sem aulas hoje.",
+      "lessonsDone": "{done, plural, =0 {Nenhuma dada ainda} one {# já dada} other {# já dadas}}",
+      "attendance": "Presenças",
+      "attendanceNotYet": "Ainda nenhuma aula começou.",
+      "attendanceUnmarked": "{expected, plural, one {# previsto} other {# previstos}} até agora, nada marcado",
+      "attendanceOf": "de {expected, plural, one {# previsto} other {# previstos}} até agora",
+      "collected": "Cobrado no mês",
+      "payments": "{count, plural, =0 {Nenhum pagamento ainda} one {# pagamento} other {# pagamentos}} em mensalidades",
+      "noInstructor": "Sem professor atribuído",
+      "noInstructorToday": "Aulas de hoje por resolver",
+      "allCovered": "Todas as aulas de hoje têm professor",
+      "byHour": "Hoje, hora a hora",
+      "hourLine": "{hour, number}h: {people, plural, =0 {ninguém} one {# pessoa} other {# pessoas}} na água",
+      "legendPast": "Já passou",
+      "legendNow": "Agora",
+      "legendNext": "A seguir",
+      "recintos": "Recintos · estado agora",
+      "noTanks": "Ainda não há tanques nas instalações.",
+      "tank": {
+        "ok": "Dentro dos limites",
+        "warn": "Fora dos limites",
+        "due": "Análise em atraso",
+        "none": "Sem análises"
+      },
+      "category": {
+        "energy": "Energia",
+        "fees": "Mensalidades",
+        "classes": "Turmas",
+        "water": "Água",
+        "people": "Pessoas"
+      }
     }
   },
   "marketing": {

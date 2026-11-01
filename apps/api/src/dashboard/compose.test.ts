@@ -109,7 +109,8 @@ test('a band is absent when the reader holds no role in it', async () => {
     ['management'],
     'not present-and-empty — the client should not have to tell those apart',
   );
-  assert.equal(page.bands[0]!.order, 0);
+  // Its place in BANDS, which opens with the summary since multi-sport Slice 2.
+  assert.equal(page.bands[0]!.order, 1);
 });
 
 test('bands render in their fixed order whatever order the registry is written in', async () => {
@@ -135,7 +136,7 @@ test('bands render in their fixed order whatever order the registry is written i
   );
   assert.deepEqual(
     page.bands.map((band) => band.order),
-    [0, 1, 2],
+    [1, 2, 3],
   );
 
   // A person holding three roles sees each widget once.

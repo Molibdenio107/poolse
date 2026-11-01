@@ -10,10 +10,12 @@ import {
 } from '../staff/qualifications.repository.js';
 import {
   readMaintenanceOpen,
+  readCollectedMonth,
   readMoneyPeriod,
   readOccupancyToday,
   readPeopleSummary,
   readPoolWater,
+  type CollectedMonth,
   type MaintenanceOpen,
   type MoneyPeriod,
   type OccupancyToday,
@@ -197,6 +199,99 @@ export async function setupChecklist(ctx: ResolverContext): Promise<ChecklistWid
 export async function moneyPeriod(ctx: ResolverContext): Promise<MoneyPeriod | null> {
   const money = await readMoneyPeriod(ctx.organizationId, ctx.facilityIds);
   return money.lines === 0 ? null : money;
+}
+
+/*
+ * The summary band — multi-sport Slice 2 (Rui, 01-11-2026): the handoff's
+ * dashboard on top of the cards. Its figures are the cards' own reads, never a
+ * second definition: today is `readOccupancyToday`, the water is
+ * `readPoolWater` judged by `excursions`.
+ */
+
+/**
+ * What the handoff's insight cards say — "três coisas que merecem atenção".
+ * They are the AI's to write, and the AI for them is not built: the source is
+ * an interface so wiring it later replaces `NO_INSIGHTS` and nothing else.
+ * Until then the widget answers empty and the page draws nothing — an empty box
+ * would claim that nothing deserves attention, which nobody has looked at.
+ */
+export interface Insight {
+  category: 'energy' | 'fees' | 'classes' | 'water' | 'people';
+  /** The sport it is about, or null when it is about the whole club. */
+  sport: string | null;
+  headline: string;
+  body: string;
+  /** Where its one action goes, and whether it is the recommended one (primary). */
+  href: string;
+  actionLabel: string;
+  recommended: boolean;
+}
+
+export interface InsightSource {
+  insights(ctx: ResolverContext): Promise<Insight[]>;
+}
+
+export const NO_INSIGHTS: InsightSource = { insights: async () => [] };
+
+let insightSource: InsightSource = NO_INSIGHTS;
+
+/** For the reader that will write them, and for tests. */
+export function setInsightSource(source: InsightSource): void {
+  insightSource = source;
+}
+
+export async function summaryInsights(ctx: ResolverContext): Promise<{ insights: Insight[] } | null> {
+  const insights = (await insightSource.insights(ctx)).slice(0, 3);
+  return insights.length === 0 ? null : { insights };
+}
+
+/** Today's lessons, presences, the ones without an instructor and the hour-by-hour profile. */
+export async function summaryToday(ctx: ResolverContext): Promise<OccupancyToday | null> {
+  const today = await readOccupancyToday(ctx.organizationId, ctx.facilityIds);
+  return today.classes === 0 ? null : today;
+}
+
+/** Fees collected this month. Never empty: nothing collected yet is a figure, 0,00 €. */
+export async function collectedMonth(ctx: ResolverContext): Promise<CollectedMonth> {
+  return readCollectedMonth(ctx.organizationId, ctx.facilityIds);
+}
+
+/** The three readings the handoff's *Recintos · estado agora* shows, in its order. */
+const RECINTO_METRICS: readonly PoolMetric[] = ['ph', 'free_chlorine', 'temperature'];
+
+export interface RecintosNow {
+  pools: {
+    poolId: string;
+    poolName: string;
+    facilityId: string;
+    takenAt: string | null;
+    /** `ok` in range, `warn` out of range, `due` overdue for an analysis, `none` never analysed. */
+    state: 'ok' | 'warn' | 'due' | 'none';
+    readings: { metric: PoolMetric; value: number; unit: string; out: boolean }[];
+  }[];
+}
+
+/** Every tank and its latest key readings, judged by the published bands or the club's own. */
+export async function recintosNow(ctx: ResolverContext): Promise<RecintosNow | null> {
+  const pools = await readPoolWater(ctx.organizationId, ctx.facilityIds);
+  if (pools.length === 0) return null;
+  return {
+    pools: pools.map((pool) => {
+      const out = new Set(excursions(pool.values, resolveBands(pool.overrides, pool.pool)).map((e) => e.metric));
+      const readings = RECINTO_METRICS.flatMap((metric) => {
+        const found = pool.values.find((v) => v.metric === metric);
+        return found === undefined ? [] : [{ metric, value: found.value, unit: found.unit, out: out.has(metric) }];
+      });
+      return {
+        poolId: pool.poolId,
+        poolName: pool.poolName,
+        facilityId: pool.facilityId,
+        takenAt: pool.takenAt,
+        state: out.size > 0 ? 'warn' : pool.due ? 'due' : pool.takenAt === null ? 'none' : 'ok',
+        readings,
+      };
+    }),
+  };
 }
 
 /** Today's classes. Empty on a day nothing is scheduled — a Sunday, a closure. */

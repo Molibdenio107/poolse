@@ -3,6 +3,10 @@ import type { MemberRole } from '../tenant/roles.js';
 import { MEMBER_ROLES } from '../tenant/roles.js';
 import {
   childAttendance,
+  collectedMonth,
+  recintosNow,
+  summaryInsights,
+  summaryToday,
   childFees,
   childNextClass,
   childPlan,
@@ -57,10 +61,12 @@ import {
  */
 
 /**
- * The three bands, in the order they render. **One array constant**, so
- * reordering the page is this line and nothing else.
+ * The bands, in the order they render. **One array constant**, so reordering
+ * the page is this line and nothing else. `summary` is the handoff's dashboard
+ * on top of the cards (multi-sport Slice 2, Rui 01-11-2026): a fixed layout
+ * rather than a ranking — see `FIXED_BANDS`.
  */
-export const BANDS = ['management', 'operational', 'personal'] as const;
+export const BANDS = ['summary', 'management', 'operational', 'personal'] as const;
 
 export type Band = (typeof BANDS)[number];
 
@@ -184,6 +190,13 @@ export interface WidgetDefinition {
 export const BAND_CAP = 4;
 
 /**
+ * A band laid out rather than ranked: every widget in declared order (by
+ * priority), never cut, an empty one keeping its place — the summary's tiles
+ * stand where the reader learned to look for them.
+ */
+export const FIXED_BANDS: ReadonlySet<Band> = new Set<Band>(['summary']);
+
+/**
  * The roles whose `facilityIds` are genuinely derived today.
  *
  * Slice 1 resolves a manager's sites — every site in the club. Slice 3 needed
@@ -218,6 +231,54 @@ export const SELECTOR_ROLES: readonly MemberRole[] = ['owner', 'admin'];
  * with the band it belongs to.
  */
 export const WIDGETS: readonly WidgetDefinition[] = [
+  /*
+   * The summary — multi-sport Slice 2 (Rui, 01-11-2026). The handoff's KPI
+   * row, occupancy by hour and recintos now, for the people who run the club.
+   * `sum.today` feeds three tiles and the chart from one statement; the other
+   * two are a tile and the side card. Laid out, not ranked (`FIXED_BANDS`).
+   */
+  {
+    id: 'sum.insights',
+    band: 'summary',
+    roles: ['owner', 'admin'],
+    kinds: ['business'],
+    scope: 'facility',
+    size: 3,
+    priority: 40,
+    resolver: summaryInsights,
+  },
+  {
+    id: 'sum.today',
+    band: 'summary',
+    roles: ['owner', 'admin'],
+    kinds: ['business'],
+    scope: 'facility',
+    size: 3,
+    priority: 30,
+    resolver: summaryToday,
+  },
+  {
+    id: 'sum.collected',
+    band: 'summary',
+    module: 'invoicing',
+    roles: ['owner', 'admin'],
+    kinds: ['business'],
+    scope: 'facility',
+    size: 1,
+    priority: 20,
+    resolver: collectedMonth,
+  },
+  {
+    id: 'sum.recintos',
+    band: 'summary',
+    module: 'water_quality',
+    roles: ['owner', 'admin'],
+    kinds: ['business'],
+    scope: 'facility',
+    size: 1,
+    priority: 10,
+    resolver: recintosNow,
+  },
   /*
    * What is mine — slice 4.3's panel, now a widget, resolving through the same
    * repository function the `/maintenance/tasks/mine` endpoint uses. Every
