@@ -7,6 +7,7 @@ import { ReceptionController, PassProductsController } from '../reception/passes
 import { FacilitiesController } from '../facilities/facilities.controller.js';
 import { MessagesController } from '../messages/messages.controller.js';
 import { clubToday } from '../common/club-day.js';
+import { holidaysBetween } from './holidays.js';
 import {
   actingAs,
   addMember,
@@ -29,10 +30,35 @@ import {
 
 after(closeHarness);
 
-function inDays(days: number): string {
-  const day = new Date(`${clubToday()}T12:00:00Z`);
+/**
+ * Every offset this file names, counted from a base that keeps them all off a
+ * national holiday (sweep 01-11-2026).
+ *
+ * Measured from today alone, `inDays(30)` was 1 December on 1 November — a
+ * holiday whose own closure had already cancelled the afternoon lesson, so
+ * "15:00 is not a morning" failed one day a year, and the other offsets have
+ * their own such days. Shifting the base by up to a week keeps every gap the
+ * tests rely on (a fortnight, then two days shorter) exactly as written.
+ */
+const OFFSETS = [3, 9, 10, 12, 14, 19, 21, 30, 31, 40, 41];
+
+function dayAfter(base: string, days: number): string {
+  const day = new Date(`${base}T12:00:00Z`);
   day.setUTCDate(day.getUTCDate() + days);
   return day.toISOString().slice(0, 10);
+}
+
+const BASE = (() => {
+  const today = clubToday();
+  const holidays = new Set(holidaysBetween(today, dayAfter(today, 60)).map((holiday) => holiday.date));
+  for (let shift = 0; shift <= 7; shift += 1) {
+    if (OFFSETS.every((offset) => !holidays.has(dayAfter(today, shift + offset)))) return dayAfter(today, shift);
+  }
+  return today;
+})();
+
+function inDays(days: number): string {
+  return dayAfter(BASE, days);
 }
 
 async function refusal(
