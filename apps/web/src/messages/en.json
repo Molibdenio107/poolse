@@ -6845,5 +6845,16 @@
     "notConfigured": "The club has not set up “{form}” yet, so there is nothing to print.",
     "notConfiguredLink": "Set it up in Facilities → Documents",
     "strip": "White strip underneath (covers whatever the line has)"
+  },
+  "attendanceStrip": {
+    "none": "No lessons taught yet.",
+    "count": "{present} / {lessons} present",
+    "summary": "Last {lessons, plural, one {# lesson} other {# lessons}}: {present} present, {absent} absent, {excused} excused, {unmarked} not marked.",
+    "status": {
+      "present": "Present",
+      "absent": "Absent",
+      "excused": "Excused",
+      "none": "Not marked"
+    }
   }
 }

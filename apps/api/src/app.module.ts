@@ -20,7 +20,7 @@ import {
   CompensationController,
   SalariesController,
 } from './staff/compensation.controller.js';
-import { ClassesController, TimetableController } from './classes/classes.controller.js';
+import { ClassesController, RecentAttendanceController, TimetableController } from './classes/classes.controller.js';
 import {
   CalendarController,
   ClosuresController,
@@ -224,6 +224,7 @@ export const IDENTITY_ONLY_ROUTES = [
     OccupancyController,
     ClassesController,
     TimetableController,
+    RecentAttendanceController,
     ClosuresController,
     CalendarController,
     SessionsCalendarController,

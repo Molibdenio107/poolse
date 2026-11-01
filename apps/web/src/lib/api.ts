@@ -2748,6 +2748,8 @@ export interface TimetableEntry {
   startTime: string;
   durationMinutes: number;
   status: 'active' | 'waiting';
+  /** The turma's sport (POOLSE-122), for the sport chip. */
+  sport: PoolseSport;
 }
 
 /** Morning or afternoon of one day, cut at `Closures.halfDayCut` — POOLSE-84. */

@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import type { InvitationDelivery } from '@/lib/api';
+import { Badge } from '@/components/ui/badge';
 
 /**
  * Whether an invitation email actually went — backlog round 4, ticket 5.
@@ -25,16 +26,9 @@ export function DeliveryBadge({
 
   if (delivery === 'sent') return null;
 
-  const tone =
-    delivery === 'failed'
-      ? 'bg-danger/15 text-danger'
-      : delivery === 'pending'
-        ? 'bg-warning/15 text-warning'
-        : 'bg-surface-muted text-foreground-muted';
-
   return (
-    <span className={`whitespace-nowrap rounded px-2 py-0.5 text-sm ${tone}`}>
+    <Badge tone={delivery === 'failed' ? 'danger' : delivery === 'pending' ? 'late' : 'muted'}>
       {t(`invite.delivery.${delivery}`)}
-    </span>
+    </Badge>
   );
 }

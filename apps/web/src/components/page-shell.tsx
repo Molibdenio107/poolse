@@ -1,3 +1,4 @@
+import { Inbox, type LucideIcon } from 'lucide-react';
 import { BackLink } from '@/components/back-link';
 import { cn } from '@/lib/utils';
 
@@ -226,25 +227,42 @@ export function PageError({ message, detail }: { message: string; detail?: strin
 }
 
 /**
- * Nothing here yet, said in the shell's own spacing — AC6.
+ * Nothing here yet, said in the shell's own spacing — AC6, in the handoff's
+ * empty state since Slice 5 (01-11-2026): an icon, a title in the heading face,
+ * a muted line saying what goes here, and up to two ways to start — the
+ * secondary first, the primary last, as every action row here.
  *
  * Takes the same box as a populated section, so a list that arrives does not
- * move the page under somebody reading it.
+ * move the page under somebody reading it. The icon is decorative (the title
+ * says it); without one, a neutral inbox.
  */
 export function PageEmpty({
   message,
   hint,
+  icon: Icon = Inbox,
   action,
+  secondaryAction,
 }: {
+  /** The title: what is not here. */
   message: string;
+  /** The body: what goes here, or why it is empty. */
   hint?: string | undefined;
+  icon?: LucideIcon | undefined;
+  /** The primary way to start — a button or a link, already styled. */
   action?: React.ReactNode;
+  secondaryAction?: React.ReactNode;
 }): React.ReactElement {
   return (
-    <section className="flex flex-col items-start gap-2 rounded bg-surface p-5 shadow-card">
-      <p>{message}</p>
-      {hint !== undefined && <p className="text-sm text-foreground-muted">{hint}</p>}
-      {action}
+    <section className="flex flex-col items-center gap-2 rounded bg-surface px-5 py-8 text-center shadow-card">
+      <Icon aria-hidden className="size-8 text-foreground-muted" strokeWidth={1.5} />
+      <h2 className="text-[15px] font-semibold">{message}</h2>
+      {hint !== undefined && <p className="max-w-prose text-sm text-foreground-muted">{hint}</p>}
+      {(action !== undefined || secondaryAction !== undefined) && (
+        <div className="mt-2 flex flex-wrap justify-center gap-2">
+          {secondaryAction}
+          {action}
+        </div>
+      )}
     </section>
   );
 }

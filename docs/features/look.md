@@ -75,3 +75,26 @@ tickets (POOLSE-125/127, 136).
   geometry, dragging or the markup changed (Rui asked for looks only). The handoff's 8 px dot
   and 13 px title were dropped because a lane column is too narrow for the name with them; the
   toolbar's grouping and the 64 px time column were left as they were.
+
+## Shared components — the handoff's Slice 5 (1 November 2026)
+
+- **`Badge`** (`components/ui/badge.tsx`) is a state as a word on a tint: 11 px bold, 2 px radius, no border. It has
+  five tones:
+  - `ok` (done, fine) and `pending` (waiting on somebody);
+  - `late` (behind, needs doing: *em atraso*) and `danger` (a failure);
+  - `muted` (quiet).
+
+  The tones are our green / primary / amber / red, each ink on its own wash, AA in both themes (`contrast:check`).
+  The invoice status, the email delivery and the vacation request badges use it, so an overdue invoice is now amber
+  rather than red. Roles, qualifications and lab grades keep their own chips.
+- **`SportChip`** (`components/sport-chip.tsx`) shows a 4 × 14 px bar in the sport's colour, its icon and its name,
+  on a card or a muted fill. It is shown only where `isMultiSport`. First use: the student's *Turmas* tab (each
+  turma's sport comes from its recinto, `timetable.sport`).
+- **`AttendanceStrip`** (`components/attendance-strip.tsx`) shows a student's last lessons in a turma as one
+  14 × 6 px block each, oldest first: filled is present, muted absent, outlined excused, dashed not marked. A visible
+  count (*5 / 8 presenças*) and one spoken summary go with it. It reads `GET /students/:id/attendance-recent` (the
+  last 8 taught lessons per active turma since the student joined, cancelled ones left out, one statement), which
+  staff and the child's own family may read. First use: the student's *Turmas* tab.
+- **`PageEmpty`** is the handoff's empty state: a 32 px icon (an inbox by default), a title in the heading face, a
+  muted line, and up to two actions (secondary, then primary). Its seven pages took it as they were; the ~40
+  hand-written empty sentences change with the slices that redo their screens.

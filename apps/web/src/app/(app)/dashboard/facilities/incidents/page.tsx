@@ -1,7 +1,7 @@
 import { FromLink } from '@/components/from-link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Siren } from 'lucide-react';
+import { Siren, ShieldCheck } from 'lucide-react';
 import { apiFetch, type Facilities } from '@/lib/api';
 import { outcome } from '@/lib/load-failure';
 import { backProp, originBack } from '@/lib/back';
@@ -105,6 +105,7 @@ export default async function IncidentsPage({
 
         {incidents.state === 'ok' && incidents.data.total === 0 && (
           <PageEmpty
+            icon={ShieldCheck}
             message={t('incidents.empty', { site: chosen.name })}
             hint={t('incidents.emptyHint')}
           />

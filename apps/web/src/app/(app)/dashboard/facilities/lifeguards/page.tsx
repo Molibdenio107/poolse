@@ -1,6 +1,6 @@
 import { FromLink } from '@/components/from-link';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Waves } from 'lucide-react';
 import { apiFetch, type Facilities } from '@/lib/api';
 import { outcome } from '@/lib/load-failure';
 import { backProp, originBack } from '@/lib/back';
@@ -106,7 +106,7 @@ export default async function LifeguardsPage({
         )}
 
         {roster.state === 'ok' && roster.data.pools.length === 0 && (
-          <PageEmpty message={t('roster.noPools', { site: chosen.name })} />
+          <PageEmpty icon={Waves} message={t('roster.noPools', { site: chosen.name })} />
         )}
 
         {roster.state === 'ok' && roster.data.pools.length > 0 && (() => {

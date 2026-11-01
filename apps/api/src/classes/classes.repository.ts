@@ -1159,6 +1159,78 @@ export async function endEnrollment(
 }
 
 // ---------------------------------------------------------------------------
+// One student's recent lessons — Slice 5's attendance strip
+// ---------------------------------------------------------------------------
+
+/** A taught lesson and the student's mark on it; null is not marked yet. */
+export interface RecentLesson {
+  sessionId: string;
+  /** `YYYY-MM-DD`, the club's day. */
+  date: string;
+  status: 'present' | 'absent' | 'excused' | null;
+}
+
+export interface RecentAttendance {
+  classGroupId: string;
+  /** Oldest first, at most `perTurma`. */
+  lessons: RecentLesson[];
+}
+
+/**
+ * The last lessons of each turma the student is actively in, with their mark
+ * (Rui, 01-11-2026): lessons that have started, were not cancelled, and fall on
+ * or after the day the student joined — a lesson before they were enrolled is
+ * not one they missed. One statement for every turma.
+ */
+export async function recentAttendanceFor(
+  organizationId: string,
+  studentId: string,
+  perTurma = 8,
+): Promise<RecentAttendance[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      class_group_id: string;
+      session_id: string | null;
+      occurs_on: string | null;
+      status: 'present' | 'absent' | 'excused' | null;
+    }>(
+      `
+      SELECT g.id AS class_group_id, x.session_id, x.occurs_on, x.status
+        FROM enrollment e
+        JOIN class_group g
+          ON g.id = e.class_group_id AND g.organization_id = e.organization_id AND g.archived_at IS NULL
+        LEFT JOIN LATERAL (
+          SELECT s.id AS session_id, s.occurs_on::text AS occurs_on, a.status::text AS status, s.starts_at
+            FROM class_session s
+            LEFT JOIN attendance a
+              ON a.class_session_id = s.id AND a.organization_id = s.organization_id AND a.student_id = e.student_id
+           WHERE s.class_group_id = g.id
+             AND s.organization_id = g.organization_id
+             AND s.status <> 'cancelled'
+             AND s.starts_at <= now()
+             AND s.occurs_on >= e.joined_on
+           ORDER BY s.starts_at DESC
+           LIMIT $2
+        ) x ON true
+       WHERE e.student_id = $1 AND e.status = 'active'
+       ORDER BY g.id, x.starts_at
+      `,
+      [studentId, perTurma],
+    );
+
+    const byTurma = new Map<string, RecentLesson[]>();
+    for (const row of rows) {
+      const lessons = byTurma.get(row.class_group_id) ?? [];
+      if (row.session_id !== null && row.occurs_on !== null) {
+        lessons.push({ sessionId: row.session_id, date: row.occurs_on, status: row.status });
+      }
+      byTurma.set(row.class_group_id, lessons);
+    }
+    return [...byTurma].map(([classGroupId, lessons]) => ({ classGroupId, lessons }));
+  });
+}
+
+// ---------------------------------------------------------------------------
 // One student's week
 // ---------------------------------------------------------------------------
 
@@ -1173,6 +1245,8 @@ export interface TimetableEntry {
   startTime: string;
   durationMinutes: number;
   status: 'active' | 'waiting';
+  /** The turma's recinto's sport (POOLSE-122); `pool` for a turma with no recinto yet. Slice 5's sport chip. */
+  sport: string;
 }
 
 export async function timetableFor(
@@ -1191,6 +1265,7 @@ export async function timetableFor(
       start_time: string;
       duration_minutes: number;
       status: 'active' | 'waiting';
+      sport: string;
     }>(
       `
       SELECT cg.id AS class_group_id,
@@ -1202,7 +1277,8 @@ export async function timetableFor(
              cs.weekday,
              to_char(cs.start_time, 'HH24:MI') AS start_time,
              cs.duration_minutes,
-             e.status
+             e.status,
+             coalesce(pa.sport_id, 'pool') AS sport
         FROM enrollment e
         JOIN class_group cg
           ON cg.id = e.class_group_id AND cg.organization_id = e.organization_id
@@ -1216,6 +1292,7 @@ export async function timetableFor(
         LEFT JOIN membership m   ON m.id = cg.instructor_membership_id
                                 AND m.organization_id = cg.organization_id
         LEFT JOIN app_user u     ON u.id = m.app_user_id
+        LEFT JOIN playing_area pa ON pa.id = cg.playing_area_id AND pa.organization_id = cg.organization_id
        WHERE e.student_id = $1
          AND e.status <> 'ended'
        ORDER BY cs.weekday, cs.start_time
@@ -1234,6 +1311,7 @@ export async function timetableFor(
       startTime: row.start_time,
       durationMinutes: row.duration_minutes,
       status: row.status,
+      sport: row.sport,
     }));
   });
 }

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Archive } from 'lucide-react';
 import type { ArchiveEntry, ArchiveKind } from '@/lib/api';
 import { formatStamp } from '@/lib/date-format';
 import { addDays, today } from '@/lib/dates';
@@ -127,6 +127,7 @@ export default async function ArchivePage({
 
       {entries.state === 'ok' && entries.data.total === 0 && (
         <PageEmpty
+          icon={Archive}
           message={t('archive.empty')}
           hint={period === 'all' ? t('archive.emptyHintAll') : t('archive.emptyHint')}
         />

@@ -1,3 +1,7 @@
+import { AttendanceStrip, type StripLesson } from '@/components/attendance-strip';
+import { isMultiSport } from '@poolse/rules';
+import { SportChip } from '@/components/sport-chip';
+import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Smartphone } from 'lucide-react';
 import { FromLink } from '@/components/from-link';
 import { ActivityPanel } from '@/components/activity-panel';
@@ -10,6 +14,7 @@ import {
   apiFetch,
   type Calendar,
   type LessonFeedback,
+  type Me,
   type Student,
   type StudentFees,
   type StudentIdDocument,
@@ -218,6 +223,10 @@ export default async function StudentPage({
   // One row per turma, not per slot: a turma that meets on Tuesday and Thursday
   // is one enrolment, and listing it twice would read as two.
   const turmas = [...new Map(timetable.map((entry) => [entry.classGroupId, entry])).values()];
+  // Each turma's sport, only for a club with a second sport (Slice 5): the same
+  // `/me` the layout reads, which Next answers once per render.
+  const clubSports = await apiFetch<Me>('/me').then((me) => me.memberships[0]?.sports ?? [], () => []);
+  const multiSport = isMultiSport(clubSports);
 
   const storageReady = await storageConfigured();
 
@@ -613,7 +622,15 @@ export default async function StudentPage({
           labelKey: 'students.turmas',
           visible: turmas.length > 0,
           badge: { kind: 'count', value: turmas.length },
-          content: () => (
+          content: async () => {
+            // The last lessons per turma, for the attendance strip (Slice 5). A
+            // failure loses the strips, never the list.
+            const recent = await outcome(
+              apiFetch<{ turmas: { classGroupId: string; lessons: StripLesson[] }[] }>(`/students/${id}/attendance-recent`),
+            );
+            const lessonsOf = (groupId: string): StripLesson[] | null =>
+              recent.state === 'ok' ? (recent.data.turmas.find((x) => x.classGroupId === groupId)?.lessons ?? []) : null;
+            return (
             <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('students.turmas')}
@@ -637,11 +654,8 @@ export default async function StudentPage({
                           {entry.className}
                         </FromLink>
                       )}
-                      {entry.status === 'waiting' && (
-                        <span className="rounded bg-surface-muted px-2 py-0.5 text-xs text-foreground-muted">
-                          {t('students.waiting')}
-                        </span>
-                      )}
+                      {multiSport && <SportChip sport={entry.sport} />}
+                      {entry.status === 'waiting' && <Badge tone="muted">{t('students.waiting')}</Badge>}
                     </span>
 
                     <span className="text-sm text-foreground-muted">
@@ -654,11 +668,15 @@ export default async function StudentPage({
                         .filter(Boolean)
                         .join(' · ')}
                     </span>
+                    {entry.status === 'active' && lessonsOf(entry.classGroupId) !== null && (
+                      <AttendanceStrip lessons={lessonsOf(entry.classGroupId)!} className="basis-full" />
+                    )}
                   </li>
                 ))}
               </ul>
             </section>
-          ),
+            );
+          },
         },
         {
           // The dated week — the only fetch on this page that waits for its tab.

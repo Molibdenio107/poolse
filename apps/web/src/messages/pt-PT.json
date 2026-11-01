@@ -6845,5 +6845,16 @@
     "notConfigured": "O clube ainda não configurou «{form}», por isso não há o que imprimir.",
     "notConfiguredLink": "Configurar em Instalações → Documentos",
     "strip": "Faixa branca por baixo (tapa o que a linha tiver)"
+  },
+  "attendanceStrip": {
+    "none": "Ainda sem aulas dadas.",
+    "count": "{present} / {lessons} presenças",
+    "summary": "Últimas {lessons, plural, one {# aula} other {# aulas}}: {present} presenças, {absent} faltas, {excused} justificadas, {unmarked} por marcar.",
+    "status": {
+      "present": "Presente",
+      "absent": "Faltou",
+      "excused": "Falta justificada",
+      "none": "Por marcar"
+    }
   }
 }

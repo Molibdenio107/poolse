@@ -13,6 +13,7 @@ import { ActivityController } from '../activity/activity.controller.js';
 import { SupportGrantsController } from '../support/support.controller.js';
 import {
   ClassesController,
+  RecentAttendanceController,
   TimetableController,
 } from '../classes/classes.controller.js';
 import {
@@ -407,6 +408,9 @@ test("a stranger's child is not there: students/:id and its timetable, calendar,
     await refused('GET students/:alice/timetable', 404, () =>
       new TimetableController().read(fixture.aliceId),
     );
+    await refused('GET students/:alice/attendance-recent', 404, () =>
+      new RecentAttendanceController().read(fixture.aliceId),
+    );
     await refused('GET students/:alice/calendar', 404, () =>
       new StudentCalendarController().read(fixture.aliceId),
     );
@@ -440,6 +444,9 @@ test("a linked guardian reads their own child, and not another's", async () => {
     );
     await refused('GET students/:bruno/timetable as Marta', 404, () =>
       new TimetableController().read(fixture.brunoStudentId),
+    );
+    await refused('GET students/:bruno/attendance-recent as Marta', 404, () =>
+      new RecentAttendanceController().read(fixture.brunoStudentId),
     );
     await refused('GET students/:bruno/calendar as Marta', 404, () =>
       new StudentCalendarController().read(fixture.brunoStudentId),

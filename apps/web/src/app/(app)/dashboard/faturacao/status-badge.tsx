@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import type { InvoiceStatus } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import { Badge, type BadgeTone } from '@/components/ui/badge';
 
 /**
  * What state a document is in, said in words.
@@ -12,18 +12,20 @@ import { cn } from '@/lib/utils';
  * the standing rule, and the reason a status is a word first and a tint second.
  * The server decides which word; nothing here recomputes it.
  *
- * Solid tints on the surface rather than washed fills, for the reason the level
- * colours are solid: a wash of the background at 10% is a colour doing no work.
+ * Drawn by the shared `Badge` since Slice 5 (01-11-2026), so a state reads the
+ * same here as on every other screen.
  */
-const TONES: Record<InvoiceStatus, string> = {
-  open: 'border-border text-foreground-muted',
-  partly_paid: 'border-primary/40 bg-primary/10 text-primary',
-  overdue: 'border-danger/40 bg-danger/10 text-danger',
-  paid: 'border-success/40 bg-success/10 text-success',
+const TONES: Record<InvoiceStatus, BadgeTone> = {
+  open: 'muted',
+  partly_paid: 'pending',
+  // Behind and needing a chase: the handoff's *Em atraso* is the late tone
+  // (Slice 5, 01-11-2026), amber rather than the red it used to be.
+  overdue: 'late',
+  paid: 'ok',
   // A credited document and a credit note are both "not owed", and both are
   // quiet: the operator's attention belongs on the ones that are.
-  credited: 'border-border bg-surface-muted text-foreground-muted',
-  credit_note: 'border-border bg-surface-muted text-foreground-muted',
+  credited: 'muted',
+  credit_note: 'muted',
 };
 
 export function StatusBadge({
@@ -39,16 +41,10 @@ export function StatusBadge({
   const t = useTranslations();
 
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded border px-2 py-0.5 text-xs whitespace-nowrap',
-        TONES[status],
-        className,
-      )}
-    >
+    <Badge tone={TONES[status]} className={className}>
       {status === 'overdue' && daysOverdue != null
         ? t('invoices.status.overdueBy', { days: daysOverdue })
         : t(`invoices.status.${status}`)}
-    </span>
+    </Badge>
   );
 }

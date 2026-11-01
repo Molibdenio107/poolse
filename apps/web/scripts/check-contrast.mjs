@@ -176,6 +176,14 @@ const PAIRS = [
   ['foreground', 'surface+primary@0.06', 4.5, "text in today's tinted calendar column"],
   ['foreground-muted', 'surface+primary@0.06', 4.5, "muted text in today's tinted calendar column"],
 
+  // The badge's five tones (Slice 5, `ui/badge.tsx`): each ink on its own wash,
+  // over a card, where badges sit.
+  ['success-ink', 'surface+success@0.15', 4.5, 'an ok badge'],
+  ['primary-ink', 'surface+primary@0.12', 4.5, 'a pending badge'],
+  ['warning-ink', 'surface+warning@0.15', 4.5, 'a late badge'],
+  ['danger-ink', 'surface+danger@0.15', 4.5, 'a danger badge'],
+  ['foreground-muted', 'surface-muted', 4.5, 'a muted badge'],
+
   // Sport washes (POOLSE-138/141): a sport page's ground and its active section
   // tab. Measured at .14, the light alpha — dark uses .12, and more tint is the
   // harder case in both themes, so one alpha covers them.

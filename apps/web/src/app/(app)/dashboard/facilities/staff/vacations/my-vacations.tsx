@@ -1,5 +1,6 @@
 'use client';
 
+import { Badge } from '@/components/ui/badge';
 import { today } from '@/lib/dates';
 import { useMemo, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
@@ -333,14 +334,7 @@ function StatusBadge({ status }: { status: VacationRequest['status'] }): React.R
 
   // Never colour alone — each badge carries its own word, which is what makes
   // this readable to somebody who cannot tell the green from the amber.
-  const tone =
-    status === 'approved'
-      ? 'bg-success/15 text-success'
-      : status === 'pending'
-        ? 'bg-warning/15 text-warning'
-        : 'bg-surface-muted text-foreground-muted';
-
-  return (
-    <span className={`rounded px-2 py-0.5 text-sm ${tone}`}>{t(`vacations.${status}`)}</span>
-  );
+  // Waiting on somebody's decision is the pending tone (Slice 5's shared badge).
+  const tone = status === 'approved' ? 'ok' : status === 'pending' ? 'pending' : 'muted';
+  return <Badge tone={tone}>{t(`vacations.${status}`)}</Badge>;
 }

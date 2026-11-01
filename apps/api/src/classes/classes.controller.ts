@@ -6,6 +6,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -38,6 +39,8 @@ import {
   moveSchedule,
   removeSchedule,
   timetableFor,
+  recentAttendanceFor,
+  type RecentAttendance,
   updateClassGroup,
   type ClassGroup,
   isClassColour,
@@ -404,6 +407,20 @@ export class TimetableController {
     await requireActsForStudent(studentId);
     const { organizationId } = currentTenant();
     return { entries: await timetableFor(organizationId, studentId) };
+  }
+}
+
+/**
+ * A student's last lessons per turma, with their marks — Slice 5's attendance
+ * strip on the record. The timetable's guard: staff, or the child's own family.
+ */
+@CoreRoute()
+@Controller('students/:studentId/attendance-recent')
+export class RecentAttendanceController {
+  @Get()
+  async read(@Param('studentId', ParseUUIDPipe) studentId: string): Promise<{ turmas: RecentAttendance[] }> {
+    await requireActsForStudent(studentId);
+    return { turmas: await recentAttendanceFor(currentTenant().organizationId, studentId) };
   }
 }
 
