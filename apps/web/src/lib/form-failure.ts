@@ -124,7 +124,7 @@ export function describeFailure(error: unknown, fallbackKey: string): FormState 
  * else's JSON, and a missing field must degrade to a message without numbers
  * rather than to `undefined` in the middle of a sentence.
  */
-function refusalValues(error: ApiError): { values?: Record<string, number> } {
+function refusalValues(error: ApiError): { values?: Record<string, string | number> } {
   const body = error.details;
   if (typeof body !== 'object' || body === null) return {};
 
@@ -137,6 +137,19 @@ function refusalValues(error: ApiError): { values?: Record<string, number> } {
       // bug; "0 left" plus the two real figures says the same thing without
       // the puzzle.
       return { values: { max, taken, remaining: Math.max(remaining, 0) } };
+    }
+  }
+
+  /*
+   * A student already in another turma at that hour — POOLSE-144. The other
+   * turma's name is the club's own word, not server prose, and the weekday goes
+   * as its number for the sentence's `select` to name.
+   */
+  const clash = (body as { enrollmentClash?: unknown }).enrollmentClash;
+  if (typeof clash === 'object' && clash !== null) {
+    const { turma, weekday, startTime } = clash as Record<string, unknown>;
+    if (typeof turma === 'string' && typeof weekday === 'number' && typeof startTime === 'string') {
+      return { values: { turma, weekday: String(weekday), start: startTime } };
     }
   }
 

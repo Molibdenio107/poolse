@@ -3,6 +3,7 @@ import { recordAudit } from '../audit/audit.js';
 import { describeChange, type ChangeContext, type ChangeSpec } from '../audit/change.js';
 import type { CascadeItem } from '../archive/restorable.js';
 import { displayName, nameOrder, shortName } from '../people/names.js';
+import { clashFrom } from './enrollment-clash.js';
 import {
   paginated,
   totalOf,
@@ -1124,9 +1125,13 @@ export async function insertEnrollment(
 /**
  * What an enrolment insert's failure means. 23505 is enrollment_live_uq; 23514
  * is the capacity trigger, which raises with a check_violation code so it reads
- * like the constraint it is. Anything else is returned as it came.
+ * like the constraint it is — or the time-clash trigger (POOLSE-144), which
+ * raises the same code and always carries its DETAIL, so it is read first.
+ * Anything else is returned as it came.
  */
 export function enrollmentRefusal(error: unknown, groupId: string, studentId: string): unknown {
+  const clash = clashFrom(error);
+  if (clash !== null) return clash;
   const code = error instanceof Error ? (error as { code?: string }).code : undefined;
   if (code === '23505') return new AlreadyEnrolledError(studentId);
   if (code === '23514') return new FullError(groupId);
@@ -1155,6 +1160,57 @@ export async function endEnrollment(
       data: { studentId: rows[0].student_id },
     });
     return true;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Students in two turmas at once — POOLSE-144
+// ---------------------------------------------------------------------------
+
+/** One student whose turmas overlap, and the slots that do. */
+export interface EnrollmentClashRow {
+  studentId: string;
+  name: string;
+  /** Each clashing slot of each turma involved, by day and hour. */
+  slots: { classGroupId: string; turma: string; weekday: number; startTime: string }[];
+}
+
+/**
+ * Every student whose active turmas overlap — the clashes the trigger now
+ * refuses but that were already in the club's data, or that a series move has
+ * made since (BA 3, BA 5). Kept, never ended: the club fixes them by hand.
+ *
+ * Judged by `enrollment_clashes()` and nothing else. A pair appears from both
+ * sides, which is what lists both turmas of it. Exempt from paging as a queue
+ * worked down, like pending invitations: paging it would hide the child
+ * somebody came to fix.
+ */
+export async function listEnrollmentClashes(organizationId: string): Promise<EnrollmentClashRow[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ student_id: string; name: string; slots: EnrollmentClashRow['slots'] }>(
+      `SELECT s.id AS student_id,
+              ${shortName('s')} AS name,
+              jsonb_agg(DISTINCT jsonb_build_object(
+                'classGroupId', g.id, 'turma', g.name,
+                'weekday', cs.weekday, 'startTime', to_char(cs.start_time, 'HH24:MI'))) AS slots
+         FROM enrollment e
+         JOIN student s
+           ON s.id = e.student_id AND s.organization_id = e.organization_id AND s.archived_at IS NULL
+         JOIN class_group g
+           ON g.id = e.class_group_id AND g.organization_id = e.organization_id AND g.archived_at IS NULL
+         JOIN LATERAL enrollment_clashes(e.student_id, e.class_group_id) c ON true
+         JOIN class_schedule cs ON cs.id = c.schedule_id AND cs.organization_id = e.organization_id
+        WHERE e.status = 'active'
+        GROUP BY s.id, s.first_name, s.last_name
+        ORDER BY ${nameOrder('s')}`,
+    );
+    return rows.map((row) => ({
+      studentId: row.student_id,
+      name: row.name,
+      slots: [...row.slots].sort(
+        (a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime) || a.turma.localeCompare(b.turma),
+      ),
+    }));
   });
 }
 

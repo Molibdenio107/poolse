@@ -399,6 +399,7 @@ test('rosters, skills grid and stand-in list refuse non-staff (403)', async () =
   await asEach(async () => {
     await refused('GET class-groups', 403, () => new ClassesController().list());
     await refused('GET class-groups/:id', 403, () => new ClassesController().one(fixture.groupId));
+    await refused('GET class-groups/clashes', 403, () => new ClassesController().clashes());
     await refused('GET skills/turma/:id', 403, () => new SkillsController().grid(fixture.groupId));
     await refused('GET sessions/:id/stand-in', 403, () =>
       new SessionsCalendarController().standInOptions(fixture.sessionId),
@@ -624,6 +625,12 @@ test('operational reads refuse non-staff (403)', async () => {
     await refused('GET incidents/people', 403, () =>
       new IncidentsController().people('student', 'Alice'),
     );
+  });
+});
+
+test('the overlapping-lessons list is owner/admin: an instructor is refused too — POOLSE-144', async () => {
+  await as(fixture.instructorId, ['instructor'], async () => {
+    await refused('GET class-groups/clashes as instructor', 403, () => new ClassesController().clashes());
   });
 });
 

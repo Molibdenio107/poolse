@@ -1573,6 +1573,15 @@
       "waiting": "{count} on the waiting list",
       "students": "Students",
       "assignInstructor": "Assign an instructor"
+    },
+    "clashes": {
+      "pill": "Overlaps",
+      "banner": "{count, plural, one {# student has} other {# students have}} overlapping lessons.",
+      "bannerLink": "See which",
+      "hint": "Students enrolled in two class groups that meet on the same day and hour. Enrolling like this is no longer possible; these were there before, or a class group was moved. Nothing was changed: move the student to another class group, or the class group to another time.",
+      "none": "No student has overlapping lessons.",
+      "student": "Student",
+      "slots": "Lessons that overlap"
     }
   },
   "reposicao": {
@@ -3411,7 +3420,9 @@
       "cancelled": "Cancelled",
       "registerTaken": "Register taken",
       "moved": "Moved for this week only"
-    }
+    },
+    "clashLabel": "Overlapping lessons",
+    "clashValue": "{names} also {count, plural, one {has} other {have}} another lesson at this time"
   },
   "inventory": {
     "title": "Inventory",
@@ -5422,7 +5433,8 @@
       },
       "licence": "The plan allows {allowed, plural, one {# site} other {# sites}} and {current, plural, one {# is} other {# are}} already active. Archive another or ask for a bigger plan to restore this one.",
       "poolFull": "The pool holds {max} people and the classes in that slot already total {taken}. Free some places to restore this class.",
-      "classFull": "The class has {capacity} places and {taken} are taken, so not every enrolment can come back."
+      "classFull": "The class has {capacity} places and {taken} are taken, so not every enrolment can come back.",
+      "enrollmentClash": "Could not restore: the student is now in {turma} at the same time ({weekday, select, 1 {Monday} 2 {Tuesday} 3 {Wednesday} 4 {Thursday} 5 {Friday} 6 {Saturday} other {Sunday}} at {start})."
     },
     "archived": {
       "student": "Student archived",
@@ -6914,5 +6926,8 @@
       "excused": "Excused",
       "none": "Not marked"
     }
+  },
+  "enrollment": {
+    "clash": "This student already has a lesson at that time, in {turma} ({weekday, select, 1 {Monday} 2 {Tuesday} 3 {Wednesday} 4 {Thursday} 5 {Friday} 6 {Saturday} other {Sunday}} at {start})."
   }
 }

@@ -39,6 +39,7 @@ export function ProposalCard({
   const t = useTranslations();
   const toast = useToast();
   const [failure, setFailure] = useState<string | null>(null);
+  const [failureValues, setFailureValues] = useState<Record<string, string | number> | undefined>(undefined);
   const [pending, start] = useTransition();
 
   // Today, in the club's terms. The effective date is a decision — a transfer
@@ -75,7 +76,10 @@ export function ProposalCard({
         classGroupId,
         effectiveOn,
       );
-      if (!result.ok) setFailure(result.errorKey ?? 'advancement.confirmFailed');
+      if (!result.ok) {
+        setFailure(result.errorKey ?? 'advancement.confirmFailed');
+        setFailureValues(result.values);
+      }
     });
   }
 
@@ -178,7 +182,7 @@ export function ProposalCard({
           </button>
         </form>
 
-        {failure !== null && <span className="text-sm text-danger">{t(failure)}</span>}
+        {failure !== null && <span className="text-sm text-danger">{t(failure, failureValues)}</span>}
       </div>
     </li>
   );

@@ -1,3 +1,5 @@
+import { EnrollmentClashError, clashConflict } from './enrollment-clash.js';
+import { listEnrollmentClashes, type EnrollmentClashRow } from './classes.repository.js';
 import {
   BadRequestException,
   Body,
@@ -171,6 +173,17 @@ export class ClassesController {
       // on the grid instead of above it.
       facilities,
     };
+  }
+
+  /**
+   * Students whose turmas meet at the same hour — POOLSE-144 BA 5. Owner and
+   * admin, the people who can move a child; declared before `:id`, which would
+   * otherwise take "clashes" for a turma id.
+   */
+  @Get('clashes')
+  async clashes(): Promise<{ students: EnrollmentClashRow[] }> {
+    requireRole('owner', 'admin');
+    return { students: await listEnrollmentClashes(currentTenant().organizationId) };
   }
 
   @Get(':id')
@@ -368,6 +381,10 @@ export class ClassesController {
       }
       if (error instanceof AlreadyEnrolledError) {
         throw new ConflictException('That student is already in this class group');
+      }
+      // POOLSE-144: another of the student's turmas meets at that hour.
+      if (error instanceof EnrollmentClashError) {
+        throw await clashConflict(organizationId, error, 'studentId');
       }
       throw error;
     }

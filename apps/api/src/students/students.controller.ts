@@ -1,3 +1,4 @@
+import { EnrollmentClashError, clashConflict } from '../classes/enrollment-clash.js';
 import {
   BadRequestException,
   Body,
@@ -1405,13 +1406,17 @@ export class AdvancementController {
       throw new BadRequestException('effectiveOn must be a real date');
     }
 
-    const { outcome, noticeId } = await confirmProposal(
-      organizationId,
-      id,
-      classGroupId,
-      effectiveOn,
-      membershipId,
-    );
+    let confirmed: Awaited<ReturnType<typeof confirmProposal>>;
+    try {
+      confirmed = await confirmProposal(organizationId, id, classGroupId, effectiveOn, membershipId);
+    } catch (error) {
+      // POOLSE-144: the turma meets when another of the student's turmas does.
+      if (error instanceof EnrollmentClashError) {
+        throw await clashConflict(organizationId, error, 'classGroupId');
+      }
+      throw error;
+    }
+    const { outcome, noticeId } = confirmed;
 
     if (outcome === 'not_found') throw new NotFoundException('No such proposal');
     if (outcome === 'no_such_turma') {

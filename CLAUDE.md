@@ -885,6 +885,8 @@ with mensalidades. `docs/features/reception.md`.
 and `lane_level_capacity` is a separate teaching judgement. A null ceiling means "not
 measured" and enforces nothing — never treat it as zero.
 
+**One student, one hour: an enrolment that overlaps another of the student's turmas is refused; a move that creates one is warned** (POOLSE-144). `enrollment_clashes()` is the one definition (pattern × pattern, same season, any sport or site), read by the `enrollment_time_clash` trigger, `readGrid`'s `clashStudents` and `GET /class-groups/clashes`. Its refusal is `check_violation` with DETAIL `enrollment_clash|<turma>|<weekday>|<HH:MM>`, the capacity trigger's code, so **a mapping reads `clashFrom` (`classes/enrollment-clash.ts`) before treating a 23514 as "full"**, and a new enrolment path answers `clashConflict`. `docs/features/classes.md`.
+
 **Light and dark mode in every app**, from the first component. Colors come from tokens;
 no literal hex in components. **The `dark` class on `<html>` has one owner** (POOLSE-99): the pre-paint `ThemeScript` on a load and `applyTheme` on a choice — never a root layout's `className`, which a stale render puts back. The header's theme control is a three-option menu (`theme-toggle.tsx`), and `setThemeAction` always revalidates. `docs/features/preferences.md`.
 

@@ -1,3 +1,4 @@
+import { EnrollmentClashError, clashConflict } from '../classes/enrollment-clash.js';
 import {
   BadRequestException,
   Body,
@@ -224,6 +225,10 @@ export class LeadsController {
           message: 'This turma is full — add to its waiting list instead',
           fields: { classGroupId: 'leads.groupFull' },
         });
+      }
+      // POOLSE-144: another of the student's turmas meets at that hour.
+      if (error instanceof EnrollmentClashError) {
+        throw await clashConflict(currentTenant().organizationId, error, 'classGroupId');
       }
       if (error instanceof AlreadyEnrolledError) {
         throw new ConflictException({

@@ -509,6 +509,8 @@ export function EnrolForm({
             value={studentId}
             onChange={(event) => setPicked(event.target.value)}
             className={CONTROL_LINE}
+            aria-invalid={state.fields?.['studentId'] !== undefined || undefined}
+            aria-describedby={state.fields?.['studentId'] === undefined ? undefined : 'enrol-student-error'}
           >
             {matching.length === 0 && (
               <option value="" disabled>
@@ -532,6 +534,12 @@ export function EnrolForm({
               );
             })}
           </select>
+          {/* Under the field it is about — a clash with another turma (POOLSE-144). */}
+          {state.fields?.['studentId'] !== undefined && (
+            <p id="enrol-student-error" className="text-sm text-danger">
+              {t(state.fields['studentId'], state.values)}
+            </p>
+          )}
         </div>
 
         <button
@@ -566,7 +574,7 @@ export function EnrolForm({
         </label>
       )}
 
-      <Problem state={state} />
+      <Problem state={state} except={['studentId']} />
     </form>
   );
 }

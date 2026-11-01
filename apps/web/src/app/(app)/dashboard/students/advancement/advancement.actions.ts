@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiPost } from '../../../../../lib/api';
+import { describeFailure } from '@/lib/form-failure';
 
 /**
  * Confirming and dismissing a level advancement — POOLSE-19.
@@ -16,7 +17,7 @@ export async function confirmAdvancementAction(
   proposalId: string,
   classGroupId: string,
   effectiveOn: string,
-): Promise<{ ok: boolean; errorKey?: string }> {
+): Promise<{ ok: boolean; errorKey?: string; values?: Record<string, string | number> }> {
   try {
     await apiPost(
       `/transfer-proposals/${proposalId}/confirm`,
@@ -24,6 +25,12 @@ export async function confirmAdvancementAction(
       { organizationId },
     );
   } catch (error) {
+    // POOLSE-144: the turma meets while the student is in another — not a seat
+    // that went, and said with the other turma's name, day and hour.
+    if (error instanceof ApiError && error.status === 409 && error.code === 'enrollment_clash') {
+      const failed = describeFailure(error, 'advancement.confirmFailed');
+      return { ok: false, errorKey: 'enrollment.clash', ...(failed.values === undefined ? {} : { values: failed.values }) };
+    }
     if (error instanceof ApiError && error.status === 409) {
       return { ok: false, errorKey: 'advancement.seatGone' };
     }

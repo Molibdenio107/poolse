@@ -480,3 +480,13 @@ been built with an empty list and always said nobody was enrolled.
 - A parceria, free swim and an evento carry `people: null`, and the card draws **no student section** at all: a
   partner group has a headcount, not people.
 - **Informative only**: names, never links. *Marcar presenças* stays where it was.
+
+## Overlapping lessons on the card — POOLSE-144 (1 November 2026)
+
+When a series move, a new slot or an import makes two of a student's turmas meet at the same
+hour, the move is written, never refused: the operator moves a class, and a student does not
+pin the timetable. Each block involved then carries the attention dot, and its card adds
+*Aulas sobrepostas — Ana Silva também tem outra aula a esta hora*. The names are
+`clashStudents` on the grid booking, read inside the same grouped statement as the card's
+students (`enrollment_clashes()`, never a second definition). A week moved by hand does not
+count; the rule reads the pattern.

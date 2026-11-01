@@ -296,6 +296,20 @@ export function CalendarWeek({
       if (session?.registerTaken === true) {
         facts.push({ label: t('calendar.registerLabel'), value: t('calendar.registerTaken') });
       }
+      /*
+       * Students who meet another of their turmas at this hour — POOLSE-144.
+       * A move that made it was written, never blocked; the card says who, in
+       * words, and the block carries the shared dot below.
+       */
+      if (booking.clashStudents.length > 0) {
+        facts.push({
+          label: t('calendar.clashLabel'),
+          value: t('calendar.clashValue', {
+            names: booking.clashStudents.join(', '),
+            count: booking.clashStudents.length,
+          }),
+        });
+      }
       // POOLSE-120: what the families said, as words on the card.
       if ((session?.familyAnswers ?? 0) > 0) {
         facts.push({
@@ -334,7 +348,7 @@ export function CalendarWeek({
         title: booking.name,
         detail: { facts, occupancy, people, peopleEmpty: t('classes.nobodyEnrolled') },
         ...(actions === undefined ? {} : { actions }),
-        attention: session?.familyAnswers ?? 0,
+        attention: (session?.familyAnswers ?? 0) + (booking.clashStudents.length > 0 ? 1 : 0),
       };
     },
     [controlsFor, sessionButtons, teacherFor, t],

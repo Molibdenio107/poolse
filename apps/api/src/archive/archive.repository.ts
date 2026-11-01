@@ -1,3 +1,4 @@
+import { clashFrom, describeClashIn } from '../classes/enrollment-clash.js';
 import { moduleIsOn } from '../tenant/modules.js';
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
@@ -233,7 +234,9 @@ export type RestoreRefusalCode =
   | 'restore_conflict'
   | 'licence_exceeded'
   | 'pool_full'
-  | 'class_full';
+  | 'class_full'
+  /** POOLSE-144: the student is now in another turma at that hour. */
+  | 'enrollment_clash';
 
 /**
  * A refusal carrying its figures as structure — the trigger-refusal convention.
@@ -485,6 +488,18 @@ async function refusalFor(tx: Tx, error: unknown, table: string, id: string): Pr
   if (typeof pgError.detail === 'string' && pgError.detail.startsWith('pool_capacity|')) {
     const [, max, taken, asked] = pgError.detail.split('|').map(Number);
     return new RestoreRefusal('pool_full', { max, taken, asked });
+  }
+
+  // An enrolment reopening at an hour the student has since filled — POOLSE-144.
+  // Under the savepoint, so the other turma can still be named.
+  const clash = clashFrom(error);
+  if (clash !== null) {
+    const detail = await describeClashIn(tx, clash);
+    return new RestoreRefusal('enrollment_clash', {
+      turma: detail.turma,
+      weekday: detail.weekday,
+      startTime: detail.startTime,
+    });
   }
 
   // An enrolment reopening into a turma whose capacity was lowered meanwhile.

@@ -20,7 +20,7 @@ Rui, 01-11-2026: *"One student being one entity, it cannot enrol in 2 classes of
 6. A `waiting` enrolment never clashes and never blocks; the check runs when it becomes active, which is where the club finds out.
 7. Every way in is covered by the one trigger: the student form, the lead conversion (`insertEnrollment`), the app's request (POOLSE-121 `placeLead`), the advancement queue (POOLSE-112) and the Excel import. Each surfaces the same 409 sentence through `enrollmentRefusal`.
 
-**Open:** whether a clash with a turma in a *different* facility of the same club counts. Default: yes — one body, one hour, whatever the building.
+**Open:** whether a clash with a turma in a *different* facility of the same club counts. Default: yes — one body, one hour, whatever the building. **Answered by the default when built (01-11-2026).**
 
 ### Dev notes
 
@@ -46,8 +46,8 @@ Rui, 01-11-2026: *"One student being one entity, it cannot enrol in 2 classes of
 
 ### Acceptance criteria
 
-- [ ] `enrollment_clashes()` function; constraint trigger on `enrollment`; DETAIL with its figures.
-- [ ] 409 `enrollment_clash` through every enrolment path (QA 1, 5, 8).
-- [ ] Calendar warning on a move that creates a clash; nothing blocked.
-- [ ] Existing clashes counted and shown, never changed.
-- [ ] `docs/data-model.md` and `docs/features/classes.md` updated; one line in `CLAUDE.md` beside *Capacity rules compose*.
+- [x] `enrollment_clashes()` function; constraint trigger on `enrollment`; DETAIL with its figures.
+- [x] 409 `enrollment_clash` through every enrolment path (QA 1, 5, 8).
+- [x] Calendar warning on a move that creates a clash; nothing blocked.
+- [x] Existing clashes counted and shown, never changed.
+- [x] `docs/data-model.md` and `docs/features/classes.md` updated; one line in `CLAUDE.md` beside *Capacity rules compose*.

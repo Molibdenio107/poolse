@@ -1573,6 +1573,15 @@
       "waiting": "{count, plural, one {# em lista de espera} other {# em lista de espera}}",
       "students": "Alunos",
       "assignInstructor": "Atribuir professor"
+    },
+    "clashes": {
+      "pill": "Sobreposições",
+      "banner": "{count, plural, one {# aluno tem} other {# alunos têm}} aulas sobrepostas.",
+      "bannerLink": "Ver quais",
+      "hint": "Alunos inscritos em duas turmas que se cruzam no mesmo dia e hora. Já não é possível inscrever assim; estes ficaram de antes, ou de uma turma mudada de horário. Nada foi alterado: mude o aluno de turma ou a turma de horário.",
+      "none": "Nenhum aluno tem aulas sobrepostas.",
+      "student": "Aluno",
+      "slots": "Aulas que se cruzam"
     }
   },
   "reposicao": {
@@ -3411,7 +3420,9 @@
       "cancelled": "Cancelada",
       "registerTaken": "Presenças marcadas",
       "moved": "Mudou só esta semana"
-    }
+    },
+    "clashLabel": "Aulas sobrepostas",
+    "clashValue": "{names} também {count, plural, one {tem} other {têm}} outra aula a esta hora"
   },
   "inventory": {
     "title": "Inventário",
@@ -5422,7 +5433,8 @@
       },
       "licence": "O plano permite {allowed, plural, one {# instalação} other {# instalações}} e já {current, plural, one {há # ativa} other {há # ativas}}. Arquive outra ou peça um plano maior para restaurar esta.",
       "poolFull": "O tanque leva {max} pessoas e as turmas nesse horário já somam {taken}. Liberte lugares para restaurar esta turma.",
-      "classFull": "A turma tem {capacity} lugares e {taken} já estão ocupados, por isso as inscrições não podem voltar todas."
+      "classFull": "A turma tem {capacity} lugares e {taken} já estão ocupados, por isso as inscrições não podem voltar todas.",
+      "enrollmentClash": "Não foi possível restaurar: o aluno está agora na turma {turma} à mesma hora ({weekday, select, 1 {segunda} 2 {terça} 3 {quarta} 4 {quinta} 5 {sexta} 6 {sábado} other {domingo}} às {start})."
     },
     "archived": {
       "student": "Aluno arquivado",
@@ -6914,5 +6926,8 @@
       "excused": "Falta justificada",
       "none": "Por marcar"
     }
+  },
+  "enrollment": {
+    "clash": "Este aluno já tem aula a essa hora, na turma {turma} ({weekday, select, 1 {segunda} 2 {terça} 3 {quarta} 4 {quinta} 5 {sexta} 6 {sábado} other {domingo}} às {start})."
   }
 }

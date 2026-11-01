@@ -1,3 +1,4 @@
+import { clashFrom } from '../classes/enrollment-clash.js';
 import { withOrg, withoutTenantScope, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import {
@@ -510,6 +511,10 @@ export async function placeLead(
     if (pg.code === '23505' && pg.constraint === 'enrollment_live_uq') {
       throw new AlreadyEnrolledError(groupId);
     }
+    // POOLSE-144: the time-clash trigger shares the capacity trigger's code and
+    // carries its DETAIL, so it is read before "full" below.
+    const clash = clashFrom(error);
+    if (clash !== null) throw clash;
     // The capacity trigger raises check_violation with no constraint name; a
     // table CHECK always carries one.
     if (pg.code === '23514' && pg.constraint === undefined) throw new FullError(groupId);

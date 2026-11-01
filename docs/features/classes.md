@@ -67,3 +67,32 @@ list used to read only the login's cached name, and its cards said *Sem professo
 
 The calendar's event states from the same handoff are **not built**. They wait for Rui to see them in a mockup on the
 real calendar.
+
+## A student in two turmas at once — POOLSE-144 (1 November 2026)
+
+A student cannot be enrolled in two turmas that meet at the same time, **whatever the sport
+or the site**. The rule is `enrollment_clashes()`: the same season, the same weekday, and
+lesson windows that overlap. Touching is not overlapping: 18:00–18:45 and 18:45–19:30 is two
+lessons in a row. The rule is in `docs/data-model.md`.
+
+- **Enrolling is refused.** Every way in answers the same 409 `enrollment_clash`, naming the
+  other turma, its weekday and hour (*Este aluno já tem aula a essa hora, na turma Golfinhos
+  (segunda às 18:00)*). The sentence lands under the field that chose the turma.
+  - **The turma's *Inscrever aluno* form**: under *Aluno*.
+  - ***Colocar* in Pedidos**, including a request from the app: under *Turma*.
+  - **The advancement queue**: on the card. The whole transfer rolls back, so the student
+    keeps the enrolment they were leaving.
+  - **The bin's restore**: an ended enrolment that would come back into an hour the student
+    has filled since.
+  - **Not the Excel import.** No importer writes an enrolment today. If one ever does, the
+    trigger covers it.
+- **Waiting is never refused.** The check runs when a waiting enrolment becomes active.
+- **Moving is never refused.** A series move, a new slot or a timetable import that makes two
+  of a child's turmas meet is written. The calendar card then names the students under
+  *Aulas sobrepostas*, and the block carries the attention dot.
+- **Existing clashes are kept and listed.** For owner and admin, Turmas shows *N alunos têm
+  aulas sobrepostas* with *Ver quais*, which opens the **Sobreposições** section: each
+  student, with links to their record and to each turma and slot involved. Nothing is ended
+  or changed; the club moves the child or the turma by hand. The section and the line exist
+  only while there is somebody on the list. `GET /class-groups/clashes` is owner/admin, and
+  the list is exempt from paging as a queue worked down.

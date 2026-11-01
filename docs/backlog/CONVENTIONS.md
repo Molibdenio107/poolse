@@ -56,6 +56,7 @@ work being awkward:
 | The weather forecast | Seven days, from the provider. |
 | Reception's *em natação livre* list | The default stay. A check-in leaves it on its own after that window, and a tank holds what it holds. Paging it would hide the swimmer reception came to check out. |
 | Pending invitations | A queue worked down, not a register kept. Paging it would hide the invite somebody came to chase. |
+| Turmas › Sobreposições (`GET /class-groups/clashes`) | A queue worked down — POOLSE-144. Paging it would hide the child somebody came to move. |
 | Ownership-transfer candidates | Every admin — a picker must be complete, or it tells the owner their colleague is not an admin. |
 | A form's dropdown options | Everything the form can express. A half-filled `<select>` is a form that silently cannot say what somebody means. |
 | One student's record history | One swimmer's career, and the chart above it needs every point. |

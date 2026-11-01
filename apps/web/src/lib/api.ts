@@ -3635,6 +3635,18 @@ export interface GridBooking {
   people: { id: string; name: string }[] | null;
   /** The turma's capacity; null when not set. */
   capacity: number | null;
+  /**
+   * Students of this turma who meet another of their turmas at this pattern's
+   * hour — POOLSE-144. A move that made it is written; the calendar warns.
+   */
+  clashStudents: string[];
+}
+
+/** A student whose turmas overlap, and the slots that do — POOLSE-144. */
+export interface EnrollmentClashStudent {
+  studentId: string;
+  name: string;
+  slots: { classGroupId: string; turma: string; weekday: number; startTime: string }[];
 }
 
 /**

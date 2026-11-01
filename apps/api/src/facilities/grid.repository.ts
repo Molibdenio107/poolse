@@ -127,6 +127,14 @@ export interface GridBooking {
   people: { id: string; name: string }[] | null;
   /** The turma's capacity; null when not set (or not a turma). */
   capacity: number | null;
+  /**
+   * Students of this turma who are also in another turma at an overlapping hour
+   * on this pattern's day — POOLSE-144. A series move or a new slot that makes
+   * two of a child's turmas meet is written, and the calendar warns with these
+   * names; the student never pins the timetable. Judged by
+   * `enrollment_clashes()`, never here.
+   */
+  clashStudents: string[];
 }
 
 /**
@@ -364,12 +372,19 @@ export async function readGrid(
       ),
     ];
     const rosters = turmaIds.length === 0
-      ? { rows: [] as { class_group_id: string; capacity: number | null; people: { id: string; name: string }[] }[] }
-      : await tx.query<{ class_group_id: string; capacity: number | null; people: { id: string; name: string }[] }>(
+      ? { rows: [] as { class_group_id: string; capacity: number | null; people: RosterPerson[] }[] }
+      : await tx.query<{ class_group_id: string; capacity: number | null; people: RosterPerson[] }>(
           `SELECT cg.id AS class_group_id,
                   cg.capacity,
                   coalesce(
-                    json_agg(json_build_object('id', s.id, 'name', ${shortName('s')})
+                    json_agg(json_build_object(
+                               'id', s.id,
+                               'name', ${shortName('s')},
+                               -- The patterns of this turma on which the student
+                               -- meets another of theirs — POOLSE-144, one
+                               -- definition, inside the same statement.
+                               'clashes', (SELECT coalesce(array_agg(DISTINCT c.schedule_id), '{}')
+                                             FROM enrollment_clashes(e.student_id, e.class_group_id) c))
                              ORDER BY ${nameOrder('s')})
                       FILTER (WHERE s.id IS NOT NULL),
                     '[]'::json) AS people
@@ -540,14 +555,28 @@ export async function readGrid(
   });
 }
 
-/** A turma booking's roster and capacity; nothing for any other subject. */
+interface RosterPerson {
+  id: string;
+  name: string;
+  /** The schedule ids of this turma on which the student clashes. */
+  clashes: string[];
+}
+
+/** A turma booking's roster, capacity and clashes; nothing for any other subject. */
 function rosterFields(
   row: GridBookingRow,
-  rosterOf: Map<string, { capacity: number | null; people: { id: string; name: string }[] }>,
-): Pick<GridBooking, 'people' | 'capacity'> {
-  if (row.subject_type !== 'turma' || row.class_group_id === null) return { people: null, capacity: null };
+  rosterOf: Map<string, { capacity: number | null; people: RosterPerson[] }>,
+): Pick<GridBooking, 'people' | 'capacity' | 'clashStudents'> {
+  if (row.subject_type !== 'turma' || row.class_group_id === null) {
+    return { people: null, capacity: null, clashStudents: [] };
+  }
   const roster = rosterOf.get(row.class_group_id);
-  return { people: roster?.people ?? [], capacity: roster?.capacity ?? null };
+  const people = roster?.people ?? [];
+  return {
+    people: people.map(({ id, name }) => ({ id, name })),
+    capacity: roster?.capacity ?? null,
+    clashStudents: people.filter((person) => person.clashes.includes(row.id)).map((person) => person.name),
+  };
 }
 
 interface GridBookingRow {

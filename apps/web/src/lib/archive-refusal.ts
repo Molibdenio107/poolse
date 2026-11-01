@@ -81,6 +81,13 @@ export function archiveRefusal(details: unknown, t: Translate): ArchiveRefusal |
         values: { capacity: count('capacity'), taken: count('taken') },
       };
 
+    // POOLSE-144: the student is now in another turma at that hour.
+    case 'enrollment_clash':
+      return {
+        errorKey: 'archive.refusal.enrollmentClash',
+        values: { turma: text('turma'), weekday: String(count('weekday')), start: text('startTime') },
+      };
+
     default:
       return null;
   }

@@ -1,4 +1,6 @@
 import { TurmaCards } from './turma-cards';
+import { ClashList } from './clash-list';
+import { AlertTriangle } from 'lucide-react';
 import { subMenuPillClass } from '@/components/section-pills';
 import { FromLink } from '@/components/from-link';
 import { dataOf, describeLoad, outcome, type LoadFailure } from '@/lib/load-failure';
@@ -9,6 +11,7 @@ import {
   type Classes,
   type EnrolledStudent,
   type FacilityGrid,
+  type EnrollmentClashStudent,
 } from '@/lib/api';
 import { PartnerClasses } from './partner-classes';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
@@ -95,6 +98,18 @@ export default async function ClassesPage({
         };
       }
     }
+  }
+
+  /*
+    Students in two turmas at the same hour — POOLSE-144. Owner and admin, who
+    can move a child; best-effort, so a failure says so without costing the page.
+  */
+  let clashes: EnrollmentClashStudent[] = [];
+  let clashFailure: LoadFailure | null = null;
+  if (data?.canManage === true) {
+    const result = await outcome(apiFetch<{ students: EnrollmentClashStudent[] }>('/class-groups/clashes'));
+    if (result.state === 'failed') clashFailure = result.failure;
+    clashes = dataOf(result)?.students ?? [];
   }
 
   const dayNames = Object.fromEntries(
@@ -316,6 +331,8 @@ export default async function ClassesPage({
       ['week', true],
       ['unscheduled', unscheduled.length > 0],
       ['partners', grid !== null && partnerBookings.length > 0],
+      // POOLSE-144: offered only while there is somebody to fix.
+      ['clashes', clashes.length > 0],
     ] as const
   )
     .filter(([, offered]) => offered)
@@ -370,8 +387,29 @@ export default async function ClassesPage({
         />
       )}
 
+      {clashFailure !== null && (
+        <PageError
+          message={t(clashFailure.key)}
+          {...(clashFailure.detail === '' ? {} : { detail: clashFailure.detail })}
+        />
+      )}
+
       {data !== null && (
         <>
+          {/*
+            The count, in words with a warning icon, and the way to the list —
+            POOLSE-144 BA 5. Not on the list itself, which says it at the top.
+          */}
+          {clashes.length > 0 && current !== 'clashes' && (
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              <AlertTriangle aria-hidden className="size-4 shrink-0 text-warning attention" />
+              <span>{t('classes.clashes.banner', { count: clashes.length })}</span>
+              <FromLink href={sectionLink('clashes')} className="text-primary underline-offset-4 hover:underline">
+                {t('classes.clashes.bannerLink')}
+              </FromLink>
+            </p>
+          )}
+
           <SectionPills
             label={t('classes.section.nav')}
             current={current}
@@ -384,10 +422,14 @@ export default async function ClassesPage({
                   ? t('classes.week')
                   : key === 'unscheduled'
                     ? t('classes.section.unscheduled')
-                    : t('partnerClasses.title'),
+                    : key === 'clashes'
+                      ? t('classes.clashes.pill')
+                      : t('partnerClasses.title'),
               href: sectionLink(key),
               ...(key === 'unscheduled'
                 ? { count: unscheduled.length }
+                : key === 'clashes'
+                  ? { count: clashes.length }
                 : key === 'partners'
                   ? { count: new Set(partnerBookings.map((booking) => booking.partnerGroupId ?? booking.id)).size }
                   : {}),
@@ -400,7 +442,7 @@ export default async function ClassesPage({
             the scope filters; the parcerias are not turmas and no scope reaches
             them, so a switch above them would be a switch that does nothing.
           */}
-          {current !== 'partners' && (
+          {current !== 'partners' && current !== 'clashes' && (
             <div className="flex flex-wrap items-center justify-between gap-2">
               {/*
                 The switch, and only for somebody with two views — slice 1.12.
@@ -451,6 +493,8 @@ export default async function ClassesPage({
           )}
 
           {current === 'cards' && <TurmaCards groups={data.groups} canManage={data.canManage} />}
+
+          {current === 'clashes' && <ClashList students={clashes} />}
 
           {current === 'week' && (
             <>

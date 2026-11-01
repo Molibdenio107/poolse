@@ -62,6 +62,7 @@ test('every code this knows resolves to a key that exists', () => {
     'licence_exceeded',
     'pool_full',
     'class_full',
+    'enrollment_clash',
   ]) {
     const refusal = archiveRefusal({ code }, lookup);
     assert.ok(refusal, code);

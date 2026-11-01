@@ -1813,6 +1813,37 @@ implying one. Partnership bookings count as nothing, because `class_schedule` ro
 `subject_type = 'parceria'` carry no headcount at all — inventing one would refuse real
 timetables on a figure nobody entered.
 
+### One student, one hour — POOLSE-144
+
+```
+enrollment_clashes(student_id, class_group_id)
+  returns (schedule_id, other_class_group_id, other_schedule_id, weekday, start_time)
+  -- the turma's live patterns that overlap a live pattern of another turma the student is
+  -- actively in: same season, same weekday, [start, start + duration) windows overlapping
+  -- (touching is not overlapping), any site of the club, any sport
+
+enrollment_time_clash   constraint trigger on enrollment
+  after insert or update of status, deferrable initially immediate
+  -> enrollment_no_time_clash()   -- raises check_violation,
+     DETAIL enrollment_clash|<other class_group_id>|<weekday>|<HH:MM>
+```
+
+A fourth rule beside the three above, and the only one about a *person* rather than a place.
+
+- **It judges the pattern** (`class_schedule`), never `class_session`. A week moved by hand
+  does not invalidate an enrolment.
+- **It judges new rows only**: an insert, or a row becoming active. A `waiting` row never
+  clashes. Clashes already in a club's data stay; the migration counted them, and
+  `GET /class-groups/clashes` lists them.
+- **It never fires on a timetable write.** A series move or a new slot that makes two of a
+  child's turmas meet is written, and the calendar warns.
+- **It locks the student row first** (`FOR NO KEY UPDATE`, which does not conflict with the
+  foreign key's `KEY SHARE`), so two enrolments of one child at the same moment are judged in
+  turn.
+- **The windows are compared as intervals**, because `time + interval` wraps at midnight.
+- **One definition.** The trigger, `readGrid` (each booking's `clashStudents`) and the
+  Turmas list all call the function, and no TypeScript copies the rule.
+
 ### Medical leave
 
 ```

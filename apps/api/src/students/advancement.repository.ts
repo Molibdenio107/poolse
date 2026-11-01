@@ -1,3 +1,4 @@
+import { clashFrom } from '../classes/enrollment-clash.js';
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { setStudentLevelIn } from './students.repository.js';
@@ -306,7 +307,9 @@ export async function confirmProposal(
       if ((error as { code?: string }).code === '23505') {
         return { outcome: 'already_in_turma', noticeId: null };
       }
-      throw error;
+      // POOLSE-144: the target turma meets when another of the student's does.
+      // Thrown, so the whole transfer rolls back — the old enrolment included.
+      throw clashFrom(error) ?? error;
     }
 
     // The student's own level moves with them, so every screen that filters by
