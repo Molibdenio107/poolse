@@ -741,6 +741,8 @@ one an owner would act on. `docs/features/salaries.md`.
 
 **A turma is chosen in `TurmaPicker` (`components/turma-picker.tsx`), never a `<select>` of joined strings.** POOLSE-110: grouped by level with the requested level first, searchable, a row per turma with slots, instructor and a fill bar with its figure, a full turma pickable only where `allowFull`. A caller with a better grouping than level gives every row `group: { key, label, order }`; the rows then keep their given order (POOLSE-113, the advancement queue's rank reasons). Used by Pedidos and the advancement queue; the app's enrolment swaps to it next. A control inside a dialog that closes itself on Escape marks itself `data-own-escape`, and `Dialog` leaves the key to it.
 
+**Turmas opens on *Cartões*** (`turma-cards.tsx`, multi-sport Slice 4): a card per turma with a `Badge` of *Aberta / Completa / Sem professor*, the last outlined in amber; the weekly board is `?section=week`. `docs/features/classes.md`.
+
 **A document on paper is a route with print styles, never a PDF library** (POOLSE-54, -115): black on white, `@page` for A4 and its margin footer, `PrintButton` and `AutoPrint` from `components/`, its own components rather than the screen's with a print patch, and an entry in `check-layout.mjs`. A print page with options opens the dialog only on `?print=1`, so changing an option does not reopen it.
 
 **A cancelled lesson tells its families, and push is a second channel on a recorded notice.** POOLSE-90 slice 4.

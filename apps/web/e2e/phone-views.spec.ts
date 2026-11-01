@@ -76,7 +76,8 @@ test.describe('on a phone', () => {
 
   test('the Turmas board reads a day at a time, no card squeezed', async ({ page }) => {
     await poolsideLesson();
-    await visit(page, '/dashboard/classes');
+    // The week grid is its own section since the Cartões view opens the page (multi-sport Slice 4).
+    await visit(page, '/dashboard/classes?section=week');
     const narrow = await page.evaluate(() =>
       Array.from(document.querySelectorAll<HTMLElement>('main h3'))
         .filter((h) => /segunda|terça|monday|tuesday/i.test(h.textContent ?? ''))
@@ -153,7 +154,8 @@ test.describe('on a desk, the same pages are unchanged', () => {
     await expect(page.getByLabel(/piscina|pool/i).first()).toBeVisible();
     await expect(page.getByRole('navigation', { name: /dias da semana|days of the week/i })).toBeHidden();
 
-    await visit(page, '/dashboard/classes');
+    // The week grid is its own section since the Cartões view opens the page (multi-sport Slice 4).
+    await visit(page, '/dashboard/classes?section=week');
     const columns = await page.evaluate(() => {
       const monday = Array.from(document.querySelectorAll<HTMLElement>('main h3')).find((h) =>
         /segunda|monday/i.test(h.textContent ?? ''),

@@ -1,3 +1,4 @@
+import { TurmaCards } from './turma-cards';
 import { subMenuPillClass } from '@/components/section-pills';
 import { FromLink } from '@/components/from-link';
 import { dataOf, describeLoad, outcome, type LoadFailure } from '@/lib/load-failure';
@@ -310,6 +311,8 @@ export default async function ClassesPage({
   */
   const sections = (
     [
+      // The turmas as cards first — multi-sport Slice 4, the handoff's Turmas page.
+      ['cards', true],
       ['week', true],
       ['unscheduled', unscheduled.length > 0],
       ['partners', grid !== null && partnerBookings.length > 0],
@@ -317,7 +320,7 @@ export default async function ClassesPage({
   )
     .filter(([, offered]) => offered)
     .map(([key]) => key);
-  const current = pickSection(sections, section, 'week');
+  const current = pickSection(sections, section, 'cards');
 
   /*
     The section links keep the scope, and the scope links keep the section, so
@@ -329,7 +332,7 @@ export default async function ClassesPage({
   const scopeLink = (option: 'all' | 'mine'): string => {
     const query = new URLSearchParams();
     if (option === 'mine') query.set('scope', 'mine');
-    if (current !== 'week') query.set('section', current);
+    if (current !== 'cards') query.set('section', current);
     const rest = query.toString();
     return rest === '' ? '/dashboard/classes' : `/dashboard/classes?${rest}`;
   };
@@ -375,7 +378,9 @@ export default async function ClassesPage({
             items={sections.map((key) => ({
               key,
               label:
-                key === 'week'
+                key === 'cards'
+                  ? t('classes.cards.title')
+                  : key === 'week'
                   ? t('classes.week')
                   : key === 'unscheduled'
                     ? t('classes.section.unscheduled')
@@ -444,6 +449,8 @@ export default async function ClassesPage({
               )}
             </div>
           )}
+
+          {current === 'cards' && <TurmaCards groups={data.groups} canManage={data.canManage} />}
 
           {current === 'week' && (
             <>

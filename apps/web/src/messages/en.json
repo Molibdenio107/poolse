@@ -1557,7 +1557,23 @@
     "enrolStudent": "Enrol a student",
     "slotLessonsClash": "A future lesson of this group would overlap another of the same instructor's classes at that time.",
     "occurrenceInstructorBusy": "The instructor already has another class in a different pool at that time.",
-    "occurrenceClosed": "It cannot go there: that pool is closed at that time."
+    "occurrenceClosed": "It cannot go there: that pool is closed at that time.",
+    "cards": {
+      "title": "Cards",
+      "state": {
+        "open": "Open",
+        "full": "Full",
+        "noInstructor": "No instructor"
+      },
+      "noSchedule": "No timetable",
+      "noInstructor": "No instructor assigned",
+      "capacity": "Capacity",
+      "fill": "{active} / {capacity} students",
+      "noLimit": "{count, plural, one {# student} other {# students}} · no limit",
+      "waiting": "{count} on the waiting list",
+      "students": "Students",
+      "assignInstructor": "Assign an instructor"
+    }
   },
   "reposicao": {
     "title": "Make-up classes",

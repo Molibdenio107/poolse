@@ -1557,7 +1557,23 @@
     "enrolStudent": "Inscrever aluno",
     "slotLessonsClash": "Uma aula futura desta turma ficaria sobreposta a outra aula do mesmo professor a essa hora.",
     "occurrenceInstructorBusy": "O professor já tem outra aula noutro tanque a essa hora.",
-    "occurrenceClosed": "Não pode ficar aí: esse tanque está encerrado a essa hora."
+    "occurrenceClosed": "Não pode ficar aí: esse tanque está encerrado a essa hora.",
+    "cards": {
+      "title": "Cartões",
+      "state": {
+        "open": "Aberta",
+        "full": "Completa",
+        "noInstructor": "Sem professor"
+      },
+      "noSchedule": "Sem horário",
+      "noInstructor": "Sem professor atribuído",
+      "capacity": "Lotação",
+      "fill": "{active} / {capacity} alunos",
+      "noLimit": "{count, plural, one {# aluno} other {# alunos}} · sem limite",
+      "waiting": "{count, plural, one {# em lista de espera} other {# em lista de espera}}",
+      "students": "Alunos",
+      "assignInstructor": "Atribuir professor"
+    }
   },
   "reposicao": {
     "title": "Aulas de reposição",

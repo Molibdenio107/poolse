@@ -217,7 +217,7 @@ const GROUP_COLUMNS = `
        )
   ) AS monthly_price_cents,
   cg.instructor_membership_id,
-  short_name(u.cached_first_name, u.cached_last_name) AS instructor_name,
+  short_name(coalesce(u.cached_first_name, m.first_name), coalesce(u.cached_last_name, m.last_name)) AS instructor_name,
   cg.capacity,
   cg.colour::text AS colour,
   cg.fee_category_id,
@@ -1272,7 +1272,7 @@ export async function timetableFor(
              cg.name AS class_name,
              l.name AS level_name,
              p.name AS pool_name,
-             short_name(u.cached_first_name, u.cached_last_name) AS instructor_name,
+             short_name(coalesce(u.cached_first_name, m.first_name), coalesce(u.cached_last_name, m.last_name)) AS instructor_name,
              ln.position AS lane,
              cs.weekday,
              to_char(cs.start_time, 'HH24:MI') AS start_time,
