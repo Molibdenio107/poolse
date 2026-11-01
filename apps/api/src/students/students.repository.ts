@@ -1021,10 +1021,23 @@ export async function exportStudents(
          )}
          AND ($2::uuid IS NULL OR s.level_id = $2::uuid)
          AND (NOT $4::boolean OR s.is_socio)
+         -- The list's own filters (sweep 01-11-2026): an export under a filtered
+         -- register must be that register, or the button lies about its file.
+         AND (NOT $5::boolean OR ${PAYMENT_STATE} = 'overdue')
+         AND ($6::text IS NULL OR $6::text = ANY(${STUDENT_SPORTS('s')}))
+         AND (NOT $7::boolean OR cardinality(${STUDENT_SPORTS('s')}) > 1)
        ORDER BY ${nameOrder('s')}, s.id
        LIMIT $3
       `,
-      [query.search, query.levelId, MAX_EXPORT_ROWS, socios],
+      [
+        query.search,
+        query.levelId,
+        MAX_EXPORT_ROWS,
+        socios,
+        query.overdueOnly === true,
+        query.sport ?? null,
+        query.multiSport === true,
+      ],
     );
 
     const students = rows.map((row) => toStudent(row as never));

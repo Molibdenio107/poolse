@@ -2,6 +2,7 @@ import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { StudentsController } from './students.controller.js';
 import { StudentFeesController } from '../billing/fees.controller.js';
+import { ExportsController } from './export.controller.js';
 import pg from 'pg';
 import { actingAs, closeHarness, withScratchTenant } from '../test/harness.js';
 
@@ -95,6 +96,16 @@ test('the register says each student’s sports, filters by them and counts them
       ],
       multi: 1,
     });
+
+    // The export is the list it was asked from (sweep 01-11-2026): a sport, or
+    // the multi-sport students, never everybody.
+    const exported = (sport?: string, multi?: string) =>
+      actingAs(tenant, { roles: ['admin'] }, () =>
+        new ExportsController().students(undefined, undefined, undefined, undefined, sport, multi),
+      ).then((r) => r.students.map((one) => one.id).sort());
+    assert.deepEqual(await exported('tennis'), [bruno, carla].sort());
+    assert.deepEqual(await exported(undefined, '1'), [carla]);
+    assert.equal((await exported()).length, 4);
 
     // The mensalidade's split: each plan carries its turmas' sport.
     const fees = await actingAs(tenant, { roles: ['admin'] }, () => new StudentFeesController().list(carla));

@@ -84,6 +84,13 @@ export async function GET(request: Request): Promise<Response> {
   if (search !== '') query.set('search', search);
   if (levelId !== '') query.set('levelId', levelId);
   if (socios) query.set('socios', '1');
+  // The register's own filters travel to the file (sweep 01-11-2026): the page
+  // sent them and this route used to drop them, so an export from *Em atraso*
+  // or from one sport's list handed over everybody.
+  for (const key of ['sort', 'sport', 'multi'] as const) {
+    const value = (url.searchParams.get(key) ?? '').trim();
+    if (value !== '') query.set(key, value);
+  }
 
   let data: ExportResponse;
   try {

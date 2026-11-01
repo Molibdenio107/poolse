@@ -4,6 +4,7 @@ import { requireRole } from '../tenant/roles.js';
 import { readSearch } from '../common/search.js';
 import { exportStudents, MAX_EXPORT_ROWS, type Student } from './students.repository.js';
 import { CoreRoute } from '../tenant/modules.js';
+import { isPoolseSport } from '@poolse/rules';
 
 /**
  * Slice 1.11 — data leaving.
@@ -35,6 +36,10 @@ export class ExportsController {
     @Query('levelId') levelId?: string,
     /** POOLSE-134: `socios=1` is *Exportar sócios* — the same sheet, sócios only. */
     @Query('socios') socios?: string,
+    /** The register's own filters, read as the list reads them (sweep 01-11-2026). */
+    @Query('sort') sort?: string,
+    @Query('sport') sport?: string,
+    @Query('multi') multi?: string,
   ): Promise<{ students: Student[]; total: number; capped: boolean; max: number }> {
     /*
      * The same roles as the import, and for a stronger reason. This hands over
@@ -56,6 +61,10 @@ export class ExportsController {
       // screen is too short to filter the file — POOLSE-30.
       search: readSearch(search),
       levelId: levelId?.trim() ? levelId.trim() : null,
+      overdueOnly: sort === 'overdue',
+      // A sport the catalogue does not know matches nobody, as on the list.
+      sport: sport === undefined || sport.trim() === '' ? null : isPoolseSport(sport) ? sport : '-',
+      multiSport: multi === '1',
     }, socios === '1' || socios === 'true');
 
     return {

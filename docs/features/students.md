@@ -583,3 +583,11 @@ None of this appears for a pool-only club (`isMultiSport`).
   each sport's priced plans, then their total. A sport with nothing priced says *sem preço* and is never 0,00 €, and
   the line counts the unpriced turmas. These are the prices the turmas imply, not what is charged. Each
   `currentPlans` entry carries its turmas' `sport`.
+
+## The export is the list it was asked from (sweep 01-11-2026)
+
+*Exportar* under a filtered register exports that register: the search, the level, *Em atraso*
+(`sort=overdue`) and, for a multi-sport club, the sport and *Multi-modalidade* chips. The page
+always sent the overdue filter, and the export route dropped it; an export from *Em atraso* handed
+over every student. `exportStudents` reads the list's own predicates (`PAYMENT_STATE`,
+`STUDENT_SPORTS`), never a copy.

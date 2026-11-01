@@ -115,6 +115,8 @@ export default async function StudentsPage({
   // The overdue filter travels too: an export under a filtered list must be the
   // list, or the button lies about what it is exporting.
   if (overdueOnly) exportQuery.set('sort', 'overdue');
+  if (sportFilter !== null) exportQuery.set('sport', sportFilter);
+  if (multiOnly) exportQuery.set('multi', '1');
 
   let data: Students | null = null;
   let failure: LoadFailure | null = null;
