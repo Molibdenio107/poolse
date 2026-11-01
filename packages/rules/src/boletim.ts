@@ -212,3 +212,27 @@ export function boletimValue(field: BoletimField, data: BoletimData, today: stri
       return part(today, 'yearShort');
   }
 }
+
+/**
+ * A model's proposed layout, judged (POOLSE-142 slice B): `{ placements: [{ field, x, y }] }`
+ * on a 0–1000 grid becomes page fractions at the default size. An unknown field,
+ * a point off the grid or a repeat of the same spot is dropped; at most `limit`.
+ */
+export function placementsFromGrid(raw: unknown, limit = 60): BoletimPlacement[] {
+  const list = (raw as { placements?: unknown } | null)?.placements;
+  if (!Array.isArray(list)) return [];
+  const seen = new Set<string>();
+  const out: BoletimPlacement[] = [];
+  for (const item of list) {
+    const { field, x, y } = (item ?? {}) as Record<string, unknown>;
+    if (!isBoletimField(field)) continue;
+    if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (x < 0 || x > 1000 || y < 0 || y > 1000) continue;
+    const spot = `${field}:${Math.round(x / 10)}:${Math.round(y / 10)}`;
+    if (seen.has(spot)) continue;
+    seen.add(spot);
+    out.push({ field, x: Math.round(x * 10) / 10000, y: Math.round(y * 10) / 10000, sizePt: BOLETIM_SIZE_DEFAULT });
+    if (out.length >= limit) break;
+  }
+  return out;
+}

@@ -26,6 +26,8 @@ const READER_ROLES: Record<AiReader, readonly MemberRole[]> = {
   water_report: ['owner', 'admin'],
   pdf_table: ['owner', 'admin', 'maintenance', 'instructor'],
   column_match: ['owner', 'admin'],
+  // POOLSE-142: whoever may place the boletim's fields.
+  boletim_template: ['owner', 'admin'],
 };
 
 /**

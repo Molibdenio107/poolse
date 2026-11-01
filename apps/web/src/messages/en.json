@@ -4678,14 +4678,16 @@
         "energy_invoice_ai": "Energy bill reading",
         "water_report_ai": "Lab report reading",
         "pdf_table_ai": "Reading lists from PDF",
-        "column_match_ai": "Column matching"
+        "column_match_ai": "Column matching",
+        "boletim_template_ai": "Positions on the membership form"
       },
       "covers": {
         "id_document_ai": "When a student's ID card photo is uploaded, its number and dates are read and proposed in the form for someone to confirm. Only the image is sent. Each read has a cost.",
         "energy_invoice_ai": "Under Energy → Import bill, the bill PDF is read and proposed on the form for somebody to confirm. Each read has a cost. Each club also needs its own tick on its page.",
         "water_report_ai": "A lab report as a PDF or photo, dropped on a pool, is read and proposed for somebody to confirm. Each read has a cost. Each club also needs its own tick on its page.",
         "pdf_table_ai": "The list importers (students, timetable, partnerships, salaries, inventory, entry times) take a PDF, transcribed as a spreadsheet. Each read has a cost. Each club also needs its own tick on its page.",
-        "column_match_ai": "When importing students, columns no synonym recognised are proposed by the model. Only the headings and the shape of each column are sent. Each call has a cost. Each club also needs its own tick on its page."
+        "column_match_ai": "When importing students, columns no synonym recognised are proposed by the model. Only the headings and the shape of each column are sent. Each call has a cost. Each club also needs its own tick on its page.",
+        "boletim_template_ai": "On Club details, the club's own form is read and the AI proposes where each detail goes, for somebody to adjust and save. Only the form's image is sent. Each read has a cost."
       },
       "on": "On",
       "off": "Off",
@@ -4714,20 +4716,22 @@
       "coverage": "based on {measured} of {reads}",
       "estimateNote": "The estimate multiplies each read's tokens by the model's list price, converted to euros. It is not an invoice. “—” means the model has no known price.",
       "cap": "Monthly read limit",
-      "capHint": "For all five readers together, per calendar month. Empty: no limit. Used this month: {used}.",
+      "capHint": "For all readers together, per calendar month. Empty: no limit. Used this month: {used}.",
       "name": {
         "energy_invoice": "Energy bill reading",
         "id_document": "ID document reading",
         "water_report": "Lab report reading",
         "pdf_table": "Reading lists from PDF",
-        "column_match": "Column matching"
+        "column_match": "Column matching",
+        "boletim_template": "Positions on the membership form"
       },
       "covers": {
         "energy_invoice": "Under Energy → Import bill, the bill PDF is read and proposed on the form for somebody to confirm.",
         "id_document": "When a student's ID card photo is uploaded, the number and dates are read and proposed on the form for somebody to confirm.",
         "water_report": "A lab report as a PDF or photo, dropped on a pool, is read and proposed for somebody to confirm.",
         "pdf_table": "The list importers (students, timetable, partnerships, salaries, inventory, entry times) take a PDF, transcribed as a spreadsheet.",
-        "column_match": "When importing students, columns no synonym recognised are proposed by the model. Only the headings and the shape of each column are sent."
+        "column_match": "When importing students, columns no synonym recognised are proposed by the model. Only the headings and the shape of each column are sent.",
+        "boletim_template": "On Club details, the AI proposes where each detail goes on the club's own form, for somebody to adjust and save."
       }
     }
   },
@@ -6779,6 +6783,20 @@
       "today_month": "Month today (in words)",
       "today_year": "Year today",
       "today_year_short": "Year today (two digits)"
+    },
+    "ai": {
+      "propose": "Propose positions with AI",
+      "proposing": "Reading the form…",
+      "proposed": "{count, plural, =0 {The AI found nothing more to place.} one {The AI proposed # detail. Check it on the form and save.} other {The AI proposed # details. Check them on the form and save.}}",
+      "note": {
+        "off": "AI reading of the form isn't switched on for this club. Place the details by hand.",
+        "noKey": "AI reading is on, but this server has no API key. Place the details by hand.",
+        "capReached": "The club has used this month's AI reads. Place the details by hand.",
+        "unreadable": "The form could not be read. Place the details by hand.",
+        "nothingFound": "The AI found nowhere to place details on this form. Place them by hand.",
+        "notAllowed": "You aren't allowed to use AI reading.",
+        "rateLimited": "Too many AI reads in a row. Try again in a few minutes."
+      }
     }
   }
 }

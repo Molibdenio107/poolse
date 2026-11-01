@@ -66,4 +66,6 @@ export const AI_ROLES = {
   energy: ['owner', 'admin', 'maintenance'],
   // POOLSE-85: whoever may type an entry time may import one.
   qualifying: ['owner', 'admin', 'instructor'],
+  // POOLSE-142: the club's boletim is placed by the office.
+  boletimTemplate: ['owner', 'admin'],
 } as const satisfies Record<string, readonly string[]>;

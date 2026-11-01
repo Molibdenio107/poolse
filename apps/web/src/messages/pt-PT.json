@@ -4678,14 +4678,16 @@
         "energy_invoice_ai": "Leitura de faturas de energia",
         "water_report_ai": "Leitura de relatórios de análises",
         "pdf_table_ai": "Leitura de listas em PDF",
-        "column_match_ai": "Correspondência de colunas"
+        "column_match_ai": "Correspondência de colunas",
+        "boletim_template_ai": "Posições no boletim de sócio"
       },
       "covers": {
         "id_document_ai": "Ao carregar a fotografia do CC de um aluno, o número e as datas são lidos e propostos no formulário para alguém confirmar. Só a imagem é enviada. Cada leitura tem custo.",
         "energy_invoice_ai": "Em Energia → Importar fatura, o PDF da fatura é lido e proposto no formulário para alguém confirmar. Cada leitura tem custo. Cada clube precisa também do seu visto na página do clube.",
         "water_report_ai": "Um relatório de análises em PDF ou fotografia, largado numa piscina, é lido e proposto para alguém confirmar. Cada leitura tem custo. Cada clube precisa também do seu visto na página do clube.",
         "pdf_table_ai": "Os importadores de listas (alunos, horário, parcerias, salários, inventário, mínimos) aceitam um PDF, transcrito como folha de cálculo. Cada leitura tem custo. Cada clube precisa também do seu visto na página do clube.",
-        "column_match_ai": "Ao importar alunos, as colunas que nenhum sinónimo reconheceu são propostas pelo modelo. Só vão os cabeçalhos e a forma de cada coluna. Cada chamada tem custo. Cada clube precisa também do seu visto na página do clube."
+        "column_match_ai": "Ao importar alunos, as colunas que nenhum sinónimo reconheceu são propostas pelo modelo. Só vão os cabeçalhos e a forma de cada coluna. Cada chamada tem custo. Cada clube precisa também do seu visto na página do clube.",
+        "boletim_template_ai": "Em Dados do clube, o boletim do próprio clube é lido e a IA propõe onde vai cada dado, para alguém acertar e guardar. Só vai a imagem do formulário. Cada leitura tem custo."
       },
       "on": "Ligado",
       "off": "Desligado",
@@ -4714,20 +4716,22 @@
       "coverage": "com base em {measured} de {reads}",
       "estimateNote": "A estimativa multiplica os tokens de cada leitura pelo preço de tabela do modelo, convertido para euros. Não é uma fatura. “—” quer dizer que o modelo não tem preço conhecido.",
       "cap": "Limite mensal de leituras",
-      "capHint": "Para as cinco leituras juntas, por mês civil. Vazio: sem limite. Usadas este mês: {used}.",
+      "capHint": "Para todas as leituras juntas, por mês civil. Vazio: sem limite. Usadas este mês: {used}.",
       "name": {
         "energy_invoice": "Leitura de faturas de energia",
         "id_document": "Leitura do documento de identificação",
         "water_report": "Leitura de relatórios de análises",
         "pdf_table": "Leitura de listas em PDF",
-        "column_match": "Correspondência de colunas"
+        "column_match": "Correspondência de colunas",
+        "boletim_template": "Posições no boletim de sócio"
       },
       "covers": {
         "energy_invoice": "Em Energia → Importar fatura, o PDF da fatura é lido e proposto no formulário para alguém confirmar.",
         "id_document": "Ao carregar a fotografia do CC de um aluno, o número e as datas são lidos e propostos no formulário para alguém confirmar.",
         "water_report": "Um relatório de análises em PDF ou fotografia, largado numa piscina, é lido e proposto para alguém confirmar.",
         "pdf_table": "Os importadores de listas (alunos, horário, parcerias, salários, inventário, mínimos) aceitam um PDF, transcrito como folha de cálculo.",
-        "column_match": "Ao importar alunos, as colunas que nenhum sinónimo reconheceu são propostas pelo modelo. Só vão os cabeçalhos e a forma de cada coluna."
+        "column_match": "Ao importar alunos, as colunas que nenhum sinónimo reconheceu são propostas pelo modelo. Só vão os cabeçalhos e a forma de cada coluna.",
+        "boletim_template": "Em Dados do clube, a IA propõe onde vai cada dado no boletim do próprio clube, para alguém acertar e guardar."
       }
     }
   },
@@ -6779,6 +6783,20 @@
       "today_month": "Mês de hoje (por extenso)",
       "today_year": "Ano de hoje",
       "today_year_short": "Ano de hoje (dois algarismos)"
+    },
+    "ai": {
+      "propose": "Propor posições com IA",
+      "proposing": "A ler o boletim…",
+      "proposed": "{count, plural, =0 {A IA não encontrou mais dados para colocar.} one {A IA propôs # dado. Confira-o no boletim e guarde.} other {A IA propôs # dados. Confira-os no boletim e guarde.}}",
+      "note": {
+        "off": "A leitura com IA do boletim não está ligada para este clube. Coloque os dados à mão.",
+        "noKey": "A leitura com IA está ligada, mas falta a chave da API neste servidor. Coloque os dados à mão.",
+        "capReached": "O clube já usou todas as leituras com IA deste mês. Coloque os dados à mão.",
+        "unreadable": "Não foi possível ler o boletim. Coloque os dados à mão.",
+        "nothingFound": "A IA não encontrou onde colocar os dados neste boletim. Coloque-os à mão.",
+        "notAllowed": "Não tem permissão para usar a leitura com IA.",
+        "rateLimited": "Demasiadas leituras com IA seguidas. Tente daqui a alguns minutos."
+      }
     }
   }
 }

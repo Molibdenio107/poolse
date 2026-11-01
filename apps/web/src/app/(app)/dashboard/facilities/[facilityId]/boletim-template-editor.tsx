@@ -1,8 +1,8 @@
 'use client';
 
-import { Minus, Plus, Trash2, Upload, X } from 'lucide-react';
+import { Minus, Plus, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BOLETIM_FIELD_GROUPS,
   BOLETIM_SIZE_DEFAULT,
@@ -15,11 +15,18 @@ import { BoletimSheet, placementStyle } from '@/components/boletim-sheet';
 import { Dialog } from '@/components/ui/dialog';
 import { fileUrl } from '@/lib/files';
 import { pageImage } from '@/lib/page-image';
+import { useBusyWhile } from '@/lib/busy';
 import { useSavedAction } from '@/lib/saved';
 import { cn } from '@/lib/utils';
 import { uploadFileAction } from '../../files.actions';
 import type { FormState } from '../../actions';
-import { removeBoletimTemplateAction, saveBoletimFieldsAction, type BoletimTemplate } from './boletim-template.actions';
+import {
+  proposeBoletimFieldsAction,
+  removeBoletimTemplateAction,
+  saveBoletimFieldsAction,
+  type BoletimTemplate,
+  type ProposalState,
+} from './boletim-template.actions';
 
 const SECONDARY =
   'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-surface px-4 text-control text-foreground shadow-card hover:bg-surface-muted disabled:opacity-60';
@@ -73,6 +80,21 @@ export function BoletimTemplateEditor({
   const [uploadState, upload, uploading] = useSavedAction(uploadFileAction, INITIAL);
   const [saveState, save, saving] = useSavedAction(saveBoletimFieldsAction, INITIAL);
   const [, remove, removing] = useSavedAction(removeBoletimTemplateAction, INITIAL);
+  // The model's proposal (slice B): not a save, so no toast and no refresh — a
+  // refresh would put the server's placements back over it.
+  const [proposal, propose, proposing] = useActionState(proposeBoletimFieldsAction, { ok: false } as ProposalState);
+  useBusyWhile(proposing, 'load');
+  const [proposedCount, setProposedCount] = useState<number | null>(null);
+  const takenProposal = useRef<ProposalState | null>(null);
+  useEffect(() => {
+    if (takenProposal.current === proposal || proposal.proposal === undefined) return;
+    takenProposal.current = proposal;
+    // Only what is not placed yet: nothing the club placed is moved by a proposal.
+    const have = new Set(placed.map((p) => p.field));
+    const added = proposal.proposal.filter((p) => !have.has(p.field));
+    setProposedCount(added.length);
+    setPlaced([...placed, ...keyed(added)]);
+  }, [proposal, placed]);
   const dirty = JSON.stringify(plain(placed)) !== seeded;
   const current = placed.find((p) => p.key === selected) ?? null;
 
@@ -206,6 +228,20 @@ export function BoletimTemplateEditor({
               : t('boletimTemplate.replace')}
         </button>
         {template !== null && (
+          <button
+            type="button"
+            className={SECONDARY}
+            disabled={proposing}
+            onClick={() => {
+              setProposedCount(null);
+              startTransition(() => propose());
+            }}
+          >
+            <Sparkles aria-hidden className="size-4" />
+            {proposing ? t('boletimTemplate.ai.proposing') : t('boletimTemplate.ai.propose')}
+          </button>
+        )}
+        {template !== null && (
           <button type="button" className={SECONDARY} disabled={removing} onClick={() => setConfirmRemove(true)}>
             <Trash2 aria-hidden className="size-4" />
             {t('boletimTemplate.remove')}
@@ -215,6 +251,12 @@ export function BoletimTemplateEditor({
       {!storageReady && <p className="text-sm text-foreground-muted">{t('files.notConfigured')}</p>}
       {failure !== undefined && <p className="text-sm text-danger">{t(failure)}</p>}
       {onlyFirst && <p className="text-sm text-foreground-muted">{t('boletimTemplate.firstPageOnly')}</p>}
+      {!proposing && proposal.note !== undefined && takenProposal.current !== proposal && (
+        <p className="text-sm text-foreground-muted">{t(`boletimTemplate.ai.note.${proposal.note}`)}</p>
+      )}
+      {!proposing && proposedCount !== null && (
+        <p className="text-sm text-foreground-muted">{t('boletimTemplate.ai.proposed', { count: proposedCount })}</p>
+      )}
 
       {imageUrl !== null && (
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_16rem]">

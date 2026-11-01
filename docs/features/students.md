@@ -338,7 +338,7 @@ is one link away.
 (`student.id_document_read`). Replacing the form drops its placements, and the screen asks first. Removing it
 returns to Poolse's form.
 
-The AI proposing the positions is slice B, not built yet.
+**Slice B: the AI proposes the positions.** *Propor posições com IA* sends the stored form image and the field list, nothing about any student, to the sixth AI reader (`boletim_template`, `lib/boletim-template-agent.ts`). It is gated like the others: the `boletim_template_ai` switch on /admin, the club's tick, the monthly cap and a key, behind `guardAiCall` (owner and admin). Positions come back on a 0–1000 grid and are judged by `placementsFromGrid` in `@poolse/rules`. They fill in **only the fields not placed yet**, so nothing the club placed is moved. They load into the editor unsaved, for a person to adjust and save. A closed gate or a failed read is a sentence beside the button, and the manual editor always works.
 
 ## Levels
 

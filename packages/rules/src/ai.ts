@@ -9,7 +9,7 @@
  * on, and the web app has a key. A club stores what is **on**
  * (`organization.ai_readers`), and a new club has none.
  */
-export const AI_READERS = ['energy_invoice', 'id_document', 'water_report', 'pdf_table', 'column_match'] as const;
+export const AI_READERS = ['energy_invoice', 'id_document', 'water_report', 'pdf_table', 'column_match', 'boletim_template'] as const;
 
 export type AiReader = (typeof AI_READERS)[number];
 
@@ -24,6 +24,8 @@ export const AI_READER_SWITCH: Record<AiReader, string> = {
   water_report: 'water_report_ai',
   pdf_table: 'pdf_table_ai',
   column_match: 'column_match_ai',
+  // POOLSE-142: proposes where each field goes on a club's own boletim.
+  boletim_template: 'boletim_template_ai',
 };
 
 /**

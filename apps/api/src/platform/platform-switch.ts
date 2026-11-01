@@ -16,6 +16,7 @@ export const PLATFORM_SWITCHES = [
   'water_report_ai',
   'pdf_table_ai',
   'column_match_ai',
+  'boletim_template_ai',
 ] as const;
 export type PlatformSwitchName = (typeof PLATFORM_SWITCHES)[number];
 
