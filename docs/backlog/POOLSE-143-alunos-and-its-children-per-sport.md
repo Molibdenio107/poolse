@@ -27,7 +27,7 @@ The rule this ticket sets, for every later menu question (Rui, 01-11-2026): **a 
 9. With only `pool` on, nothing changes: sidebar snapshot identical (POOLSE-125 Decided 11).
 10. `?sport=` on every list this ticket touches is validated against `/me.sports` (POOLSE-125 Dev). **It is a convenience filter, not an authorisation boundary** — an instructor may still ask for another sport's students, exactly as today, until POOLSE-145.
 
-**Open:** whether the per-sport *Alunos* should also take the group's wash (`SportShell`) when reached from the sport tab. Default: yes, it is the sport's page.
+**Open:** whether the per-sport *Alunos* should also take the group's wash (`SportShell`) when reached from the sport tab. Default: yes, it is the sport's page. **Built with the default (01-11-2026).**
 
 ### Dev notes
 
@@ -51,8 +51,8 @@ The rule this ticket sets, for every later menu question (Rui, 01-11-2026): **a 
 
 ### Acceptance criteria
 
-- [ ] `perSport` on the five entries; `sports` scope; pool-only snapshot unchanged.
-- [ ] *Sem modalidade* chip on Alunos and Pedidos, multi-sport only.
-- [ ] Lead sport derived in one SQL expression, read by the list and the circle.
-- [ ] Public form offers a sport only when multi-sport.
-- [ ] `docs/features/navigation.md` states the facility/sport placement rule (PO).
+- [x] `perSport` on the five entries; `sports` scope; pool-only snapshot unchanged.
+- [x] *Sem modalidade* chip on Alunos and Pedidos, multi-sport only.
+- [x] Lead sport derived in one SQL expression, read by the list and the circle.
+- [x] Public form offers a sport only when multi-sport.
+- [x] `docs/features/navigation.md` states the facility/sport placement rule (PO).

@@ -54,11 +54,29 @@ export interface Item {
    */
   badge?: BadgeKey;
   /**
-   * One copy per enabled sport — POOLSE-125. With swimming alone the entry
-   * stands where it is; with a second sport on it moves into each sport's
-   * group, its address carrying `?sport=`.
+   * One copy per enabled sport — POOLSE-125, POOLSE-143. With swimming alone the
+   * entry stands where it is. With a second sport on:
+   *
+   * - `true` — it **moves** into each sport's group (Turmas, Calendário,
+   *   Níveis, Avanços, Competição): its data is the sport's own.
+   * - `'copy'` — it **stays** shared and each sport's group gets a filtered
+   *   copy (Alunos, Pedidos): its rows carry a sport, and the shared list still
+   *   holds the rows with none (*Sem modalidade*).
+   *
+   * Either way the copy's address carries `?sport=`. Applies at any depth.
    */
-  perSport?: true;
+  perSport?: true | 'copy';
+  /**
+   * The sports this entry exists for — POOLSE-143 rule 4. Absent means every
+   * sport. Competição is `['pool']`: a sport with no competition model shows no
+   * entry rather than an empty page.
+   */
+  sports?: readonly PoolseSport[];
+  /**
+   * The count is per sport in a sport's copy (`<badge>:<sport>`) — POOLSE-143
+   * rule 7, the Pedidos circle. The shared entry keeps the plain key.
+   */
+  badgePerSport?: true;
   /** The sport a generated entry belongs to, set by `visibleSections`, never by hand. */
   sport?: PoolseSport;
 }
@@ -69,7 +87,15 @@ export interface Item {
  * needs doing, from `GET /attention`, cleared when it is done.
  */
 export type BadgeKey = 'meetInbox' | 'leads' | 'facilities' | 'calendar';
-export type Badges = Partial<Record<BadgeKey, number>>;
+/** By badge key, and `<key>:<sport>` for a per-sport copy (POOLSE-143). */
+export type Badges = Partial<Record<string, number>>;
+
+/** The count an entry shows: its sport's own where the badge is per sport. */
+export function badgeCount(item: Item, badges: Badges): number {
+  if (item.badge === undefined) return 0;
+  const key = item.badgePerSport === true && item.sport !== undefined ? `${item.badge}:${item.sport}` : item.badge;
+  return badges[key] ?? 0;
+}
 
 /*
  * Who an entry is for, matched to its endpoint — 15 October 2026 (Rui): a menu
@@ -79,6 +105,13 @@ export type Badges = Partial<Record<BadgeKey, number>>;
 export const STAFF = ['owner', 'admin', 'instructor', 'maintenance'] as const;
 export const TEACHING = ['owner', 'admin', 'instructor'] as const;
 export const OFFICE = ['owner', 'admin'] as const;
+
+/**
+ * The sports with a competition model — POOLSE-143 rule 4. Swimming (the FPN's
+ * meets, mínimos and escalões) and nothing else yet: a sport joins by being
+ * added here and having its page built, and until then shows no Competição.
+ */
+export const COMPETITION_SPORTS: readonly PoolseSport[] = ['pool'];
 
 /** Who is looking: their roles, and what kind of tenant they are in. */
 export interface Viewer {
@@ -314,6 +347,8 @@ export const SECTIONS: Item[] = [
     icon: 'student',
     roles: TEACHING,
     kinds: ['business'],
+    // POOLSE-143: the shared register stays; each sport gets it filtered.
+    perSport: 'copy',
     // Ordered by how close each one sits to a student — round 6. Encarregados
     // first, directly under Alunos, because a guardian is a person attached to a
     // student and the two lists are read together; Níveis next, being what a
@@ -325,7 +360,16 @@ export const SECTIONS: Item[] = [
       // Pedidos de inscrição — POOLSE-69. Second, under Encarregados: a request
       // is a family that is not a student yet, and in September it is the list
       // reception works first. The roles are the endpoint's own.
-      { href: '/dashboard/students/pedidos', key: 'leads.title', roles: OFFICE, badge: 'leads' },
+      // POOLSE-143: a filtered copy in each sport's group; the shared one keeps
+      // the leads with no sport, and its circle counts only those.
+      {
+        href: '/dashboard/students/pedidos',
+        key: 'leads.title',
+        roles: OFFICE,
+        badge: 'leads',
+        badgePerSport: true,
+        perSport: 'copy',
+      },
       // Mensagens sit with the families they are written to — POOLSE-67. The
       // roles are the endpoint's own; an instructor writes to their own turmas.
       {
@@ -347,13 +391,17 @@ export const SECTIONS: Item[] = [
         roles: TEACHING,
         module: 'competition',
         badge: 'meetInbox',
+        // POOLSE-143 rule 4: FPN swimming, and only where a sport has a model.
+        perSport: true,
+        sports: COMPETITION_SPORTS,
         children: [
           { href: '/dashboard/students/provas', key: 'qualifying.section.meets' },
           { href: '/dashboard/students/provas/minimos', key: 'qualifying.section.minimos' },
           { href: '/dashboard/students/provas/escaloes', key: 'qualifying.section.escaloes' },
         ],
       },
-      { href: '/dashboard/students/levels', key: 'students.levels' },
+      // One ladder per sport (POOLSE-126), so it moves into the sport's group.
+      { href: '/dashboard/students/levels', key: 'students.levels', perSport: true },
       /*
        * The advancement queue — POOLSE-19. It shipped on 28 August with no way
        * in: nothing linked to it, so a proposal waited for somebody to type the
@@ -363,6 +411,7 @@ export const SECTIONS: Item[] = [
         href: '/dashboard/students/advancement',
         key: 'advancement.title',
         roles: ['owner', 'admin', 'instructor'],
+        perSport: true,
       },
       /*
        * Categorias is **not** here any more — round 19.
@@ -433,7 +482,7 @@ export function pathOf(href: string): string {
  * a court's warning must not light the pool's entry (rule 4).
  */
 function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] {
-  const scoped = sections.filter((section) => section.perSport === true);
+  const scoped = sections.filter((section) => section.perSport !== undefined);
   if (!isMultiSport(sports) || scoped.length === 0) return sections;
 
   // A sport's section opens on its Calendário, listed first — the handoff's
@@ -441,16 +490,27 @@ function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] 
   // menu keeps the order it shipped with.
   const inSection = [...scoped].sort((a, b) => sportPageRank(a.href) - sportPageRank(b.href));
   const groups = sports.map((sport): Item => {
-    const children = inSection.map((entry): Item => {
-      const { badge, children: below, ...rest } = entry;
-      return {
-        ...rest,
-        href: `${entry.href}?sport=${sport}`,
-        sport,
-        children: sport === BASE_SPORT ? (below ?? []) : [],
-        ...(sport === BASE_SPORT && badge !== undefined ? { badge } : {}),
-      };
-    });
+    const children = inSection
+      .filter((entry) => forSport(entry, sport))
+      .map((entry): Item => {
+        const { badge, children: below, ...rest } = entry;
+        // A moved section keeps its children only in the pool's group (Épocas,
+        // Reposições, Encerramentos read no sport yet — POOLSE-125). A copied
+        // one keeps the children that are per sport themselves.
+        const kept =
+          entry.perSport === 'copy'
+            ? sportChildren(below ?? [], sport)
+            : sport === BASE_SPORT
+              ? (below ?? [])
+              : [];
+        return {
+          ...rest,
+          href: withSport(entry.href, sport),
+          sport,
+          children: kept,
+          ...(badge !== undefined && (sport === BASE_SPORT || entry.badgePerSport === true) ? { badge } : {}),
+        };
+      });
     const [first] = children as [Item, ...Item[]];
     return {
       href: first.href,
@@ -461,9 +521,42 @@ function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] 
     };
   });
 
+  // What stays shared: every section that does not move, and inside a copied
+  // one, every child that does not move either.
+  const shared = (items: Item[]): Item[] =>
+    items
+      .filter((item) => item.perSport !== true)
+      .map((item) => (item.children === undefined ? item : { ...item, children: shared(item.children) }));
+
   const at = sections.indexOf(scoped[0] as Item);
-  const rest = sections.filter((section) => section.perSport !== true);
-  return [...rest.slice(0, at), ...groups, ...rest.slice(at)];
+  const rest = shared(sections);
+  const before = shared(sections.slice(0, at));
+  return [...before, ...groups, ...rest.slice(before.length)];
+}
+
+/** Whether an entry exists for this sport (`sports` absent: every sport). */
+function forSport(item: Item, sport: PoolseSport): boolean {
+  return item.sports === undefined || item.sports.includes(sport);
+}
+
+/** A copied section's children in one sport's group: the per-sport ones, addressed with it. */
+function sportChildren(items: Item[], sport: PoolseSport): Item[] {
+  return items
+    .filter((item) => item.perSport !== undefined && forSport(item, sport))
+    .map((item): Item => {
+      const { badge, ...rest } = item;
+      return {
+        ...rest,
+        href: withSport(item.href, sport),
+        sport,
+        ...(badge !== undefined && (sport === BASE_SPORT || item.badgePerSport === true) ? { badge } : {}),
+        children: (item.children ?? []).map((child) => ({ ...child, href: withSport(child.href, sport), sport })),
+      };
+    });
+}
+
+function withSport(href: string, sport: PoolseSport): string {
+  return `${href}${href.includes('?') ? '&' : '?'}sport=${sport}`;
 }
 
 /** Calendário first, then the rest in their menu order (a stable sort keeps it). */

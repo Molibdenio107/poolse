@@ -1,9 +1,9 @@
 import { withOrg } from '@poolse/db';
-import { excursions, gradeLabResult, resolveBands } from '@poolse/rules';
+import { excursions, gradeLabResult, isMultiSport, resolveBands } from '@poolse/rules';
 import { readPoolWater } from '../dashboard/management.repository.js';
 import { labValues, type LabParameter } from '../facilities/lab-results.repository.js';
 import { TASK_STATE } from '../maintenance/maintenance.repository.js';
-import { readLeadsWidget } from '../leads/leads.repository.js';
+import { readLeadsWidget, waitingLeadsBySport } from '../leads/leads.repository.js';
 
 /**
  * Where something needs doing — POOLSE-120 (Rui, 28-10-2026).
@@ -52,8 +52,28 @@ export async function readAttention(organizationId: string, scope: AttentionScop
   const out: Attention = { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {} };
 
   if (scope.leads) {
-    const waiting = (await readLeadsWidget(organizationId)).waiting;
-    if (waiting > 0) out.menu['leads'] = waiting;
+    /*
+     * POOLSE-143 rule 7: with a second sport on, each sport's *Pedidos* counts
+     * its own (`leads:<sport>`) and the shared entry only those with no sport,
+     * as POOLSE-125 rule 4 splits the recintos. A pool-only club keeps the one
+     * count it had.
+     */
+    const sports = await withOrg(organizationId, async (tx) =>
+      (
+        await tx.query<{ enabled_sports: string[] }>(
+          'SELECT enabled_sports::text[] AS enabled_sports FROM organization WHERE id = $1',
+          [organizationId],
+        )
+      ).rows[0]?.enabled_sports ?? ['pool'],
+    );
+    if (isMultiSport(sports as never)) {
+      for (const [sport, count] of await waitingLeadsBySport(organizationId)) {
+        if (count > 0) out.menu[sport === null ? 'leads' : `leads:${sport}`] = count;
+      }
+    } else {
+      const waiting = (await readLeadsWidget(organizationId)).waiting;
+      if (waiting > 0) out.menu['leads'] = waiting;
+    }
   }
 
   if (scope.water || scope.maintenance) {

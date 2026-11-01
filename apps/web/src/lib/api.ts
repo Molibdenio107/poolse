@@ -1648,7 +1648,7 @@ export interface Students {
   /** POOLSE-129: whether *Convidar famílias* is offered. */
   canInviteFamilies: boolean;
   /** The *Modalidades* chips' counts, when asked for (`sportCounts=1`, multi-sport clubs only). */
-  sportCounts?: { total: number; bySport: { sport: PoolseSport; count: number }[]; multi: number };
+  sportCounts?: { total: number; bySport: { sport: PoolseSport; count: number }[]; multi: number; none: number };
   /**
    * The club's maioridade — POOLSE-22.
    *
@@ -5317,6 +5317,8 @@ export interface Lead {
   existingStudent: boolean;
   /** Asked for one of the club's students, whatever has happened since — the card's wording. */
   forExistingStudent: boolean;
+  /** The lead's sport, derived from the turma asked for, else its level — POOLSE-143. */
+  sport: PoolseSport | null;
 }
 
 /** Asking to join a class from the app — POOLSE-121. */
@@ -5344,6 +5346,8 @@ export interface Leads {
   retentionMonths: number;
   /** The last time, within a week, the public form turned people away for being flooded. */
   ceilingReachedAt: string | null;
+  /** The open queue by sport, when asked for (`sportCounts=1`) — POOLSE-143's chips. */
+  sportCounts?: { total: number; bySport: { sport: PoolseSport; count: number }[]; none: number };
 }
 
 export interface TrialOption {

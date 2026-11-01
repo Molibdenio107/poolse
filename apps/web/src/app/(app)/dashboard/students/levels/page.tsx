@@ -13,6 +13,7 @@ import { outcome } from '@/lib/load-failure';
 import { AdvancementModeCard } from '../advancement/advancement-mode-card';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isPoolseSport } from '@poolse/rules';
 import { backProp, originBack } from '@/lib/back';
 import { CreateLevelForm } from './level-forms';
 import { LevelList } from './level-list';
@@ -48,11 +49,14 @@ function byAge(levels: StudentLevel[]): StudentLevel[] {
 export default async function LevelsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; from?: string }>;
+  searchParams: Promise<{ sort?: string; from?: string; sport?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const params = await searchParams;
   const byAgeOrder = params.sort === 'age';
+  // POOLSE-143: a sport's *Níveis* is its own ladder, and a new level joins it.
+  const sport = isPoolseSport(params.sport) ? params.sport : null;
+  const sportQuery = sport === null ? '' : `sport=${sport}`;
   const back = originBack(params.from);
 
   let data: Students | null = null;
@@ -66,7 +70,7 @@ export default async function LevelsPage({
   );
 
   try {
-    data = await apiFetch<Students>('/students');
+    data = await apiFetch<Students>(`/students${sportQuery === '' ? '' : `?${sportQuery}`}`);
   } catch (error) {
     failure = describeLoad(error);
   }
@@ -116,7 +120,7 @@ export default async function LevelsPage({
                 {t('students.addLevel')}
               </summary>
               <div className="border-t border-border p-5">
-                <CreateLevelForm organizationId={data.organizationId} levels={all} />
+                <CreateLevelForm organizationId={data.organizationId} levels={all} sportId={sport} />
               </div>
             </details>
           )}
@@ -129,14 +133,14 @@ export default async function LevelsPage({
           {levels.length > 0 && (
             <nav className="flex flex-wrap gap-1.5">
               <FromLink
-                href="/dashboard/students/levels"
+                href={`/dashboard/students/levels${sportQuery === '' ? '' : `?${sportQuery}`}`}
                 aria-current={byAgeOrder ? undefined : 'true'}
                 className={subMenuPillClass(!byAgeOrder)}
               >
                 {t('students.sortByLadder')}
               </FromLink>
               <FromLink
-                href="/dashboard/students/levels?sort=age"
+                href={`/dashboard/students/levels?sort=age${sportQuery === '' ? '' : `&${sportQuery}`}`}
                 aria-current={byAgeOrder ? 'true' : undefined}
                 className={subMenuPillClass(byAgeOrder)}
               >

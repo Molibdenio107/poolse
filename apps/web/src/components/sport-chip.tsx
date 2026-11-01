@@ -39,3 +39,17 @@ export function SportChip({
     </span>
   );
 }
+
+/**
+ * A count per sport, with the sport being read added at nought when it has none
+ * — POOLSE-143. A sport's own page always has its chip marked current, even
+ * before the first student or request arrives, or the row reads as unfiltered.
+ */
+export function withCurrent<T extends { sport: PoolseSport; count: number }>(
+  counts: readonly T[],
+  current: PoolseSport | 'none' | null | undefined,
+): { sport: PoolseSport; count: number }[] {
+  if (current === null || current === undefined || current === 'none') return [...counts];
+  if (counts.some((entry) => entry.sport === current)) return [...counts];
+  return [...counts, { sport: current, count: 0 }];
+}

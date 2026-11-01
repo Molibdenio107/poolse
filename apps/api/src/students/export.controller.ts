@@ -4,7 +4,7 @@ import { requireRole } from '../tenant/roles.js';
 import { readSearch } from '../common/search.js';
 import { exportStudents, MAX_EXPORT_ROWS, type Student } from './students.repository.js';
 import { CoreRoute } from '../tenant/modules.js';
-import { isPoolseSport } from '@poolse/rules';
+import { readSportFilter } from './sport-filter.js';
 
 /**
  * Slice 1.11 — data leaving.
@@ -55,6 +55,7 @@ export class ExportsController {
      */
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
+    const sportFilter = await readSportFilter(organizationId, sport);
 
     const students = await exportStudents(organizationId, {
       // Read exactly as the list reads it, so a term too short to filter the
@@ -62,8 +63,8 @@ export class ExportsController {
       search: readSearch(search),
       levelId: levelId?.trim() ? levelId.trim() : null,
       overdueOnly: sort === 'overdue',
-      // A sport the catalogue does not know matches nobody, as on the list.
-      sport: sport === undefined || sport.trim() === '' ? null : isPoolseSport(sport) ? sport : '-',
+      // The list's own filter, validated the same way (POOLSE-143).
+      sport: sportFilter,
       multiSport: multi === '1',
     }, socios === '1' || socios === 'true');
 

@@ -37,7 +37,7 @@ test('QA 2: with two sports each gets a group, in order, where Turmas stood, and
   const [poolGroup, tennisGroup] = [sections[pool], sections[tennis]] as [Item, Item];
   assert.deepEqual(
     tennisGroup.children?.map((item) => item.href),
-    ['/dashboard/calendar?sport=tennis', '/dashboard/classes?sport=tennis'],
+    ['/dashboard/calendar?sport=tennis', '/dashboard/classes?sport=tennis', '/dashboard/students?sport=tennis'],
   );
   // A sport's tab opens its Calendário (POOLSE-141 rule 3, the handoff's sidebar).
   assert.equal(tennisGroup.href, '/dashboard/calendar?sport=tennis');
@@ -45,8 +45,46 @@ test('QA 2: with two sports each gets a group, in order, where Turmas stood, and
   const poolCalendar = poolGroup.children?.find((item) => item.key === 'calendar.title');
   assert.equal(poolCalendar?.badge, 'calendar');
   assert.ok((poolCalendar?.children ?? []).length > 0);
-  assert.equal(flat(tennisGroup.children ?? []).some((item) => item.badge !== undefined), false);
-  assert.equal(flat(tennisGroup.children ?? []).some((item) => (item.children ?? []).length > 0), false);
+  // Only Pedidos carries a circle in a court's group, and it is that sport's own (POOLSE-143).
+  assert.deepEqual(
+    flat(tennisGroup.children ?? []).filter((item) => item.badge !== undefined).map((item) => [item.badge, item.badgePerSport]),
+    [['leads', true]],
+  );
+  const tennisTurmas = tennisGroup.children?.find((item) => item.key === 'classes.title');
+  assert.deepEqual(tennisTurmas?.children, [], 'Épocas and Reposições read no sport yet');
+});
+
+test('POOLSE-143: Alunos is shared and copied; Níveis, Avanços and Competição move; Competição is swimming only', () => {
+  const sections = visibleSections({ ...owner, sports: ['pool', 'tennis'] });
+  const shared = sections.find((item) => item.key === 'students.title' && item.sport === undefined);
+  assert.deepEqual(
+    shared?.children?.map((item) => item.key),
+    ['students.guardiansTitle', 'leads.title', 'messages.title'],
+    'the shared register keeps what has no sport dimension, and Pedidos',
+  );
+  const studentsOf = (sport: string): Item | undefined =>
+    sections.find((item) => item.sport === sport)?.children?.find((item) => item.key === 'students.title');
+  assert.deepEqual(
+    studentsOf('pool')?.children?.map((item) => item.href),
+    [
+      '/dashboard/students/pedidos?sport=pool',
+      '/dashboard/students/provas?sport=pool',
+      '/dashboard/students/levels?sport=pool',
+      '/dashboard/students/advancement?sport=pool',
+    ],
+  );
+  assert.deepEqual(
+    studentsOf('tennis')?.children?.map((item) => item.href),
+    [
+      '/dashboard/students/pedidos?sport=tennis',
+      '/dashboard/students/levels?sport=tennis',
+      '/dashboard/students/advancement?sport=tennis',
+    ],
+    'no Competição for a sport without a model',
+  );
+  // QA 1: swimming alone keeps every child where it was.
+  const poolOnly = visibleSections(owner).find((item) => item.key === 'students.title');
+  assert.equal(poolOnly?.children?.some((item) => item.key === 'students.levels'), true);
 });
 
 test('a role that may not see Turmas gets no empty sport group', () => {

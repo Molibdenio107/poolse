@@ -1,3 +1,4 @@
+import { isPoolseSport } from '@poolse/rules';
 import { redirect } from 'next/navigation';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
@@ -30,10 +31,12 @@ import { ProposalCard } from './proposal-card';
 export default async function AdvancementPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; from?: string }>;
+  searchParams: Promise<{ page?: string; from?: string; sport?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { page: pageParam, from } = await searchParams;
+  const { page: pageParam, from, sport: sportParam } = await searchParams;
+  // POOLSE-143: a sport's *Avanços* is the proposals onto its own ladder.
+  const sport = isPoolseSport(sportParam) ? sportParam : undefined;
   const back = originBack(from);
   const page = readPage(pageParam);
 
@@ -49,7 +52,10 @@ export default async function AdvancementPage({
   try {
     const [queue, me, loaded] = await Promise.all([
       apiFetch<{ proposals: Paginated<TransferProposal> }>(
-        `/transfer-proposals${page > 1 ? `?page=${page}` : ''}`,
+        `/transfer-proposals?${new URLSearchParams({
+          ...(page > 1 ? { page: String(page) } : {}),
+          ...(sport === undefined ? {} : { sport }),
+        }).toString()}`,
       ),
       apiFetch<Me>('/me'),
       outcome(apiFetch<{ outlook: AdvancementOutlook }>('/transfer-proposals/outlook')),
@@ -66,7 +72,7 @@ export default async function AdvancementPage({
 
   if (proposals !== null && isPastEnd(page, proposals.total, proposals.limit)) {
     redirect(
-      pageHref('/dashboard/students/advancement', {}, lastPage(proposals.total, proposals.limit)),
+      pageHref('/dashboard/students/advancement', { sport }, lastPage(proposals.total, proposals.limit)),
     );
   }
 
@@ -129,7 +135,7 @@ export default async function AdvancementPage({
             ))}
           </ul>
 
-          <Pagination page={proposals} basePath="/dashboard/students/advancement" query={{ from }} />
+          <Pagination page={proposals} basePath="/dashboard/students/advancement" query={{ from, sport }} />
         </>
       )}
     </PageShell>

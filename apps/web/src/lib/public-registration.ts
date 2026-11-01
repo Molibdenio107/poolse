@@ -18,7 +18,10 @@ export interface RegistrationForm {
     /** Each site's operating regulation in force. */
     regulations: { facilityName: string; effectiveFrom: string; body: string }[];
     facilities: { id: string; name: string }[];
-    levels: { id: string; name: string }[];
+    /** `sportId` only for a club with a second sport — POOLSE-143. */
+    levels: { id: string; name: string; sportId?: string }[];
+    /** The club's sports, only when there are two or more. */
+    sports?: string[];
   };
   /** Proof the form was rendered recently; handed back on submit. */
   stamp: string;

@@ -1,6 +1,7 @@
 import { Trophy } from 'lucide-react';
 import { FromLink } from '@/components/from-link';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { COMPETITION_SPORTS } from '@/lib/nav-entries';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type MeetInboxList, type MeetList, type QualifyingOverview } from '@/lib/api';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
@@ -51,8 +52,11 @@ export async function CompetitionPage({
   params,
 }: {
   section: Section;
-  params: { page?: string; season?: string; from?: string };
+  params: { page?: string; season?: string; from?: string; sport?: string };
 }): Promise<React.ReactElement> {
+  // POOLSE-143 rule 4: a sport with no competition model has no Competição — a
+  // 404 page, never a blank one.
+  if (params.sport !== undefined && !COMPETITION_SPORTS.includes(params.sport as never)) notFound();
   const t = await getTranslations();
   const page = readPage(params.page);
   const back = originBack(params.from);

@@ -3931,6 +3931,9 @@ hour. `poolse_app` holds no DELETE on `lead`. Migration `1790330400000_lead.sql`
 - **`slugify()`** now cuts to 50 characters and pads anything under 3 as `piscina-…`, so every
   name fits `organization_slug_shape`.
 - **`public_lead_form`** also returns `ageOfMajority`.
+- **`public_lead_form`** returns `sports` and each level's `sportId`, but only for a club with a
+  second sport, so a pool-only club's answer is unchanged (POOLSE-143, migration 1794651000000).
+  `submit_lead` is unchanged. A lead's sport is derived (`LEAD_SPORT`), with no column.
 - **`submit_lead`** locks `FOR NO KEY UPDATE`.
 - **The trial trigger** answers a session that is not the club's as `foreign_key_violation`.
 

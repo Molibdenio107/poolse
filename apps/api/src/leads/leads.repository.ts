@@ -42,7 +42,10 @@ export interface PublicLeadForm {
   /** Under this a swimmer needs a guardian — the club's own setting. */
   ageOfMajority: number;
   facilities: { id: string; name: string }[];
-  levels: { id: string; name: string }[];
+  /** `sportId` only for a club with a second sport (POOLSE-143). */
+  levels: { id: string; name: string; sportId?: string }[];
+  /** The club's sports, only when there are two or more — the form then asks first. */
+  sports?: string[];
 }
 
 interface RawForm {
@@ -52,7 +55,8 @@ interface RawForm {
   regulations: { facilityName: string; effectiveFrom: string; body: string }[];
   ageOfMajority: number;
   facilities: { id: string; name: string }[];
-  levels: { id: string; name: string }[];
+  levels: { id: string; name: string; sportId?: string }[];
+  sports?: string[];
 }
 
 /** An open club's form, or null for every other slug. Built field by field. */
@@ -74,7 +78,12 @@ export async function readLeadForm(slug: string): Promise<PublicLeadForm | null>
     })),
     ageOfMajority: raw.ageOfMajority,
     facilities: raw.facilities.map((f) => ({ id: f.id, name: f.name })),
-    levels: raw.levels.map((l) => ({ id: l.id, name: l.name })),
+    levels: raw.levels.map((l) => ({
+      id: l.id,
+      name: l.name,
+      ...(typeof l.sportId === 'string' ? { sportId: l.sportId } : {}),
+    })),
+    ...(Array.isArray(raw.sports) ? { sports: raw.sports.filter((s) => typeof s === 'string') } : {}),
   };
 }
 
@@ -154,6 +163,8 @@ export interface Lead {
   existingStudent: boolean;
   /** It was asked for one of the club's students, whatever has happened since — the card's wording. */
   forExistingStudent: boolean;
+  /** Its sport (`LEAD_SPORT`), or null — POOLSE-143. */
+  sport: string | null;
 }
 
 interface LeadRow {
@@ -191,6 +202,7 @@ interface LeadRow {
   requested_by_name: string | null;
   existing_student: boolean;
   for_existing_student: boolean;
+  sport: string | null;
 }
 
 /*
@@ -198,6 +210,24 @@ interface LeadRow {
  * every join LEFT — a lead with no preference, or a trial whose turma was
  * archived since, is still a lead.
  */
+/**
+ * A lead's sport — POOLSE-143, rule 5. Derived, never stored: the recinto of the
+ * turma the family asked for (a turma with no recinto is the pool, as in
+ * `STUDENT_SPORTS`), else the sport of the level it names, else none. **The one
+ * definition**, read by the list, its *Sem modalidade* chip and the menu circle,
+ * so the three cannot disagree about which leads have no sport.
+ */
+export const LEAD_SPORT = (alias: string): string => `
+  coalesce(
+    (SELECT coalesce(pa.sport_id, 'pool')
+       FROM class_group g
+       LEFT JOIN playing_area pa
+         ON pa.id = g.playing_area_id AND pa.organization_id = g.organization_id
+      WHERE g.id = ${alias}.requested_class_group_id AND g.organization_id = ${alias}.organization_id),
+    (SELECT sl.sport_id
+       FROM student_level sl
+      WHERE sl.id = ${alias}.level_id AND sl.organization_id = ${alias}.organization_id))`;
+
 const LEAD_SELECT = `
   SELECT l.id, l.status::text AS status, l.created_at,
          l.swimmer_first_name, l.swimmer_last_name,
@@ -227,7 +257,8 @@ const LEAD_SELECT = `
          -- Whatever has happened since: a new child's request names a relationship,
          -- an existing child's never does (submitAppRequest). Sweep 29-10-2026.
          (l.requested_by_membership_id IS NOT NULL AND l.guardian_relationship IS NULL)
-           AS for_existing_student
+           AS for_existing_student,
+         ${LEAD_SPORT('l')} AS sport
     FROM lead l
     -- An archived turma reads as gone (sweep 29-10-2026).
     LEFT JOIN class_group rg
@@ -283,23 +314,55 @@ function toLead(row: LeadRow): Lead {
     requestedByName: row.requested_by_name,
     existingStudent: row.existing_student,
     forExistingStudent: row.for_existing_student,
+    sport: row.sport,
   };
 }
 
 /** `open` is the queue to work (new, trial booked); `done` is the rest. */
 export type LeadView = 'open' | 'done';
 
-export async function listLeads(organizationId: string, view: LeadView): Promise<Lead[]> {
+export async function listLeads(
+  organizationId: string,
+  view: LeadView,
+  /** One sport's *Pedidos*, or `none` for the shared chip (POOLSE-143). */
+  sport: string | null = null,
+): Promise<Lead[]> {
   const statuses = view === 'open' ? ['new', 'trial_booked'] : ['waitlisted', 'converted', 'dismissed'];
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<LeadRow>(
       `${LEAD_SELECT}
         WHERE l.archived_at IS NULL AND l.status::text = ANY($1::text[])
+          AND ($2::text IS NULL
+               OR ($2::text = 'none' AND ${LEAD_SPORT('l')} IS NULL)
+               OR ${LEAD_SPORT('l')} = $2::text)
         ORDER BY l.created_at DESC
         LIMIT 500`,
-      [statuses],
+      [statuses, sport],
     );
     return rows.map(toLead);
+  });
+}
+
+/** The open queue by sport, for the chips — one grouped statement (POOLSE-143). */
+export async function leadSportCounts(
+  organizationId: string,
+): Promise<{ total: number; bySport: { sport: string; count: number }[]; none: number }> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ sport: string | null; n: number }>(
+      `SELECT ${LEAD_SPORT('l')} AS sport, count(*)::int AS n
+         FROM lead l
+        WHERE l.archived_at IS NULL AND l.status IN ('new', 'trial_booked')
+        GROUP BY 1`,
+    );
+    const bySport = rows
+      .filter((row) => row.sport !== null)
+      .map((row) => ({ sport: row.sport as string, count: row.n }))
+      .sort((a, b) => a.sport.localeCompare(b.sport));
+    return {
+      total: rows.reduce((sum, row) => sum + row.n, 0),
+      bySport,
+      none: rows.find((row) => row.sport === null)?.n ?? 0,
+    };
   });
 }
 
@@ -355,6 +418,23 @@ export async function readLeadsWidget(organizationId: string): Promise<LeadsWidg
     );
     const row = rows[0]!;
     return { waiting: row.waiting, trials: row.trials, oldestWaitingDays: row.oldest };
+  });
+}
+
+/**
+ * Waiting leads by sport — the menu's circles once a club has a second sport
+ * (POOLSE-143 rule 7): each sport's *Pedidos* counts its own, and the shared
+ * entry counts those with no sport (`null` key here). Same `LEAD_SPORT`.
+ */
+export async function waitingLeadsBySport(organizationId: string): Promise<Map<string | null, number>> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ sport: string | null; n: number }>(
+      `SELECT ${LEAD_SPORT('l')} AS sport, count(*)::int AS n
+         FROM lead l
+        WHERE l.archived_at IS NULL AND l.status = 'new'
+        GROUP BY 1`,
+    );
+    return new Map(rows.map((row) => [row.sport, row.n]));
   });
 }
 

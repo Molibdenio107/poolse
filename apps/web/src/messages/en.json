@@ -2435,7 +2435,8 @@
     },
     "sportFilter": "Sports",
     "sportAll": "All · {count}",
-    "sportMulti": "Several sports · {count}"
+    "sportMulti": "Several sports · {count}",
+    "sportNone": "No sport · {count}"
   },
   "advancement": {
     "title": "Advancement",
@@ -5653,7 +5654,8 @@
       "invalidEmail": "Give a valid email address.",
       "guardianRequired": "Required for anyone under {age}.",
       "sameNif": "The guardian's NIF must differ from the swimmer's.",
-      "consentRequired": "You need to agree to send the request."
+      "consentRequired": "You need to agree to send the request.",
+      "sport": "Sport"
     },
     "ceilingReached": "The public form received too many requests in a short time ({when}) and turned away those over the limit without telling the sender. It may have been an attack; if you were expecting sign-ups then, reach the families another way.",
     "noNote": "The request came with no notes.",
@@ -5664,7 +5666,8 @@
       "byNew": "Asked in the app by {name}, for a new child.",
       "byExistingDone": "Asked in the app by {name}, for one of the club's students."
     },
-    "studentArchived": "The student this request names has since been archived. Restore them or dismiss the request."
+    "studentArchived": "The student this request names has since been archived. Restore them or dismiss the request.",
+    "sportFilter": "Requests by sport"
   },
   "labResults": {
     "hint": "The monthly analyses by an accredited laboratory, graded against the national reference (NP 4542:2017). A non-compliant result alerts the owner, the admins and maintenance.",

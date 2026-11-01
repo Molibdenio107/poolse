@@ -4,7 +4,7 @@ import { StudentsController } from './students.controller.js';
 import { StudentFeesController } from '../billing/fees.controller.js';
 import { ExportsController } from './export.controller.js';
 import pg from 'pg';
-import { actingAs, closeHarness, withScratchTenant } from '../test/harness.js';
+import { actingAs, closeHarness, expectStatus, withScratchTenant } from '../test/harness.js';
 
 /**
  * Multi-sport Slice 3 — the register's *Modalidades*: each student's sports
@@ -85,7 +85,11 @@ test('the register says each student’s sports, filters by them and counts them
     const ids = (r: Awaited<ReturnType<typeof list>>) => r.students.items.map((s) => s.id).sort();
     assert.deepEqual(ids(await list({ sport: 'tennis' })), [bruno, carla].sort());
     assert.deepEqual(ids(await list({ multi: '1' })), [carla]);
-    assert.deepEqual(ids(await list({ sport: 'curling' })), [], 'an unknown sport matches nobody');
+    // POOLSE-143: a sport the club has not switched on is a 400, never an empty list;
+    // `none` is *Sem modalidade* — Duarte, in no live turma.
+    await expectStatus(() => list({ sport: 'padel' }), 400);
+    const duarte = all.students.items.find((s) => s.firstName === 'Duarte')!.id;
+    assert.deepEqual(ids(await list({ sport: 'none' })), [duarte]);
 
     const counted = await list({ sportCounts: '1' });
     assert.deepEqual(counted.sportCounts, {
@@ -95,6 +99,7 @@ test('the register says each student’s sports, filters by them and counts them
         { sport: 'tennis', count: 2 },
       ],
       multi: 1,
+      none: 1,
     });
 
     // The export is the list it was asked from (sweep 01-11-2026): a sport, or

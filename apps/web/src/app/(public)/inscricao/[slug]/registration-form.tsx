@@ -13,7 +13,7 @@ export type RegistrationLabels = Record<
   | 'swimmer' | 'swimmerFirstName' | 'swimmerLastName' | 'swimmerBirthDate' | 'swimmerTaxNumber'
   | 'guardian' | 'guardianHint' | 'guardianName' | 'guardianRelationship'
   | 'guardianRelationshipHint' | 'guardianTaxNumber' | 'contact' | 'email' | 'emailHint'
-  | 'phone' | 'preferences' | 'facility' | 'level' | 'noPreference' | 'days' | 'daysHint'
+  | 'phone' | 'preferences' | 'facility' | 'level' | 'sport' | 'noPreference' | 'days' | 'daysHint'
   | 'note' | 'noteHint' | 'consent' | 'submit' | 'sending' | 'sentTitle' | 'sentBody'
   | 'failed' | 'optional' | 'honeypot',
   string
@@ -26,6 +26,7 @@ export function RegistrationForm({
   majority,
   facilities,
   levels,
+  sports = [],
   weekdays,
   labels,
   errors,
@@ -36,7 +37,13 @@ export function RegistrationForm({
   /** The club's age of majority; under it, the guardian is required. */
   majority: number;
   facilities: { id: string; name: string }[];
-  levels: { id: string; name: string }[];
+  levels: { id: string; name: string; sportId?: string }[];
+  /**
+   * The club's sports, already named — POOLSE-143 rule 6. Empty for a pool-only
+   * club, whose form is exactly what it was. Chosen first, it narrows the levels;
+   * it is not sent, because the level a family picks already carries its sport.
+   */
+  sports?: { value: string; label: string }[];
   /** ISO weekday (1 = Monday) and its name in the reader's language. */
   weekdays: { value: number; label: string }[];
   labels: RegistrationLabels;
@@ -49,6 +56,8 @@ export function RegistrationForm({
 
   // Controlled, so a refused send keeps every tick — React 19 resets the form.
   const [days, setDays] = useState<number[]>([]);
+  const [sport, setSport] = useState('');
+  const shownLevels = sport === '' ? levels : levels.filter((level) => level.sportId === sport);
   const [consent, setConsent] = useState(false);
 
   const error = (field: string): string | undefined => {
@@ -140,13 +149,23 @@ export function RegistrationForm({
               ]}
             />
           )}
-          {levels.length > 0 && (
+          {sports.length > 1 && (
             <SelectField
+              name="sport"
+              label={labels.sport}
+              options={[{ value: '', label: labels.noPreference }, ...sports]}
+              onValueChange={setSport}
+            />
+          )}
+          {shownLevels.length > 0 && (
+            <SelectField
+              // A new sport is a new list of levels; the choice starts over.
+              key={sport}
               name="levelId"
               label={labels.level}
               options={[
                 { value: '', label: labels.noPreference },
-                ...levels.map((l) => ({ value: l.id, label: l.name })),
+                ...shownLevels.map((l) => ({ value: l.id, label: l.name })),
               ]}
             />
           )}

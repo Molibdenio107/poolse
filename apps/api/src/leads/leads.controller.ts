@@ -1,3 +1,4 @@
+import { readSportFilter } from '../students/sport-filter.js';
 import { EnrollmentClashError, clashConflict } from '../classes/enrollment-clash.js';
 import {
   BadRequestException,
@@ -26,6 +27,7 @@ import {
   bookTrial,
   dismissLead,
   lastCeilingReached,
+  leadSportCounts,
   listLeads,
   placeLead,
   readLead,
@@ -79,14 +81,25 @@ export class LeadsController {
   @Get()
   async list(
     @Query('view') view?: string,
-  ): Promise<{ leads: Lead[]; retentionMonths: number; ceilingReachedAt: string | null }> {
+    /** POOLSE-143: one sport's *Pedidos*, or `none` for the shared chip. */
+    @Query('sport') sport?: string,
+    /** The chips' counts, asked for only by a multi-sport club. */
+    @Query('sportCounts') sportCounts?: string,
+  ): Promise<{
+    leads: Lead[];
+    retentionMonths: number;
+    ceilingReachedAt: string | null;
+    sportCounts?: { total: number; bySport: { sport: string; count: number }[]; none: number };
+  }> {
     requireRole(...CAN_WORK_LEADS);
     const { organizationId } = currentTenant();
-    const leads = await listLeads(organizationId, view === 'done' ? 'done' : 'open');
+    const filter = await readSportFilter(organizationId, sport);
+    const leads = await listLeads(organizationId, view === 'done' ? 'done' : 'open', filter);
     return {
       leads,
       retentionMonths: LEAD_RETENTION_MONTHS,
       ceilingReachedAt: await lastCeilingReached(organizationId),
+      ...(sportCounts === '1' ? { sportCounts: await leadSportCounts(organizationId) } : {}),
     };
   }
 

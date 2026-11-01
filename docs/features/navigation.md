@@ -350,3 +350,29 @@ Every verdict is the existing one: `excursions`/`resolveBands`, `gradeLabResult`
 - A section that is not current carries the attention dot when something inside needs doing.
 - One sport: no tabs, no header, no wash — nothing changes. `SportIcon` stands in for the
   handoff's Material Symbols.
+
+## Where a page goes once a club has a second sport — POOLSE-143 (1 November 2026)
+
+The rule for every menu question from here on (Rui, 01-11-2026):
+
+- **An item whose data is sport-specific moves into each sport's group** (`perSport: true`):
+  Turmas, Calendário, Níveis (one ladder per sport), Avanços and Competição.
+- **A facility-level item whose rows carry a sport gets a filtered copy in each sport's group and
+  stays shared** (`perSport: 'copy'`): Alunos and Pedidos. The shared list keeps the rows with no
+  sport, behind a *Sem modalidade* chip: a student in no live turma, or a request that names
+  neither a turma nor a level.
+- **An item with no sport dimension stays shared**: Encarregados (a guardian is child-first),
+  Mensagens (audience-based), Receção (until the pilot says whether the desk sells per sport) and
+  everything under Instalações. **Mensalidades needs nothing**: a plan priced by a level is per sport
+  already, and inscrição, seguro and quota are per season or age. Do not copy the price list per
+  sport.
+
+An entry may also name the sports it exists for (`sports`). Competição is `COMPETITION_SPORTS`
+(`['pool']`): a sport with no competition model shows no entry, and `?sport=` naming one is a 404
+page, never an empty one.
+
+A copied page is a sport's page (its wash, its sidebar) only when the address says `?sport=`; a
+moved one belongs to the first sport even bare, as before. The *Pedidos* circle splits per sport
+(`leads:<sport>`, `badgePerSport`) and the shared entry counts only the requests with no sport.
+`?sport=` is checked against the club's sports (400 otherwise) and is a convenience filter, not a
+permission, until POOLSE-145. With swimming alone nothing changes: the menu is the one that shipped.

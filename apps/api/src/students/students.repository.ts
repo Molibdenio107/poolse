@@ -30,6 +30,8 @@ export interface StudentLevel {
   id: string;
   name: string;
   sortOrder: number;
+  /** The sport whose ladder it is on — POOLSE-126; `pool` for every level that predates it. */
+  sportId: string;
   /**
    * Its swimmers compete — POOLSE-81 (pré-competição, competição). The same
    * ladder, so advancement proposes swimmers into it as into any level.
@@ -343,10 +345,15 @@ function asDuplicate(error: unknown, name: string): never {
 // Levels
 // ---------------------------------------------------------------------------
 
-export async function listLevels(organizationId: string): Promise<StudentLevel[]> {
+export async function listLevels(
+  organizationId: string,
+  /** One sport's ladder — a sport's *Níveis* (POOLSE-143). Null is every ladder. */
+  sport: string | null = null,
+): Promise<StudentLevel[]> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
       id: string;
+      sport_id: string;
       name: string;
       sort_order: number;
       min_age_months: number | null;
@@ -373,13 +380,16 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
                   AND s.archived_at IS NULL
              ) AS student_count
              , l.colour::text AS colour
+             , l.sport_id
         FROM student_level l
        WHERE l.archived_at IS NULL
+         AND ($1::text IS NULL OR l.sport_id = $1::text)
        ORDER BY l.sort_order, l.name
-    `);
+    `, [sport]);
 
     return rows.map((row) => ({
       id: row.id,
+      sportId: row.sport_id,
       name: row.name,
       sortOrder: row.sort_order,
       colour: row.colour,
@@ -491,6 +501,8 @@ export async function createLevel(
    * level created afterwards without one being picked.
    */
   colour: string | null = null,
+  /** The ladder it joins — POOLSE-143; a sport's *Níveis* creates on its own. */
+  sportId = 'pool',
 ): Promise<string> {
   try {
     return await withOrg(organizationId, async (tx) => {
@@ -500,11 +512,13 @@ export async function createLevel(
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO student_level (organization_id, name, sort_order,
                                     min_age_months, max_age_months,
-                                    admits_male, admits_female, colour, competitive)
+                                    admits_male, admits_female, colour, competitive, sport_id)
          VALUES (
            $1, $2,
-           coalesce((SELECT max(sort_order) + 1 FROM student_level WHERE archived_at IS NULL), 0),
-           $3, $4, $5, $6, $7, $8
+           -- The end of its own sport's ladder; each ladder is ordered on its own.
+           coalesce((SELECT max(sort_order) + 1 FROM student_level
+                      WHERE archived_at IS NULL AND sport_id = $9), 0),
+           $3, $4, $5, $6, $7, $8, $9
          )
          RETURNING id`,
         [
@@ -516,6 +530,7 @@ export async function createLevel(
           range.admitsFemale,
           colour,
           range.competitive,
+          sportId,
         ],
       );
 
@@ -787,7 +802,11 @@ export interface StudentQuery {
   toInvite?: boolean;
   search: string | null;
   levelId: string | null;
-  /** Only students with an active turma of this sport — multi-sport Slice 3. */
+  /**
+   * Only students with an active turma of this sport — multi-sport Slice 3 —
+   * or `none`: those with no active turma at all, the shared list's *Sem
+   * modalidade* (POOLSE-143). Validated by `readSportFilter` before it gets here.
+   */
   sport?: string | null;
   /** Only students in turmas of two or more sports. */
   multiSport?: boolean;
@@ -811,18 +830,25 @@ const STUDENT_SPORTS = (alias: string): string => `
  */
 export async function studentSportCounts(
   organizationId: string,
-): Promise<{ total: number; bySport: { sport: string; count: number }[]; multi: number }> {
+): Promise<{ total: number; bySport: { sport: string; count: number }[]; multi: number; none: number }> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ total: number; by_sport: { sport: string; count: number }[]; multi: number }>(
+    const { rows } = await tx.query<{
+      total: number;
+      by_sport: { sport: string; count: number }[];
+      multi: number;
+      none: number;
+    }>(
       `WITH x AS (
          SELECT s.id, ${STUDENT_SPORTS('s')} AS sports FROM student s WHERE s.archived_at IS NULL
        )
        SELECT (SELECT count(*) FROM x)::int AS total,
               (SELECT coalesce(json_agg(json_build_object('sport', sport, 'count', n) ORDER BY sport), '[]'::json)
                  FROM (SELECT unnest(sports) AS sport, count(*)::int AS n FROM x GROUP BY 1) t) AS by_sport,
-              (SELECT count(*) FROM x WHERE cardinality(sports) > 1)::int AS multi`,
+              (SELECT count(*) FROM x WHERE cardinality(sports) > 1)::int AS multi,
+              -- *Sem modalidade* — POOLSE-143: in no live turma, so in no sport's group.
+              (SELECT count(*) FROM x WHERE cardinality(sports) = 0)::int AS none`,
     );
-    return { total: rows[0]!.total, bySport: rows[0]!.by_sport, multi: rows[0]!.multi };
+    return { total: rows[0]!.total, bySport: rows[0]!.by_sport, multi: rows[0]!.multi, none: rows[0]!.none };
   });
 }
 
@@ -920,7 +946,9 @@ export async function listStudents(
          AND (NOT $5::boolean OR ${PAYMENT_STATE} = 'overdue')
          AND (NOT $6::boolean OR ${HAS_UNINVITED('s')})
          -- *Modalidades* — multi-sport Slice 3.
-         AND ($7::text IS NULL OR $7::text = ANY(${STUDENT_SPORTS('s')}))
+         AND ($7::text IS NULL
+              OR ($7::text = 'none' AND cardinality(${STUDENT_SPORTS('s')}) = 0)
+              OR $7::text = ANY(${STUDENT_SPORTS('s')}))
          AND (NOT $8::boolean OR cardinality(${STUDENT_SPORTS('s')}) > 1)
        /*
         * The window goes here, inside the statement that carries the tenant
@@ -1024,7 +1052,9 @@ export async function exportStudents(
          -- The list's own filters (sweep 01-11-2026): an export under a filtered
          -- register must be that register, or the button lies about its file.
          AND (NOT $5::boolean OR ${PAYMENT_STATE} = 'overdue')
-         AND ($6::text IS NULL OR $6::text = ANY(${STUDENT_SPORTS('s')}))
+         AND ($6::text IS NULL
+              OR ($6::text = 'none' AND cardinality(${STUDENT_SPORTS('s')}) = 0)
+              OR $6::text = ANY(${STUDENT_SPORTS('s')}))
          AND (NOT $7::boolean OR cardinality(${STUDENT_SPORTS('s')}) > 1)
        ORDER BY ${nameOrder('s')}, s.id
        LIMIT $3

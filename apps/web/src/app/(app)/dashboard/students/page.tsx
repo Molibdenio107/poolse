@@ -22,7 +22,7 @@ import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isMultiSport, isPoolseSport, type PoolseSport } from '@poolse/rules';
 import { SUB_MENU_ROW, subMenuPillClass } from '@/components/section-pills';
-import { SportChip } from '@/components/sport-chip';
+import { SportChip, withCurrent } from '@/components/sport-chip';
 import { SportIcon, sportNameKey } from '@/components/sport-icon';
 
 /**
@@ -68,7 +68,8 @@ export default async function StudentsPage({
   // has neither a login nor a live invitation.
   const pendingOnly = invite === 'pending';
   // *Modalidades* — multi-sport Slice 3: one sport, or the students in two or more.
-  const sportFilter: PoolseSport | null = isPoolseSport(sport) ? sport : null;
+  // `none` is *Sem modalidade* — in no live turma, so in no sport's group (POOLSE-143).
+  const sportFilter: PoolseSport | 'none' | null = sport === 'none' ? 'none' : isPoolseSport(sport) ? sport : null;
   const multiOnly = multi === '1';
   const flags = {
     sort: overdueOnly ? 'overdue' : undefined,
@@ -324,7 +325,7 @@ export default async function StudentsPage({
               >
                 {t('students.sportAll', { count: data.sportCounts.total })}
               </FromLink>
-              {data.sportCounts.bySport.map((entry) => (
+              {withCurrent(data.sportCounts.bySport, sportFilter).map((entry) => (
                 <FromLink
                   key={entry.sport}
                   href={pageHref('/dashboard/students', { search, levelId, ...flags, sport: entry.sport, multi: undefined }, 1)}
@@ -343,6 +344,14 @@ export default async function StudentsPage({
                 className={subMenuPillClass(multiOnly)}
               >
                 {t('students.sportMulti', { count: data.sportCounts.multi })}
+              </FromLink>
+              {/* POOLSE-143: the students no sport's group lists — new, paused, between seasons. */}
+              <FromLink
+                href={pageHref('/dashboard/students', { search, levelId, ...flags, sport: 'none', multi: undefined }, 1)}
+                aria-current={sportFilter === 'none' ? 'page' : undefined}
+                className={subMenuPillClass(sportFilter === 'none')}
+              >
+                {t('students.sportNone', { count: data.sportCounts.none })}
               </FromLink>
             </nav>
           )}

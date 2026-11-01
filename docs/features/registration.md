@@ -132,3 +132,10 @@ Waitlisted requests are archived too; the student they created is untouched.
 There's no email to the family on receipt or on an answer; that waits for the notifications
 phase. There's also no online payment,
 no picking a session from the public form, and no parent account.
+
+## The public form asks for the sport — POOLSE-143 (1 November 2026)
+
+For a club with a second sport, `public_lead_form()` also returns `sports` and each level's
+`sportId`, and the form asks for the *Modalidade* before the *Nível*, listing only that sport's
+levels. The sport is not sent: the level carries it, and a lead's sport is derived from its level
+or turma. A pool-only club's form and its answer are exactly as before.

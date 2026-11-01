@@ -19,6 +19,7 @@ import {
   visibleSections,
   type Badges,
   type Item,
+  badgeCount,
 } from '@/lib/nav-entries';
 
 export type { BadgeKey, Badges } from '@/lib/nav-entries';
@@ -85,6 +86,7 @@ export function AppSidebar({
   const t = useTranslations();
   const pathname = usePathname();
   const sport = useCurrentSport(sports);
+  const askedSport = useAskedSport();
 
   /*
    * Pruned by role and by kind of tenant, at every depth — POOLSE-38 AC5, 4.5.
@@ -93,7 +95,7 @@ export function AppSidebar({
    * standing. Never inherited: Instalações and Staff have different audiences.
    */
   const sections = visibleSections({ roles, kind, modules, sports });
-  const section = sectionOf(sections, pathname, sport);
+  const section = sectionOf(sections, pathname, sport, askedSport);
 
   /*
    * From `md` up only — POOLSE-88. Below it the same list lives in a sheet
@@ -136,16 +138,27 @@ function groupsOf(sections: Item[]): Item[] {
   return groups.length >= 2 ? groups : [];
 }
 
-function sectionOf(sections: Item[], pathname: string, sport: PoolseSport): NavSection | null {
+function sectionOf(
+  sections: Item[],
+  pathname: string,
+  sport: PoolseSport,
+  /** `?sport=` as written — null when the address names none. */
+  asked: string | null,
+): NavSection | null {
   const groups = groupsOf(sections);
   if (groups.length === 0) return null;
-  const inSport = groups.some((group) =>
-    (group.children ?? []).some((child) => {
+  /*
+   * A copied entry (Alunos, Pedidos — POOLSE-143) is also a shared page, so it
+   * is a sport's only when the address says which; a moved one (Turmas,
+   * Níveis…) belongs to a sport even bare, the first one by POOLSE-125 rule 3.
+   */
+  const matches = (items: Item[]): boolean =>
+    items.some((child) => {
       const path = pathOf(child.href);
-      return pathname === path || pathname.startsWith(`${path}/`);
-    }),
-  );
-  return inSport ? sport : 'site';
+      const here = pathname === path || pathname.startsWith(`${path}/`);
+      return (here && (child.perSport !== 'copy' || asked !== null)) || matches(child.children ?? []);
+    });
+  return groups.some((group) => matches(group.children ?? [])) ? sport : 'site';
 }
 
 /** What the sidebar lists for a section: the shared pages, or one sport's entries. */
@@ -257,7 +270,7 @@ function SectionLinks({
   const site = sections.filter((item) => item.sport === undefined);
   const waiting = (items: Item[]): number =>
     items.reduce(
-      (sum, item) => sum + (item.badge === undefined ? 0 : (badges[item.badge] ?? 0)) + childCount(item, badges),
+      (sum, item) => sum + badgeCount(item, badges) + childCount(item, badges),
       0,
     );
   const lineSport = target === 'site' || target === null ? null : target;
@@ -390,8 +403,9 @@ export function ClubBrandOrSections({
 }): React.ReactElement {
   const pathname = usePathname();
   const sport = useCurrentSport(sports);
+  const askedSport = useAskedSport();
   const sections = visibleSections({ roles, kind, modules, sports });
-  const section = sectionOf(sections, pathname, sport);
+  const section = sectionOf(sections, pathname, sport, askedSport);
   if (section === null) return <ClubIdentity club={club} />;
   return (
     <>
@@ -426,7 +440,8 @@ export function SportShell({
 }): React.ReactElement {
   const pathname = usePathname();
   const sport = useCurrentSport(sports);
-  const section = sectionOf(visibleSections({ roles, kind, modules, sports }), pathname, sport);
+  const askedSport = useAskedSport();
+  const section = sectionOf(visibleSections({ roles, kind, modules, sports }), pathname, sport, askedSport);
   const washed = section !== null && section !== 'site';
   return (
     <div {...(washed ? { 'data-sport': section } : {})} className={cn(className, washed && 'sport-shell')}>
@@ -457,6 +472,11 @@ function SectionFade({ section, children }: { section: NavSection | null; childr
       {children}
     </div>
   );
+}
+
+/** `?sport=` exactly as the address has it, or null — POOLSE-143. */
+function useAskedSport(): string | null {
+  return useSearchParams().get('sport');
 }
 
 /** `?sport=` when it names one of the club's sports, else the first — POOLSE-125 rule 3. */
@@ -525,9 +545,10 @@ export function MobileMenu({
   const t = useTranslations();
   const pathname = usePathname();
   const sport = useCurrentSport(sports);
+  const askedSport = useAskedSport();
   const [open, setOpen] = useState(false);
   const sections = visibleSections({ roles, kind, modules, sports });
-  const section = sectionOf(sections, pathname, sport);
+  const section = sectionOf(sections, pathname, sport, askedSport);
 
   // Any arrival closes it, another sport's tab (the same path, another
   // `?sport=`) included.
@@ -586,7 +607,7 @@ export function MobileMenu({
 function childCount(item: Item, badges: Badges): number {
   return (item.children ?? []).reduce(
     (sum, child) =>
-      sum + (child.badge === undefined ? 0 : (badges[child.badge] ?? 0)) + childCount(child, badges),
+      sum + badgeCount(child, badges) + childCount(child, badges),
     0,
   );
 }
@@ -632,7 +653,7 @@ function NavItem({
   // The page is named once: by the child that shares its parent's address.
   const current =
     pathname === path && ofSport(item) && !(item.children ?? []).some((child) => child.href === item.href);
-  const count = item.badge === undefined ? 0 : (badges[item.badge] ?? 0);
+  const count = badgeCount(item, badges);
   // A closed section says something inside it needs doing (POOLSE-120).
   const inside = count === 0 && !active ? childCount(item, badges) : 0;
 

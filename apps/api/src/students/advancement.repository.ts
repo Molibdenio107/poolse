@@ -75,6 +75,8 @@ export interface TransferProposal {
 export async function listProposals(
   organizationId: string,
   page: PageQuery,
+  /** One sport's queue — a sport's *Avanços* (POOLSE-143): proposals onto its ladder. */
+  sport: string | null = null,
 ): Promise<Paginated<TransferProposal>> {
   return withOrg(organizationId, async (tx) => {
     const run = (limit: number, offset: number) =>
@@ -143,9 +145,11 @@ export async function listProposals(
           WHERE p.status = 'pending'
             AND p.archived_at IS NULL
             AND s.archived_at IS NULL
+            -- In the sport's own group, inside the same statement as the window.
+            AND ($3::text IS NULL OR tl.sport_id = $3::text)
           ORDER BY p.generated_at, ${nameOrder('s')}
           LIMIT $1 OFFSET $2`,
-        [limit, offset],
+        [limit, offset, sport],
       );
 
     return windowed(page, run, (row) => ({

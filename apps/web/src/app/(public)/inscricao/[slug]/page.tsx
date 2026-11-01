@@ -1,3 +1,5 @@
+import { isPoolseSport } from '@poolse/rules';
+import { sportNameKey } from '@/components/sport-icon';
 import Link from 'next/link';
 import { createTranslator } from 'next-intl';
 import { fetchRegistrationForm, type RegistrationForm as Loaded } from '@/lib/public-registration';
@@ -96,6 +98,7 @@ export default async function RegistrationPage({
     preferences: label('preferences'),
     facility: label('facility'),
     level: label('level'),
+    sport: label('sport'),
     noPreference: label('noPreference'),
     days: label('days'),
     daysHint: label('daysHint'),
@@ -141,6 +144,11 @@ export default async function RegistrationPage({
         majority={loaded.form.ageOfMajority}
         facilities={loaded.form.facilities}
         levels={loaded.form.levels}
+        // POOLSE-143 rule 6: asked only of a club with a second sport.
+        sports={(loaded.form.sports ?? []).filter(isPoolseSport).map((sport) => ({
+          value: sport,
+          label: t(sportNameKey(sport)),
+        }))}
         weekdays={weekdays}
         labels={labels}
         errors={errors}

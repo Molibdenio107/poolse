@@ -591,3 +591,22 @@ None of this appears for a pool-only club (`isMultiSport`).
 always sent the overdue filter, and the export route dropped it; an export from *Em atraso* handed
 over every student. `exportStudents` reads the list's own predicates (`PAYMENT_STATE`,
 `STUDENT_SPORTS`), never a copy.
+
+## Alunos per sport — POOLSE-143 (1 November 2026)
+
+With a second sport on (`isMultiSport`):
+
+- **Alunos.** Each sport's group has the register filtered by `?sport=`. The shared register
+  stays, with a *Sem modalidade* chip for students in no live turma (`?sport=none`). The chips
+  always include the sport being read, at 0 if it has nobody yet. `readSportFilter` checks the
+  value against the club's sports: an unknown sport is a 400, not an empty list (this reverses
+  Slice 3's "an unknown sport matches nobody").
+- **Níveis** is one sport's ladder. `GET /students?sport=` lists only its levels, and
+  `POST /levels` takes `sportId`, adding to the end of that sport's own ladder.
+- **Avanços** (`GET /transfer-proposals?sport=`) is the proposals onto that sport's ladder.
+- **Pedidos** gets a filtered copy per sport. A lead's sport is `LEAD_SPORT` in
+  `leads.repository.ts`: the recinto of the turma asked for, else the level's sport, else none.
+  It is never stored. The list, the chips (`sportCounts=1`) and the menu circle all read it.
+- **Competição** is swimming only.
+
+Instructors may filter any sport, as before, until POOLSE-145.

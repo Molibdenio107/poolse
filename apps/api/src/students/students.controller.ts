@@ -1,3 +1,4 @@
+import { readSportFilter } from './sport-filter.js';
 import { EnrollmentClashError, clashConflict } from '../classes/enrollment-clash.js';
 import {
   BadRequestException,
@@ -12,7 +13,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { isValidNif, isPoolseSport } from '@poolse/rules';
+import { isValidNif } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireActsForStudent } from './student-access.js';
 import {
@@ -148,7 +149,7 @@ interface StudentsResponse {
    * The *Modalidades* chips' counts — multi-sport Slice 3. Only when asked
    * (`sportCounts=1`), which the web does only for a club with a second sport.
    */
-  sportCounts?: { total: number; bySport: { sport: string; count: number }[]; multi: number };
+  sportCounts?: { total: number; bySport: { sport: string; count: number }[]; multi: number; none: number };
   /**
    * The club's maioridade — POOLSE-22.
    *
@@ -403,6 +404,8 @@ export class StudentsController {
     // Security review, 12 October 2026: this answered any member, a guardian included.
     requireRole('owner', 'admin', 'instructor');
     const { organizationId } = currentTenant();
+    // POOLSE-143: a sport the club has on, or `none`; anything else is a 400.
+    const sportFilter = await readSportFilter(organizationId, sport);
 
     // All three are tenant-scoped reads on the same organization; together they
     // cost one round trip instead of three.
@@ -419,14 +422,15 @@ export class StudentsController {
           overdueOnly: sort === 'overdue',
           // *Por convidar* — POOLSE-129.
           toInvite: invite === 'pending',
-          // *Modalidades* — multi-sport Slice 3. A sport the catalogue does not
-          // know matches nobody rather than everybody.
-          sport: sport === undefined || sport.trim() === '' ? null : isPoolseSport(sport) ? sport : '-',
+          // *Modalidades* — multi-sport Slice 3, validated since POOLSE-143.
+          sport: sportFilter,
           multiSport: multi === '1',
         },
         readPageQuery(page, limit),
       ),
-      listLevels(organizationId),
+      // A sport's register lists that sport's ladder (POOLSE-143); `none` and no
+      // filter list every ladder.
+      listLevels(organizationId, sportFilter === 'none' ? null : sportFilter),
       ageOfMajority(organizationId),
       sportCounts === '1' ? studentSportCounts(organizationId) : Promise.resolve(undefined),
     ]);
@@ -680,8 +684,17 @@ export class LevelsController {
     const { organizationId } = currentTenant();
 
     const name = requiredText(body['name'], 'name');
+    // POOLSE-143: a sport's *Níveis* adds to its own ladder; a sport the club
+    // has not switched on is a 400 from the same helper as every list.
+    const sport = await readSportFilter(
+      organizationId,
+      typeof body['sportId'] === 'string' ? body['sportId'] : undefined,
+    );
+    if (sport === 'none') throw new BadRequestException('sportId must be a sport');
     try {
-      return { id: await createLevel(organizationId, name, ageRange(body), levelColour(body)) };
+      return {
+        id: await createLevel(organizationId, name, ageRange(body), levelColour(body), sport ?? 'pool'),
+      };
     } catch (error) {
       throw asHttp(error);
     }
@@ -1351,10 +1364,14 @@ export class AdvancementController {
   async list(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    /** POOLSE-143: one sport's queue. Every proposal is on a ladder, so `none` is refused. */
+    @Query('sport') sport?: string,
   ): Promise<{ proposals: Paginated<TransferProposal> }> {
     requireRole('owner', 'admin', 'instructor');
     const { organizationId } = currentTenant();
-    return { proposals: await listProposals(organizationId, readPageQuery(page, limit)) };
+    const filter = await readSportFilter(organizationId, sport);
+    if (filter === 'none') throw new BadRequestException('sport must be a sport');
+    return { proposals: await listProposals(organizationId, readPageQuery(page, limit), filter) };
   }
 
   /**

@@ -283,9 +283,11 @@ export async function createLevelAction(
   const organizationId = String(formData.get('organizationId') ?? '');
   const body = levelBody(formData);
   if (!body.name) return { ok: false, errorKey: 'students.levelNameRequired' };
+  // POOLSE-143: the sport's own ladder when added from a sport's *Níveis*.
+  const sportId = String(formData.get('sportId') ?? '').trim();
 
   try {
-    await apiPost('/levels', body, { organizationId });
+    await apiPost('/levels', sportId === '' ? body : { ...body, sportId }, { organizationId });
   } catch (error) {
     return failure(error, 'students.levelFailed');
   }

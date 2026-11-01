@@ -86,6 +86,32 @@ BEGIN
   RAISE NOTICE 'PASS test 1b: closed, unknown and malformed look the same';
 END $$;
 
+RESET ROLE;
+
+-- Test 1c — POOLSE-143: a club with a second sport is offered the sport, and each
+-- level says its own; switched back to swimming alone, the form is as before.
+DO $$
+DECLARE v_form jsonb;
+BEGIN
+  UPDATE organization SET enabled_sports = '{pool,tennis}' WHERE slug = 'clube-aberto';
+  v_form := public_lead_form('clube-aberto');
+  IF v_form->'sports' <> '["pool", "tennis"]'::jsonb THEN
+    RAISE EXCEPTION 'FAIL test 1c: a two-sport form offers %', v_form->'sports';
+  END IF;
+  IF v_form->'levels'->0->>'sportId' IS DISTINCT FROM 'pool' THEN
+    RAISE EXCEPTION 'FAIL test 1c: a level does not say its sport: %', v_form->'levels';
+  END IF;
+  UPDATE organization SET enabled_sports = '{pool}' WHERE slug = 'clube-aberto';
+  v_form := public_lead_form('clube-aberto');
+  IF v_form ? 'sports' OR v_form->'levels'->0 ? 'sportId' THEN
+    RAISE EXCEPTION 'FAIL test 1c: a pool-only form changed: %', v_form;
+  END IF;
+  RAISE NOTICE 'PASS test 1c: the sport is offered only with a second sport on';
+END $$;
+
+SET LOCAL ROLE poolse_app;
+SELECT set_config('app.organization_id', 'f6900000-0000-0000-0000-000000000002', true);
+
 -- ---------------------------------------------------------------------------
 -- Test 2 — a submit writes for an open club only, and returns nothing either way
 -- ---------------------------------------------------------------------------

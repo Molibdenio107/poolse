@@ -1,3 +1,4 @@
+import { withCurrent } from '@/components/sport-chip';
 import { getTranslations } from 'next-intl/server';
 import { apiFetch, type Classes, type Lead, type Leads, type Me, type RegistrationSettings } from '@/lib/api';
 import { formatDate, formatStamp } from '@/lib/date-format';
@@ -9,6 +10,11 @@ import { SectionPills, pickSection, sectionHref } from '@/components/section-pil
 import { LeadActions } from './lead-actions';
 import type { TurmaOption } from '@/components/turma-picker';
 import { RegistrationSettingsForm } from './registration-settings';
+import { BASE_SPORT, isMultiSport, isPoolseSport, type PoolseSport } from '@poolse/rules';
+import { FromLink } from '@/components/from-link';
+import { SUB_MENU_ROW, subMenuPillClass } from '@/components/section-pills';
+import { SportIcon, sportNameKey } from '@/components/sport-icon';
+import { cn } from '@/lib/utils';
 
 const PATH = '/dashboard/students/pedidos';
 const SECTIONS = ['open', 'done', 'form'] as const;
@@ -34,10 +40,20 @@ export default async function LeadsPage({
   const params = await searchParams;
   const back = originBack(typeof params.from === 'string' ? params.from : undefined);
   const section: Section = pickSection(SECTIONS, params['section'], 'open');
+  // POOLSE-143: a sport's *Pedidos*, or the shared list's *Sem modalidade*.
+  const sportParam = typeof params['sport'] === 'string' ? params['sport'] : undefined;
+  const sport: PoolseSport | 'none' | undefined =
+    sportParam === 'none' ? 'none' : isPoolseSport(sportParam) ? sportParam : undefined;
+  const leadsQuery = (view?: 'done'): string => {
+    const query = new URLSearchParams({ sportCounts: '1' });
+    if (view !== undefined) query.set('view', view);
+    if (sport !== undefined) query.set('sport', sport);
+    return `/leads?${query.toString()}`;
+  };
 
   const [openLeads, doneLeads, settings, me] = await Promise.all([
-    outcome(apiFetch<Leads>('/leads')),
-    section === 'done' ? outcome(apiFetch<Leads>('/leads?view=done')) : Promise.resolve(null),
+    outcome(apiFetch<Leads>(leadsQuery())),
+    section === 'done' ? outcome(apiFetch<Leads>(leadsQuery('done'))) : Promise.resolve(null),
     outcome(apiFetch<RegistrationSettings>('/settings/registration')),
     outcome(apiFetch<Me>('/me')),
   ]);
@@ -142,9 +158,49 @@ export default async function LeadsPage({
       );
   }
 
+  /*
+   * The sport chips — POOLSE-143, as on Alunos: everyone, each sport, and the
+   * leads that name neither a turma nor a level (*Sem modalidade*). Only for a
+   * club with a second sport; the section the reader is on stays.
+   */
+  const clubSports = me.state === 'ok' ? (me.data.memberships[0]?.sports ?? [BASE_SPORT]) : [BASE_SPORT];
+  const counts = openLeads.data.sportCounts;
+  const sportHref = (value: string | undefined): string => {
+    const query = new URLSearchParams();
+    if (section !== 'open') query.set('section', section);
+    if (value !== undefined) query.set('sport', value);
+    if (typeof params.from === 'string') query.set('from', params.from);
+    const rest = query.toString();
+    return rest === '' ? PATH : `${PATH}?${rest}`;
+  };
+  const sportChips =
+    isMultiSport(clubSports) && counts !== undefined && section !== 'form' ? (
+      <nav aria-label={t('leads.sportFilter')} className={cn(SUB_MENU_ROW, 'items-center')}>
+        <FromLink href={sportHref(undefined)} aria-current={sport === undefined ? 'page' : undefined} className={subMenuPillClass(sport === undefined)}>
+          {t('students.sportAll', { count: counts.total })}
+        </FromLink>
+        {withCurrent(counts.bySport, sport).map((entry) => (
+          <FromLink
+            key={entry.sport}
+            href={sportHref(entry.sport)}
+            aria-current={sport === entry.sport ? 'page' : undefined}
+            className={subMenuPillClass(sport === entry.sport)}
+          >
+            <SportIcon sport={entry.sport} className="size-4" />
+            {t(sportNameKey(entry.sport))}
+            <span className="tabular-nums opacity-80">{entry.count}</span>
+          </FromLink>
+        ))}
+        <FromLink href={sportHref('none')} aria-current={sport === 'none' ? 'page' : undefined} className={subMenuPillClass(sport === 'none')}>
+          {t('students.sportNone', { count: counts.none })}
+        </FromLink>
+      </nav>
+    ) : null;
+
   return shell(
     <div className="flex flex-col gap-5">
       <SectionPills items={pills} current={section} label={t('leads.sectionsLabel')} />
+      {sportChips}
       {/*
         The form drops requests past its ceiling without telling the sender —
         so it tells the club instead. 16-10-2026 sweep.

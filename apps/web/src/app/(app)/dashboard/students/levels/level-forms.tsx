@@ -148,9 +148,12 @@ function OverlapWarning({
 export function CreateLevelForm({
   organizationId,
   levels,
+  sportId = null,
 }: {
   organizationId: string;
   levels: StudentLevel[];
+  /** The sport whose ladder this adds to — a sport's *Níveis* (POOLSE-143). Null is the pool. */
+  sportId?: string | null;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(createLevelAction, INITIAL);
@@ -166,6 +169,7 @@ export function CreateLevelForm({
   return (
     <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
+      {sportId !== null && <input type="hidden" name="sportId" value={sportId} />}
       <div className="flex flex-wrap gap-2">
         <input
           name="name"
