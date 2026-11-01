@@ -3422,7 +3422,14 @@
       "moved": "Mudou só esta semana"
     },
     "clashLabel": "Aulas sobrepostas",
-    "clashValue": "{names} também {count, plural, one {tem} other {têm}} outra aula a esta hora"
+    "clashValue": "{names} também {count, plural, one {tem} other {têm}} outra aula a esta hora",
+    "blockFill": "{active}/{capacity}",
+    "freeSlot": "Marcar aula",
+    "legend": {
+      "label": "Legenda",
+      "uncovered": "Sem professor",
+      "free": "Recinto livre — clique para marcar aula"
+    }
   },
   "inventory": {
     "title": "Inventário",

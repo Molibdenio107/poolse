@@ -3422,7 +3422,14 @@
       "moved": "Moved for this week only"
     },
     "clashLabel": "Overlapping lessons",
-    "clashValue": "{names} also {count, plural, one {has} other {have}} another lesson at this time"
+    "clashValue": "{names} also {count, plural, one {has} other {have}} another lesson at this time",
+    "blockFill": "{active}/{capacity}",
+    "freeSlot": "Book a lesson",
+    "legend": {
+      "label": "Legend",
+      "uncovered": "No instructor",
+      "free": "Free space — click to book a lesson"
+    }
   },
   "inventory": {
     "title": "Inventory",

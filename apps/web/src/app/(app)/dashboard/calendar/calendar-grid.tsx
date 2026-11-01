@@ -48,8 +48,9 @@ import {
   snapStep,
   startTimeOf,
   TIME_VISIBLE_MIN_HEIGHT,
+  CAPACITY_VISIBLE_MIN_HEIGHT,
 } from '@/lib/calendar-scale';
-import { toMinutes } from '@/lib/grid-layout';
+import { instructorDisplay, toMinutes } from '@/lib/grid-layout';
 import { cn } from '@/lib/utils';
 import { TurmaCardButton, TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
 import { useToast } from '@/components/ui/toast';
@@ -1102,6 +1103,8 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
                         column exists is that those are hard to find.
                       */
                       creatable={lane.id !== NO_LANE_ID}
+                      step={step}
+                      idle={dragging === null && ghost === null}
                       onCreate={props.onCreate}
                     />
                   ))}
@@ -1318,6 +1321,24 @@ function Toolbar({
         )}
       </ul>
       )}
+
+      {/*
+        The two block states a colour alone would not explain (multi-sport
+        Slice 4, the handoff's legend): each swatch drawn as the block is drawn,
+        and named. Read-only — the filters above are what switch things off.
+      */}
+      {anything && (
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground-muted" aria-label={t('calendar.legend.label')}>
+          <li className="flex items-center gap-2">
+            <span aria-hidden="true" className="lesson-chip lesson-chip-uncovered lesson-tint-none h-3 w-4 rounded-sm" />
+            {t('calendar.legend.uncovered')}
+          </li>
+          <li className="flex items-center gap-2">
+            <span aria-hidden="true" className="h-3 w-4 rounded-sm border border-dashed border-foreground-muted/60" />
+            {t('calendar.legend.free')}
+          </li>
+        </ul>
+      )}
     </div>
   );
 }
@@ -1512,6 +1533,8 @@ function LaneColumn({
   disabled,
   closed = [],
   creatable = true,
+  step,
+  idle,
   onCreate,
 }: {
   weekday: number;
@@ -1534,9 +1557,21 @@ function LaneColumn({
    * One flag for both would have meant choosing which of the two to get wrong.
    */
   creatable?: boolean;
+  /** The grid's snap step, so the free-slot ghost lands where a click would. */
+  step: number;
+  /** No drag or resize in flight: the ghost is for a pointer at rest. */
+  idle: boolean;
   onCreate: (weekday: number, laneId: string, startMinutes: number) => void;
 }): React.ReactElement {
   const t = useTranslations();
+  /*
+   * *Recinto livre* — the handoff's fourth block state (multi-sport Slice 4).
+   * Drawn where the mouse is, never in every free slot: a dashed box in each
+   * empty quarter-hour of seven days and six pistas would bury the week. It is
+   * the click's own preview — "Marcar aula" at the snapped minute — so a mouse
+   * sees what a click will do; a finger, which has no hover, taps as before.
+   */
+  const [hover, setHover] = useState<number | null>(null);
   const { setNodeRef, isOver } = useDroppable({
     id: `col:${weekday}:${lane.id}`,
     disabled,
@@ -1551,6 +1586,18 @@ function LaneColumn({
   return (
     <div
       ref={setNodeRef}
+      onPointerMove={(event) => {
+        if (event.pointerType !== 'mouse' || disabled || !creatable || !idle) {
+          if (hover !== null) setHover(null);
+          return;
+        }
+        const box = event.currentTarget.getBoundingClientRect();
+        const minutes = range.startMinutes + pxToMinutes(event.clientY - box.top);
+        const snapped = Math.floor(minutes / step) * step;
+        const next = shutAt(minutes) || snapped + step > range.endMinutes ? null : snapped;
+        if (next !== hover) setHover(next);
+      }}
+      onPointerLeave={() => setHover(null)}
       onClick={(event) => {
         if (disabled || !creatable) return;
         const box = event.currentTarget.getBoundingClientRect();
@@ -1571,6 +1618,15 @@ function LaneColumn({
           `${minutesToPx(60)}px)`,
       }}
     >
+      {hover !== null && idle && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0.5 flex items-start overflow-hidden rounded-chip border border-dashed border-foreground-muted/60 px-0.5 py-0.5 text-[0.625rem] leading-tight text-foreground-muted"
+          style={{ top: minutesToPx(hover - range.startMinutes), height: Math.max(26, minutesToPx(step)) }}
+        >
+          <span className="leading-[1.1]">{t('calendar.freeSlot')}</span>
+        </div>
+      )}
       {closed.map((closure, index) => {
         const from = Math.max(closure.window?.from ?? range.startMinutes, range.startMinutes);
         const to = Math.min(closure.window?.to ?? range.endMinutes, range.endMinutes);
@@ -1820,6 +1876,26 @@ function Block({
 
   const card = renderDetail(booking);
 
+  /*
+   * The handoff's block states (multi-sport Slice 4). Two staffing gaps, kept
+   * apart as POOLSE-53 keeps them: *uncovered* is the warning (an amber fill and
+   * "Sem professor" in the warning ink), *to define* is a plan not yet made
+   * ("A definir", muted). Only a turma is staffed this way; a partnership that
+   * brings its own coach is neither. And *completa*: the fill line in full ink.
+   */
+  const staffing =
+    booking.subjectType === 'turma' && booking.instructorStatus !== 'assigned'
+      ? instructorDisplay(booking).state
+      : null;
+  const fill =
+    booking.people !== null && booking.capacity !== null
+      ? {
+          active: booking.people.length,
+          capacity: booking.capacity,
+          full: booking.people.length >= booking.capacity,
+        }
+      : null;
+
   // dnd-kit's node and our own, one stable callback so neither is re-attached
   // on every render of a moving block.
   const setRefs = useCallback(
@@ -1893,6 +1969,7 @@ function Block({
         // where focus is before Space picks it up.
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary',
         tint,
+        staffing === 'uncovered' && 'lesson-chip-uncovered',
         // Nothing on a block is clickable now, so a read-only one says so
         // rather than offering a pointer that does nothing.
         movable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default',
@@ -1970,13 +2047,29 @@ function Block({
           className={cn(
             'truncate text-[0.6875rem] leading-tight opacity-90',
             moving !== null && 'font-semibold opacity-100',
+            // Sem professor — the handoff's second line in the warning ink, 700.
+            moving === null && staffing === 'uncovered' && 'lesson-line-warn',
           )}
         >
           {(moving === null ? booking.startTime : startTimeOf(moving.startMinutes)).slice(0, 5)}
-          {moving === null && booking.instructorName !== null
-            ? ` · ${booking.instructorName}`
-            : ''}
+          {moving === null && staffing === 'uncovered'
+            ? ` · ${t('grid.noInstructor')}`
+            : moving === null && staffing === 'to_define'
+              ? ` · ${t('grid.staffing.pending')}`
+              : moving === null && booking.instructorName !== null
+                ? ` · ${booking.instructorName}`
+                : ''}
           {moving !== null ? ` – ${startTimeOf(moving.startMinutes + moving.durationMinutes).slice(0, 5)}` : ''}
+        </p>
+      )}
+      {/*
+        Lotação, the handoff's third line — the list's own length against the
+        turma's capacity (POOLSE-147's roster), in full ink and 700 when full.
+        Only where there is a capacity and room for a third line.
+      */}
+      {moving === null && fill !== null && height >= CAPACITY_VISIBLE_MIN_HEIGHT && (
+        <p className={cn('truncate font-mono text-[0.6875rem] leading-tight', fill.full && 'lesson-line-strong')}>
+          {t('calendar.blockFill', { active: fill.active, capacity: fill.capacity })}
         </p>
       )}
 

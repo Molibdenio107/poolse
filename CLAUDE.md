@@ -885,6 +885,8 @@ with mensalidades. `docs/features/reception.md`.
 and `lane_level_capacity` is a separate teaching judgement. A null ceiling means "not
 measured" and enforces nothing — never treat it as zero.
 
+**A calendar block's state is words first** (multi-sport Slice 4): *Sem professor* (`uncovered`) is the amber wash (`.lesson-chip-uncovered`, .15) and a `lesson-line-warn` second line; *A definir* (`to_define`) is muted words and no wash; a full turma's fill line is `lesson-line-strong`; *Marcar aula* is a dashed hover ghost, never drawn in every free slot. A new block state is a class in globals.css plus its contrast pairs. `docs/features/calendar.md`.
+
 **One student, one hour: an enrolment that overlaps another of the student's turmas is refused; a move that creates one is warned** (POOLSE-144). `enrollment_clashes()` is the one definition (pattern × pattern, same season, any sport or site), read by the `enrollment_time_clash` trigger, `readGrid`'s `clashStudents` and `GET /class-groups/clashes`. Its refusal is `check_violation` with DETAIL `enrollment_clash|<turma>|<weekday>|<HH:MM>`, the capacity trigger's code, so **a mapping reads `clashFrom` (`classes/enrollment-clash.ts`) before treating a 23514 as "full"**, and a new enrolment path answers `clashConflict`. `docs/features/classes.md`.
 
 **Light and dark mode in every app**, from the first component. Colors come from tokens;

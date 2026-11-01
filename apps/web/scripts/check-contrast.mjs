@@ -181,6 +181,11 @@ const PAIRS = [
   ['success-ink', 'surface+success@0.15', 4.5, 'an ok badge'],
   ['primary-ink', 'surface+primary@0.12', 4.5, 'a pending badge'],
   ['warning-ink', 'surface+warning@0.15', 4.5, 'a late badge'],
+  // A calendar block with nobody teaching it (multi-sport Slice 4): the same
+  // amber wash, under the name, the "Sem professor" line and the fill line.
+  ['foreground', 'surface+warning@0.15', 4.5, 'a turma name on a sem-professor block'],
+  ['warning-ink', 'surface+warning@0.15', 4.5, 'the sem-professor line on its block'],
+  ['foreground-muted', 'surface+warning@0.15', 4.5, 'the fill line on a sem-professor block'],
   ['danger-ink', 'surface+danger@0.15', 4.5, 'a danger badge'],
   ['foreground-muted', 'surface-muted', 4.5, 'a muted badge'],
 

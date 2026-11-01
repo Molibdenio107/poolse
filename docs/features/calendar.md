@@ -490,3 +490,27 @@ pin the timetable. Each block involved then carries the attention dot, and its c
 `clashStudents` on the grid booking, read inside the same grouped statement as the card's
 students (`enrollment_clashes()`, never a second definition). A week moved by hand does not
 count; the rule reads the pattern.
+
+## Block states — multi-sport Slice 4 (1 November 2026)
+
+The handoff's four event states, on the real calendar's blocks (`calendar-grid.tsx`). Each
+says its state in words; colour only repeats it.
+
+- **Normal.** The turma's chip, as POOLSE-139 made it.
+- **Sem professor** (a turma whose booking is `uncovered`). The chip takes the amber wash the
+  *late* badge uses, and its second line reads *17:45 · Sem professor* in the warning ink at
+  700. The wash is .15, not the handoff's .28: at .28 the warning ink fell under AA, and the
+  three pairs on the wash are in `contrast:check`.
+- ***A definir*** (`to_define`). The second line says *A definir*, muted, with no wash. This
+  keeps POOLSE-53's two claims apart: a plan not yet made is not the gap the club is being
+  warned about.
+- **Completa.** A third line gives the fill (*7/10*, the roster's own length against the
+  turma's capacity) in full ink at 700 when full. It fits only on a block of 50 minutes or
+  more (`CAPACITY_VISIBLE_MIN_HEIGHT`); a 45-minute lesson keeps two lines, and its card says
+  *n/capacidade lugares ocupados*.
+- **Recinto livre.** A dashed *Marcar aula* box follows the mouse over empty space, snapped
+  to the grid's step, as a preview of what a click there does. It is never drawn in every
+  free slot, which would bury the week, and never under a finger, a drag or a closure.
+
+Under the filters, a legend names the two states a colour alone would not explain:
+*Sem professor* and *Recinto livre*. The phone's agenda (`CalendarAgenda`) is unchanged.

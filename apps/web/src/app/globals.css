@@ -833,6 +833,24 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
 .lesson-tint-7 { --tint: var(--level-7); }
 .lesson-tint-8 { --tint: var(--level-8); }
 .lesson-tint-none { --tint: var(--level-none); }
+/*
+ * The handoff's block states (multi-sport Slice 4). Sem professor is the amber
+ * wash the late badge uses (.15, measured AA in contrast:check; the handoff's .28
+ * put the warning ink under 4.5:1), its second line the warning ink at 700; a
+ * full turma's fill line is full ink at 700. Words carry each state; colour only
+ * repeats them.
+ */
+.lesson-chip.lesson-chip-uncovered {
+  background: linear-gradient(rgb(var(--warning) / 0.15) 0 0), rgb(var(--surface));
+}
+.lesson-chip > p.lesson-line-warn {
+  color: rgb(var(--warning-ink));
+  font-weight: 700;
+}
+.lesson-chip > p.lesson-line-strong {
+  color: rgb(var(--foreground));
+  font-weight: 700;
+}
 
 /*
  * App mode's tab screens — POOLSE-136 (`data-shell="tabs"`, set by app-frame.tsx).

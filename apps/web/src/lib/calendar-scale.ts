@@ -31,6 +31,13 @@ export const PX_PER_MINUTE = 1;
 /** Below this a block cannot show its time as well as its name. */
 export const TIME_VISIBLE_MIN_HEIGHT = 34;
 
+/**
+ * Below this a block has no room for its third line, the turma's fill
+ * (multi-sport Slice 4). A 45-minute lesson is 45 px and keeps two lines; its
+ * card still says the fill in words.
+ */
+export const CAPACITY_VISIBLE_MIN_HEIGHT = 50;
+
 /** Nothing is drawn shorter than this, or a 10-minute block has no hit area. */
 export const MIN_BLOCK_HEIGHT = 18;
 
