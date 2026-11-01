@@ -511,13 +511,6 @@ export default async function StudentPage({
                     {...feesSections(billing.data.fees.seasonCharges.length > 0, section)}
                     path={`/dashboard/students/${id}`}
                   />
-                  {/* POOLSE-134: the boletim, beside the sócio it is about. */}
-                  {/* Only under the Sócio section — Rui, 30-10-2026. */}
-                  {reg.canManage &&
-                    loaded.isSocio &&
-                    feesSections(billing.data.fees.seasonCharges.length > 0, section).section === 'socio' && (
-                      <BoletimPanel studentId={loaded.id} storageReady={storageReady} />
-                    )}
                 </>
               )
             ),
@@ -537,8 +530,11 @@ export default async function StudentPage({
             if (documents.state === 'refused') return <PageError message={t('common.notAllowed')} />;
             if (documents.state === 'failed') return <PageError message={t(documents.failure.key)} />;
             const docs = documents.data;
+            // The boletim de sócio joined these on 01-11-2026 (Rui), from Mensalidades.
             const offered: DocumentsSection[] =
-              docs.minor === false ? ['identificacao', 'fpn'] : ['identificacao', 'fpn', 'fpn-menores'];
+              docs.minor === false
+                ? ['identificacao', 'fpn', 'boletim']
+                : ['identificacao', 'fpn', 'fpn-menores', 'boletim'];
             const current = pickSection(offered, section, 'identificacao');
             const path = `/dashboard/students/${id}`;
             return (
@@ -570,6 +566,9 @@ export default async function StudentPage({
                       storageReady={storageReady}
                     />
                   </>
+                )}
+                {current === 'boletim' && (
+                  <BoletimPanel studentId={loaded.id} documents={docs} storageReady={storageReady} />
                 )}
                 {current === 'fpn' && (
                   <FpnSection studentId={loaded.id} kind="fpn_declaration" documents={docs} storageReady={storageReady} />
@@ -844,7 +843,7 @@ function Row({ label, value }: { label: string; value: string | null }): React.R
 }
 
 /** The *Documentos* tab's sections — POOLSE-132. */
-type DocumentsSection = 'identificacao' | 'fpn' | 'fpn-menores';
+type DocumentsSection = 'identificacao' | 'fpn' | 'fpn-menores' | 'boletim';
 
 /** Which fee sections are offered, and which of them is open. */
 function feesSections(

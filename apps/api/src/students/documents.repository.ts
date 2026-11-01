@@ -47,6 +47,14 @@ export interface StudentDocuments {
   copies: FiledCopy[];
   /** What the Anexo 2 would print blank, as keys for the screen to list. */
   missing: string[];
+  /**
+   * Which of the club's own forms are ready to print — uploaded, with at least
+   * one field placed (Rui, 01-11-2026): a form only prints from the club's
+   * template, so without one the screen says where to set it.
+   */
+  templates: Record<'socio_form' | 'fpn_declaration' | 'fpn_declaration_minor', boolean>;
+  /** The site whose *Documentos* tab holds those forms (the club's first), for that link. */
+  templateSiteId: string | null;
 }
 
 /** Null when the student is not this club's (or not live). */
@@ -113,7 +121,23 @@ export async function readDocuments(organizationId: string, studentId: string): 
     if (row.association === null) missing.push('fpnAssociation');
     if (row.club_code === null) missing.push('fpnClubCode');
 
+    const ready = await tx.query<{ kind: string }>(
+      `SELECT DISTINCT t.kind FROM boletim_template t
+         JOIN boletim_template_field f ON f.template_id = t.id AND f.archived_at IS NULL
+        WHERE t.archived_at IS NULL`,
+    );
+    const placed = new Set(ready.rows.map((r) => r.kind));
+    const site = await tx.query<{ id: string }>(
+      'SELECT id FROM facility WHERE archived_at IS NULL ORDER BY created_at LIMIT 1',
+    );
+
     return {
+      templates: {
+        socio_form: placed.has('socio_form'),
+        fpn_declaration: placed.has('fpn_declaration'),
+        fpn_declaration_minor: placed.has('fpn_declaration_minor'),
+      },
+      templateSiteId: site.rows[0]?.id ?? null,
       studentName: row.name,
       minor: row.minor,
       disciplines: row.disciplines as FpnDiscipline[],

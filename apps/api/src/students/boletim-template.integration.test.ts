@@ -83,13 +83,15 @@ test('POOLSE-142 — template, placements and the guarded numbers', async () => 
     await asAdmin(() =>
       routes.place('socio_form', {
         fields: [
-          { field: 'name', x: 0.2, y: 0.18 },
+          { field: 'name', x: 0.2, y: 0.18, width: 0.5 },
           { field: 'locality', x: 0.2, y: 0.31, sizePt: 10 },
           { field: 'locality', x: 0.17, y: 0.45 },
         ],
       }),
     );
     const live = (await asAdmin(() => routes.read('socio_form'))).template!;
+    assert.equal(live.fields[0]?.width, 0.5, 'the white strip is kept');
+    assert.equal(live.fields[1]?.width, null, 'no strip asked, none kept');
     assert.equal(live.fileId, first);
     assert.deepEqual(
       live.fields.map((f) => [f.field, f.sizePt]),

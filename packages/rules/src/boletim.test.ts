@@ -50,7 +50,10 @@ test('every field has a value path', () => {
 });
 
 test('a placement must be a known field on the page at a readable size', () => {
-  assert.deepEqual(parseBoletimPlacement({ field: 'name', x: 0.123456, y: 0.5 }), { field: 'name', x: 0.1235, y: 0.5, sizePt: 11 });
+  assert.deepEqual(parseBoletimPlacement({ field: 'name', x: 0.123456, y: 0.5 }), { field: 'name', x: 0.1235, y: 0.5, sizePt: 11, width: null });
+  assert.equal(parseBoletimPlacement({ field: 'name', x: 0.2, y: 0.5, width: 0.5 })?.width, 0.5);
+  assert.equal(parseBoletimPlacement({ field: 'name', x: 0.8, y: 0.5, width: 0.5 }), null, 'a strip stays on the page');
+  assert.equal(parseBoletimPlacement({ field: 'discipline_pura', x: 0.2, y: 0.5, width: 0.3 })?.width, null, 'a tick has no strip');
   assert.equal(parseBoletimPlacement({ field: 'name', x: 1.2, y: 0.5 }), null);
   assert.equal(parseBoletimPlacement({ field: 'curling', x: 0.1, y: 0.5 }), null);
   assert.equal(parseBoletimPlacement({ field: 'name', x: 0.1, y: 0.5, sizePt: 50 }), null);
@@ -60,7 +63,7 @@ test('a placement must be a known field on the page at a readable size', () => {
 test('a proposed layout on the 0–1000 grid becomes page fractions, and nonsense is dropped', () => {
   const placed = placementsFromGrid({
     placements: [
-      { field: 'name', x: 215, y: 187 },
+      { field: 'name', x: 215, y: 187, end: 730 },
       { field: 'name', x: 216, y: 188 },
       { field: 'curling', x: 100, y: 100 },
       { field: 'locality', x: 1200, y: 300 },
@@ -68,8 +71,8 @@ test('a proposed layout on the 0–1000 grid becomes page fractions, and nonsens
     ],
   });
   assert.deepEqual(placed, [
-    { field: 'name', x: 0.215, y: 0.187, sizePt: 11 },
-    { field: 'birth_day', x: 0.25, y: 0.249, sizePt: 11 },
+    { field: 'name', x: 0.215, y: 0.187, sizePt: 11, width: 0.515 },
+    { field: 'birth_day', x: 0.25, y: 0.249, sizePt: 11, width: 0.3 },
   ]);
   assert.deepEqual(placementsFromGrid(null), []);
   assert.equal(placementsFromGrid({ placements: Array.from({ length: 80 }, (_, i) => ({ field: 'name', x: i * 10, y: 500 })) }).length, 60);

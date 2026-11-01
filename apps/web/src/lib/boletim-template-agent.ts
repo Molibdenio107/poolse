@@ -81,7 +81,7 @@ function systemFor(kind: TemplateKind): string {
       ? 'You look at one scanned page of a Portuguese club\'s membership form ("Proposta de Sócio", "Boletim de sócio") and say where a clerk would write each piece of data.'
       : 'You look at one scanned page of the Portuguese Swimming Federation\'s informed-consent declaration ("Declaração de Consentimento Informado", Anexo 2) as a club prints it, and say where a clerk would write each piece of data.',
     'Coordinates are on a 0–1000 grid over the whole image: x from the left edge, y from the top edge.',
-    'For each field the form asks for, give the point where the handwriting starts: x just after the printed label (at the start of the blank line), y on the blank line itself (the baseline the writing sits on).',
+    'For each field the form asks for, give the point where the handwriting starts: x just after the printed label (at the start of the blank line), y on the blank line itself (the baseline the writing sits on), and end where that blank line stops (the next printed label or the right end of the line). For a tick box, end equals x.',
     kind === 'socio_form'
       ? 'Only fields the form actually asks for. Never invent a blank. Skip a field the form does not have; skip boxes to tick and the club\'s own sections (approval, direction signatures, "Admitido em sessão").'
       : 'Only fields the form actually asks for. Never invent a blank. Skip a field the form does not have. A modalidade\'s tick box is a field: its point is the centre of the box, where an X is printed.',
@@ -103,11 +103,12 @@ function schema(kind: TemplateKind): Record<string, unknown> {
         items: {
           type: 'object',
           additionalProperties: false,
-          required: ['field', 'x', 'y'],
+          required: ['field', 'x', 'y', 'end'],
           properties: {
             field: { type: 'string', enum: [...fieldsFor(kind)] },
             x: { type: 'integer' },
             y: { type: 'integer' },
+            end: { type: 'integer' },
           },
         },
       },

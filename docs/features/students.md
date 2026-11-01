@@ -319,8 +319,8 @@ saved. Erasing a student's health data clears the notes and shreds the certifica
 
 ## Boletim de sócio — POOLSE-134
 
-Under Mensalidades, for a sócio: *Imprimir preenchido* (`/boletim`, the record's fields and the sócio
-columns, never the SNS number; a minor names the primary guardian) and the signed copy filed in
+On the student's *Documentos* tab, section *Boletim de sócio* (moved from Mensalidades, Rui 01-11-2026):
+*Imprimir preenchido* (`/boletim`) and the signed copy filed in
 `student_document` (kind `socio_form`, no season), older ones kept. The sócios list exports and imports
 through the student sheet (`socios=1`), no second pipeline.
 
@@ -339,8 +339,18 @@ Positions are fractions of the page, and sizes are points of A4. `BoletimSheet` 
 editor and the print, so what is placed is what prints.
 
 *Imprimir preenchido* then uses the club's form. It is written in Portuguese whatever the reader's language
-(`boletimValue` in `@poolse/rules`: split dates, the month in words, the year's last two digits). Poolse's own form
-is one link away.
+(`boletimValue` in `@poolse/rules`: split dates, the month in words, the year's last two digits).
+
+**Only the club's form prints** (Rui, 01-11-2026). Poolse no longer composes a boletim or an Anexo 2 of its own.
+Without a form placed for that kind, the student's print button is replaced by a sentence and a link to
+*Instalações → Documentos* (`NoClubForm`, from the documents read's `templates` and `templateSiteId`), and the
+print route says the same.
+
+**A white strip under each value** (`width`): the value prints on a white band from where it starts to where the
+blank ends, slightly above and below the text, so whatever the scan has on that line (an old answer, a mark) never
+shows through. A blank form is still the one to upload. A new text field starts with a strip (`defaultStripWidth`)
+whose right edge is dragged (or `[` / `]`). It can be switched off, and a tick box never has one. The AI reader
+proposes each blank's end as well.
 
 The FPN declaration offers its own fields: the signer (the guardian on a minor's), the season, the club's association, FPN code and place, and the ID document's type, number and dates. It also offers one box per modalidade, which prints an X centred on the box where the student's own *Documentos* tab ticks it. The ticks are never taken from a level. Each kind offers only its own fields (`fieldsFor`, refused otherwise), and the student's *Documentos* print uses the club's adult or minor form when it is placed, with Poolse's one link away.
 

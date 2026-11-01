@@ -136,6 +136,23 @@ export interface BoletimPlacement {
   x: number;
   y: number;
   sizePt: number;
+  /**
+   * The white strip under the value, as a fraction of the page's width from x
+   * to where the blank ends (Rui, 01-11-2026): it covers whatever the scan has
+   * on that line. Absent or null is no strip; a tick box never has one.
+   */
+  width?: number | null;
+}
+
+/** A tick box's field — it prints an X centred on its point, and takes no strip. */
+export function isTickField(field: BoletimField): boolean {
+  return field.startsWith('discipline_');
+}
+
+/** The strip a new text placement starts with, kept on the page. */
+export function defaultStripWidth(field: BoletimField, x: number): number | null {
+  if (isTickField(field)) return null;
+  return Math.max(0.02, Math.round(Math.min(0.3, 0.98 - x) * 10000) / 10000);
 }
 
 export const BOLETIM_SIZE_MIN = 6;
@@ -145,14 +162,25 @@ export const BOLETIM_SIZE_DEFAULT = 11;
 /** A placement as the API receives it, or null when any part is wrong. */
 export function parseBoletimPlacement(raw: unknown): BoletimPlacement | null {
   if (raw === null || typeof raw !== 'object') return null;
-  const { field, x, y, sizePt } = raw as Record<string, unknown>;
+  const { field, x, y, sizePt, width } = raw as Record<string, unknown>;
   if (!isBoletimField(field)) return null;
   const onPage = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1;
   if (!onPage(x) || !onPage(y)) return null;
   const size = sizePt === undefined ? BOLETIM_SIZE_DEFAULT : sizePt;
   if (typeof size !== 'number' || !Number.isFinite(size) || size < BOLETIM_SIZE_MIN || size > BOLETIM_SIZE_MAX) return null;
+  let strip: number | null = null;
+  if (width !== undefined && width !== null) {
+    if (typeof width !== 'number' || !Number.isFinite(width) || width <= 0 || x + width > 1.0001) return null;
+    strip = isTickField(field) ? null : Math.round(width * 10000) / 10000;
+  }
   // The columns are numeric(5,4) and numeric(4,1): round here so what is saved is what was sent.
-  return { field, x: Math.round(x * 10000) / 10000, y: Math.round(y * 10000) / 10000, sizePt: Math.round(size * 10) / 10 };
+  return {
+    field,
+    x: Math.round(x * 10000) / 10000,
+    y: Math.round(y * 10000) / 10000,
+    sizePt: Math.round(size * 10) / 10,
+    width: strip,
+  };
 }
 
 const MONTHS_PT = [
@@ -332,14 +360,21 @@ export function placementsFromGrid(raw: unknown, limit = 60): BoletimPlacement[]
   const seen = new Set<string>();
   const out: BoletimPlacement[] = [];
   for (const item of list) {
-    const { field, x, y } = (item ?? {}) as Record<string, unknown>;
+    const { field, x, y, end } = (item ?? {}) as Record<string, unknown>;
     if (!isBoletimField(field)) continue;
     if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) continue;
     if (x < 0 || x > 1000 || y < 0 || y > 1000) continue;
     const spot = `${field}:${Math.round(x / 10)}:${Math.round(y / 10)}`;
     if (seen.has(spot)) continue;
     seen.add(spot);
-    out.push({ field, x: Math.round(x * 10) / 10000, y: Math.round(y * 10) / 10000, sizePt: BOLETIM_SIZE_DEFAULT });
+    // Where the blank line ends gives the strip; without one, the default length.
+    const width =
+      isTickField(field)
+        ? null
+        : typeof end === 'number' && Number.isFinite(end) && end > x && end <= 1000
+          ? Math.round(end - x) / 1000
+          : defaultStripWidth(field, x / 1000);
+    out.push({ field, x: Math.round(x * 10) / 10000, y: Math.round(y * 10) / 10000, sizePt: BOLETIM_SIZE_DEFAULT, width });
     if (out.length >= limit) break;
   }
   return out;

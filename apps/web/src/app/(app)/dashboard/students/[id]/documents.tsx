@@ -3,6 +3,7 @@
 import { startTransition, useCallback, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Camera, Printer, Sparkles } from 'lucide-react';
+import { NoClubForm } from '@/components/no-club-form';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import { acceptFor } from '@/lib/files';
 import { FromLink } from '@/components/from-link';
@@ -242,17 +243,22 @@ export function FpnSection({
           {minor && documents.minor === true && (
             <p className="text-sm text-foreground-muted">{t('documents.fpn.signerMinor')}</p>
           )}
-          <div>
-            {/*
-              A plain anchor in its own tab, as the meet sheet's (POOLSE-115):
-              `Link` would prefetch it, and reading it decrypts the ID number
-              and writes that to the audit log.
-            */}
-            <a href={printHref} target="_blank" rel="noopener" className={SECONDARY}>
-              <Printer className="size-4" aria-hidden />
-              {t('documents.fpn.print')}
-            </a>
-          </div>
+          {/* Only from the club's own form (Rui, 01-11-2026); without one, where to set it. */}
+          {documents.templates[minor ? 'fpn_declaration_minor' : 'fpn_declaration'] ? (
+            <div>
+              {/*
+                A plain anchor in its own tab, as the meet sheet's (POOLSE-115):
+                `Link` would prefetch it, and reading it decrypts the ID number
+                and writes that to the audit log.
+              */}
+              <a href={printHref} target="_blank" rel="noopener" className={SECONDARY}>
+                <Printer className="size-4" aria-hidden />
+                {t('documents.fpn.print')}
+              </a>
+            </div>
+          ) : (
+            <NoClubForm kind={minor ? 'fpn_declaration_minor' : 'fpn_declaration'} siteId={documents.templateSiteId} />
+          )}
         </section>
       )}
 

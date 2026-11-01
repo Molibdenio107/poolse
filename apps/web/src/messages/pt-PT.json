@@ -6479,7 +6479,8 @@
     "section": {
       "identificacao": "Identificação",
       "fpn": "Declaração FPN",
-      "fpn-menores": "Declaração FPN – Menores"
+      "fpn-menores": "Declaração FPN – Menores",
+      "boletim": "Boletim de sócio"
     },
     "error": {
       "date": "Escolha uma data válida.",
@@ -6736,7 +6737,7 @@
     "bigger": "Aumentar o tamanho",
     "size": "{size} pt",
     "unplace": "Tirar do boletim",
-    "keysHint": "As setas movem o dado (com Shift, mais depressa); Delete tira-o.",
+    "keysHint": "As setas movem o dado (com Shift, mais depressa); [ e ] encurtam e alongam a faixa branca; Delete tira-o.",
     "placedCount": "{count, plural, one {colocado} other {# vezes}}",
     "save": "Guardar posições",
     "unsaved": "Há alterações por guardar.",
@@ -6747,8 +6748,6 @@
     "replaceConfirm": "Substituir",
     "removeExplain": "Os alunos voltam a imprimir o boletim do Poolse. As posições guardadas são retiradas com ele.",
     "removeConfirm": "Remover",
-    "printClubForm": "Imprimir no boletim do clube",
-    "printPoolseForm": "Imprimir no boletim do Poolse",
     "group": {
       "person": "Pessoa",
       "birth": "Nascimento",
@@ -6843,7 +6842,8 @@
     "removeTitleKind": "Remover «{form}»?",
     "removeExplainFpn": "Os alunos voltam a imprimir a declaração do Poolse. As posições guardadas são retiradas com ela.",
     "removedFpn": "Declaração removida. Os alunos voltam a imprimir a declaração do Poolse.",
-    "printClubFpn": "Imprimir na declaração do clube",
-    "printPoolseFpn": "Imprimir na declaração do Poolse"
+    "notConfigured": "O clube ainda não configurou «{form}», por isso não há o que imprimir.",
+    "notConfiguredLink": "Configurar em Instalações → Documentos",
+    "strip": "Faixa branca por baixo (tapa o que a linha tiver)"
   }
 }

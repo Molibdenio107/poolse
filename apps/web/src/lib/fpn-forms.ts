@@ -46,6 +46,10 @@ export interface StudentDocuments {
   }[];
   /** What the Anexo 2 would print blank. */
   missing: string[];
+  /** Which of the club's own forms are ready to print (Rui, 01-11-2026); none prints without one. */
+  templates: Record<'socio_form' | 'fpn_declaration' | 'fpn_declaration_minor', boolean>;
+  /** The site whose Documentos tab holds them, for the link that says where to set one. */
+  templateSiteId: string | null;
 }
 
 /** `GET /students/:id/documents/fpn`. The ID number is decrypted, and the read audited. */

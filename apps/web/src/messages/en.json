@@ -6479,7 +6479,8 @@
     "section": {
       "identificacao": "Identification",
       "fpn": "FPN declaration",
-      "fpn-menores": "FPN declaration – minors"
+      "fpn-menores": "FPN declaration – minors",
+      "boletim": "Membership form"
     },
     "error": {
       "date": "Choose a valid date.",
@@ -6736,7 +6737,7 @@
     "bigger": "Bigger",
     "size": "{size} pt",
     "unplace": "Take off the form",
-    "keysHint": "Arrow keys move the detail (faster with Shift); Delete takes it off.",
+    "keysHint": "Arrow keys move the detail (faster with Shift); [ and ] shorten and lengthen the white strip; Delete takes it off.",
     "placedCount": "{count, plural, one {placed} other {# times}}",
     "save": "Save positions",
     "unsaved": "There are unsaved changes.",
@@ -6747,8 +6748,6 @@
     "replaceConfirm": "Replace",
     "removeExplain": "Students print Poolse's boletim again. The saved positions go with it.",
     "removeConfirm": "Remove",
-    "printClubForm": "Print on the club's form",
-    "printPoolseForm": "Print on Poolse's form",
     "group": {
       "person": "Person",
       "birth": "Birth",
@@ -6843,7 +6842,8 @@
     "removeTitleKind": "Remove “{form}”?",
     "removeExplainFpn": "Students print Poolse's declaration again. The saved positions go with it.",
     "removedFpn": "Declaration removed. Students print Poolse's declaration again.",
-    "printClubFpn": "Print on the club's declaration",
-    "printPoolseFpn": "Print on Poolse's declaration"
+    "notConfigured": "The club has not set up “{form}” yet, so there is nothing to print.",
+    "notConfiguredLink": "Set it up in Facilities → Documents",
+    "strip": "White strip underneath (covers whatever the line has)"
   }
 }

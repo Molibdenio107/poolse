@@ -1,31 +1,28 @@
 import { getTranslations } from 'next-intl/server';
 import { Printer } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
-import { outcome } from '@/lib/load-failure';
 import type { StudentDocuments } from '@/lib/fpn-forms';
 import { FileUpload } from '@/components/file-upload';
-import { PageError } from '@/components/page-shell';
+import { NoClubForm } from '@/components/no-club-form';
 
 /**
- * *Boletim de sócio* — POOLSE-134 (Rui, 30-10-2026), under Mensalidades beside
- * the sócio it is about. Print it filled from the record, have it signed, file
- * the scan: the panel says whether one is on file, and keeps the older copies.
- * Owner and admin, as the sócio form is.
+ * *Boletim de sócio* — POOLSE-134, on the student's *Documentos* tab since
+ * 01-11-2026 (Rui; it was under Mensalidades). Print it filled on the club's
+ * own form — only from that form, so without one the panel says where to set
+ * it — have it signed, file the scan: the panel says whether one is on file,
+ * and keeps the older copies. Owner and admin, as the tab is.
  */
 export async function BoletimPanel({
   studentId,
+  documents,
   storageReady,
 }: {
   studentId: string;
+  documents: StudentDocuments;
   storageReady: boolean;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const loaded = await outcome(apiFetch<StudentDocuments>(`/students/${studentId}/documents`));
-  if (loaded.state === 'failed') return <PageError message={t(loaded.failure.key)} />;
-  if (loaded.state !== 'ok') return <></>;
-
-  const copies = loaded.data.copies.filter((copy) => copy.kind === 'socio_form');
+  const copies = documents.copies.filter((copy) => copy.kind === 'socio_form');
   const current = copies.find((copy) => copy.replacedAt === null);
 
   return (
@@ -40,15 +37,19 @@ export async function BoletimPanel({
         A plain anchor in a new tab, as the FPN print: a document page, opened
         on the print dialog.
       */}
-      <a
-        href={`/dashboard/students/${studentId}/boletim?print=1`}
-        target="_blank"
-        rel="noopener"
-        className="inline-flex h-control items-center justify-center gap-2 self-start rounded-sm px-4 text-control hover:bg-surface-muted bg-surface shadow-card"
-      >
-        <Printer className="size-4" aria-hidden />
-        {t('boletim.print')}
-      </a>
+      {documents.templates.socio_form ? (
+        <a
+          href={`/dashboard/students/${studentId}/boletim?print=1`}
+          target="_blank"
+          rel="noopener"
+          className="inline-flex h-control items-center justify-center gap-2 self-start rounded-sm px-4 text-control hover:bg-surface-muted bg-surface shadow-card"
+        >
+          <Printer className="size-4" aria-hidden />
+          {t('boletim.print')}
+        </a>
+      ) : (
+        <NoClubForm kind="socio_form" siteId={documents.templateSiteId} />
+      )}
       <FileUpload
         target={`student-document:${studentId}:socio_form:none`}
         label={t('boletim.upload')}

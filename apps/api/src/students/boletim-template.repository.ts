@@ -26,8 +26,8 @@ export async function liveTemplateIn(tx: Tx, kind: TemplateKind): Promise<Boleti
   );
   const template = rows[0];
   if (template === undefined) return null;
-  const placed = await tx.query<{ field: BoletimField; x: string; y: string; size_pt: string }>(
-    `SELECT field::text AS field, x, y, size_pt FROM boletim_template_field
+  const placed = await tx.query<{ field: BoletimField; x: string; y: string; size_pt: string; width: string | null }>(
+    `SELECT field::text AS field, x, y, size_pt, width FROM boletim_template_field
       WHERE template_id = $1 AND archived_at IS NULL
       ORDER BY y, x, field`,
     [template.id],
@@ -36,7 +36,13 @@ export async function liveTemplateIn(tx: Tx, kind: TemplateKind): Promise<Boleti
     id: template.id,
     kind,
     fileId: template.file_id,
-    fields: placed.rows.map((row) => ({ field: row.field, x: Number(row.x), y: Number(row.y), sizePt: Number(row.size_pt) })),
+    fields: placed.rows.map((row) => ({
+      field: row.field,
+      x: Number(row.x),
+      y: Number(row.y),
+      sizePt: Number(row.size_pt),
+      width: row.width === null ? null : Number(row.width),
+    })),
   };
 }
 
@@ -110,9 +116,10 @@ export async function savePlacements(
     );
     if (fields.length > 0) {
       await tx.query(
-        `INSERT INTO boletim_template_field (organization_id, template_id, field, x, y, size_pt)
-         SELECT $1, $2, f.field::boletim_field, f.x, f.y, f.size_pt
-           FROM unnest($3::text[], $4::numeric[], $5::numeric[], $6::numeric[]) AS f(field, x, y, size_pt)`,
+        `INSERT INTO boletim_template_field (organization_id, template_id, field, x, y, size_pt, width)
+         SELECT $1, $2, f.field::boletim_field, f.x, f.y, f.size_pt, f.width
+           FROM unnest($3::text[], $4::numeric[], $5::numeric[], $6::numeric[], $7::numeric[])
+                AS f(field, x, y, size_pt, width)`,
         [
           organizationId,
           template.id,
@@ -120,6 +127,7 @@ export async function savePlacements(
           fields.map((f) => f.x),
           fields.map((f) => f.y),
           fields.map((f) => f.sizePt),
+          fields.map((f) => f.width ?? null),
         ],
       );
     }

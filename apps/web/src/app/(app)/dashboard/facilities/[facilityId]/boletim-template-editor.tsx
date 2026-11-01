@@ -7,7 +7,9 @@ import {
   BOLETIM_SIZE_DEFAULT,
   BOLETIM_SIZE_MAX,
   BOLETIM_SIZE_MIN,
+  defaultStripWidth,
   fieldGroupsFor,
+  isTickField,
   type BoletimField,
   type BoletimPlacement,
   type TemplateKind,
@@ -43,7 +45,7 @@ const INITIAL: FormState = { ok: false };
 let next = 0;
 const keyed = (fields: readonly BoletimPlacement[]): Placed[] => fields.map((f) => ({ ...f, key: `p${next++}` }));
 const plain = (placed: readonly Placed[]): BoletimPlacement[] =>
-  placed.map(({ field, x, y, sizePt }) => ({ field, x, y, sizePt }));
+  placed.map(({ field, x, y, sizePt, width }) => ({ field, x, y, sizePt, width: width ?? null }));
 const clamp = (v: number): number => Math.min(1, Math.max(0, Math.round(v * 10000) / 10000));
 
 /**
@@ -153,7 +155,10 @@ export function BoletimTemplateEditor({
     }
     const point = at(event);
     if (point === null) return;
-    const [added] = keyed([{ field: armed, x: clamp(point.x), y: clamp(point.y), sizePt: BOLETIM_SIZE_DEFAULT }]);
+    const x = clamp(point.x);
+    const [added] = keyed([
+      { field: armed, x, y: clamp(point.y), sizePt: BOLETIM_SIZE_DEFAULT, width: defaultStripWidth(armed, x) },
+    ]);
     setPlaced((all) => [...all, added!]);
     setSelected(added!.key);
     setArmed(null);
@@ -200,7 +205,41 @@ export function BoletimTemplateEditor({
       resize(p.key, 1);
     } else if (event.key === '-') {
       resize(p.key, -1);
+    } else if ((event.key === '[' || event.key === ']') && p.width !== null && p.width !== undefined) {
+      event.preventDefault();
+      setStrip(p.key, p.width + (event.key === ']' ? 0.01 : -0.01));
     }
+  };
+
+  // The white strip under a value (Rui, 01-11-2026): from x to where the blank
+  // ends, kept on the page; null is no strip.
+  const setStrip = (key: string, width: number | null): void =>
+    setPlaced((all) =>
+      all.map((p) =>
+        p.key === key
+          ? { ...p, width: width === null ? null : Math.round(Math.min(1 - p.x, Math.max(0.02, width)) * 10000) / 10000 }
+          : p,
+      ),
+    );
+
+  const stretch = (event: React.PointerEvent<HTMLSpanElement>, p: Placed): void => {
+    event.stopPropagation();
+    event.preventDefault();
+    setSelected(p.key);
+    const target = event.currentTarget;
+    target.setPointerCapture(event.pointerId);
+    const onMove = (e: PointerEvent): void => {
+      const now = at(e);
+      if (now !== null) setStrip(p.key, now.x - p.x);
+    };
+    const onUp = (): void => {
+      target.removeEventListener('pointermove', onMove);
+      target.removeEventListener('pointerup', onUp);
+      target.removeEventListener('pointercancel', onUp);
+    };
+    target.addEventListener('pointermove', onMove);
+    target.addEventListener('pointerup', onUp);
+    target.addEventListener('pointercancel', onUp);
   };
 
   const busy = converting || uploading;
@@ -288,12 +327,21 @@ export function BoletimTemplateEditor({
                       onFocus={() => setSelected(p.key)}
                       aria-label={t('boletimTemplate.placedLabel', { field: label(p.field) })}
                       className={cn(
-                        'absolute cursor-move touch-none whitespace-nowrap rounded-[2px] bg-primary/20 px-0.5 font-medium text-primary',
+                        'absolute cursor-move touch-none whitespace-nowrap rounded-[2px] bg-primary/20 px-0.5 text-left font-medium text-primary',
                         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+                        // A strip shows as the white band it prints, outlined so it can be seen and sized.
+                        p.width !== null && p.width !== undefined && 'outline-dashed outline-1 outline-primary/60',
                         p.key === selected && 'ring-2 ring-primary',
                       )}
                     >
                       {label(p.field)}
+                      {p.width !== null && p.width !== undefined && (
+                        <span
+                          aria-hidden
+                          onPointerDown={(event) => stretch(event, p)}
+                          className="absolute inset-y-0 right-0 w-2 cursor-ew-resize touch-none bg-primary/40 coarse:w-4"
+                        />
+                      )}
                     </button>
                   ))}
                 </BoletimSheet>
@@ -319,6 +367,18 @@ export function BoletimTemplateEditor({
                     <X aria-hidden className="size-4" />
                   </button>
                 </div>
+                {!isTickField(current.field) && (
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={current.width !== null && current.width !== undefined}
+                      onChange={(event) =>
+                        setStrip(current.key, event.target.checked ? (defaultStripWidth(current.field, current.x) ?? 0.3) : null)
+                      }
+                    />
+                    {t('boletimTemplate.strip')}
+                  </label>
+                )}
                 <p className="text-xs text-foreground-muted">{t('boletimTemplate.keysHint')}</p>
               </div>
             )}
