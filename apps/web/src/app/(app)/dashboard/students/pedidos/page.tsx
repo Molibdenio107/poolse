@@ -173,8 +173,24 @@ export default async function LeadsPage({
     const rest = query.toString();
     return rest === '' ? PATH : `${PATH}?${rest}`;
   };
+  // A sport's own *Pedidos* (Rui, 01-11-2026): that sport and *Todos*, which goes
+  // back to the shared queue; the shared queue keeps every chip.
+  const sportPage = sport !== undefined && sport !== 'none';
   const sportChips =
-    isMultiSport(clubSports) && counts !== undefined && section !== 'form' ? (
+    isMultiSport(clubSports) && counts !== undefined && section !== 'form' && sportPage ? (
+      <nav aria-label={t('leads.sportFilter')} className={cn(SUB_MENU_ROW, 'items-center')}>
+        <FromLink href={sportHref(undefined)} className={subMenuPillClass(false)}>
+          {t('students.sportAll', { count: counts.total })}
+        </FromLink>
+        <span aria-current="page" className={subMenuPillClass(true)}>
+          <SportIcon sport={sport} className="size-4" />
+          {t(sportNameKey(sport))}
+          <span className="tabular-nums opacity-80">
+            {counts.bySport.find((one) => one.sport === sport)?.count ?? 0}
+          </span>
+        </span>
+      </nav>
+    ) : isMultiSport(clubSports) && counts !== undefined && section !== 'form' ? (
       <nav aria-label={t('leads.sportFilter')} className={cn(SUB_MENU_ROW, 'items-center')}>
         <FromLink href={sportHref(undefined)} aria-current={sport === undefined ? 'page' : undefined} className={subMenuPillClass(sport === undefined)}>
           {t('students.sportAll', { count: counts.total })}

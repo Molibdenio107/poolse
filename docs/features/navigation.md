@@ -361,6 +361,8 @@ The rule for every menu question from here on (Rui, 01-11-2026):
   stays shared** (`perSport: 'copy'`): Alunos and Pedidos. The shared list keeps the rows with no
   sport, behind a *Sem modalidade* chip: a student in no live turma, or a request that names
   neither a turma nor a level.
+  On a sport's own copy the sport is the page, not a filter (Rui, 01-11-2026): its chips are that
+  sport and *Todos*, which goes back to the shared list, and *Limpar* keeps the sport.
 - **An item with no sport dimension stays shared**: Encarregados (a guardian is child-first),
   Mensagens (audience-based), Receção (until the pilot says whether the desk sells per sport) and
   everything under Instalações. **Mensalidades needs nothing**: a plan priced by a level is per sport

@@ -136,8 +136,15 @@ export default async function StudentsPage({
   // The club's name, for the message a shared link carries.
   const organizationName = data === null ? '' : (me?.memberships[0]?.organizationName ?? '');
 
+  /*
+   * A sport's own *Alunos* (POOLSE-143, Rui 01-11-2026): reached from the sport's
+   * tab, the sport is the page, not a filter — *Limpar* keeps it, and the chips
+   * are that sport and *Todos*, which goes back to the shared register.
+   */
+  const sportPage = sportFilter !== null && sportFilter !== 'none';
   const filtering =
-    search.trim().length > 0 || levelId.trim().length > 0 || overdueOnly || pendingOnly || sportFilter !== null || multiOnly;
+    search.trim().length > 0 || levelId.trim().length > 0 || overdueOnly || pendingOnly || sportFilter === 'none' || multiOnly;
+  const clearHref = sportPage ? `/dashboard/students?sport=${sportFilter}` : '/dashboard/students';
 
   /*
    * A page that has fallen off the end — QA 29.6 and 29.12.
@@ -271,7 +278,7 @@ export default async function StudentsPage({
 
             {filtering && (
               <FromLink
-                href="/dashboard/students"
+                href={clearHref}
                 className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
               >
                 {t('students.clear')}
@@ -316,7 +323,23 @@ export default async function StudentsPage({
           )}
 
           {/* *Modalidades* — multi-sport Slice 3: a chip per sport and the students in two or more. */}
-          {multiSport && data.sportCounts !== undefined && (
+          {multiSport && data.sportCounts !== undefined && sportPage && (
+            <nav aria-label={t('students.sportFilter')} className={cn(SUB_MENU_ROW, 'items-center')}>
+              <FromLink href="/dashboard/students" className={subMenuPillClass(false)}>
+                {t('students.sportAll', { count: data.sportCounts.total })}
+              </FromLink>
+              {withCurrent([], sportFilter).map((entry) => (
+                <span key={entry.sport} aria-current="page" className={subMenuPillClass(true)}>
+                  <SportIcon sport={entry.sport} className="size-4" />
+                  {t(sportNameKey(entry.sport))}
+                  <span className="tabular-nums opacity-80">
+                    {data.sportCounts?.bySport.find((one) => one.sport === entry.sport)?.count ?? 0}
+                  </span>
+                </span>
+              ))}
+            </nav>
+          )}
+          {multiSport && data.sportCounts !== undefined && !sportPage && (
             <nav aria-label={t('students.sportFilter')} className={cn(SUB_MENU_ROW, 'items-center')}>
               <FromLink
                 href={pageHref('/dashboard/students', { search, levelId, ...flags, sport: undefined, multi: undefined }, 1)}
