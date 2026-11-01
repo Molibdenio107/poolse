@@ -281,6 +281,8 @@ export default {
       /* A card is lifted, not outlined; dark mode adds a hairline to it (globals.css). */
       boxShadow: {
         card: 'var(--shadow-card)',
+        /* The handoff's sport chip on a card. */
+        chip: 'var(--shadow-chip)',
         /*
          * The handoff's hairlines (POOLSE-139): the top bar's bottom edge and the
          * sidebar's right edge, drawn as a shadow so no border colour is invented.

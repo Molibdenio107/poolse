@@ -175,6 +175,16 @@ const PAIRS = [
   // `bg+fg@alpha` is composited before it is measured; nothing else is.
   ['foreground', 'surface+primary@0.06', 4.5, "text in today's tinted calendar column"],
   ['foreground-muted', 'surface+primary@0.06', 4.5, "muted text in today's tinted calendar column"],
+
+  // Sport washes (POOLSE-138/141): a sport page's ground and its active section
+  // tab. Measured at .14, the light alpha — dark uses .12, and more tint is the
+  // harder case in both themes, so one alpha covers them.
+  ...['pool', 'tennis', 'padel', 'basketball', 'football', 'handball', 'volleyball', 'gym'].flatMap((sport) =>
+    ['background', 'surface'].flatMap((ground) => [
+      ['foreground', `${ground}+sport-${sport}@0.14`, 4.5, `text on the ${sport} wash over the ${ground}`],
+      ['foreground-muted', `${ground}+sport-${sport}@0.14`, 4.5, `muted text on the ${sport} wash over the ${ground}`],
+    ]),
+  ),
 ];
 
 const css = await readFile(CSS, 'utf8');

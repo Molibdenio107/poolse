@@ -35,8 +35,26 @@ tickets (POOLSE-125/127, 136).
   (`--app-primary-ink`), and so does the focus ring (`--ring`). On white the fill is 2.8:1, a
   known exception in `contrast:check` like the backoffice brand fill's.
 - **Sport washes** (`--sport-*`, `--wash-a`, `[data-sport]`, `.sport-shell`) are in
-  `globals.css` from `docs/design/tokens.css` and inert: nothing sets `data-sport` yet, so a
-  pool club renders exactly as before. Atmosphere only, never a button, text or primary.
+  `globals.css` from `docs/design/tokens.css`. Atmosphere only, never a button, text or
+  primary. `SportShell` and the section tabs (POOLSE-141) set `data-sport`, and only for a
+  multi-sport club, so a pool club renders exactly as before. `contrast:check` measures ink
+  and muted text on every wash, over the page and over a card, in both themes.
+- **Status colours are ours, not the handoff's.** Its `--ok`/`--warn` are `--success` /
+  `--warning` and their inks (01-11-2026): its orange warn sat next to `--danger`.
+  `--wash-green` is a wash only. `--radius-card` and `--shadow-chip` (`shadow-chip`) carry
+  the handoff's names.
+
+## Sports — the handoff's Slice 0 (1 November 2026)
+
+- **`isMultiSport(sports)`** in `@poolse/rules` is the one switch behind every multi-sport
+  surface: the section tabs, the sidebar per section, the wash, and sport chips and labels.
+  A missing or empty list counts as `[pool]`, and so answers false.
+- **A sport's metadata** is three facts, one place each: the id in `POOLSE_SPORTS`, the name
+  at `sportNameKey(sport)` (`sport.name.*`, pt-PT and en, with the pool called *Natação*
+  everywhere), and the icon in `SPORT_ICON` (`components/sport-icon.tsx`).
+- **Every sport has its own glyph.** These are Lucide stand-ins until Material Symbols arrive
+  after the pilot. Tennis, padel and basketball are drawn with `createLucideIcon`, because
+  Lucide has none; padel is the handoff's own SVG. The icon always sits beside the name.
 
 ## The frame — POOLSE-139 (31 October 2026)
 

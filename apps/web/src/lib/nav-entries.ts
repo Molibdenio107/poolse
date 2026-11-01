@@ -1,4 +1,4 @@
-import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
+import { BASE_SPORT, isMultiSport, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import type { EntityKind } from '@/components/entity-icon';
 import type { OrganizationKind } from '@/lib/api';
 
@@ -434,7 +434,7 @@ export function pathOf(href: string): string {
  */
 function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] {
   const scoped = sections.filter((section) => section.perSport === true);
-  if (sports.length < 2 || scoped.length === 0) return sections;
+  if (!isMultiSport(sports) || scoped.length === 0) return sections;
 
   const groups = sports.map((sport): Item => {
     const children = scoped.map((entry): Item => {

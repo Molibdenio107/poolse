@@ -277,12 +277,22 @@
     --radius-control: 2px;
     --radius-chip: 6px;
     --shadow-card: 0 1px 3px rgb(0 0 0 / 0.08);
+    /* The handoff's names for the two above (docs/design/tokens.css), so its files read beside ours. */
+    --radius-card: var(--radius);
+    --shadow-chip: 0 1px 2px rgb(0 0 0 / 0.06);
+    /*
+     * The complementary green as a wash — never text, never a fill that carries
+     * meaning. The handoff's `--ok`/`--warn` are **not** tokens here: they are
+     * `--success`/`--warning` and their inks (decided 01-11-2026), because its
+     * orange warn sat beside `--danger` and would have made two "bad" colours.
+     */
+    --wash-green: 179 212 157;
 
     /*
      * Sport washes — POOLSE-138, copied from docs/design/tokens.css. Atmosphere
-     * only, painted by `.sport-shell` on a sport's own pages once a club has a
-     * second sport (POOLSE-125/127). Nothing sets `data-sport` yet, so a pool
-     * club renders exactly as before. Never a button, a text or a primary.
+     * only, painted by `.sport-shell` on a sport's own pages, and set only when
+     * `isMultiSport` (@poolse/rules) — so a pool club renders exactly as before.
+     * Never a button, a text or a primary.
      */
     --sport-pool: 160 205 218;
     --sport-tennis: 205 230 80;
@@ -778,7 +788,8 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
 
 /*
  * Sport scopes and the one surface the wash is painted on — POOLSE-138, from
- * docs/design/tokens.css. Inert until a page sets `data-sport` (POOLSE-125/127).
+ * docs/design/tokens.css. Set by `SportShell` and the section tabs (POOLSE-141),
+ * only for a club where `isMultiSport` holds.
  */
 [data-sport='pool'] { --sport-wash: var(--sport-pool); }
 [data-sport='tennis'] { --sport-wash: var(--sport-tennis); }

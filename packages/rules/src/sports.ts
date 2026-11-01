@@ -49,3 +49,14 @@ export function addonSports(org: { enabledSports: readonly string[] }): PoolseSp
 export function mayCreateRecinto(sport: string, org: { enabledSports: readonly string[] }): boolean {
   return isPoolseSport(sport) && enabledSports(org).includes(sport);
 }
+
+/**
+ * Whether a club has more than one sport — the handoff's `isMultiSport`. The
+ * one switch behind every multi-sport surface: section tabs, the sidebar per
+ * section, the sport wash, sport chips and labels. Read through
+ * `enabledSports`, so a missing or empty list is `[pool]` and answers false —
+ * a single-sport club stays exactly as it was, never a club with no sports.
+ */
+export function isMultiSport(sports: readonly string[] | undefined): boolean {
+  return enabledSports({ enabledSports: sports ?? [] }).length > 1;
+}
