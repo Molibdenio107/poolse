@@ -55,8 +55,14 @@ export interface TurmaDetail {
   facts: { label: string; value: string }[];
   /** "9/12", already formatted. Shown prominently because it is the number people look for. */
   occupancy?: string | undefined;
-  /** Every enrolled student, in full. No truncation — that is the point. */
-  people: string[];
+  /**
+   * Every enrolled student, in full. No truncation — that is the point.
+   *
+   * Null means the block has no students to speak of — a parceria carries a
+   * headcount and no people, free swim and an evento neither — and the card
+   * then draws no student section at all (POOLSE-147).
+   */
+  people: string[] | null;
   /** Shown instead of the list when nobody is enrolled. */
   peopleEmpty?: string | undefined;
 }
@@ -248,6 +254,7 @@ function TurmaCardBody({
         </dl>
       )}
 
+      {detail.people !== null && (
       <div className="mt-3 border-t border-border pt-3">
         {detail.people.length === 0 ? (
           <p className="text-sm text-foreground-muted">
@@ -265,8 +272,9 @@ function TurmaCardBody({
               is the problem the ticket is about.
             */}
             <ul className="flex list-inside list-disc flex-col gap-0.5 text-sm">
-              {detail.people.map((person) => (
-                <li key={person} className="break-words">
+              {detail.people.map((person, index) => (
+                // Two children can share a short name; the position keeps them apart.
+                <li key={`${index}-${person}`} className="break-words">
                   {person}
                 </li>
               ))}
@@ -274,6 +282,7 @@ function TurmaCardBody({
           </>
         )}
       </div>
+      )}
 
       {/*
         The actions, last and under a rule — round 6, ticket 4.0.

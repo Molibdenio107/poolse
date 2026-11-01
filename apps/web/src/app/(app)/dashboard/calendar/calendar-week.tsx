@@ -320,9 +320,19 @@ export function CalendarWeek({
           </div>
         );
 
+      /*
+       * Who is in the turma — POOLSE-147. Informative only: names, never links,
+       * because the register is where a lesson's people are acted on. Null for a
+       * parceria, free swim or an evento, which then shows no student section.
+       * The occupancy is the list's own length, so the two cannot disagree.
+       */
+      const people = booking.people?.map((person) => person.name) ?? null;
+      const occupancy =
+        people === null || booking.capacity === null ? undefined : `${people.length}/${booking.capacity}`;
+
       return {
         title: booking.name,
-        detail: { facts, people: [], peopleEmpty: t('classes.nobodyEnrolled') },
+        detail: { facts, occupancy, people, peopleEmpty: t('classes.nobodyEnrolled') },
         ...(actions === undefined ? {} : { actions }),
         attention: session?.familyAnswers ?? 0,
       };

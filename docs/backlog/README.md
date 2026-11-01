@@ -168,7 +168,7 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-144](./POOLSE-144-enrolment-refuses-a-time-clash.md) | A student cannot be enrolled in two turmas that meet at the same time (any sport); a move that creates a clash warns, never blocks | Classes / Enrolment | High (pre go-live) | — | 1 |
 | [POOLSE-145](./POOLSE-145-instructor-scoped-to-sports.md) | An instructor belongs to the sports the club assigns (`membership.sports`, explicit) and reads only those sports' students; owner/admin see all | Staff / Security | Low (post go-live) | POOLSE-143, 125 | 1 |
 | [POOLSE-146](./POOLSE-146-messages-by-sport-and-qualifications-per-sport.md) | A message can go to everyone in one sport; a qualification type names its sport so *em falta* is judged per sport | Messages / Staff | Low (post go-live) | POOLSE-145, 67, 27 | 1 |
-| [POOLSE-147](./POOLSE-147-calendar-card-lists-the-students.md) | The calendar's class card lists the turma's active students (hover, informative only) instead of always saying nobody is enrolled — hard-coded `people: []` since round 6 | Calendar | High (pre go-live) | — | 0 |
+| [POOLSE-147](./POOLSE-147-calendar-card-lists-the-students.md) | **Built 01-11-2026.** The calendar's class card lists the turma's active students (hover, informative only) instead of always saying nobody is enrolled — hard-coded `people: []` since round 6 | Calendar | High (pre go-live) | — | 0 |
 
 ## To discuss — raised 01-11-2026, parked until after the pilot has used the app
 

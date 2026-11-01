@@ -464,3 +464,19 @@ click inside the band is refused (`grid.tankClosed`).
 turmas, each affected parceria's partner at its contacts' addresses, and the leads whose aula
 experimental was cancelled. The confirmation counts the three and names anybody with no
 address, a partner with no contact e-mail included. The lead's status is not changed.
+
+## The class card lists its students — POOLSE-147 (1 November 2026)
+
+The calendar's hover card (pinned by a click, reached by keyboard through `TurmaCardButton`) lists a turma's
+**active** students, filed by surname, the whole list uncut, with *n/capacidade lugares ocupados* above it when the
+turma has a capacity. The number is the list's own length, so the two cannot disagree. Since round 6 the card had
+been built with an empty list and always said nobody was enrolled.
+
+- The names come with `readGrid` (`GET /facilities/:id/grid`, staff only), as `people` and `capacity` on each
+  turma booking, from **one grouped statement** over every turma the grid draws, never one per booking. The
+  integration test proves it with `countStatements` over sixty bookings.
+- A waiting enrolment is not listed. A turma with nobody keeps the sentence *Ainda não há alunos inscritos nesta
+  turma*.
+- A parceria, free swim and an evento carry `people: null`, and the card draws **no student section** at all: a
+  partner group has a headcount, not people.
+- **Informative only**: names, never links. *Marcar presenças* stays where it was.

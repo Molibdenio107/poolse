@@ -3628,6 +3628,13 @@ export interface GridBooking {
   slotId: string | null;
   /** Every lane it occupies, in position order. One block spans all of them. */
   laneIds: string[];
+  /**
+   * The turma's active students, filed by surname — POOLSE-147. Null for
+   * anything that is not a turma, which has no student section at all.
+   */
+  people: { id: string; name: string }[] | null;
+  /** The turma's capacity; null when not set. */
+  capacity: number | null;
 }
 
 /**

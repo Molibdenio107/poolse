@@ -1,4 +1,5 @@
 import { withOrg, type Tx } from '@poolse/db';
+import { nameOrder, shortName } from '../people/names.js';
 
 /**
  * The lane grid — POOLSE-49.
@@ -116,6 +117,16 @@ export interface GridBooking {
   slotId: string | null;
   /** Every lane it occupies, in position order. One block spans all of them. */
   laneIds: string[];
+  /**
+   * The turma's active students, filed by surname — POOLSE-147.
+   *
+   * Null for anything that is not a turma: a partner group carries a headcount
+   * and no people, and free swim and an evento have neither. An empty array is
+   * a turma nobody is enrolled in, which is a different sentence.
+   */
+  people: { id: string; name: string }[] | null;
+  /** The turma's capacity; null when not set (or not a turma). */
+  capacity: number | null;
 }
 
 /**
@@ -337,6 +348,44 @@ export async function readGrid(
           [facilityId, season.id],
         );
 
+    /*
+     * Who is in each turma on the grid — POOLSE-147.
+     *
+     * One grouped statement over every turma the week draws, never one per
+     * booking: a week with sixty classes would otherwise be sixty round trips
+     * before the card can open. Active enrolments only — a waiting one is not
+     * in the class — and filed by surname, as the Turmas page files them.
+     */
+    const turmaIds = [
+      ...new Set(
+        bookings.rows
+          .filter((row) => row.subject_type === 'turma' && row.class_group_id !== null)
+          .map((row) => row.class_group_id as string),
+      ),
+    ];
+    const rosters = turmaIds.length === 0
+      ? { rows: [] as { class_group_id: string; capacity: number | null; people: { id: string; name: string }[] }[] }
+      : await tx.query<{ class_group_id: string; capacity: number | null; people: { id: string; name: string }[] }>(
+          `SELECT cg.id AS class_group_id,
+                  cg.capacity,
+                  coalesce(
+                    json_agg(json_build_object('id', s.id, 'name', ${shortName('s')})
+                             ORDER BY ${nameOrder('s')})
+                      FILTER (WHERE s.id IS NOT NULL),
+                    '[]'::json) AS people
+             FROM class_group cg
+             LEFT JOIN enrollment e
+               ON e.class_group_id = cg.id AND e.organization_id = cg.organization_id
+              AND e.status = 'active'
+             LEFT JOIN student s
+               ON s.id = e.student_id AND s.organization_id = e.organization_id
+              AND s.archived_at IS NULL
+            WHERE cg.id = ANY($1::uuid[])
+            GROUP BY cg.id, cg.capacity`,
+          [turmaIds],
+        );
+    const rosterOf = new Map(rosters.rows.map((row) => [row.class_group_id, row]));
+
     const categories = await tx.query<{ id: string; name: string; colour: string }>(
       `SELECT id, name, colour::text AS colour
          FROM booking_category
@@ -476,6 +525,7 @@ export async function readGrid(
         durationMinutes: row.duration_minutes,
         slotId: row.slot_id,
         laneIds: row.lane_ids ?? [],
+        ...rosterFields(row, rosterOf),
       })),
       categories: categories.rows,
       instructors: [...instructors].map(([id, name]) => ({ id, name })).sort((a, b) =>
@@ -488,6 +538,16 @@ export async function readGrid(
       maxConcurrentGroups: limits.rows[0]?.max_concurrent_groups_per_instructor ?? null,
     };
   });
+}
+
+/** A turma booking's roster and capacity; nothing for any other subject. */
+function rosterFields(
+  row: GridBookingRow,
+  rosterOf: Map<string, { capacity: number | null; people: { id: string; name: string }[] }>,
+): Pick<GridBooking, 'people' | 'capacity'> {
+  if (row.subject_type !== 'turma' || row.class_group_id === null) return { people: null, capacity: null };
+  const roster = rosterOf.get(row.class_group_id);
+  return { people: roster?.people ?? [], capacity: roster?.capacity ?? null };
 }
 
 interface GridBookingRow {

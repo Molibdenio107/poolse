@@ -222,7 +222,11 @@ async function seed(tenant: ScratchTenant): Promise<Fixture> {
   const [session] = await tenant.sql<{ id: string; occurs_on: string }>(
     `INSERT INTO class_session
        (organization_id, class_group_id, pool_id, starts_at, duration_minutes, occurs_on)
-     VALUES ($1, $2, $3, now() + interval '7 days', 45, (now() + interval '7 days')::date)
+     -- Next week's Wednesday, the turma's own day: "a week from today" was a
+     -- Sunday every Sunday, and a leave day may not be one (vacation_day CHECK).
+     -- At 07:00, clear of the 18:00 lesson the pattern already generated.
+     VALUES ($1, $2, $3, date_trunc('week', now()) + interval '9 days 7 hours', 45,
+             (date_trunc('week', now()) + interval '9 days')::date)
      RETURNING id, occurs_on::text`,
     [org, groupId, pool!.id],
   );

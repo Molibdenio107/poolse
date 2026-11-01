@@ -40,7 +40,7 @@ It is not a data problem. `calendar-week.tsx` builds every card's detail with `p
 
 ### Acceptance criteria
 
-- [ ] Names on the calendar card from the grid read, one grouped statement.
-- [ ] Parcerias and free swim show no student section.
-- [ ] Nothing actionable added to the card.
-- [ ] `docs/features/calendar.md` updated.
+- [x] Names on the calendar card from the grid read, one grouped statement.
+- [x] Parcerias and free swim show no student section.
+- [x] Nothing actionable added to the card.
+- [x] `docs/features/calendar.md` updated.
