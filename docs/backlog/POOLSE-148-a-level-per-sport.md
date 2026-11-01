@@ -2,7 +2,7 @@
 
 > Part of the Poolse backlog. Conventions in [CONVENTIONS.md](./CONVENTIONS.md) apply to this ticket and are not repeated here.
 
-**Slice A built 01-11-2026; B and C open.** · **Type:** Feature · **Area:** Students / Levels · **Priority:** Medium · **Depends on** [POOLSE-126](./POOLSE-126-levels-and-seasons-per-sport.md), [POOLSE-143](./POOLSE-143-alunos-and-its-children-per-sport.md)
+**Slices A, B and C built 01-11-2026 (Atividade revert for another sport's level still open).** · **Type:** Feature · **Area:** Students / Levels · **Priority:** Medium · **Depends on** [POOLSE-126](./POOLSE-126-levels-and-seasons-per-sport.md), [POOLSE-143](./POOLSE-143-alunos-and-its-children-per-sport.md)
 
 ### PO — why this exists
 
@@ -40,6 +40,6 @@ Rui, 01-11-2026: *"Levels and advancement should be independent from sport to sp
 - [x] `student_sport_level` with tenant key, composite keys, RLS, a partial unique index on live rows, and the sport-match rule in the database.
 - [x] `setStudentLevelIn` is the only writer, for every sport.
 - [x] The record shows and sets a level per sport; pool-only unchanged.
-- [ ] A sport's Alunos reads that sport's level (slice B).
-- [ ] Advancement per sport, end to end (slice C).
-- [ ] `docs/data-model.md`, `docs/features/students.md` updated.
+- [x] A sport's Alunos reads that sport's level (slice B).
+- [x] Advancement per sport, end to end (slice C). Atividade revert of another sport's level: open.
+- [x] `docs/data-model.md`, `docs/features/students.md` updated.

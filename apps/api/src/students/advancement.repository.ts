@@ -221,8 +221,10 @@ export async function confirmProposal(
     }>(
       `SELECT p.status::text AS status, p.student_id, p.from_level_id, p.to_level_id,
               p.reason::text AS reason, p.applied_at,
-              (SELECT s.level_id FROM student s
-                WHERE s.id = p.student_id AND s.organization_id = p.organization_id) AS student_level_id
+              -- The student's level in the proposal's own sport (POOLSE-148).
+              student_level_in(p.student_id,
+                (SELECT tl.sport_id FROM student_level tl
+                  WHERE tl.id = p.to_level_id AND tl.organization_id = p.organization_id)) AS student_level_id
          FROM transfer_proposal p
         WHERE p.id = $1 AND p.archived_at IS NULL
           FOR UPDATE OF p`,
@@ -698,10 +700,13 @@ export async function applyDueAgeProposals(organizationId: string): Promise<Appl
       to_level_id: string;
       level_id: string | null;
     }>(
-      `SELECT p.id, p.student_id, p.from_level_id, p.to_level_id, s.level_id
+      `SELECT p.id, p.student_id, p.from_level_id, p.to_level_id,
+              -- The student's level in the proposal's own sport (POOLSE-148).
+              student_level_in(p.student_id, tl.sport_id) AS level_id
          FROM transfer_proposal p
          JOIN season se ON se.id = p.season_id AND se.organization_id = p.organization_id
          JOIN student s ON s.id = p.student_id AND s.organization_id = p.organization_id
+         JOIN student_level tl ON tl.id = p.to_level_id AND tl.organization_id = p.organization_id
         WHERE p.reason = 'age'
           AND p.status = 'pending'
           AND p.applied_at IS NULL

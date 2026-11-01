@@ -627,3 +627,16 @@ A student in two sports holds a level in each, and the two are independent (Rui,
   Atividade is slice C.
 - **Not built yet:** a sport's *Alunos* row and level filter reading that sport's level (slice B),
   and advancement by skills and by age per sport (slice C).
+
+## A level in each sport — slices B and C (1 November 2026)
+
+- **A sport's *Alunos*** shows each student's level in that sport, and its *Nível* filter reads the
+  same level (`LIST_LEVEL`). The shared register and the export read the swimming level, because
+  the export re-imports into it.
+- **Advancement is per sport.** A skills proposal comes from the skill's level, and an age proposal
+  from each level the student holds. Both move to the next level of the **same** sport's ladder.
+  Confirming a proposal, by hand or in the automatic mode, moves only that sport's level, and ends
+  only the enrolments at the level being left. A swimmer's swimming level and turmas are untouched
+  by a tennis move.
+- **Not yet:** reverting another sport's level change from Atividade. It is recorded, but its revert
+  needs its own path. POOLSE-148 says so.

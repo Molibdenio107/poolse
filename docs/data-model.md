@@ -1834,6 +1834,12 @@ level's own sport, so a person's edit, a confirmed advancement, the automatic mo
 revert all land in the right place. The app may insert, change `level_id` and archive, and never
 delete. The migration moved any non-swimming `student.level_id` to its row and cleared the column.
 
+`student_level_in(student, sport)` is the one definition of a student's level in a sport, read by
+an advancement's confirmation and the automatic mode. Since slice C, `next_level` and
+`age_fit_level` stay on the level's own ladder. Before that they ordered every ladder together, so
+a swimmer could be proposed into a tennis level. `age_band_standing` judges every level a student
+holds, with one row per level.
+
 ### One student, one hour — POOLSE-144
 
 ```

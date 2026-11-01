@@ -169,7 +169,7 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-145](./POOLSE-145-instructor-scoped-to-sports.md) | An instructor belongs to the sports the club assigns (`membership.sports`, explicit) and reads only those sports' students; owner/admin see all | Staff / Security | Low (post go-live) | POOLSE-143, 125 | 1 |
 | [POOLSE-146](./POOLSE-146-messages-by-sport-and-qualifications-per-sport.md) | A message can go to everyone in one sport; a qualification type names its sport so *em falta* is judged per sport | Messages / Staff | Low (post go-live) | POOLSE-145, 67, 27 | 1 |
 | [POOLSE-147](./POOLSE-147-calendar-card-lists-the-students.md) | **Built 01-11-2026.** The calendar's class card lists the turma's active students (hover, informative only) instead of always saying nobody is enrolled — hard-coded `people: []` since round 6 | Calendar | High (pre go-live) | — | 0 |
-| [POOLSE-148](./POOLSE-148-a-level-per-sport.md) | A student holds a level in each sport they do (swimming on `student.level_id`, others in `student_sport_level`); advancement runs per sport on its own ladder — slices A (schema + record), B (lists), C (advancement) | Students / Levels | Medium | POOLSE-126, 143 | 1 |
+| [POOLSE-148](./POOLSE-148-a-level-per-sport.md) | **Built 01-11-2026** (Atividade revert of another sport's level open). A student holds a level in each sport they do (swimming on `student.level_id`, others in `student_sport_level`); advancement runs per sport on its own ladder — slices A (schema + record), B (lists), C (advancement) | Students / Levels | Medium | POOLSE-126, 143 | 1 |
 
 ## To discuss — raised 01-11-2026, parked until after the pilot has used the app
 

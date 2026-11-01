@@ -824,6 +824,19 @@ export interface StudentQuery {
   multiSport?: boolean;
 }
 
+/**
+ * The level a list reads for a student — POOLSE-148 slice B. On a sport's own
+ * register (`sport` names a sport other than swimming) it is the student's
+ * level in that sport; everywhere else it is the swimming level on the record.
+ * One expression for the row's level and the *Nível* filter, so they agree.
+ */
+const LIST_LEVEL = (alias: string, sportParam: string): string => `
+  CASE WHEN ${sportParam}::text IS NOT NULL AND ${sportParam}::text NOT IN ('pool', 'none')
+       THEN (SELECT x.level_id FROM student_sport_level x
+              WHERE x.student_id = ${alias}.id AND x.organization_id = ${alias}.organization_id
+                AND x.sport_id = ${sportParam}::text AND x.archived_at IS NULL)
+       ELSE ${alias}.level_id END`;
+
 /** The sports of a student's active turmas, as SQL — one definition for the list, its filters and its counts. */
 const STUDENT_SPORTS = (alias: string): string => `
   ARRAY(SELECT DISTINCT coalesce(pa.sport_id, 'pool')
@@ -909,7 +922,7 @@ export async function listStudents(
              CASE WHEN s.birth_date IS NULL THEN NULL
                   ELSE extract(YEAR FROM age(s.birth_date))::int
              END AS age,
-             s.level_id,
+             l.id AS level_id,
              l.name AS level_name,
              s.gender,
              s.contact_email::text AS contact_email,
@@ -926,8 +939,9 @@ export async function listStudents(
              ${IS_GUARDIAN} AS is_guardian,
              ${STUDENT_SPORTS('s')}::text[] AS sports
         FROM student s
+        -- The level this list reads: a sport's own, on a sport's register (POOLSE-148).
         LEFT JOIN student_level l
-               ON l.id = s.level_id
+               ON l.id = ${LIST_LEVEL('s', '$7')}
               AND l.organization_id = s.organization_id
        WHERE s.archived_at IS NULL
          /*
@@ -952,7 +966,7 @@ export async function listStudents(
             coalesce(s.contact_email::text, '') || ' ' || coalesce(s.contact_phone, '')`,
            '$1',
          )}
-         AND ($2::uuid IS NULL OR s.level_id = $2::uuid)
+         AND ($2::uuid IS NULL OR ${LIST_LEVEL('s', '$7')} = $2::uuid)
          -- Only who owes, when the register asks for it — round 5. A filter
          -- rather than a sort, so the count in the header is the answer.
          AND (NOT $5::boolean OR ${PAYMENT_STATE} = 'overdue')

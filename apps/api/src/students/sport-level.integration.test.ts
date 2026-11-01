@@ -46,6 +46,33 @@ test('a student holds a swimming and a tennis level, each set on its own (QA 1, 
       assert.equal(record.levelId, golfinhos, 'the swimming level did not move');
       assert.deepEqual(record.sportLevels, [{ sport: 'tennis', levelId: tennisTwo, levelName: 'Iniciação 2' }]);
 
+      // Slice B: a sport's register reads that sport's level, row and filter alike;
+      // the general register reads the swimming one. She is in a tennis turma, so
+      // the tennis register lists her.
+      const [court] = await tenant.sql<{ id: string }>(
+        `INSERT INTO playing_area (organization_id, facility_id, sport_id, name) VALUES ($1, $2, 'tennis', 'Campo') RETURNING id`,
+        [tenant.organizationId, tenant.facilityId],
+      );
+      const [turma] = await tenant.sql<{ id: string }>(
+        `INSERT INTO class_group (organization_id, season_id, facility_id, name, playing_area_id)
+         VALUES ($1, $2, $3, 'Ténis', $4) RETURNING id`,
+        [tenant.organizationId, tenant.seasonId, tenant.facilityId, court!.id],
+      );
+      await tenant.sql(
+        `INSERT INTO enrollment (organization_id, class_group_id, student_id, status) VALUES ($1, $2, $3, 'active')`,
+        [tenant.organizationId, turma!.id, id],
+      );
+      const row = async (levelId: string | undefined, sport: string | undefined) => {
+        const result = await students.list(undefined, levelId, undefined, undefined, undefined, undefined, sport);
+        return result.students.items.find((one) => one.id === id);
+      };
+      const tennisList = await students.list(undefined, tennisTwo);
+      assert.equal(tennisList.students.items.some((one) => one.id === id), false, 'the general list filters by swimming');
+      assert.equal((await row(undefined, undefined))?.levelName, 'Golfinhos');
+      assert.equal((await row(undefined, 'tennis'))?.levelName, 'Iniciação 2');
+      assert.equal((await row(tennisTwo, 'tennis'))?.levelId, tennisTwo, 'the tennis filter reads the tennis level');
+      assert.equal(await row(tennisOne, 'tennis'), undefined);
+
       // A level from the other ladder is refused, on both paths.
       await expectStatus(() => sportLevel.set(id, { sport: 'tennis', levelId: golfinhos }), 400);
       await expectStatus(
