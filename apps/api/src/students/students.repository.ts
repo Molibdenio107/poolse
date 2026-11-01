@@ -217,6 +217,12 @@ export interface Student {
    */
   isAdultStudent: boolean;
   isGuardian: boolean;
+  /**
+   * The sports of the student's active turmas, by each turma's recinto
+   * (POOLSE-122; `pool` without one) — multi-sport Slice 3's *Modalidades*.
+   * On lists only; absent on a single record, which reads its turmas instead.
+   */
+  sports?: string[];
   socioNumber: string | null;
   /** Sócio desde, `YYYY-MM-DD` — POOLSE-134. Carried by the export only. */
   socioSince?: string | null;
@@ -781,6 +787,43 @@ export interface StudentQuery {
   toInvite?: boolean;
   search: string | null;
   levelId: string | null;
+  /** Only students with an active turma of this sport — multi-sport Slice 3. */
+  sport?: string | null;
+  /** Only students in turmas of two or more sports. */
+  multiSport?: boolean;
+}
+
+/** The sports of a student's active turmas, as SQL — one definition for the list, its filters and its counts. */
+const STUDENT_SPORTS = (alias: string): string => `
+  ARRAY(SELECT DISTINCT coalesce(pa.sport_id, 'pool')
+          FROM enrollment e
+          JOIN class_group g
+            ON g.id = e.class_group_id AND g.organization_id = e.organization_id AND g.archived_at IS NULL
+          LEFT JOIN playing_area pa
+            ON pa.id = g.playing_area_id AND pa.organization_id = g.organization_id
+         WHERE e.student_id = ${alias}.id AND e.organization_id = ${alias}.organization_id
+           AND e.status = 'active'
+         ORDER BY 1)`;
+
+/**
+ * How many live students have an active turma of each sport, and in two or more —
+ * the *Modalidades* filter chips' counts (multi-sport Slice 3). One grouped statement.
+ */
+export async function studentSportCounts(
+  organizationId: string,
+): Promise<{ total: number; bySport: { sport: string; count: number }[]; multi: number }> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ total: number; by_sport: { sport: string; count: number }[]; multi: number }>(
+      `WITH x AS (
+         SELECT s.id, ${STUDENT_SPORTS('s')} AS sports FROM student s WHERE s.archived_at IS NULL
+       )
+       SELECT (SELECT count(*) FROM x)::int AS total,
+              (SELECT coalesce(json_agg(json_build_object('sport', sport, 'count', n) ORDER BY sport), '[]'::json)
+                 FROM (SELECT unnest(sports) AS sport, count(*)::int AS n FROM x GROUP BY 1) t) AS by_sport,
+              (SELECT count(*) FROM x WHERE cardinality(sports) > 1)::int AS multi`,
+    );
+    return { total: rows[0]!.total, bySport: rows[0]!.by_sport, multi: rows[0]!.multi };
+  });
 }
 
 export async function listStudents(
@@ -842,7 +885,8 @@ export async function listStudents(
              ${PHOTO_KEY} AS photo_file_id,
              ${PHOTO_CONSENT} AS photo_consent,
              ${IS_ADULT_STUDENT} AS is_adult_student,
-             ${IS_GUARDIAN} AS is_guardian
+             ${IS_GUARDIAN} AS is_guardian,
+             ${STUDENT_SPORTS('s')}::text[] AS sports
         FROM student s
         LEFT JOIN student_level l
                ON l.id = s.level_id
@@ -875,6 +919,9 @@ export async function listStudents(
          -- rather than a sort, so the count in the header is the answer.
          AND (NOT $5::boolean OR ${PAYMENT_STATE} = 'overdue')
          AND (NOT $6::boolean OR ${HAS_UNINVITED('s')})
+         -- *Modalidades* — multi-sport Slice 3.
+         AND ($7::text IS NULL OR $7::text = ANY(${STUDENT_SPORTS('s')}))
+         AND (NOT $8::boolean OR cardinality(${STUDENT_SPORTS('s')}) > 1)
        /*
         * The window goes here, inside the statement that carries the tenant
         * scope, the search and the sort — POOLSE-29. Never a page taken from a
@@ -893,7 +940,16 @@ export async function listStudents(
        ORDER BY ${nameOrder('s')}, s.id
        LIMIT $3 OFFSET $4
       `,
-      [query.search, query.levelId, limit, offset, query.overdueOnly ?? false, query.toInvite ?? false],
+      [
+        query.search,
+        query.levelId,
+        limit,
+        offset,
+        query.overdueOnly ?? false,
+        query.toInvite ?? false,
+        query.sport ?? null,
+        query.multiSport ?? false,
+      ],
     );
 
     return windowed(page, run, toStudent);
@@ -1533,6 +1589,7 @@ function toStudent(row: {
   photo_consent: boolean;
   is_adult_student: boolean;
   is_guardian: boolean;
+  sports?: string[];
   left_on?: string | null;
   health_erases_on?: string | null;
   identity_erases_on?: string | null;
@@ -1581,6 +1638,7 @@ function toStudent(row: {
     photoConsent: row.photo_consent,
     isAdultStudent: row.is_adult_student,
     isGuardian: row.is_guardian,
+    ...(row.sports === undefined ? {} : { sports: row.sports }),
   };
 }
 

@@ -20,6 +20,10 @@ import { FamilyBulkInvite } from './family-bulk';
 import { InviteStudent } from './invite-student';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isMultiSport, isPoolseSport, type PoolseSport } from '@poolse/rules';
+import { SUB_MENU_ROW, subMenuPillClass } from '@/components/section-pills';
+import { SportChip } from '@/components/sport-chip';
+import { SportIcon, sportNameKey } from '@/components/sport-icon';
 
 /**
  * Slice 1.2 — the student register.
@@ -40,10 +44,12 @@ export default async function StudentsPage({
     from?: string;
     sort?: string;
     invite?: string;
+    sport?: string;
+    multi?: string;
   }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { search = '', levelId = '', page: pageParam, from, sort, invite } = await searchParams;
+  const { search = '', levelId = '', page: pageParam, from, sort, invite, sport, multi } = await searchParams;
 
   /*
    * Only the students who owe money — round 5.
@@ -61,10 +67,20 @@ export default async function StudentsPage({
   // *Por convidar* — POOLSE-129: somebody on the record could use the app and
   // has neither a login nor a live invitation.
   const pendingOnly = invite === 'pending';
+  // *Modalidades* — multi-sport Slice 3: one sport, or the students in two or more.
+  const sportFilter: PoolseSport | null = isPoolseSport(sport) ? sport : null;
+  const multiOnly = multi === '1';
   const flags = {
     sort: overdueOnly ? 'overdue' : undefined,
     invite: pendingOnly ? 'pending' : undefined,
+    sport: sportFilter ?? undefined,
+    multi: multiOnly ? '1' : undefined,
   };
+  // The club's own `/me`: its name for a shared link, and whether it has a
+  // second sport — the only case the *Modalidades* chips and column appear in.
+  const me = await apiFetch<Me>('/me').catch(() => null);
+  const clubSports = me?.memberships[0]?.sports ?? [];
+  const multiSport = isMultiSport(clubSports);
 
   /*
    * The register is a top-level section, so it has no parent and no back link —
@@ -80,6 +96,9 @@ export default async function StudentsPage({
   if (levelId.trim()) query.set('levelId', levelId.trim());
   if (overdueOnly) query.set('sort', 'overdue');
   if (pendingOnly) query.set('invite', 'pending');
+  if (sportFilter !== null) query.set('sport', sportFilter);
+  if (multiOnly) query.set('multi', '1');
+  if (multiSport) query.set('sportCounts', '1');
   if (page > 1) query.set('page', String(page));
 
   /*
@@ -112,11 +131,10 @@ export default async function StudentsPage({
   }
 
   // The club's name, for the message a shared link carries.
-  const organizationName =
-    data === null ? '' : await apiFetch<Me>('/me').then((me) => me.memberships[0]?.organizationName ?? '').catch(() => '');
+  const organizationName = data === null ? '' : (me?.memberships[0]?.organizationName ?? '');
 
   const filtering =
-    search.trim().length > 0 || levelId.trim().length > 0 || overdueOnly || pendingOnly;
+    search.trim().length > 0 || levelId.trim().length > 0 || overdueOnly || pendingOnly || sportFilter !== null || multiOnly;
 
   /*
    * A page that has fallen off the end — QA 29.6 and 29.12.
@@ -294,6 +312,39 @@ export default async function StudentsPage({
             </div>
           )}
 
+          {/* *Modalidades* — multi-sport Slice 3: a chip per sport and the students in two or more. */}
+          {multiSport && data.sportCounts !== undefined && (
+            <nav aria-label={t('students.sportFilter')} className={cn(SUB_MENU_ROW, 'items-center')}>
+              <FromLink
+                href={pageHref('/dashboard/students', { search, levelId, ...flags, sport: undefined, multi: undefined }, 1)}
+                aria-current={sportFilter === null && !multiOnly ? 'page' : undefined}
+                className={subMenuPillClass(sportFilter === null && !multiOnly)}
+              >
+                {t('students.sportAll', { count: data.sportCounts.total })}
+              </FromLink>
+              {data.sportCounts.bySport.map((entry) => (
+                <FromLink
+                  key={entry.sport}
+                  href={pageHref('/dashboard/students', { search, levelId, ...flags, sport: entry.sport, multi: undefined }, 1)}
+                  aria-current={sportFilter === entry.sport ? 'page' : undefined}
+                  className={subMenuPillClass(sportFilter === entry.sport)}
+                >
+                  <SportIcon sport={entry.sport} className="size-4" />
+                  {t(sportNameKey(entry.sport))}
+                  <span className="tabular-nums opacity-80">{entry.count}</span>
+                </FromLink>
+              ))}
+              <span aria-hidden className="mx-1 h-5 w-px bg-foreground/15" />
+              <FromLink
+                href={pageHref('/dashboard/students', { search, levelId, ...flags, sport: undefined, multi: '1' }, 1)}
+                aria-current={multiOnly ? 'page' : undefined}
+                className={subMenuPillClass(multiOnly)}
+              >
+                {t('students.sportMulti', { count: data.sportCounts.multi })}
+              </FromLink>
+            </nav>
+          )}
+
           <section className="rounded bg-surface p-5 shadow-card">
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('students.count', { count: data.students.total })}
@@ -402,6 +453,8 @@ export default async function StudentsPage({
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
+                      {/* *Modalidades*, a chip per sport — only in a multi-sport club. */}
+                      {multiSport && (student.sports ?? []).map((one) => <SportChip key={one} sport={one} />)}
                       {/* Furthest right, after the level and the flags. */}
                       {data.canManage && (
                         <PaymentMark state={student.paymentState} />

@@ -1599,6 +1599,8 @@ export interface Student {
    */
   isAdultStudent: boolean;
   isGuardian: boolean;
+  /** The sports of the active turmas — on lists only (multi-sport Slice 3). */
+  sports?: PoolseSport[];
   socioNumber: string | null;
   /** Sócio desde, `YYYY-MM-DD` — POOLSE-134. Carried by the export only. */
   socioSince?: string | null;
@@ -1645,6 +1647,8 @@ export interface Students {
   canManage: boolean;
   /** POOLSE-129: whether *Convidar famílias* is offered. */
   canInviteFamilies: boolean;
+  /** The *Modalidades* chips' counts, when asked for (`sportCounts=1`, multi-sport clubs only). */
+  sportCounts?: { total: number; bySport: { sport: PoolseSport; count: number }[]; multi: number };
   /**
    * The club's maioridade — POOLSE-22.
    *
@@ -2032,6 +2036,8 @@ export interface CurrentPlan {
   defaultFeePeriodId: string | null;
   /** Whether it is already being charged. */
   hasLine: boolean;
+  /** The turmas' sport (multi-sport Slice 3). */
+  sport: PoolseSport;
 }
 
 /**

@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, Check, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
+import { sportNameKey } from '@/components/sport-icon';
 import { SectionPills, sectionHref } from '@/components/section-pills';
 import { formatCents, monthlyEquivalentCents } from '@/lib/money';
 import { feeTotals } from '@/lib/fee-totals';
@@ -419,6 +420,48 @@ const SECTION_LABEL: Record<FeesSection, string> = {
   socio: 'fees.membershipTitle',
 };
 
+/**
+ * The mensalidade across sports — multi-sport Slice 3 (the handoff's
+ * *Mensalidade*, "sum of per-sport fees"). Only for a student whose turmas span
+ * two or more sports. Each sport's priced plans, then their total; a plan the
+ * site does not price is never a zero, so the line says how many have no price
+ * (`docs/financials.md`: a total reports its coverage). These are the prices
+ * their turmas imply, not what is charged — the lines below are that.
+ */
+function CombinedMensalidade({ plans }: { plans: StudentFees['currentPlans'] }): React.ReactElement | null {
+  const t = useTranslations();
+  const locale = useLocale();
+  const sports = [...new Set(plans.map((plan) => plan.sport))];
+  if (sports.length < 2) return null;
+  // Never a zero for "no price": a sport with nothing priced says so, and the
+  // total is over what is priced, its coverage said beside it.
+  const pricedOf = (list: typeof plans): { cents: number; count: number } =>
+    list.reduce(
+      (acc, plan) => (plan.amountCents === null ? acc : { cents: acc.cents + plan.amountCents, count: acc.count + 1 }),
+      { cents: 0, count: 0 },
+    );
+  const all = pricedOf(plans);
+  const unpriced = plans.length - all.count;
+  return (
+    <p className="rounded bg-surface-muted px-3 py-2 text-sm">
+      <span className="font-medium">{t('fees.combined')}: </span>
+      {sports
+        .map((sport) => {
+          const own = pricedOf(plans.filter((p) => p.sport === sport));
+          return `${t(sportNameKey(sport))} ${own.count === 0 ? t('fees.combinedNoPrice') : formatCents(locale, own.cents)}`;
+        })
+        .join(' · ')}
+      {all.count > 0 && (
+        <>
+          {' — '}
+          <span className="font-semibold tabular-nums">{t('fees.combinedTotal', { amount: formatCents(locale, all.cents) })}</span>
+        </>
+      )}
+      {unpriced > 0 && <span className="text-foreground-muted"> {t('fees.combinedUnpriced', { count: unpriced })}</span>}
+    </p>
+  );
+}
+
 export function FeesBlock({
   studentId,
   fees,
@@ -581,7 +624,8 @@ export function FeesBlock({
           <ul className="flex flex-col divide-y divide-border">
             {fees.currentPlans.map((plan) => (
               <CurrentPlanRow
-                key={`${plan.facilityId}-${plan.levelId ?? 'none'}`}
+                // The sport too: a pool and a tennis turma may share a site and no level (multi-sport Slice 3).
+                key={`${plan.facilityId}-${plan.levelId ?? 'none'}-${plan.sport}`}
                 studentId={studentId}
                 plan={plan}
                 periods={periods[plan.facilityId] ?? []}
@@ -594,6 +638,7 @@ export function FeesBlock({
             ))}
           </ul>
         )}
+        <CombinedMensalidade plans={fees.currentPlans} />
       </div>
 
       {live.length === 0 && <p className="text-sm text-foreground-muted">{t('fees.noLines')}</p>}

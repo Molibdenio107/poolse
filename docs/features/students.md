@@ -565,3 +565,21 @@ transaction. *Exportar 50 m / 25 m* writes the same shape back, and a round trip
   nothing to route: `notifications/` sends invitation and vacation email and no messaging
   feature exists. The rule is written down in the ticket and should be built with the feature
   it belongs to, not stubbed ahead of it. It is the only criterion of POOLSE-23 still open.
+
+## Modalidades — multi-sport Slice 3 (1 November 2026)
+
+None of this appears for a pool-only club (`isMultiSport`).
+
+- **The register.** Each row carries a `SportChip` per sport of the student's active turmas. A turma's sport is its
+  recinto's (`STUDENT_SPORTS` in `students.repository.ts`, `pool` for a turma with none), never a level's.
+
+  Above the list sits a chip row: *Todos · n*, one per sport with its count, and *Multi-modalidade · n*. The filters
+  are `?sport=` and `?multi=1`; an unknown sport matches nobody. The counts come from `studentSportCounts`, one
+  grouped statement, and are fetched only when the web asks (`sportCounts=1`), which it does only for a multi-sport
+  club.
+- **The record's *Turmas* tab** has one card per sport, the handoff's enrolment cards: the sport's 4 px bar, icon and
+  name, then that sport's turmas with their attendance strips. With one sport it is one card, as before.
+- **The combined mensalidade.** Under *Plano atual*, a student whose turmas span two or more sports gets one line:
+  each sport's priced plans, then their total. A sport with nothing priced says *sem preço* and is never 0,00 €, and
+  the line counts the unpriced turmas. These are the prices the turmas imply, not what is charged. Each
+  `currentPlans` entry carries its turmas' `sport`.

@@ -247,6 +247,8 @@ export interface CurrentPlan {
   defaultFeePeriodId: string | null;
   /** Whether a fee line already exists for it — what tells the screen to offer one. */
   hasLine: boolean;
+  /** The turmas' sport, by their recinto (POOLSE-122) — the mensalidade's split by sport (multi-sport Slice 3). */
+  sport: string;
 }
 
 /**
@@ -1277,19 +1279,21 @@ async function readStudentFees(
       amount_cents: number | null;
       default_fee_period_id: string | null;
       has_line: boolean;
+      sport: string;
     }>(
       `WITH attending AS (
-         SELECT cg.facility_id, cg.level_id,
+         SELECT cg.facility_id, cg.level_id, coalesce(pa.sport_id, 'pool') AS sport,
                 sum((
                   SELECT count(*) FROM class_schedule cs
                    WHERE cs.class_group_id = cg.id AND cs.archived_at IS NULL
                 ))::int AS lessons_per_week
            FROM enrollment e
            JOIN class_group cg ON cg.id = e.class_group_id
+           LEFT JOIN playing_area pa ON pa.id = cg.playing_area_id AND pa.organization_id = cg.organization_id
           WHERE e.student_id = $1 AND e.status = 'active' AND cg.archived_at IS NULL
-          GROUP BY cg.facility_id, cg.level_id
+          GROUP BY cg.facility_id, cg.level_id, coalesce(pa.sport_id, 'pool')
        )
-       SELECT a.facility_id, f.name AS facility_name,
+       SELECT a.facility_id, f.name AS facility_name, a.sport,
               a.level_id, l.name AS level_name, a.lessons_per_week,
               p.id AS plan_id, p.amount_cents, p.default_fee_period_id,
               EXISTS (
@@ -1362,6 +1366,7 @@ async function readStudentFees(
         amountCents: row.amount_cents,
         defaultFeePeriodId: row.default_fee_period_id,
         hasLine: row.has_line,
+        sport: row.sport,
       })),
       cover,
       seasonCharges: chargeRows.map((row) => ({

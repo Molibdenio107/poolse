@@ -1,6 +1,7 @@
+import { cn } from '@/lib/utils';
 import { AttendanceStrip, type StripLesson } from '@/components/attendance-strip';
-import { isMultiSport } from '@poolse/rules';
-import { SportChip } from '@/components/sport-chip';
+import { isMultiSport, type PoolseSport } from '@poolse/rules';
+import { SportIcon, sportNameKey } from '@/components/sport-icon';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Smartphone } from 'lucide-react';
 import { FromLink } from '@/components/from-link';
@@ -630,14 +631,39 @@ export default async function StudentPage({
             );
             const lessonsOf = (groupId: string): StripLesson[] | null =>
               recent.state === 'ok' ? (recent.data.turmas.find((x) => x.classGroupId === groupId)?.lessons ?? []) : null;
+            // One card per sport in a multi-sport club — the handoff's enrolment
+            // cards (multi-sport Slice 3), each with its sport's bar, icon and
+            // name. With one sport, one card across the width, as before.
+            const groups: { sport: PoolseSport | null; entries: TimetableEntry[] }[] = multiSport
+              ? [...new Set(turmas.map((entry) => entry.sport))].map((sport) => ({
+                  sport,
+                  entries: turmas.filter((entry) => entry.sport === sport),
+                }))
+              : [{ sport: null, entries: turmas }];
             return (
-            <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
+            <div className="grid grid-cols-1 gap-page-gap lg:grid-cols-2">
+            {groups.map(({ sport, entries }) => (
+            <section
+              key={sport ?? 'all'}
+              {...(sport === null ? {} : { 'data-sport': sport })}
+              className={cn(
+                'flex flex-col gap-3 rounded bg-surface p-5 shadow-card',
+                sport === null ? 'lg:col-span-2' : 'border-l-4 border-[rgb(var(--sport-wash))]',
+              )}
+            >
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('students.turmas')}
+                {sport === null ? (
+                  t('students.turmas')
+                ) : (
+                  <span className="inline-flex items-center gap-2 normal-case tracking-normal text-foreground">
+                    <SportIcon sport={sport} />
+                    <span className="font-heading text-base font-semibold">{t(sportNameKey(sport))}</span>
+                  </span>
+                )}
               </h2>
 
               <ul className="flex flex-col divide-y divide-border">
-                {turmas.map((entry) => (
+                {entries.map((entry) => (
                   <li
                     key={entry.classGroupId}
                     className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 first:pt-0 last:pb-0"
@@ -654,7 +680,6 @@ export default async function StudentPage({
                           {entry.className}
                         </FromLink>
                       )}
-                      {multiSport && <SportChip sport={entry.sport} />}
                       {entry.status === 'waiting' && <Badge tone="muted">{t('students.waiting')}</Badge>}
                     </span>
 
@@ -675,6 +700,8 @@ export default async function StudentPage({
                 ))}
               </ul>
             </section>
+            ))}
+            </div>
             );
           },
         },

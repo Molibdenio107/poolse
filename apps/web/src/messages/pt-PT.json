@@ -1948,7 +1948,11 @@
     "studentSection": {
       "nav": "Secções da mensalidade",
       "linesHint": "O que for cobrado aqui passa a ser uma linha em Mensalidades, onde está o total do período."
-    }
+    },
+    "combined": "Mensalidade combinada",
+    "combinedTotal": "total {amount}",
+    "combinedUnpriced": "({count, plural, one {# turma sem preço} other {# turmas sem preço}})",
+    "combinedNoPrice": "sem preço"
   },
   "categories": {
     "title": "Categorias de preço",
@@ -2402,7 +2406,10 @@
       "tooLong": "Texto demasiado longo.",
       "postalCodeInvalid": "Use o formato 0000-000.",
       "snsNumberInvalid": "O nº de utente tem nove algarismos."
-    }
+    },
+    "sportFilter": "Modalidades",
+    "sportAll": "Todos · {count}",
+    "sportMulti": "Multi-modalidade · {count}"
   },
   "advancement": {
     "title": "Progressões",

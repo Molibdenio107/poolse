@@ -1948,7 +1948,11 @@
     "studentSection": {
       "nav": "Fee sections",
       "linesHint": "Anything charged here becomes a line under Monthly fees, where the period total is shown."
-    }
+    },
+    "combined": "Combined monthly fee",
+    "combinedTotal": "total {amount}",
+    "combinedUnpriced": "({count, plural, one {# class without a price} other {# classes without a price}})",
+    "combinedNoPrice": "no price"
   },
   "categories": {
     "title": "Fee categories",
@@ -2402,7 +2406,10 @@
       "tooLong": "Text too long.",
       "postalCodeInvalid": "Use the format 0000-000.",
       "snsNumberInvalid": "The SNS number has nine digits."
-    }
+    },
+    "sportFilter": "Sports",
+    "sportAll": "All · {count}",
+    "sportMulti": "Several sports · {count}"
   },
   "advancement": {
     "title": "Advancement",

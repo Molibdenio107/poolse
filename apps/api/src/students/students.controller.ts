@@ -11,7 +11,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { isValidNif } from '@poolse/rules';
+import { isValidNif, isPoolseSport } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireActsForStudent } from './student-access.js';
 import {
@@ -68,6 +68,7 @@ import {
   revokeRole,
   listLevels,
   listStudents,
+  studentSportCounts,
   reorderLevels,
   renameLevel,
   searchPeople,
@@ -142,6 +143,11 @@ interface StudentsResponse {
   canManage: boolean;
   /** POOLSE-129: whether *Convidar famílias* is offered. */
   canInviteFamilies: boolean;
+  /**
+   * The *Modalidades* chips' counts — multi-sport Slice 3. Only when asked
+   * (`sportCounts=1`), which the web does only for a club with a second sport.
+   */
+  sportCounts?: { total: number; bySport: { sport: string; count: number }[]; multi: number };
   /**
    * The club's maioridade — POOLSE-22.
    *
@@ -389,6 +395,9 @@ export class StudentsController {
     @Query('limit') limit?: string,
     @Query('sort') sort?: string,
     @Query('invite') invite?: string,
+    @Query('sport') sport?: string,
+    @Query('multi') multi?: string,
+    @Query('sportCounts') sportCounts?: string,
   ): Promise<StudentsResponse> {
     // Security review, 12 October 2026: this answered any member, a guardian included.
     requireRole('owner', 'admin', 'instructor');
@@ -396,7 +405,7 @@ export class StudentsController {
 
     // All three are tenant-scoped reads on the same organization; together they
     // cost one round trip instead of three.
-    const [students, levels, majority] = await Promise.all([
+    const [students, levels, majority, counts] = await Promise.all([
       listStudents(
         organizationId,
         {
@@ -409,11 +418,16 @@ export class StudentsController {
           overdueOnly: sort === 'overdue',
           // *Por convidar* — POOLSE-129.
           toInvite: invite === 'pending',
+          // *Modalidades* — multi-sport Slice 3. A sport the catalogue does not
+          // know matches nobody rather than everybody.
+          sport: sport === undefined || sport.trim() === '' ? null : isPoolseSport(sport) ? sport : '-',
+          multiSport: multi === '1',
         },
         readPageQuery(page, limit),
       ),
       listLevels(organizationId),
       ageOfMajority(organizationId),
+      sportCounts === '1' ? studentSportCounts(organizationId) : Promise.resolve(undefined),
     ]);
 
     // POOLSE-131: the SNS number for owner and admin only.
@@ -430,6 +444,7 @@ export class StudentsController {
       // their own turmas by the endpoint; support invites nobody.
       canInviteFamilies: currentTenant().support !== true,
       ageOfMajority: majority,
+      ...(counts === undefined ? {} : { sportCounts: counts }),
     };
   }
 
