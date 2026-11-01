@@ -1,3 +1,4 @@
+import { Trophy } from 'lucide-react';
 import { FromLink } from '@/components/from-link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -6,7 +7,7 @@ import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { formatDate } from '@/lib/date-format';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { backProp, originBack } from '@/lib/back';
-import { PageError, PageShell } from '@/components/page-shell';
+import { PageError, PageShell, PageEmpty } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { SectionPills } from '@/components/section-pills';
 import { ImportMeet } from './import-meet';
@@ -200,9 +201,7 @@ export async function CompetitionPage({
 
       {qualifying !== null &&
         (qualifying.seasonId === null ? (
-          <section className="rounded bg-surface p-5 shadow-card">
-            <p>{t('qualifying.noSeason')}</p>
-          </section>
+          <PageEmpty icon={Trophy} message={t('qualifying.noSeason')} hint={t('qualifying.noSeasonHint')} />
         ) : (
           <>
             <SeasonChooser overview={qualifying} path={sectionPath(section)} />

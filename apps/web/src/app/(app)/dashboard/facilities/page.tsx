@@ -3,12 +3,12 @@ import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { backProp, originBack } from '@/lib/back';
 import { ApiError, apiFetch, type Facilities } from '../../../../lib/api';
 import { FromLink } from '@/components/from-link';
-import { Settings } from 'lucide-react';
+import { Settings, Building2 } from 'lucide-react';
 import { EntityIcon } from '@/components/entity-icon';
 import { PoolClosureNote } from '@/components/pool-closure-note';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from './facility-forms';
-import { PageError, PageShell } from '@/components/page-shell';
+import { PageError, PageShell, PageEmpty } from '@/components/page-shell';
 import { AttentionDot } from '@/components/attention-dot';
 import { readAttention } from '@/lib/attention';
 
@@ -98,12 +98,11 @@ export default async function FacilitiesPage({
             ))}
 
           {data.facilities.length === 0 ? (
-            <section className="rounded bg-surface p-5 shadow-card">
-              <p>{t('facilities.none')}</p>
-              <p className="mt-1 text-sm text-foreground-muted">
-                {data.canManage ? t('facilities.noneHintManager') : t('facilities.noneHintMember')}
-              </p>
-            </section>
+            <PageEmpty
+              icon={Building2}
+              message={t('facilities.none')}
+              hint={data.canManage ? t('facilities.noneHintManager') : t('facilities.noneHintMember')}
+            />
           ) : (
             data.facilities.map((facility) => (
               <section

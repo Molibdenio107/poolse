@@ -1,6 +1,6 @@
 import { TurmaCards } from './turma-cards';
 import { ClashList } from './clash-list';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CalendarDays } from 'lucide-react';
 import { subMenuPillClass } from '@/components/section-pills';
 import { FromLink } from '@/components/from-link';
 import { dataOf, describeLoad, outcome, type LoadFailure } from '@/lib/load-failure';
@@ -15,7 +15,7 @@ import {
 } from '@/lib/api';
 import { PartnerClasses } from './partner-classes';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
-import { PageError, PageShell } from '@/components/page-shell';
+import { PageError, PageShell, PageEmpty } from '@/components/page-shell';
 import { formatCents } from '@/lib/money';
 import { classColourVar } from '@/lib/calendar-scale';
 import { cn } from '@/lib/utils';
@@ -500,12 +500,11 @@ export default async function ClassesPage({
             <>
               {/* Above the grid, so a club with none is told before an empty week. */}
               {data.groups.length === 0 && (
-                <section className="rounded bg-surface p-5 shadow-card">
-                  <p>{t('classes.none')}</p>
-                  <p className="mt-1 text-sm text-foreground-muted">
-                    {data.canManage ? t('classes.noneHintManager') : t('classes.noneHintMember')}
-                  </p>
-                </section>
+                <PageEmpty
+                  icon={CalendarDays}
+                  message={t('classes.none')}
+                  hint={data.canManage ? t('classes.noneHintManager') : t('classes.noneHintMember')}
+                />
               )}
 
               <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">

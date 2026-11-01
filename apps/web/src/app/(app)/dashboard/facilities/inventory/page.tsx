@@ -1,9 +1,10 @@
+import { Building2 } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { describeLoad, outcome, type LoadFailure, type Outcome } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Inventory, type LostAndFound } from '@/lib/api';
 import { EntityIcon } from '@/components/entity-icon';
-import { PageError, PageShell } from '@/components/page-shell';
+import { PageError, PageShell, PageEmpty } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
@@ -139,9 +140,7 @@ export default async function InventoryPage({
         form that would 404 on save.
       */}
       {data !== null && data.facilityId === null && (
-        <section className="rounded bg-surface p-5 shadow-card">
-          <p>{t('inventory.noSites')}</p>
-        </section>
+        <PageEmpty icon={Building2} message={t('inventory.noSites')} hint={t('inventory.noSitesHint')} />
       )}
 
       {data !== null && data.facilityId !== null && (

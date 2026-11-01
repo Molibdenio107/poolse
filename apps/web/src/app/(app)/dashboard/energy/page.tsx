@@ -1,10 +1,11 @@
+import { Zap } from 'lucide-react';
 import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, outcome, type LoadFailure } from '@/lib/load-failure';
 import { apiFetch, type EnergySummary, type Facilities } from '@/lib/api';
 import { backProp, originBack } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
-import { PageError, PageShell } from '@/components/page-shell';
+import { PageError, PageShell, PageEmpty } from '@/components/page-shell';
 import { EnergyPanel } from '../facilities/energy-panel';
 import { listMeters } from '../facilities/energy.actions';
 import { invoiceImportAvailable } from '../facilities/energy/invoice.actions';
@@ -102,9 +103,7 @@ export default async function EnergyPage({
       )}
 
       {sites !== null && sites.facilities.length === 0 && (
-        <section className="rounded bg-surface p-5 shadow-card">
-          <p className="text-sm text-foreground-muted">{t('energy.noSites')}</p>
-        </section>
+        <PageEmpty icon={Zap} message={t('energy.noSites')} hint={t('energy.noSitesHint')} />
       )}
 
       {canRecord && facilities.length > 0 && (

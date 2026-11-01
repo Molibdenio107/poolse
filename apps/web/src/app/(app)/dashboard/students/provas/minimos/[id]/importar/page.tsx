@@ -1,8 +1,9 @@
+import { Trophy } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { apiFetch, type QualifyingStandard } from '@/lib/api';
 import { outcome } from '@/lib/load-failure';
-import { PageError, PageShell } from '@/components/page-shell';
+import { PageError, PageShell, PageEmpty } from '@/components/page-shell';
 import { QualifyingImportWizard } from './import-wizard';
 
 /**
@@ -34,9 +35,7 @@ export default async function ImportTimesPage({
       back={{ href: `/dashboard/students/provas/minimos/${id}?tab=times`, label: standard.name }}
     >
       {standard.ageGroups.length === 0 ? (
-        <section className="rounded bg-surface p-5 shadow-card">
-          <p>{t('qualifying.noAgeGroupsYet')}</p>
-        </section>
+        <PageEmpty icon={Trophy} message={t('qualifying.noAgeGroupsYet')} />
       ) : (
         <QualifyingImportWizard standardId={standard.id} ageGroups={standard.ageGroups} />
       )}

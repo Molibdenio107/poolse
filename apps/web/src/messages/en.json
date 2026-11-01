@@ -938,7 +938,7 @@
     },
     "title": "Energy",
     "subtitle": "Each site's meters and their readings.",
-    "noSites": "No sites yet. Create one under Facilities to add meters.",
+    "noSites": "No sites yet.",
     "siteUnavailable": "The meters for this site could not be loaded.",
     "tariff": {
       "section": "Tariff",
@@ -1060,7 +1060,8 @@
       "chartMax": "Highest: {value}",
       "showTable": "Show the figures as a table",
       "month": "Month"
-    }
+    },
+    "noSitesHint": "Create one under Facilities to add meters."
   },
   "maintenance": {
     "about": "About",
@@ -3437,7 +3438,7 @@
     "hint": "One row per kind of item, with how many there are. Correct the number after each stock check.",
     "empty": "Nothing recorded at this site yet.",
     "readOnly": "You can only view the inventory. To change it, ask an administrator.",
-    "noSites": "There are no sites yet. Create one first and the inventory will have somewhere to live.",
+    "noSites": "There are no sites yet.",
     "siteLabel": "Site",
     "backToInventory": "Back to inventory",
     "add": "Add item",
@@ -3541,7 +3542,8 @@
       "nav": "Inventory sections",
       "inventory": "Inventory",
       "lost": "Lost and found"
-    }
+    },
+    "noSitesHint": "Create one first and the inventory will have somewhere to live."
   },
   "slots": {
     "title": "Schedule grid",
@@ -5853,7 +5855,7 @@
     "navStudent": "My record",
     "title": "My children",
     "subtitle": "The records the club keeps for the people in your care.",
-    "none": "No student record is linked to your account. If your child is at the club, ask reception to link them.",
+    "none": "No student record is linked to your account.",
     "yourself": "Your own record",
     "back": "Back to my children",
     "recordHint": "This is what the club has on file. To correct anything, speak to reception.",
@@ -5865,7 +5867,8 @@
     "planEmpty": "The instructor has not written this lesson's plan yet.",
     "retry": "Try again",
     "noSessionsHint": "This season's lessons are not on the calendar yet. Until then, this is the weekly timetable:",
-    "feesHintPayTo": "What is agreed with the club and what is still to pay. Below, where to pay."
+    "feesHintPayTo": "What is agreed with the club and what is still to pay. Below, where to pay.",
+    "noneHint": "If your child is at the club, ask reception to link them."
   },
   "activity": {
     "tab": "Activity",
@@ -6160,7 +6163,7 @@
       "recebidos": "Received by email{count, plural, =0 {} other { (#)}}"
     },
     "season": "Season",
-    "noSeason": "There is no season yet. Create one under Classes › Seasons to record age groups and qualifying times.",
+    "noSeason": "There is no season yet.",
     "standardsExplain": "Each championship's entry times, copied by the club from the FPN's regulations. Each swimmer is compared with their best time at an official meet, in the same pool length.",
     "noStandards": "No qualifying times in this season yet.",
     "timeCount": "{count, plural, =0 {no times} one {# time} other {# times}}",
@@ -6255,7 +6258,8 @@
     "fpnCreateHint": "The FPN's nine swimming age groups, Cadetes C to Seniores, with this season's birth years. Any the season already has are left as they are, and all can be changed afterwards under Age groups.",
     "fpnCreated": "{count, plural, =0 {The season already had the FPN age groups} one {# FPN age group created} other {# FPN age groups created}}",
     "ageGroupPillsLead": "Age group:",
-    "yearOpen": "No limit"
+    "yearOpen": "No limit",
+    "noSeasonHint": "Create one under Classes › Seasons to record age groups and qualifying times."
   },
   "emailPreference": {
     "title": "Club messages by email",

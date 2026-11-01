@@ -1,5 +1,6 @@
 'use client';
 
+import { PageEmpty } from '@/components/page-shell';
 import { FromLink } from '@/components/from-link';
 import {
   createContext,
@@ -29,16 +30,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import {
-  AlertTriangle,
-  Ban,
-  ClipboardCheck,
-  Download,
-  GripVertical,
-  Lock,
-  Printer,
-  X,
-} from 'lucide-react';
+import { AlertTriangle, Ban, ClipboardCheck, Download, GripVertical, Lock, Printer, X, Clock } from 'lucide-react';
 import {
   concurrentGroups,
   evaluate,
@@ -1994,18 +1986,21 @@ export function ScheduleBoard({
           one that is simply not set up yet.
         */}
         {slots.length === 0 ? (
-          <section className="rounded border border-dashed border-border bg-surface-muted p-6 text-center">
-            <p className="text-sm font-medium">{t('grid.noSlots')}</p>
-            <p className="mt-1 text-sm text-foreground-muted">{t('grid.noSlotsHint')}</p>
-            {facility !== undefined && canManage && (
-              <FromLink
-                href={`/dashboard/facilities/${facility.id}`}
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-3 rounded-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
-              >
-                {t('grid.buildGrid')}
-              </FromLink>
-            )}
-          </section>
+          <PageEmpty
+            icon={Clock}
+            message={t('grid.noSlots')}
+            hint={t('grid.noSlotsHint')}
+            action={
+              facility !== undefined && canManage ? (
+                <FromLink
+                  href={`/dashboard/facilities/${facility.id}`}
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm font-semibold bg-primary text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  {t('grid.buildGrid')}
+                </FromLink>
+              ) : undefined
+            }
+          />
         ) : (
           <>
             <ExportLinks

@@ -1,3 +1,4 @@
+import { CalendarRange } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { ApiError, apiFetch, type Seasons } from '../../../../../lib/api';
@@ -5,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { backProp, originBack } from '@/lib/back';
 import { SeasonReset } from './season-reset';
 import { SeasonDrafts } from './season-drafts';
-import { PageError, PageShell } from '@/components/page-shell';
+import { PageError, PageShell, PageEmpty } from '@/components/page-shell';
 import { formatDate } from '@/lib/date-format';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 
@@ -102,10 +103,10 @@ export default async function SeasonsPage({
 
           {current === 'seasons' && (
             <>
+              {data.seasons.length === 0 ? (
+                <PageEmpty icon={CalendarRange} message={t('seasons.none')} />
+              ) : (
               <section className="rounded bg-surface p-5 shadow-card">
-                {data.seasons.length === 0 ? (
-                  <p className="text-foreground-muted">{t('seasons.none')}</p>
-                ) : (
                   <ul className="flex flex-col gap-3">
                     {data.seasons.map((season) => (
                       <li
@@ -141,8 +142,8 @@ export default async function SeasonsPage({
                       </li>
                     ))}
                   </ul>
-                )}
               </section>
+              )}
 
               {/*
                 Past seasons are readable, not restorable. Said on the screen rather

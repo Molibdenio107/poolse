@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { Waves, User } from 'lucide-react';
+import { CalendarDays, Waves, User } from 'lucide-react';
 import { FromLink } from '@/components/from-link';
 import { PageEmpty } from '@/components/page-shell';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
@@ -32,6 +32,7 @@ export async function TurmaCards({
   if (groups.length === 0) {
     return (
       <PageEmpty
+        icon={CalendarDays}
         message={t('classes.none')}
         hint={canManage ? t('classes.noneHintManager') : t('classes.noneHintMember')}
       />

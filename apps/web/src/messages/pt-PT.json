@@ -938,7 +938,7 @@
     },
     "title": "Energia",
     "subtitle": "Os contadores de cada instalação e as suas leituras.",
-    "noSites": "Ainda não há instalações. Crie uma em Instalações para poder adicionar contadores.",
+    "noSites": "Ainda não há instalações.",
     "siteUnavailable": "Não foi possível carregar os contadores desta instalação.",
     "tariff": {
       "section": "Tarifa",
@@ -1060,7 +1060,8 @@
       "chartMax": "Máximo: {value}",
       "showTable": "Ver os valores em tabela",
       "month": "Mês"
-    }
+    },
+    "noSitesHint": "Crie uma em Instalações para poder adicionar contadores."
   },
   "maintenance": {
     "about": "Sobre",
@@ -3437,7 +3438,7 @@
     "hint": "Uma linha por tipo de artigo, com a quantidade que existe. Corrija o número depois de cada contagem.",
     "empty": "Ainda não há artigos registados nesta instalação.",
     "readOnly": "Só pode consultar o inventário. Para o alterar, fale com um administrador.",
-    "noSites": "Ainda não há instalações. Crie uma primeiro e o inventário passa a ter onde ficar.",
+    "noSites": "Ainda não há instalações.",
     "siteLabel": "Instalação",
     "backToInventory": "Voltar ao inventário",
     "add": "Adicionar artigo",
@@ -3541,7 +3542,8 @@
       "nav": "Secções do inventário",
       "inventory": "Inventário",
       "lost": "Achados e perdidos"
-    }
+    },
+    "noSitesHint": "Crie uma primeiro e o inventário passa a ter onde ficar."
   },
   "slots": {
     "title": "Grelha horária",
@@ -5853,7 +5855,7 @@
     "navStudent": "O meu registo",
     "title": "Os meus educandos",
     "subtitle": "As fichas que o clube tem de quem está ao seu cuidado.",
-    "none": "Não há nenhuma ficha de aluno associada à sua conta. Se tem um educando no clube, peça à receção para o associar.",
+    "none": "Não há nenhuma ficha de aluno associada à sua conta.",
     "yourself": "A sua própria ficha",
     "back": "Voltar aos meus educandos",
     "recordHint": "Estes são os dados que o clube tem. Para corrigir alguma coisa, fale com a receção.",
@@ -5865,7 +5867,8 @@
     "planEmpty": "O professor ainda não escreveu o plano desta aula.",
     "retry": "Tentar de novo",
     "noSessionsHint": "As aulas desta época ainda não foram marcadas no calendário. Até lá, este é o horário semanal:",
-    "feesHintPayTo": "O que está acordado com o clube e o que falta pagar. Em baixo, onde pagar."
+    "feesHintPayTo": "O que está acordado com o clube e o que falta pagar. Em baixo, onde pagar.",
+    "noneHint": "Se tem um educando no clube, peça à receção para o associar."
   },
   "activity": {
     "tab": "Atividade",
@@ -6160,7 +6163,7 @@
       "recebidos": "Recebidos por email{count, plural, =0 {} other { (#)}}"
     },
     "season": "Época",
-    "noSeason": "Ainda não há nenhuma época. Crie uma em Turmas › Épocas para registar escalões e mínimos.",
+    "noSeason": "Ainda não há nenhuma época.",
     "standardsExplain": "Os tempos de admissão de cada campeonato, copiados pelo clube a partir do regulamento da FPN. Cada nadador é comparado com o seu melhor tempo em prova oficial, na mesma piscina.",
     "noStandards": "Ainda não há mínimos nesta época.",
     "timeCount": "{count, plural, =0 {sem tempos} one {# tempo} other {# tempos}}",
@@ -6255,7 +6258,8 @@
     "fpnCreateHint": "Os nove escalões de natação pura da FPN, de Cadetes C a Seniores, com os anos de nascimento desta época. Os que a época já tiver ficam como estão, e todos se podem alterar depois em Escalões.",
     "fpnCreated": "{count, plural, =0 {A época já tinha os escalões FPN} one {# escalão FPN criado} other {# escalões FPN criados}}",
     "ageGroupPillsLead": "Escalão:",
-    "yearOpen": "Sem limite"
+    "yearOpen": "Sem limite",
+    "noSeasonHint": "Crie uma em Turmas › Épocas para registar escalões e mínimos."
   },
   "emailPreference": {
     "title": "Mensagens do clube por email",

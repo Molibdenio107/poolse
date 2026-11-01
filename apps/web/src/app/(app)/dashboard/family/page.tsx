@@ -1,10 +1,11 @@
+import { Users } from 'lucide-react';
 import { FromLink } from '@/components/from-link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { apiFetch } from '@/lib/api';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { EntityIcon } from '@/components/entity-icon';
-import { PageError, PageShell } from '@/components/page-shell';
+import { PageError, PageShell, PageEmpty } from '@/components/page-shell';
 
 interface FamilyStudent {
   id: string;
@@ -52,9 +53,7 @@ export default async function FamilyPage(): Promise<React.ReactElement> {
       {failure !== null && <PageError message={t(failure.key)} />}
 
       {failure === null && students.length === 0 && (
-        <section className="rounded bg-surface p-5 shadow-card">
-          <p>{t('family.none')}</p>
-        </section>
+        <PageEmpty icon={Users} message={t('family.none')} hint={t('family.noneHint')} />
       )}
 
       {students.length > 1 && (

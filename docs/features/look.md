@@ -98,3 +98,14 @@ tickets (POOLSE-125/127, 136).
 - **`PageEmpty`** is the handoff's empty state: a 32 px icon (an inbox by default), a title in the heading face, a
   muted line, and up to two actions (secondary, then primary). Its seven pages took it as they were; the ~40
   hand-written empty sentences change with the slices that redo their screens.
+
+### Which empty states are `PageEmpty` (sweep 01-11-2026)
+
+`PageEmpty` is for a page's or a tab's whole content being empty, and it uses that page's own
+menu icon: Turmas, Épocas, Energia, Instalações, Inventário, *Os meus educandos*, Competição, the
+mínimos import, and the weekly board with no time slots (which keeps its *Construir a grelha*
+action). Its title is one short sentence, and anything after it goes in `hint`.
+
+A list under a card's own heading (an invoice's payments, a meter's readings, *Em dívida* under
+its card) keeps one muted sentence. A second card inside the first would be a box in a box.
+App mode and the public pages keep their own empty lines.
