@@ -1,3 +1,4 @@
+import { subMenuPillClass } from '@/components/section-pills';
 import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
@@ -137,19 +138,13 @@ export default async function ClosuresPage({
           */}
           {/* The same switcher as Férias, to the class — one calendar, one look. */}
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <nav aria-label={t('calendar.year')} className="flex flex-wrap gap-1">
+            <nav aria-label={t('calendar.year')} className="flex flex-wrap gap-1.5">
               {years.map((option) => (
                 <FromLink
                   key={option}
                   href={`/dashboard/calendar/closures?year=${option}`}
                   aria-current={option === year ? 'page' : undefined}
-                  className={cn(
-                    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border transition-colors',
-                    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                    option === year
-                      ? 'border-primary bg-primary/15 font-medium text-primary'
-                      : 'border-border hover:border-primary/50 hover:text-primary',
-                  )}
+                  className={subMenuPillClass(option === year)}
                 >
                   {option}
                 </FromLink>

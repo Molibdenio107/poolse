@@ -1,3 +1,4 @@
+import { subMenuPillClass } from '@/components/section-pills';
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { FromLink } from '@/components/from-link';
@@ -126,28 +127,18 @@ export default async function LevelsPage({
             other sort in this app.
           */}
           {levels.length > 0 && (
-            <nav className="flex flex-wrap gap-2">
+            <nav className="flex flex-wrap gap-1.5">
               <FromLink
                 href="/dashboard/students/levels"
                 aria-current={byAgeOrder ? undefined : 'true'}
-                className={cn(
-                  'inline-flex h-control items-center justify-center gap-2 rounded-sm border px-4 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                  byAgeOrder
-                    ? 'border-border hover:bg-surface-muted'
-                    : 'border-primary bg-primary/10 text-primary',
-                )}
+                className={subMenuPillClass(!byAgeOrder)}
               >
                 {t('students.sortByLadder')}
               </FromLink>
               <FromLink
                 href="/dashboard/students/levels?sort=age"
                 aria-current={byAgeOrder ? 'true' : undefined}
-                className={cn(
-                  'inline-flex h-control items-center justify-center gap-2 rounded-sm border px-4 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                  byAgeOrder
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border hover:bg-surface-muted',
-                )}
+                className={subMenuPillClass(byAgeOrder)}
               >
                 {t('students.sortByAge')}
               </FromLink>

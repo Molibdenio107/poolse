@@ -1,3 +1,4 @@
+import { subMenuPillClass } from '@/components/section-pills';
 import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
@@ -102,7 +103,7 @@ export default async function VacationsPage({
       {mine !== null && (
         <>
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <nav aria-label={t('vacations.tabs')} className="flex flex-wrap gap-2">
+            <nav aria-label={t('vacations.tabs')} className="flex flex-wrap gap-1.5">
               <TabLink
                 tab="mine"
                 current={tab}
@@ -132,19 +133,13 @@ export default async function VacationsPage({
               picker would be a control that changed nothing.
             */}
             {tab !== 'queue' && (
-              <nav aria-label={t('vacations.yearNav')} className="flex flex-wrap gap-1">
+              <nav aria-label={t('vacations.yearNav')} className="flex flex-wrap gap-1.5">
                 {years.map((option) => (
                   <FromLink
                     key={option}
                     href={`/dashboard/facilities/staff/vacations?tab=${tab}&year=${option}`}
                     aria-current={option === chosenYear ? 'page' : undefined}
-                    className={cn(
-                      'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border transition-colors',
-                      'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                      option === chosenYear
-                        ? 'border-primary bg-primary/15 font-medium text-primary'
-                        : 'border-border hover:border-primary/50 hover:text-primary',
-                    )}
+                    className={subMenuPillClass(option === chosenYear)}
                   >
                     {option}
                   </FromLink>
@@ -203,13 +198,7 @@ function TabLink({
     <FromLink
       href={`/dashboard/facilities/staff/vacations?tab=${tab}&year=${year}`}
       aria-current={active ? 'page' : undefined}
-      className={cn(
-        'inline-flex h-control items-center justify-center gap-2 rounded-sm px-4 text-control transition-colors',
-        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-        active
-          ? 'bg-primary/15 font-medium text-primary'
-          : 'text-foreground-muted hover:bg-surface-muted hover:text-foreground',
-      )}
+      className={subMenuPillClass(active)}
     >
       {label}
     </FromLink>

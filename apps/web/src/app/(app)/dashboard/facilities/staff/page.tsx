@@ -1,3 +1,4 @@
+import { subMenuPillClass } from '@/components/section-pills';
 import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { redirect } from 'next/navigation';
@@ -250,11 +251,7 @@ export default async function PeoplePage({
                       key={staffRole}
                       href={active ? '/dashboard/facilities/staff' : `/dashboard/facilities/staff?role=${staffRole}`}
                       aria-pressed={active}
-                      className={`inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                        active
-                          ? 'border-primary bg-primary/15 text-primary'
-                          : 'border-border text-foreground-muted hover:border-primary/50 hover:text-foreground'
-                      }`}
+                      className={subMenuPillClass(active)}
                     >
                       {t(`roles.${staffRole}`)} {people.counts.byRole[staffRole] ?? 0}
                     </FromLink>

@@ -253,7 +253,7 @@ export function DetailTabStrip(): React.ReactElement {
           >
             {t(tab.labelKey)}
             {tab.badge?.kind === 'count' && (
-              <span className="rounded-full bg-surface-muted px-1.5 text-xs tabular-nums text-foreground-muted">
+              <span className="rounded-full bg-foreground/10 px-1.5 text-xs tabular-nums">
                 {tab.badge.value}
               </span>
             )}

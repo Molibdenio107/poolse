@@ -48,7 +48,7 @@ export function SectionPills({
     <StickyUnderHeader>
       {/* `data-scroll-row`: a chip row that scrolls on purpose, like the tab strip. */}
       <ScrollArrows>
-        <nav aria-label={label} data-scroll-row className="flex flex-wrap gap-2 max-md:-m-1 max-md:flex-nowrap max-md:overflow-x-auto max-md:p-1">
+        <nav aria-label={label} data-scroll-row className={cn(SUB_MENU_ROW, 'max-md:-m-1 max-md:flex-nowrap max-md:overflow-x-auto max-md:p-1')}>
           {items.map((item) => {
             const on = item.key === current;
             return (
@@ -57,14 +57,7 @@ export function SectionPills({
                 href={item.href}
                 aria-current={on ? 'page' : undefined}
                 scroll={false}
-                className={cn(
-                  'inline-flex h-control shrink-0 items-center justify-center gap-2 rounded-sm px-4 text-control',
-                  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                  on
-                    ? 'bg-primary text-primary-foreground'
-                    : // The handoff's secondary: the card's fill and lift, no border (01-11-2026).
-                      'bg-surface shadow-card hover:bg-surface-muted',
-                )}
+                className={subMenuPillClass(on)}
               >
                 {item.label}
                 {item.count !== undefined && (
@@ -78,6 +71,26 @@ export function SectionPills({
         </nav>
       </ScrollArrows>
     </StickyUnderHeader>
+  );
+}
+
+/**
+ * **One look for every sub-menu** (Rui, 01-11-2026): section pills, a record's
+ * tabs (`ui/tabs.tsx`, the same classes by `data-state`), a view or scope
+ * switch, a filter row. The handoff's secondary — the card's fill and lift —
+ * and the current one in the primary fill with the dark ink (6.6:1), close
+ * together so the row reads as one control. A new row of choices uses these,
+ * never its own border-and-tint variant.
+ */
+export const SUB_MENU_ROW = 'flex flex-wrap gap-1.5';
+
+export function subMenuPillClass(current: boolean): string {
+  return cn(
+    'inline-flex h-control shrink-0 items-center justify-center gap-2 rounded-sm px-3.5 text-control transition-colors',
+    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+    current
+      ? 'bg-primary font-medium text-primary-foreground [&_.attention-dot]:bg-primary-foreground'
+      : 'bg-surface text-foreground shadow-card hover:bg-surface-muted',
   );
 }
 

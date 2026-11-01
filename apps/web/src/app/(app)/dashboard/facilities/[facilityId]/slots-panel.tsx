@@ -1,5 +1,6 @@
 'use client';
 
+import { subMenuPillClass } from '@/components/section-pills';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ChevronRight, Trash2 } from 'lucide-react';
@@ -99,14 +100,7 @@ export function SlotsPanel({
               role="tab"
               aria-selected={candidate === group}
               onClick={() => setGroup(candidate)}
-              className={cn(
-                'inline-flex h-control items-center justify-center gap-1 rounded-sm px-4 text-control transition-colors',
-                'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                // The section pills' look (01-11-2026): a sub-menu is one style everywhere.
-                candidate === group
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-surface shadow-card hover:bg-surface-muted',
-              )}
+              className={subMenuPillClass(candidate === group)}
             >
               {t(`slots.group.${candidate}`)}{' '}
               <span className={cn('tabular-nums', candidate !== group && 'text-foreground-muted')}>({count})</span>

@@ -66,14 +66,15 @@ export async function CalendarAgenda({
               aria-current={chosen ? 'date' : undefined}
               aria-label={t('calendar.agenda.dayLink', { day: t(`week.${index + 1}`), date: formatDate(date), count })}
               className={cn(
-                'flex min-h-control flex-col items-center justify-center rounded-sm border py-1 text-sm leading-tight',
+                'flex min-h-control flex-col items-center justify-center rounded-sm py-1 text-sm leading-tight',
                 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                chosen ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-border bg-surface',
+                // The sub-menu look (01-11-2026), stacked: a day, its date, its count.
+                chosen ? 'bg-primary font-semibold text-primary-foreground' : 'bg-surface shadow-card',
               )}
             >
               <span>{t(`weekShort.${index + 1}`)}</span>
               <span className="tabular-nums">{date.slice(8, 10)}</span>
-              <span className={cn('text-xs tabular-nums', count === 0 ? 'text-foreground-muted' : '')}>{count}</span>
+              <span className={cn('text-xs tabular-nums', count === 0 && !chosen ? 'text-foreground-muted' : '')}>{count}</span>
             </FromLink>
           );
         })}

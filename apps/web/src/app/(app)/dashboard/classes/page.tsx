@@ -1,3 +1,4 @@
+import { subMenuPillClass } from '@/components/section-pills';
 import { FromLink } from '@/components/from-link';
 import { dataOf, describeLoad, outcome, type LoadFailure } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -415,12 +416,7 @@ export default async function ClassesPage({
                         href={scopeLink(option)}
                         aria-current={on ? 'page' : undefined}
                         scroll={false}
-                        className={cn(
-                          'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                          on
-                            ? 'border-primary bg-primary/10 font-medium text-primary'
-                            : 'border-border text-foreground-muted hover:border-border-strong hover:text-foreground',
-                        )}
+                        className={subMenuPillClass(on)}
                       >
                         {t(option === 'all' ? 'classes.scopeAll' : 'classes.scopeMine')}
                       </FromLink>

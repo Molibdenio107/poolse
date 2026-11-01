@@ -1,3 +1,4 @@
+import { subMenuPillClass } from '@/components/section-pills';
 import { Fragment } from 'react';
 import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
@@ -61,7 +62,7 @@ export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<Re
             as weight.
           */}
           {band.id === 'personal' && family !== null && family.children.length > 1 && (
-            <nav aria-label={t('family.picker')} className="flex flex-wrap gap-2">
+            <nav aria-label={t('family.picker')} className="flex flex-wrap gap-1.5">
               {family.children.map((child) => {
                 const current = child.id === family.selectedId;
                 return (
@@ -69,11 +70,7 @@ export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<Re
                     key={child.id}
                     href={`/dashboard?child=${child.id}`}
                     aria-current={current ? 'page' : undefined}
-                    className={
-                      current
-                        ? 'inline-flex h-control items-center justify-center rounded-sm border border-primary bg-primary/10 px-4 text-control font-medium text-primary'
-                        : 'inline-flex h-control items-center justify-center rounded-sm px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card'
-                    }
+                    className={subMenuPillClass(current)}
                   >
                     {child.self ? t('family.yourselfShort', { name: child.name }) : child.name}
                   </FromLink>

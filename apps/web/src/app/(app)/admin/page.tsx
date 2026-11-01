@@ -1,3 +1,4 @@
+import { subMenuPillClass } from '@/components/section-pills';
 import { SupportPanel } from './support-panel';
 import { SwitchesPanel } from './switches-panel';
 import { redirect } from 'next/navigation';
@@ -489,13 +490,7 @@ function FilterLinks({
         key={label}
         href={href(filter)}
         aria-current={active ? 'true' : undefined}
-        className={cn(
-          'inline-flex h-control items-center justify-center rounded-sm border px-4 text-control',
-          active
-            ? 'border-primary font-medium text-primary'
-            : 'border-border-strong text-foreground-muted hover:text-foreground',
-          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-        )}
+        className={subMenuPillClass(active)}
       >
         {label}
         <LinkBusy />
@@ -538,13 +533,7 @@ function SortLinks({
       <Link
         href={href(sort)}
         aria-current={active ? 'true' : undefined}
-        className={cn(
-          'inline-flex h-control items-center justify-center rounded-sm border px-4 text-control',
-          active
-            ? 'border-primary font-medium text-primary'
-            : 'border-border-strong text-foreground-muted hover:text-foreground',
-          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-        )}
+        className={subMenuPillClass(active)}
       >
         {label}
         <LinkBusy />

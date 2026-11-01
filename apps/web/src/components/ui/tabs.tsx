@@ -12,10 +12,12 @@ import { cn } from '@/lib/utils';
  * and its panel are exactly the fiddly part, and getting one of them wrong is
  * invisible to anybody using a mouse.
  *
- * **The active pill is a tint with a ring, not a solid fill.** White on the
- * brand primary is 2.72:1 and sits on `contrast:check`'s known-failures list;
- * a label on a 15% wash of the primary is ordinary foreground text, and the
- * ring and the weight change mean the colour is never the only signal.
+ * **A tab looks like every other sub-menu pill** (Rui, 01-11-2026): the
+ * handoff's secondary — the card's fill and lift — close together so the row
+ * reads as one control, and the current one in the primary fill with the dark
+ * ink on it (6.6:1), as the section pills. The weight change and
+ * `aria-selected` mean colour is never the only signal, and a waiting-dot on
+ * the current tab takes the ink so it stays visible.
  */
 export const Tabs = TabsPrimitive.Root;
 
@@ -30,7 +32,7 @@ export const TabsList = forwardRef<
         // Scrolls sideways rather than wrapping: a strip that wraps on a phone
         // changes height between pages, and the sticky header jumps with it.
         // `relative`: a badge's sr-only label is anchored here, not to the page.
-        'relative flex items-center gap-1 overflow-x-auto whitespace-nowrap',
+        'relative flex items-center gap-1.5 overflow-x-auto whitespace-nowrap',
         className,
       )}
       {...props}
@@ -46,11 +48,11 @@ export const TabsTrigger = forwardRef<
     <TabsPrimitive.Trigger
       ref={ref}
       className={cn(
-        'inline-flex h-control shrink-0 items-center gap-1.5 rounded-full px-4 text-control text-foreground-muted transition-colors',
-        'hover:bg-surface-muted hover:text-foreground',
+        'inline-flex h-control shrink-0 items-center gap-1.5 rounded-sm bg-surface px-3.5 text-control text-foreground shadow-card transition-colors',
+        'hover:bg-surface-muted',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-        'data-[state=active]:bg-primary/15 data-[state=active]:font-medium data-[state=active]:text-foreground',
-        'data-[state=active]:ring-1 data-[state=active]:ring-inset data-[state=active]:ring-primary',
+        'data-[state=active]:bg-primary data-[state=active]:font-medium data-[state=active]:text-primary-foreground',
+        'data-[state=active]:[&_.attention-dot]:bg-primary-foreground',
         className,
       )}
       {...props}
