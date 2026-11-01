@@ -37,9 +37,10 @@ test('QA 2: with two sports each gets a group, in order, where Turmas stood, and
   const [poolGroup, tennisGroup] = [sections[pool], sections[tennis]] as [Item, Item];
   assert.deepEqual(
     tennisGroup.children?.map((item) => item.href),
-    ['/dashboard/classes?sport=tennis', '/dashboard/calendar?sport=tennis'],
+    ['/dashboard/calendar?sport=tennis', '/dashboard/classes?sport=tennis'],
   );
-  assert.equal(tennisGroup.href, '/dashboard/classes?sport=tennis');
+  // A sport's tab opens its Calendário (POOLSE-141 rule 3, the handoff's sidebar).
+  assert.equal(tennisGroup.href, '/dashboard/calendar?sport=tennis');
   // The pool keeps Épocas, Reposições, Encerramentos and its circle; a court's group has neither yet.
   const poolCalendar = poolGroup.children?.find((item) => item.key === 'calendar.title');
   assert.equal(poolCalendar?.badge, 'calendar');

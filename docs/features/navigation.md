@@ -342,7 +342,9 @@ Every verdict is the existing one: `excursions`/`resolveBands`, `gradeLabResult`
   POOLSE-125's groups, `?sport=`) are that sport's section; every other page is *Instalação*.
   Derived from the address (`sectionOf`), never stored.
 - The sidebar lists only the current section: the shared pages, or the sport's header (its
-  colour bar, wash, icon and name) and its entries. The phone's menu sheet shows the sections as
+  colour bar, wash, icon and name) and its entries, **Calendário first** (the handoff's order; the
+  sport's tab opens it — 1 November 2026). A pool-only menu keeps Turmas before Calendário.
+- A row of tabs too wide for the bar (eight sports on a laptop) shows ‹ / › at its ends (). The phone's menu sheet shows the sections as
   a row above the list.
 - A sport section's content wears its wash (`SportShell`, `.sport-shell`); shared pages never do.
 - A section that is not current carries the attention dot when something inside needs doing.

@@ -436,8 +436,12 @@ function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] 
   const scoped = sections.filter((section) => section.perSport === true);
   if (!isMultiSport(sports) || scoped.length === 0) return sections;
 
+  // A sport's section opens on its Calendário, listed first — the handoff's
+  // sidebar and POOLSE-141 rule 3. Only inside a sport's group: a pool-only
+  // menu keeps the order it shipped with.
+  const inSection = [...scoped].sort((a, b) => sportPageRank(a.href) - sportPageRank(b.href));
   const groups = sports.map((sport): Item => {
-    const children = scoped.map((entry): Item => {
+    const children = inSection.map((entry): Item => {
       const { badge, children: below, ...rest } = entry;
       return {
         ...rest,
@@ -460,6 +464,11 @@ function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] 
   const at = sections.indexOf(scoped[0] as Item);
   const rest = sections.filter((section) => section.perSport !== true);
   return [...rest.slice(0, at), ...groups, ...rest.slice(at)];
+}
+
+/** Calendário first, then the rest in their menu order (a stable sort keeps it). */
+function sportPageRank(href: string): number {
+  return href === '/dashboard/calendar' ? 0 : 1;
 }
 
 /** Every destination this viewer may open, children included, in menu order — the palette's list. */
