@@ -2436,7 +2436,12 @@
     "sportFilter": "Modalidades",
     "sportAll": "Todos · {count}",
     "sportMulti": "Multi-modalidade · {count}",
-    "sportNone": "Sem modalidade · {count}"
+    "sportNone": "Sem modalidade · {count}",
+    "levelInSport": "Nível · {sport}",
+    "sportLevel": {
+      "wrongLadder": "Esse nível não é desta modalidade.",
+      "failed": "Não foi possível guardar o nível."
+    }
   },
   "advancement": {
     "title": "Progressões",

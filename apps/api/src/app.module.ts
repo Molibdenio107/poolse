@@ -13,6 +13,7 @@ import {
   FamilyController,
   AdvancementController,
   RedemptionController,
+  StudentSportLevelController,
 } from './students/students.controller.js';
 import { SkillsController } from './classes/skills.controller.js';
 import { StaffController } from './staff/staff.controller.js';
@@ -209,6 +210,7 @@ export const IDENTITY_ONLY_ROUTES = [
     SettingsController,
     RedemptionController,
     AdvancementController,
+    StudentSportLevelController,
     PeopleController,
     InvitationsController,
     FacilitiesController,

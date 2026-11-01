@@ -146,9 +146,15 @@ test('a sport’s Níveis is its own ladder, and its Avanços the proposals onto
       ]);
       assert.deepEqual(await ladder('pool'), [['Natação 1', 'pool', 0]]);
 
+      // Her tennis level sits on its own row — POOLSE-148; the record's own
+      // field is the swimming level.
       const [student] = await tenant.sql<{ id: string }>(
-        `INSERT INTO student (organization_id, first_name, last_name, level_id) VALUES ($1, 'Rita', 'Teste', $2) RETURNING id`,
-        [org, tennisOne],
+        `INSERT INTO student (organization_id, first_name, last_name) VALUES ($1, 'Rita', 'Teste') RETURNING id`,
+        [org],
+      );
+      await tenant.sql(
+        `INSERT INTO student_sport_level (organization_id, student_id, sport_id, level_id) VALUES ($1, $2, 'tennis', $3)`,
+        [org, student!.id, tennisOne],
       );
       await tenant.sql(
         `INSERT INTO transfer_proposal (organization_id, student_id, from_level_id, to_level_id) VALUES ($1, $2, $3, $4)`,

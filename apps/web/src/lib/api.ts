@@ -1443,6 +1443,8 @@ export interface StudentLevel {
   id: string;
   name: string;
   sortOrder: number;
+  /** The sport whose ladder it is on — POOLSE-126/143. */
+  sportId?: PoolseSport;
   /** The level's own colour. Backfilled from position, so never null in practice. */
   colour: ClassColour | null;
   /**
@@ -1535,6 +1537,8 @@ export interface StudentIdentity {
 }
 
 export interface Student {
+  /** Their level in each sport other than swimming — POOLSE-148; on the record only. */
+  sportLevels?: { sport: PoolseSport; levelId: string; levelName: string }[];
   /** When this student left and when their data goes — 7b.8. Null while enrolled. */
   retention?: {
     leftOn: string;

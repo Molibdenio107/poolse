@@ -1,3 +1,4 @@
+import { SportLevelForm } from './sport-level-form';
 import { cn } from '@/lib/utils';
 import { AttendanceStrip, type StripLesson } from '@/components/attendance-strip';
 import { isMultiSport, type PoolseSport } from '@poolse/rules';
@@ -634,12 +635,48 @@ export default async function StudentPage({
             // One card per sport in a multi-sport club — the handoff's enrolment
             // cards (multi-sport Slice 3), each with its sport's bar, icon and
             // name. With one sport, one card across the width, as before.
+            // POOLSE-148: a sport the student holds a level in has its card too.
             const groups: { sport: PoolseSport | null; entries: TimetableEntry[] }[] = multiSport
-              ? [...new Set(turmas.map((entry) => entry.sport))].map((sport) => ({
+              ? [
+                  ...new Set([
+                    ...turmas.map((entry) => entry.sport),
+                    ...(loaded.sportLevels ?? []).map((held) => held.sport),
+                  ]),
+                ].map((sport) => ({
                   sport,
                   entries: turmas.filter((entry) => entry.sport === sport),
                 }))
               : [{ sport: null, entries: turmas }];
+            /*
+             * Each sport's own level (POOLSE-148), on its card: swimming's is the
+             * record's field (set on Geral), every other sport's is set here by
+             * owner and admin, from that sport's ladder alone.
+             */
+            const levelLine = (sport: PoolseSport): React.ReactNode => {
+              if (sport === 'pool') {
+                return (
+                  <p className="text-sm">
+                    <span className="text-foreground-muted">{t('students.level')}: </span>
+                    {loaded.levelName ?? t('students.noLevel')}
+                  </p>
+                );
+              }
+              const held = (loaded.sportLevels ?? []).find((one) => one.sport === sport) ?? null;
+              return reg.canManage ? (
+                <SportLevelForm
+                  organizationId={reg.organizationId}
+                  studentId={loaded.id}
+                  sport={sport}
+                  levelId={held?.levelId ?? null}
+                  levels={reg.levels.filter((level) => level.sportId === sport)}
+                />
+              ) : (
+                <p className="text-sm">
+                  <span className="text-foreground-muted">{t('students.level')}: </span>
+                  {held?.levelName ?? t('students.noLevel')}
+                </p>
+              );
+            };
             return (
             <div className="grid grid-cols-1 gap-page-gap lg:grid-cols-2">
             {groups.map(({ sport, entries }) => (
@@ -661,6 +698,7 @@ export default async function StudentPage({
                   </span>
                 )}
               </h2>
+              {sport !== null && levelLine(sport)}
 
               <ul className="flex flex-col divide-y divide-border">
                 {entries.map((entry) => (

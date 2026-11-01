@@ -6,6 +6,7 @@ import {
   apiFetch,
   apiPatch,
   apiPost,
+  apiPut,
   type Calendar,
   type CalendarSession,
   type DuplicateMatch,
@@ -664,5 +665,23 @@ export async function setAdvancementModeAction(
 
   revalidatePath('/dashboard/students/levels');
   revalidatePath('/dashboard/students/advancement');
+  return { ok: true };
+}
+
+/**
+ * A student's level in one sport — POOLSE-148. The record's card for each sport
+ * posts it; swimming's own is still the Geral form's field.
+ */
+export async function setSportLevelAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const studentId = String(formData.get('studentId') ?? '');
+  const sport = String(formData.get('sport') ?? '');
+  const levelId = String(formData.get('levelId') ?? '').trim();
+  try {
+    await apiPut(`/students/${studentId}/sport-level`, { sport, levelId: levelId === '' ? null : levelId }, { organizationId });
+  } catch (error) {
+    return failure(error, 'students.sportLevel.failed');
+  }
+  revalidatePath(`/dashboard/students/${studentId}`);
   return { ok: true };
 }

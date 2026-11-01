@@ -165,6 +165,8 @@ const TENANT_TABLES = [
   'skill_progress',
   'level_change_notice',
   'transfer_proposal',
+  // POOLSE-148: a student's level in a sport other than swimming.
+  'student_sport_level',
   'student_record',
   // POOLSE-114. An inbox row names its meet, its file and its message.
   'meet_inbox',

@@ -132,7 +132,19 @@ export interface GuardianInput {
   isPrimary: boolean;
 }
 
+/** A student's level in a sport other than swimming — POOLSE-148. */
+export interface SportLevel {
+  sport: string;
+  levelId: string;
+  levelName: string;
+}
+
 export interface Student {
+  /**
+   * The levels this student holds in sports other than swimming — POOLSE-148.
+   * Swimming's is `levelId`. Only on the record, never on a list.
+   */
+  sportLevels?: SportLevel[];
   /**
    * When this student left and when their data goes — 7b.8. Null while they
    * have not left, and on lists, which do not ask.
@@ -1127,8 +1139,21 @@ export async function findStudent(
     );
     return rows;
   });
+  if (!student) return null;
 
-  return student ? toStudent(student as never) : null;
+  const sportLevels = await withOrg(organizationId, async (tx) =>
+    (
+      await tx.query<{ sport: string; level_id: string; level_name: string }>(
+        `SELECT x.sport_id AS sport, x.level_id, l.name AS level_name
+           FROM student_sport_level x
+           JOIN student_level l ON l.id = x.level_id AND l.organization_id = x.organization_id
+          WHERE x.student_id = $1 AND x.archived_at IS NULL
+          ORDER BY x.sport_id`,
+        [studentId],
+      )
+    ).rows.map((row) => ({ sport: row.sport, levelId: row.level_id, levelName: row.level_name })),
+  );
+  return { ...toStudent(student as never), sportLevels };
 }
 
 export interface StudentInput {
@@ -1537,8 +1562,28 @@ export async function setStudentLevelIn(
   studentId: string,
   levelId: string | null,
   context: ChangeContext = {},
+  /**
+   * Whose level is cleared when `levelId` is null — POOLSE-148. A level names its
+   * own sport, so a set never needs this; only "no level in tennis" does.
+   * Absent is swimming, as every caller before this meant.
+   */
+  clearSport: string = 'pool',
 ): Promise<'updated' | 'not_found' | 'bad_level'> {
   if (!(await levelExists(tx, levelId))) return 'bad_level';
+  /*
+   * Where the level lives is decided by the level's own sport (POOLSE-148):
+   * swimming on `student.level_id`, every other sport in its own row. One
+   * writer for both, so the person's edit, a confirmed advancement, the
+   * automatic mode and Atividade's revert all land in the right place.
+   */
+  const sport =
+    levelId === null
+      ? clearSport
+      : ((
+          await tx.query<{ sport_id: string }>('SELECT sport_id FROM student_level WHERE id = $1', [levelId])
+        ).rows[0]?.sport_id ?? 'pool');
+  if (sport !== 'pool') return setOtherSportLevelIn(tx, studentId, sport, levelId, context);
+
   const before = await lockStudentFields(tx, studentId);
   if (before === null) return 'not_found';
 
@@ -1558,6 +1603,72 @@ export async function setStudentLevelIn(
     });
   }
   return 'updated';
+}
+
+/** A level in a sport other than swimming: its own row, upserted or archived. */
+async function setOtherSportLevelIn(
+  tx: Tx,
+  studentId: string,
+  sport: string,
+  levelId: string | null,
+  context: ChangeContext,
+): Promise<'updated' | 'not_found'> {
+  const { rows: found } = await tx.query<{ first_name: string; last_name: string }>(
+    'SELECT first_name, last_name FROM student WHERE id = $1 AND archived_at IS NULL FOR UPDATE',
+    [studentId],
+  );
+  const student = found[0];
+  if (!student) return 'not_found';
+
+  const { rows: current } = await tx.query<{ id: string; level_id: string }>(
+    `SELECT id, level_id FROM student_sport_level
+      WHERE student_id = $1 AND sport_id = $2 AND archived_at IS NULL FOR UPDATE`,
+    [studentId, sport],
+  );
+  const before = current[0]?.level_id ?? null;
+  if (before === levelId) return 'updated';
+
+  if (current[0] !== undefined && levelId !== null) {
+    await tx.query('UPDATE student_sport_level SET level_id = $2 WHERE id = $1', [current[0].id, levelId]);
+  } else if (current[0] !== undefined) {
+    await tx.query('UPDATE student_sport_level SET archived_at = now() WHERE id = $1', [current[0].id]);
+  } else if (levelId !== null) {
+    await tx.query(
+      `INSERT INTO student_sport_level (organization_id, student_id, sport_id, level_id)
+       VALUES (current_organization_id(), $1, $2, $3)`,
+      [studentId, sport, levelId],
+    );
+  }
+
+  // Recorded, with both values: a level is not personal data. Not yet revertible
+  // from Atividade — POOLSE-148 slice C.
+  await recordAudit(tx, {
+    action: 'student.sport_level_set',
+    entityType: 'student',
+    entityId: studentId,
+    data: { name: `${student.first_name} ${student.last_name}`, sport, before, after: levelId, ...context },
+  });
+  return 'updated';
+}
+
+/** One sport's level for one student, from the record — POOLSE-148. */
+export async function setStudentSportLevel(
+  organizationId: string,
+  studentId: string,
+  sport: string,
+  levelId: string | null,
+): Promise<'updated' | 'not_found' | 'bad_level'> {
+  return withOrg(organizationId, async (tx) => {
+    if (levelId !== null) {
+      const { rows } = await tx.query<{ sport_id: string }>(
+        'SELECT sport_id FROM student_level WHERE id = $1 AND archived_at IS NULL',
+        [levelId],
+      );
+      // A level from another ladder is the caller's mistake, said as one.
+      if (rows[0]?.sport_id !== sport) return 'bad_level';
+    }
+    return setStudentLevelIn(tx, studentId, levelId, {}, sport);
+  });
 }
 
 export async function archiveStudent(

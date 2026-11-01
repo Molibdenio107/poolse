@@ -9,8 +9,10 @@ import {
   Get,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { isValidNif } from '@poolse/rules';
@@ -86,6 +88,7 @@ import {
   type Student,
   type StudentInput,
   type StudentLevel,
+  setStudentSportLevel,
 } from './students.repository.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import { isClassColour } from '../classes/classes.repository.js';
@@ -551,6 +554,9 @@ export class StudentsController {
     } catch (error) {
       if (error instanceof DuplicateTaxNumberError) throw taxNumberConflict();
       if (error instanceof DuplicateLicenceError) throw licenceConflict();
+      // POOLSE-148: the form's level is the swimming level; another sport's is
+      // refused by the database, said under the field rather than as a 500.
+      if (isSportLevelMismatch(error)) throw sportLevelMismatch();
       throw error;
     }
 
@@ -574,6 +580,9 @@ export class StudentsController {
     } catch (error) {
       if (error instanceof DuplicateTaxNumberError) throw taxNumberConflict();
       if (error instanceof DuplicateLicenceError) throw licenceConflict();
+      // POOLSE-148: the form's level is the swimming level; another sport's is
+      // refused by the database, said under the field rather than as a 500.
+      if (isSportLevelMismatch(error)) throw sportLevelMismatch();
       throw error;
     }
 
@@ -673,6 +682,43 @@ function ageRange(body: Record<string, unknown>): LevelShape {
   const competitive = body['competitive'] === true;
 
   return { minAgeMonths, maxAgeMonths, admitsMale, admitsFemale, competitive };
+}
+
+/**
+ * A student's level in one sport — POOLSE-148. Swimming's too, so a sport's card
+ * on the record has one control whatever the sport; the write is the one path
+ * every level change takes (`setStudentLevelIn`). Owner and admin, as the
+ * student form's level is.
+ */
+@CoreRoute()
+@Controller('students/:studentId/sport-level')
+export class StudentSportLevelController {
+  @Put()
+  async set(
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ updated: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    const sport = await readSportFilter(
+      organizationId,
+      typeof body['sport'] === 'string' ? body['sport'] : undefined,
+    );
+    if (sport === null || sport === 'none') throw new BadRequestException('sport must be one of the club\'s sports');
+    const raw = body['levelId'];
+    if (raw !== null && typeof raw !== 'string') throw new BadRequestException('levelId must be a level or null');
+    const levelId = typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null;
+    const outcome = await setStudentSportLevel(organizationId, studentId, sport, levelId);
+    if (outcome === 'not_found') throw new NotFoundException('No such student');
+    if (outcome === 'bad_level') {
+      throw new BadRequestException({
+        code: 'level_not_in_sport',
+        message: 'That level is not on this sport\'s ladder',
+        fields: { levelId: 'students.sportLevel.wrongLadder' },
+      });
+    }
+    return { updated: true };
+  }
 }
 
 @CoreRoute()
@@ -803,6 +849,20 @@ export class LevelsController {
     if (!result.archived) throw new NotFoundException('No such level');
     return { archived: true, unlevelled: result.unlevelled };
   }
+}
+
+/** The database's refusal of a level on the wrong ladder (POOLSE-148). */
+function isSportLevelMismatch(error: unknown): boolean {
+  const detail = (error as { detail?: unknown }).detail;
+  return typeof detail === 'string' && detail.startsWith('sport_level_mismatch|');
+}
+
+function sportLevelMismatch(): BadRequestException {
+  return new BadRequestException({
+    code: 'level_not_in_sport',
+    message: 'That level is not on the swimming ladder',
+    fields: { levelId: 'students.sportLevel.wrongLadder' },
+  });
 }
 
 function asHttp(error: unknown): unknown {

@@ -1813,6 +1813,27 @@ implying one. Partnership bookings count as nothing, because `class_schedule` ro
 `subject_type = 'parceria'` carry no headcount at all — inventing one would refuse real
 timetables on a figure nobody entered.
 
+### A level per sport — POOLSE-148
+
+```
+student.level_id                -- the SWIMMING level, and only that (trigger student_level_is_pool)
+
+student_sport_level             -- every other sport's level
+  id, organization_id, student_id, sport_id (<> 'pool', by CHECK), level_id,
+  created_at, updated_at, archived_at
+  unique (organization_id, student_id, sport_id) where archived_at is null
+  trigger student_sport_level_matches: the level is on that sport's ladder
+```
+
+A student holds one live level per sport they do (Rui, 01-11-2026). The swimming level stays on
+`student.level_id`, so every screen, price, FPN form and import that reads it is unchanged. Every
+other sport's level is a row here. Both triggers refuse a level of this club that is on the wrong
+ladder (`check_violation`, DETAIL `sport_level_mismatch|<sport>`), and the composite foreign keys
+refuse another club's. **`setStudentLevelIn` is the only writer**: it picks the home from the
+level's own sport, so a person's edit, a confirmed advancement, the automatic mode and Atividade's
+revert all land in the right place. The app may insert, change `level_id` and archive, and never
+delete. The migration moved any non-swimming `student.level_id` to its row and cleared the column.
+
 ### One student, one hour — POOLSE-144
 
 ```

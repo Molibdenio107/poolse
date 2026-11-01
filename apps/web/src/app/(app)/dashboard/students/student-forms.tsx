@@ -412,15 +412,22 @@ function LevelPicker({
 }): React.ReactElement {
   const t = useTranslations();
   const [levelId, setLevelId] = useState(student?.levelId ?? '');
+  /*
+   * The record's own level is the swimming level (POOLSE-148): every other
+   * sport's is set on that sport's card. With a second ladder in the club the
+   * label says which one this is, so nobody looks here for tennis.
+   */
+  const otherLadders = levels.some((level) => (level.sportId ?? 'pool') !== 'pool');
+  const swimming = levels.filter((level) => (level.sportId ?? 'pool') === 'pool');
 
   const dob = birthDate === '' ? null : birthDate;
-  const chosen = levels.find((level) => level.id === levelId) ?? null;
+  const chosen = swimming.find((level) => level.id === levelId) ?? null;
   const fit = chosen === null ? 'fits' : fitsLevel(chosen, dob);
 
   return (
     <div className={FIELD_COLUMN}>
       <label htmlFor="student-level" className={FIELD_LABEL}>
-        {t('students.level')}
+        {otherLadders ? t('students.levelInSport', { sport: t('sport.name.pool') }) : t('students.level')}
       </label>
       <select
         id="student-level"
@@ -431,7 +438,7 @@ function LevelPicker({
         className={CONTROL_LINE}
       >
         <option value="">{t('students.noLevel')}</option>
-        {levels.map((level) => {
+        {swimming.map((level) => {
           const levelFit = fitsLevel(level, dob);
           // Marked in the option text itself, because a `disabled` option would
           // be the hard block this story argues against, and colour alone does

@@ -610,3 +610,20 @@ With a second sport on (`isMultiSport`):
 - **Competição** is swimming only.
 
 Instructors may filter any sport, as before, until POOLSE-145.
+
+## A level in each sport — POOLSE-148, slice A (1 November 2026)
+
+A student in two sports holds a level in each, and the two are independent (Rui, 01-11-2026).
+
+- **The record's *Turmas* tab** has one card per sport, each with that sport's level. Swimming's
+  is read-only there, because it is the *Nível · Natação* field on Geral. Every other sport's is a
+  select of that sport's ladder and *Guardar*, for owner and admin
+  (`PUT /students/:id/sport-level`, `{ sport, levelId }`; null clears it). A sport the student
+  holds a level in gets its card even with no turma in it yet.
+- **The Geral form's level is the swimming level.** With a second ladder in the club, its label
+  says *Nível · Natação* and it lists only the swimming ladder. A level from another ladder is a
+  400 under the field, never a 500.
+- Each change is recorded as `student.sport_level_set` (sport, before, after). Reverting it from
+  Atividade is slice C.
+- **Not built yet:** a sport's *Alunos* row and level filter reading that sport's level (slice B),
+  and advancement by skills and by age per sport (slice C).

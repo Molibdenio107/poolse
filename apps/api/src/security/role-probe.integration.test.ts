@@ -65,6 +65,7 @@ import {
   PeopleDedupController,
   PeopleSearchController,
   StudentsController,
+  StudentSportLevelController,
 } from '../students/students.controller.js';
 import { StudentFeesController } from '../billing/fees.controller.js';
 import { VacationsController } from '../vacations/vacations.controller.js';
@@ -898,6 +899,19 @@ test('medical exams refuse a guardian and a student (403)', async () => {
       exams.record(fixture.aliceId, { examinedOn: '2026-01-01', result: 'fit' }),
     );
     await refused('POST students/:id/medical-exams/:id/archive', 403, () => exams.archive(fixture.aliceId, NO_SUCH_ID));
+  });
+});
+
+test("a student's level per sport refuses a guardian, a student and an instructor (403) — POOLSE-148", async () => {
+  await asEach(async () => {
+    await refused('PUT students/:id/sport-level', 403, () =>
+      new StudentSportLevelController().set(fixture.aliceId, { sport: 'pool', levelId: null }),
+    );
+  });
+  await as(fixture.instructorId, ['instructor'], async () => {
+    await refused('PUT students/:id/sport-level as instructor', 403, () =>
+      new StudentSportLevelController().set(fixture.aliceId, { sport: 'pool', levelId: null }),
+    );
   });
 });
 

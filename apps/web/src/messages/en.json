@@ -2436,7 +2436,12 @@
     "sportFilter": "Sports",
     "sportAll": "All · {count}",
     "sportMulti": "Several sports · {count}",
-    "sportNone": "No sport · {count}"
+    "sportNone": "No sport · {count}",
+    "levelInSport": "Level · {sport}",
+    "sportLevel": {
+      "wrongLadder": "That level is not on this sport's ladder.",
+      "failed": "Could not save the level."
+    }
   },
   "advancement": {
     "title": "Advancement",
