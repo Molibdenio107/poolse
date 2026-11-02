@@ -1,5 +1,6 @@
 'use client';
 
+import { rememberedPool, rememberPool } from '@/lib/calendar-pool';
 import {
   memo,
   useCallback,
@@ -246,14 +247,21 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
    * with one pool never sees the control.
    */
   /*
-   * **No tank until somebody chooses one** — Rui, 12 October 2026. Opening on
-   * the first tank drew one tank's week as if it were the site's, and a club
-   * reading it took the other tank's classes for missing. With one tank there
-   * is nothing to choose, so that one is shown.
+   * **The tank this person last looked at** — Rui, 02-11-2026, reversing "no
+   * tank until somebody chooses one" (12-10-2026), which opened the page empty.
+   * The first time, the club's first tank (`lib/calendar-pool.ts`). The server
+   * render starts on the first tank; the remembered one replaces it once the
+   * browser can read it.
    */
-  const [poolId, setPoolId] = useState<string>(() =>
-    pools.length === 1 ? (pools[0]?.id ?? '') : '',
-  );
+  const [poolId, setPoolIdState] = useState<string>(() => pools[0]?.id ?? '');
+  const poolKey = pools.map((pool) => pool.id).join(',');
+  useEffect(() => {
+    setPoolIdState(rememberedPool(poolKey.split(',').filter((id) => id !== '')));
+  }, [poolKey]);
+  const setPoolId = (next: string): void => {
+    setPoolIdState(next);
+    rememberPool(next);
+  };
   const choosing = pools.length > 1 && !pools.some((pool) => pool.id === poolId);
 
   /*

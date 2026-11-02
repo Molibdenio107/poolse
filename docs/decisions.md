@@ -1284,3 +1284,5 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-02** — **A message to a whole sport is the office's** (Rui, POOLSE-146): owner and admin, like a level or the whole club; an instructor still writes only to their own turmas, so POOLSE-146 rule 3's "an instructor may choose a sport audience for their sports" is not built. SBV is seeded for every sport (`sport_id` null), the ticket's default.
 
 - **2026-11-02** — **Faturação's *A faturar* starts with nothing ticked** (Rui), **reversing** "every draft selected by default": ten families a page, *Selecionar todos* across every page, the issue button at the top; *Emitidos* moves behind its own pill on *Este mês*. *Hoje, hora a hora* is kept and explained, a bar opening its lessons. The calendar import asks which pool a file is for.
+
+- **2026-11-02** — **The calendar opens on the pool this person last looked at** (Rui), **reversing** "no tank until somebody chooses one" (12-10-2026), which opened the page empty; the first time, the club's first pool. The timetable import opens as a dialog starting on that pool.

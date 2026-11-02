@@ -524,3 +524,9 @@ matches the file's lane names against that pool's lanes only, so "Pista 2" is th
 never another tank's at the same site; everything already booked at the site still counts for
 clashes. A pool that is not the site's is a 404. The site is the chosen pool's, no longer the club's
 first.
+
+**The calendar opens on a pool** (02-11-2026, Rui, reversing "no tank until somebody chooses one" of
+12-10-2026, which opened the page empty): the one this person last looked at, remembered on this device
+(`lib/calendar-pool.ts`), else the club's first. **The import is a dialog** — a bottom sheet on a phone —
+rather than a panel in the page header, which spilled off the right edge; it starts on the calendar's
+pool and can be changed there.

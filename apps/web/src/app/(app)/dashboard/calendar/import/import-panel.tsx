@@ -1,8 +1,9 @@
 'use client';
 
+import { rememberedPool } from '@/lib/calendar-pool';
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, FileSpreadsheet, Upload, X } from 'lucide-react';
+import { AlertTriangle, FileSpreadsheet, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import {
@@ -15,7 +16,6 @@ import {
 } from './import.actions';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField } from '@/components/ui/field';
-import { Reveal } from '@/components/ui/reveal';
 
 /**
  * Importing the wall timetable — POOLSE-57, the interface.
@@ -77,8 +77,16 @@ export function TimetableImport({
   const t = useTranslations();
 
   const [open, setOpen] = useState(false);
+  /** The dropped file waiting for a yes or a no. */
+  const [pending, setPending] = useState<File | null>(null);
   // One pool is the answer; several are a question, asked before anything is read.
+  // It starts on the pool the calendar is showing (`lib/calendar-pool.ts`).
   const [poolId, setPoolId] = useState(pools.length === 1 ? pools[0]!.id : '');
+  const poolIds = pools.map((pool) => pool.id).join(',');
+  useEffect(() => {
+    if (!open && pending === null) return;
+    setPoolId((current) => current || rememberedPool(poolIds.split(',').filter((id) => id !== '')));
+  }, [open, pending, poolIds]);
   const facilityId = pools.find((pool) => pool.id === poolId)?.facilityId ?? '';
   const multiSite = new Set(pools.map((pool) => pool.facilityId)).size > 1;
   const poolOptions = [
@@ -95,8 +103,6 @@ export function TimetableImport({
       onValueChange={setPoolId}
     />
   );
-  /** The dropped file waiting for a yes or a no. */
-  const [pending, setPending] = useState<File | null>(null);
   const readButton = useRef<HTMLButtonElement | null>(null);
 
   const onFile = useCallback((file: File) => setPending(file), []);
@@ -218,24 +224,22 @@ export function TimetableImport({
         )}
       </Dialog>
 
-      <Reveal open={open}>
-        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('timetableImport.title')}
-              </h2>
-              <p className="mt-1 text-sm text-foreground-muted">{t('timetableImport.subtitle')}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label={t('common.cancel')}
-              className="rounded p-1 hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              <X aria-hidden className="size-4" />
-            </button>
-          </div>
+      {/*
+        A dialog, not a panel in the header — Rui, 02-11-2026: opened inside the
+        page header it spilled off the right edge and cut its own text. A bottom
+        sheet on a phone. The clash and drop questions open over it; only the
+        topmost dialog answers the keyboard.
+      */}
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t('timetableImport.title')}
+        description={t('timetableImport.subtitle')}
+        closeLabel={t('common.close')}
+        placement="sheet"
+        className="md:max-w-3xl"
+      >
+        <div className="flex flex-col gap-4">
 
           {/* Step zero — which pool (02-11-2026): the file's lanes are this pool's. */}
           <div className="max-w-md">{poolPicker}</div>
@@ -425,8 +429,8 @@ export function TimetableImport({
               )}
             </div>
           )}
-        </section>
-      </Reveal>
+        </div>
+      </Dialog>
 
       {showConflicts && result !== undefined && (
         <ConflictDialog
