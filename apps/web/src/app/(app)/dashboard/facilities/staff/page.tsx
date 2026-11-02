@@ -3,7 +3,9 @@ import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type OrganizationMember, type People } from '../../../../../lib/api';
+import { ApiError, apiFetch, type Me, type OrganizationMember, type People } from '../../../../../lib/api';
+import { isMultiSport } from '@poolse/rules';
+import { SportChip } from '@/components/sport-chip';
 import { DeliveryBadge } from '@/components/delivery-badge';
 import { PersonAvatar } from '@/components/person-avatar';
 import { BirthdayFlag } from '@/components/birthday-flag';
@@ -82,6 +84,9 @@ export default async function PeoplePage({
   const back = originBack(from);
 
   let people: People | null = null;
+  // POOLSE-145: a chip per person's sport, only where the club has more than one.
+  const me = await apiFetch<Me>('/me').catch(() => null);
+  const multiSport = isMultiSport(me?.memberships[0]?.sports);
   let failure: LoadFailure | null = null;
   let noOrganization = false;
   let notPermitted = false;
@@ -356,6 +361,8 @@ export default async function PeoplePage({
                         {t(`vacations.kinds.${member.awayKind}`)}
                       </span>
                     )}
+                    {multiSport &&
+                      (member.sports ?? []).map((sport) => <SportChip key={sport} sport={sport} />)}
                     <RoleBadges roles={member.roles} />
                   </div>
                 </li>

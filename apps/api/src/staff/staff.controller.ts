@@ -17,6 +17,7 @@ import {
 import { judgeUpload } from '../files/upload-check.js';
 import {
   isIdDocumentType,
+  isPoolseSport,
   isValidCcNumber,
   isValidNif,
   isValidNiss,
@@ -62,6 +63,8 @@ import {
   cancelReinvite,
   findStaff,
   reinvite,
+  setStaffSports,
+  SportNotEnabledError,
   updateStaff,
   type StaffRecord,
 } from './staff.repository.js';
@@ -282,6 +285,43 @@ export class StaffController {
       throw error;
     }
     return (await readDetails(organizationId, membershipId))!;
+  }
+
+  /**
+   * The sports a person belongs to — POOLSE-145. Owner and admin, explicitly
+   * (Rui, 01-11-2026); never empty, and only sports the club has on. An
+   * instructor then reads only these sports' students (`requireSport`).
+   */
+  @Patch(':membershipId/sports')
+  async setSports(
+    @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<StaffRecord> {
+    requireRole('owner', 'admin');
+    const raw = body['sports'];
+    if (!Array.isArray(raw) || raw.length === 0 || !raw.every((sport) => isPoolseSport(sport))) {
+      throw new BadRequestException({
+        code: 'invalid_sports',
+        message: 'sports is a non-empty list of sports',
+        fields: { sports: 'staff.sports.errors.required' },
+      });
+    }
+    const { organizationId } = currentTenant();
+    try {
+      if (!(await setStaffSports(organizationId, membershipId, [...new Set(raw as string[])]))) {
+        throw new NotFoundException('No such staff member');
+      }
+    } catch (error) {
+      if (error instanceof SportNotEnabledError) {
+        throw new BadRequestException({
+          code: 'sport_not_enabled',
+          message: error.message,
+          fields: { sports: 'staff.sports.errors.notEnabled' },
+        });
+      }
+      throw error;
+    }
+    return (await findStaff(organizationId, membershipId))!;
   }
 
   /**

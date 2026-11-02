@@ -503,6 +503,15 @@
     "section": {
       "nav": "Team sections",
       "invitations": "Invitations"
+    },
+    "sports": {
+      "title": "Sports",
+      "intro": "The sports this person teaches. An instructor sees only these sports' students; the owner and the administrators see everyone.",
+      "save": "Save",
+      "errors": {
+        "required": "Choose at least one sport.",
+        "notEnabled": "This sport is not switched on for the club."
+      }
     }
   },
   "salaries": {
@@ -4762,7 +4771,8 @@
       "price": "Add-on, {amount} a month",
       "recintos": "{count, plural, =0 {no playing areas} one {# playing area} other {# playing areas}}",
       "inUse": "{sport} has live playing areas: {recintos}. The club has to archive them before the sport can be switched off.",
-      "failed": "The sports could not be saved."
+      "failed": "The sports could not be saved.",
+      "hasStaff": "{sport} has instructors assigned: {people}. The club has to move them to another sport before the sport is switched off."
     },
     "switches": {
       "name": {

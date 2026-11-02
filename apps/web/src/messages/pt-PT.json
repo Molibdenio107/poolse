@@ -503,6 +503,15 @@
     "section": {
       "nav": "Secções da equipa",
       "invitations": "Convites"
+    },
+    "sports": {
+      "title": "Desportos",
+      "intro": "Os desportos em que esta pessoa dá aulas. Um professor só vê os alunos destes desportos; o proprietário e os administradores veem todos.",
+      "save": "Guardar",
+      "errors": {
+        "required": "Escolha pelo menos um desporto.",
+        "notEnabled": "Este desporto não está ligado no clube."
+      }
     }
   },
   "salaries": {
@@ -4762,7 +4771,8 @@
       "price": "Adicional, {amount} por mês",
       "recintos": "{count, plural, =0 {sem recintos} one {# recinto} other {# recintos}}",
       "inUse": "{sport} tem recintos ativos: {recintos}. O clube tem de os arquivar antes de o desporto ser desligado.",
-      "failed": "Não foi possível guardar os desportos."
+      "failed": "Não foi possível guardar os desportos.",
+      "hasStaff": "{sport} tem professores atribuídos: {people}. O clube tem de os passar para outro desporto antes de o desporto ser desligado."
     },
     "switches": {
       "name": {

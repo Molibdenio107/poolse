@@ -789,6 +789,9 @@ test('a staff identity refuses families and a colleague — POOLSE-100', async (
 test('staff details refuse families and a colleague — POOLSE-149', async () => {
   await asEach(async () => {
     await refused('GET staff/:id/details as a family', 403, () => new StaffController().details(fixture.instructorId));
+    await refused('PATCH staff/:id/sports as a family', 403, () =>
+      new StaffController().setSports(fixture.instructorId, { sports: ['pool'] }),
+    );
     await refused('PATCH staff/:id/details as a family', 403, () =>
       new StaffController().editDetails(fixture.instructorId, { locality: 'Lisboa' }),
     );

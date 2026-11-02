@@ -26,6 +26,8 @@ import { storageConfigured } from '@/lib/storage-status';
 import { Identification } from './identification';
 import { ContractTab } from './contract-tab';
 import { DetailsCard } from './details-card';
+import { SportsCard } from './sports-card';
+import { isMultiSport } from '@poolse/rules';
 
 /**
  * One staff member — POOLSE-39.
@@ -189,6 +191,20 @@ export default async function StaffMemberPage({
                   />
                 </div>
               </section>
+
+              {/*
+                Desportos — POOLSE-145. Only where the club has more than one
+                sport, and only for an instructor: the sports decide whose
+                students they read, and nobody else's reading depends on it.
+              */}
+              {isMultiSport(me?.memberships[0]?.sports) && record.roles.includes('instructor') && (
+                <SportsCard
+                  membershipId={membershipId}
+                  sports={record.sports}
+                  clubSports={me?.memberships[0]?.sports ?? []}
+                  canManage={viewer.canArchive}
+                />
+              )}
 
               {details.state === 'ok' && (
                 <DetailsCard membershipId={membershipId} details={details.data} canManage={viewer.canArchive} />

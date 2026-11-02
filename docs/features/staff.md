@@ -70,6 +70,19 @@ optional.
 - **Retention.** The NISS and the emergency contact go with the ID document after the person
   leaves (see below).
 
+## Sports (POOLSE-145, 02-11-2026)
+
+A staff member belongs to the sports the club assigns them — explicitly, by the Owner or an
+Admin (Rui, 01-11-2026). Everybody belonged to swimming the day the column arrived, so a pool-only
+club is unchanged.
+
+- **Where.** In a club with more than one sport, an instructor's *Geral* tab has a *Desportos* card:
+  the Owner and an Admin tick the sports (`PATCH /staff/:id/sports`, audited with before and after);
+  the person reads theirs. The staff list shows a chip per person's sport.
+- **Rules.** Never empty; only a sport the club has on. A sport with instructors assigned stays on
+  for the club: the platform refuses to switch it off (409 `sport_has_staff`) and names them.
+- **What it decides** — an instructor reads only their sports' students — is slice b, not yet built.
+
 ## Contract (POOLSE-149, 02-11-2026)
 
 A *Contrato* tab on the staff record: the signed contract (PDF, Word or a photograph), dropped

@@ -91,6 +91,12 @@ export interface MembershipSummary {
    * `pool`; keys, which the web app translates (`sport.name.*`).
    */
   sports: PoolseSport[];
+  /**
+   * The sports this person belongs to — POOLSE-145. Only those the club has
+   * on: a sport left on a person after the club switched it off is inert.
+   * Owner and admin read every sport whatever this holds (`requireSport`).
+   */
+  mySports: PoolseSport[];
 }
 
 /**
@@ -169,6 +175,7 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       o_support_expires_at: Date | null;
       o_disabled_modules: string[];
       o_enabled_sports: string[];
+      o_sports: string[];
     }>('SELECT * FROM resolve_memberships($1)', [clerkUserId]);
 
     return rows.map((row) => ({
@@ -189,6 +196,7 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       disabledModules: row.o_disabled_modules,
       modules: enabledModules(row.o_disabled_modules),
       sports: enabledSports({ enabledSports: row.o_enabled_sports }),
+      mySports: enabledSports({ enabledSports: row.o_enabled_sports }).filter((sport) => row.o_sports.includes(sport)),
     }));
   });
 }

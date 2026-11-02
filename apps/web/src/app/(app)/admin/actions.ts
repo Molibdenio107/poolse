@@ -194,6 +194,21 @@ export async function setSportsAction(
         };
       }
     }
+    if (error instanceof ApiError && error.code === 'sport_has_staff') {
+      const { sport, people } = (error.details ?? {}) as { sport?: unknown; people?: unknown };
+      if (isPoolseSport(sport) && Array.isArray(people)) {
+        const t = await getTranslations();
+        const locale = await getLocale();
+        return {
+          ok: false,
+          errorKey: 'admin.sports.hasStaff',
+          values: {
+            sport: t(`sport.name.${sport}`),
+            people: new Intl.ListFormat(locale, { type: 'conjunction' }).format(people.map(String)),
+          },
+        };
+      }
+    }
     return describeFailure(error, 'admin.sports.failed');
   }
 

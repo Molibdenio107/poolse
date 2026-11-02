@@ -338,6 +338,12 @@ export interface Me {
      * Keys; the name is `sport.name.<key>`. POOLSE-125's menu reads it.
      */
     sports?: PoolseSport[];
+    /**
+     * The sports this person belongs to — POOLSE-145, among those the club has
+     * on. An instructor reads only these sports' students; owner and admin
+     * read every sport whatever this holds.
+     */
+    mySports?: PoolseSport[];
     membershipId: string;
     roles: string[];
     /**
@@ -399,6 +405,8 @@ export interface OrganizationMember {
   roles: string[];
   /** Clerk's cached avatar for staff. Students are handled quite differently. */
   avatarUrl: string | null;
+  /** The sports this person belongs to — POOLSE-145. */
+  sports?: PoolseSport[];
   /** ISO date, or null — Poolse's own column, used to flag a birthday. */
   birthDate: string | null;
   /**
@@ -3316,6 +3324,8 @@ export interface StaffRecord {
   photoFileId: string | null;
   /** The avatar their own account holds in Clerk. */
   avatarUrl: string | null;
+  /** The sports this person belongs to — POOLSE-145. Owner and admin set it. */
+  sports: PoolseSport[];
 }
 
 /**

@@ -41,6 +41,8 @@ export interface OrganizationMember {
    * matter entirely — see PersonAvatar on the web side.
    */
   avatarUrl: string | null;
+  /** The sports this person belongs to — POOLSE-145; the list shows a chip per sport. */
+  sports?: string[];
 }
 
 export type InvitationDelivery = 'pending' | 'sent' | 'failed' | 'not_configured';
@@ -302,6 +304,7 @@ export async function listMembers(
       roles: string[];
       avatar_url: string | null;
       birth_date: string | null;
+      sports: string[];
     }>(`
       SELECT ${TOTAL_COUNT},
              m.id                AS membership_id,
@@ -322,6 +325,7 @@ export async function listMembers(
              -- written directly. Needed here so the staff list can flag a
              -- birthday without a second round trip per row — round 4.
              u.birth_date        AS birth_date,
+             m.sports::text[]    AS sports,
              -- Before acceptance there is no account, so the address the invite
              -- went to is the only name this person has here.
              coalesce(u.cached_email::text, m.email::text, i.email::text) AS email,
@@ -413,7 +417,7 @@ export async function listMembers(
        GROUP BY m.id, m.app_user_id, m.status, m.created_at,
                 m.first_name, m.last_name, m.email,
                 u.cached_first_name, u.cached_last_name, u.cached_avatar_url,
-                u.cached_email, u.birth_date, i.email
+                u.cached_email, u.birth_date, i.email, m.sports
        /*
         * By name, not by when the row was made. A staff list is something you
         * scan for somebody, and creation order is meaningless to the person
@@ -439,6 +443,7 @@ export async function listMembers(
       roles: row.roles,
       avatarUrl: row.avatar_url,
       birthDate: row.birth_date,
+      sports: row.sports,
     }));
   });
 }

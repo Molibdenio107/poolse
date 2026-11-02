@@ -4211,6 +4211,19 @@ staff_contract_version               -- the partner_contract_version shape
 Migration `1794651600000_qualification-certificate-reader`: `ai_reader` gains
 `qualification_certificate`, and `platform_switch` its switch `qualification_certificate_ai` (off).
 
+### A person's sports — POOLSE-145 slice a, 2 November 2026
+
+Migration `1794651700000_membership-sports`.
+
+- **`membership.sports text[] NOT NULL DEFAULT '{pool}'`**, backfilled by the `ADD COLUMN` itself,
+  so every existing person belongs to swimming; never empty, by CHECK.
+- **`membership_sports_enabled`** (BEFORE INSERT or UPDATE OF sports) refuses a sport the club has
+  off, `check_violation` with DETAIL `sport_not_enabled|<sport>`.
+- **`resolve_memberships`** gains `o_sports`; `/me` answers it as `mySports` (only sports the club has
+  on), beside the club's `sports`.
+- Switching a sport off for a club with instructors still in it is refused by the platform's own
+  path (409 `sport_has_staff`, naming them), not by a trigger.
+
 ### Cancellation notice and push — POOLSE-90 slice 4, 27 October 2026
 
 Migrations `1792836000000_session-audience` (the enum value, alone) and

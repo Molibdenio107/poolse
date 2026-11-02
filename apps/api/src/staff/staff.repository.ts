@@ -41,6 +41,8 @@ export interface StaffRecord {
    */
   photoFileId: string | null;
   avatarUrl: string | null;
+  /** The sports this person belongs to — POOLSE-145. Owner and admin set it. */
+  sports: string[];
 }
 
 export async function findStaff(
@@ -68,6 +70,7 @@ export async function findStaff(
       away_kind: string | null;
       photo_file_id: string | null;
       avatar_url: string | null;
+      sports: string[];
     }>(
       `SELECT m.id AS membership_id,
               m.app_user_id,
@@ -86,6 +89,7 @@ export async function findStaff(
               m.notes,
               m.photo_file_id,
               u.cached_avatar_url AS avatar_url,
+              m.sports::text[] AS sports,
               m.status::text AS status,
               coalesce((
                 SELECT array_agg(mr.role::text ORDER BY mr.role)
@@ -182,7 +186,52 @@ export async function findStaff(
       studentId: row.student_id,
       photoFileId: row.app_user_id === null ? row.photo_file_id : null,
       avatarUrl: row.avatar_url,
+      sports: row.sports,
     };
+  });
+}
+
+/** A sport the club does not have on (`membership_sports_enabled`). */
+export class SportNotEnabledError extends Error {
+  constructor(readonly sport: string) {
+    super(`sport ${sport} is not on for this club`);
+  }
+}
+
+/**
+ * Sets the sports a person belongs to — POOLSE-145. Audited with the before and
+ * after: which sports a colleague works in is not personal data, and an owner
+ * reading the log should see what changed. False when there is no such person.
+ */
+export async function setStaffSports(
+  organizationId: string,
+  membershipId: string,
+  sports: readonly string[],
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ sports: string[] }>(
+      `SELECT sports::text[] AS sports FROM membership WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+      [membershipId],
+    );
+    const was = rows[0];
+    if (was === undefined) return false;
+    try {
+      await tx.query(`UPDATE membership SET sports = $2::text[] WHERE id = $1`, [membershipId, sports]);
+    } catch (error) {
+      const detail = (error as { detail?: string }).detail ?? '';
+      if (detail.startsWith('sport_not_enabled|')) throw new SportNotEnabledError(detail.split('|')[1] ?? '');
+      throw error;
+    }
+    const same = was.sports.length === sports.length && was.sports.every((sport) => sports.includes(sport));
+    if (!same) {
+      await recordAudit(tx, {
+        action: 'staff.sports_set',
+        entityType: 'membership',
+        entityId: membershipId,
+        data: { changes: { sports: { from: was.sports, to: [...sports] } } },
+      });
+    }
+    return true;
   });
 }
 

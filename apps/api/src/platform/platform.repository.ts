@@ -1053,6 +1053,33 @@ export async function setSports(
           recintos: rows.filter((row) => row.sport_id === sport).map((row) => row.name),
         });
       }
+      /*
+       * POOLSE-145 rule 2: an instructor still assigned to a sport keeps it on,
+       * named, the way a live recinto does. The club reassigns them first; Poolse
+       * does not move a person's sports on the operator's behalf. Named by the
+       * club's record, else the login's address — the platform reads no
+       * Clerk-owned name.
+       */
+      const { rows: staff } = await tx.query<{ sport: PoolseSport; name: string }>(
+        `SELECT s.sport, coalesce(nullif(btrim(concat_ws(' ', m.first_name, m.last_name)), ''), u.cached_email::text, '—') AS name
+           FROM membership m
+           JOIN LATERAL unnest(m.sports) AS s(sport) ON s.sport = ANY ($2::text[])
+           LEFT JOIN app_user u ON u.id = m.app_user_id
+          WHERE m.organization_id = $1 AND m.archived_at IS NULL
+            AND EXISTS (SELECT 1 FROM membership_role r
+                         WHERE r.membership_id = m.id AND r.organization_id = m.organization_id
+                           AND r.archived_at IS NULL AND r.role = 'instructor')
+          ORDER BY s.sport, 2`,
+        [organizationId, leaving],
+      );
+      if (staff.length > 0) {
+        const sport = staff[0]!.sport;
+        throw new ConflictException({
+          code: 'sport_has_staff',
+          sport,
+          people: staff.filter((row) => row.sport === sport).map((row) => row.name),
+        });
+      }
     }
     return { change: { enabled_sports: [...enabled] } };
   });

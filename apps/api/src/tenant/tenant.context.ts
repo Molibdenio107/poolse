@@ -17,6 +17,11 @@ export interface TenantContext {
    * Absent is the full product, which is what a background job's context means.
    */
   disabledModules?: readonly string[];
+  /**
+   * The sports this person belongs to (POOLSE-145), read by `requireSport`.
+   * Absent is every sport, which is what a background job's context means.
+   */
+  mySports?: readonly string[];
 }
 
 /**

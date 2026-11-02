@@ -50,7 +50,7 @@ This is the one item of the 01-11-2026 brainstorm that is an **authorisation cha
 
 ### Acceptance criteria
 
-- [ ] `membership.sports`, backfilled, CHECK by trigger, audited.
+- [x] `membership.sports`, backfilled, CHECK by trigger, audited. (Slice a, 02-11-2026; `/me` answers it as `mySports`, since `sports` was already the club's.)
 - [ ] `requireSport` on every sport-scoped handler; role-probe extended with a sport-only instructor.
 - [ ] Record cards absent, not blank, for another sport.
 - [ ] Rule 7 proved by test.
