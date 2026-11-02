@@ -69,7 +69,9 @@ development, staging and production instances.
    [`railway.json`](../railway.json) at the repo root, so the Dockerfile, the start command,
    the health check and the pre-deploy migration are already configured. Leave the service
    root directory as the repository root — the Dockerfile expects that as its build context.
-4. Set the service variables in **each** environment:
+4. Set the service variables in **each** environment. **The complete list, production's, is in
+   [`go-live-runbook.md`](./go-live-runbook.md)** — the table below is the minimum that boots, and
+   the API also refuses to start without `SENSITIVE_DATA_KEY` (added 02-11-2026):
 
    | Variable | Value |
    |---|---|
@@ -80,6 +82,7 @@ development, staging and production instances.
    | `CLERK_AUTHORIZED_PARTIES` | the Vercel URL for this environment |
    | `WEB_ORIGIN` | the same URL |
    | `APP_ENV` | `staging` or `production` |
+   | `SENSITIVE_DATA_KEY` | base64 of 32 random bytes — generate once, keep two copies; losing it loses every encrypted note and sealed file |
 
    `PORT` is injected by Railway; the API reads it. Do not set `API_PORT`.
 
@@ -158,7 +161,7 @@ tests. Watch the first few in Clerk's dashboard — it shows the response the en
 ## 4. Prove it, in this order
 
 ```
-1. GET  https://<api-url>/health          → {"status":"ok","database":"ok"}
+1. GET  https://<api-url>/health          → "status":"ok", postgres and clerk ok in checks
 2. Open the Vercel URL                    → landing page, both status rows green
 3. Sign up                                → lands on /dashboard
 4. Check Clerk's webhook log              → user.created delivered, 2xx

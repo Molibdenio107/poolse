@@ -9,7 +9,7 @@
 #
 # Only the API and what it depends on are installed. `--filter @poolse/api...`
 # (the three dots mean "and its workspace dependencies") pulls in packages/db and
-# leaves the entire Next.js toolchain out of a container that will never render a
+# packages/rules, and leaves the entire Next.js toolchain out of a container that will never render a
 # page.
 
 FROM node:22-alpine AS build
@@ -21,15 +21,19 @@ WORKDIR /app
 # dependency. This layer is the slow one and it changes about once a month.
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY packages/db/package.json packages/db/
+COPY packages/rules/package.json packages/rules/
 COPY apps/api/package.json apps/api/
 
 RUN pnpm install --frozen-lockfile --filter @poolse/api...
 
 COPY tsconfig.base.json ./
 COPY packages/db packages/db
+COPY packages/rules packages/rules
 COPY apps/api apps/api
 
-# Builds packages/db before apps/api — pnpm orders workspace builds by their
+# Every workspace package the API imports is copied above, or its imports fail
+# here (02-11-2026: packages/rules had been missing since it was created).
+# Builds packages/db and packages/rules before apps/api — pnpm orders workspace builds by their
 # dependency graph, so this does not need to be spelled out.
 RUN pnpm --filter @poolse/api... build
 
