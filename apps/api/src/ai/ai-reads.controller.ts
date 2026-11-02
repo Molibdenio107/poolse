@@ -28,6 +28,8 @@ const READER_ROLES: Record<AiReader, readonly MemberRole[]> = {
   column_match: ['owner', 'admin'],
   // POOLSE-142: whoever may place the boletim's fields.
   boletim_template: ['owner', 'admin'],
+  // POOLSE-149: whoever may record a qualification.
+  qualification_certificate: ['owner', 'admin'],
 };
 
 /**
@@ -39,6 +41,7 @@ const READER_ROLES: Record<AiReader, readonly MemberRole[]> = {
 const READER_MODULE: Partial<Record<AiReader, PoolseModule>> = {
   energy_invoice: 'energy',
   water_report: 'water_quality',
+  qualification_certificate: 'qualifications',
 };
 
 /** Large enough for any one call; a figure past it is a bug or a lie. */

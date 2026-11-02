@@ -4771,7 +4771,8 @@
         "water_report_ai": "Leitura de relatórios de análises",
         "pdf_table_ai": "Leitura de listas em PDF",
         "column_match_ai": "Correspondência de colunas",
-        "boletim_template_ai": "Posições nos formulários do clube"
+        "boletim_template_ai": "Posições nos formulários do clube",
+        "qualification_certificate_ai": "Certificados de qualificação"
       },
       "covers": {
         "id_document_ai": "Ao carregar a fotografia do CC de um aluno, o número e as datas são lidos e propostos no formulário para alguém confirmar. Só a imagem é enviada. Cada leitura tem custo.",
@@ -4779,7 +4780,8 @@
         "water_report_ai": "Um relatório de análises em PDF ou fotografia, largado numa piscina, é lido e proposto para alguém confirmar. Cada leitura tem custo. Cada clube precisa também do seu visto na página do clube.",
         "pdf_table_ai": "Os importadores de listas (alunos, horário, parcerias, salários, inventário, mínimos) aceitam um PDF, transcrito como folha de cálculo. Cada leitura tem custo. Cada clube precisa também do seu visto na página do clube.",
         "column_match_ai": "Ao importar alunos, as colunas que nenhum sinónimo reconheceu são propostas pelo modelo. Só vão os cabeçalhos e a forma de cada coluna. Cada chamada tem custo. Cada clube precisa também do seu visto na página do clube.",
-        "boletim_template_ai": "Em Instalações → Documentos, o boletim e a declaração FPN do próprio clube são lidos e a IA propõe onde vai cada dado, para alguém acertar e guardar. Só vai a imagem do formulário. Cada leitura tem custo."
+        "boletim_template_ai": "Em Instalações → Documentos, o boletim e a declaração FPN do próprio clube são lidos e a IA propõe onde vai cada dado, para alguém acertar e guardar. Só vai a imagem do formulário. Cada leitura tem custo.",
+        "qualification_certificate_ai": "Na ficha de um colaborador → Qualificações, um certificado largado no ecrã é lido e a IA propõe o tipo, a entidade e as datas, para alguém confirmar e guardar. Só vai o certificado. Cada leitura tem custo."
       },
       "on": "Ligado",
       "off": "Desligado",
@@ -4815,7 +4817,8 @@
         "water_report": "Leitura de relatórios de análises",
         "pdf_table": "Leitura de listas em PDF",
         "column_match": "Correspondência de colunas",
-        "boletim_template": "Posições nos formulários do clube"
+        "boletim_template": "Posições nos formulários do clube",
+        "qualification_certificate": "Certificados de qualificação"
       },
       "covers": {
         "energy_invoice": "Em Energia → Importar fatura, o PDF da fatura é lido e proposto no formulário para alguém confirmar.",
@@ -4823,7 +4826,8 @@
         "water_report": "Um relatório de análises em PDF ou fotografia, largado numa piscina, é lido e proposto para alguém confirmar.",
         "pdf_table": "Os importadores de listas (alunos, horário, parcerias, salários, inventário, mínimos) aceitam um PDF, transcrito como folha de cálculo.",
         "column_match": "Ao importar alunos, as colunas que nenhum sinónimo reconheceu são propostas pelo modelo. Só vão os cabeçalhos e a forma de cada coluna.",
-        "boletim_template": "Em Instalações → Documentos, a IA propõe onde vai cada dado no boletim e na declaração FPN do próprio clube, para alguém acertar e guardar."
+        "boletim_template": "Em Instalações → Documentos, a IA propõe onde vai cada dado no boletim e na declaração FPN do próprio clube, para alguém acertar e guardar.",
+        "qualification_certificate": "Na ficha de um colaborador → Qualificações, a IA propõe o tipo, a entidade e as datas de um certificado largado, para alguém confirmar e guardar."
       }
     }
   },
@@ -5040,7 +5044,26 @@
       "download": "Certificado",
       "downloadLabel": "Descarregar o certificado de {name} — {type}",
       "attach": "Anexar",
-      "attachLabel": "Anexar o certificado de {name} — {type}"
+      "attachLabel": "Anexar o certificado de {name} — {type}",
+      "drop": "Largue para ler o certificado",
+      "choose": "Escolher um certificado",
+      "reading": "A ler…",
+      "hint": "PDF ou fotografia, até 10 MB. Também pode largar o ficheiro em qualquer ponto do ecrã: o certificado fica junto ao registo quando o guardar.",
+      "held": "Este certificado fica junto ao registo quando o guardar.",
+      "proposed": "Lido do certificado. Confirme o tipo, a entidade e as datas e carregue em Guardar; o certificado fica junto ao registo.",
+      "forget": "Não usar este certificado",
+      "filed": "Certificado carregado.",
+      "read": "Certificado carregado e lido. Confirme os dados.",
+      "savedWithout": "Qualificação guardada, mas o certificado não ficou junto. Junte-o no registo, abaixo.",
+      "note": {
+        "off": "A leitura automática de certificados está desligada. Preencha os dados à mão.",
+        "noKey": "A leitura automática não está configurada neste servidor. Preencha os dados à mão.",
+        "capReached": "O clube já usou as leituras automáticas deste mês. Preencha os dados à mão.",
+        "unreadable": "Não foi possível ler o certificado. Preencha os dados à mão.",
+        "nothingFound": "Não foi encontrado nada para preencher. Preencha os dados à mão.",
+        "notAllowed": "Só o proprietário e os administradores podem usar a leitura automática.",
+        "rateLimited": "Demasiadas leituras seguidas. Preencha os dados à mão ou tente daqui a pouco."
+      }
     },
     "title": "Qualificações",
     "subtitle": "Quem tem que qualificações e até quando. Verde está em dia, âmbar expira em breve, vermelho expirou.",

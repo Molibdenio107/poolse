@@ -82,5 +82,5 @@ A club keeps a staff member's file in a drawer today: the address for the contra
 - [x] A: the Geral fields stored, validated, withheld in the log, absent for other staff, cleared on anonymisation.
 - [x] B: the Identificação tab, sealed photos, audited reads, retention shreds, reader pre-fill.
 - [x] C: the Contrato tab, versions, informative facts, the Owner hidden from an Admin.
-- [ ] D: the certificate drop, the new reader behind its switch, records indistinguishable from typed ones.
-- [ ] Role probe extended; `TENANT_TABLES` updated; i18n pt-PT + en; `docs/features/staff.md`, `docs/data-model.md`, `docs/decisions.md`, `CLAUDE.md` (the POOLSE-100 paragraph).
+- [x] D: the certificate drop, the new reader behind its switch, records indistinguishable from typed ones.
+- [x] Role probe extended; `TENANT_TABLES` updated; i18n pt-PT + en; `docs/features/staff.md`, `docs/data-model.md`, `docs/decisions.md`, `CLAUDE.md` (the POOLSE-100 paragraph).

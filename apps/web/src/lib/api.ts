@@ -371,7 +371,7 @@ export interface Me {
 }
 
 /** The switches /admin flips — `PLATFORM_SWITCHES` on the API. */
-export type PlatformSwitchName = 'id_document_ai' | 'energy_invoice_ai' | 'water_report_ai' | 'pdf_table_ai' | 'column_match_ai' | 'boletim_template_ai';
+export type PlatformSwitchName = 'id_document_ai' | 'energy_invoice_ai' | 'water_report_ai' | 'pdf_table_ai' | 'column_match_ai' | 'boletim_template_ai' | 'qualification_certificate_ai';
 
 export interface PlatformSwitch {
   name: PlatformSwitchName;

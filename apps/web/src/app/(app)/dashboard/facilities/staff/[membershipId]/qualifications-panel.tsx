@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { AttachedDocument } from '@/components/file-upload';
+import { FileUp } from 'lucide-react';
+import { AttachedDocument, DocumentLink } from '@/components/file-upload';
+import { DropOverlay, useFileDrop } from '@/components/file-drop';
+import { acceptFor } from '@/lib/files';
+import type { CertificateDraft } from '@/lib/qualification-certificate-agent';
 import { QualificationStatus } from '@/components/qualification-status';
 import { SelectField, TextField } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
@@ -14,6 +18,8 @@ import type { FormState } from '../../../actions';
 import {
   addQualificationAction,
   archiveQualificationAction,
+  dropCertificateAction,
+  type CertificateState,
 } from '../qualifications/qualifications.actions';
 
 /**
@@ -84,8 +90,42 @@ export function QualificationsPanel({
       setFormKey((key) => key + 1);
       setTypeId(types[0]?.id ?? '');
       setIssuedOn('');
+      setCertificate(null);
+      setDraft(null);
     }
   }, [state, types]);
+  /*
+   * A dropped certificate — POOLSE-149 slice D. Filed at once, then (reader on)
+   * read; the form remounts around it with what was read, and saving the
+   * record attaches it. Dropped anywhere on the screen, or picked.
+   */
+  const [dropped, drop, reading] = useSavedAction<CertificateState, FormData>(dropCertificateAction, { ok: false });
+  const [certificate, setCertificate] = useState<NonNullable<CertificateState['file']> | null>(null);
+  const [draft, setDraft] = useState<CertificateDraft | null>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const canDrop = data.canManage && types.length > 0 && storageReady;
+  const sendCertificate = useCallback(
+    (file: File): void => {
+      if (!canDrop) return;
+      const form = new FormData();
+      form.set('file', file);
+      startTransition(() => drop(form));
+    },
+    [canDrop, drop],
+  );
+  const { dragging } = useFileDrop(sendCertificate);
+  const seenDrop = useRef(dropped);
+  useEffect(() => {
+    if (seenDrop.current === dropped) return;
+    seenDrop.current = dropped;
+    if (!dropped.ok || dropped.file === undefined) return;
+    setCertificate(dropped.file);
+    setDraft(dropped.draft ?? null);
+    if (dropped.draft?.typeId) setTypeId(dropped.draft.typeId);
+    setIssuedOn(dropped.draft?.issuedOn ?? '');
+    setFormKey((key) => key + 1);
+  }, [dropped]);
+
   const validity = types.find((type) => type.id === typeId)?.defaultValidityMonths ?? null;
   const suggested = suggestExpiry(issuedOn, validity);
 
@@ -108,6 +148,7 @@ export function QualificationsPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      <DropOverlay shown={dragging && canDrop} label={t('qualifications.certificate.drop')} />
       <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
         <h2 className="font-medium">{t('qualifications.standing')}</h2>
         {data.standings.length === 0 ? (
@@ -151,6 +192,7 @@ export function QualificationsPanel({
                 <TextField
                   name="issuingBody"
                   label={t('qualifications.field.issuingBody')}
+                  initial={draft?.issuingBody ?? ''}
                   maxLength={200}
                   error={fieldError('issuingBody')}
                 />
@@ -160,6 +202,7 @@ export function QualificationsPanel({
                   name="issuedOn"
                   type="date"
                   label={t('qualifications.field.issuedOn')}
+                  initial={draft?.issuedOn ?? ''}
                   onValueChange={setIssuedOn}
                   error={fieldError('issuedOn')}
                 />
@@ -167,7 +210,7 @@ export function QualificationsPanel({
                   name="expiresOn"
                   type="date"
                   label={t('qualifications.field.expiresOn')}
-                  initial={suggested}
+                  initial={draft?.expiresOn ?? suggested}
                   hint={
                     validity === null
                       ? t('qualifications.field.expiresHint')
@@ -176,8 +219,55 @@ export function QualificationsPanel({
                   error={fieldError('expiresOn')}
                 />
               </div>
-              {/* The scan is attached to the record once it exists, below. */}
-              <p className="text-sm text-foreground-muted">{t('files.certificateAfterSave')}</p>
+              {certificate !== null && <input type="hidden" name="documentFileId" value={certificate.id} />}
+              {certificate !== null ? (
+                <div className="flex flex-col items-start gap-2 rounded-sm bg-surface-muted p-3 text-sm">
+                  <span>{t(draft !== null ? 'qualifications.certificate.proposed' : 'qualifications.certificate.held')}</span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <DocumentLink quiet fileId={certificate.id} contentType={certificate.contentType} fileName={certificate.name} />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCertificate(null);
+                        setDraft(null);
+                      }}
+                      className="text-foreground-muted underline-offset-2 hover:underline coarse:-my-3 coarse:py-3"
+                    >
+                      {t('qualifications.certificate.forget')}
+                    </button>
+                  </div>
+                  {dropped.readNote !== undefined && (
+                    <span className="text-foreground-muted">{t(`qualifications.certificate.note.${dropped.readNote}`)}</span>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-start gap-1">
+                  <button
+                    type="button"
+                    disabled={!canDrop || reading}
+                    onClick={() => picker.current?.click()}
+                    className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-surface px-4 text-control shadow-card hover:bg-surface-muted disabled:opacity-60"
+                  >
+                    <FileUp className="size-4" aria-hidden />
+                    {reading ? t('qualifications.certificate.reading') : t('qualifications.certificate.choose')}
+                  </button>
+                  <input
+                    ref={picker}
+                    type="file"
+                    className="hidden"
+                    aria-label={t('qualifications.certificate.choose')}
+                    accept={acceptFor('qualification_document')}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file !== undefined) sendCertificate(file);
+                      event.target.value = '';
+                    }}
+                  />
+                  <span className="text-sm text-foreground-muted">
+                    {storageReady ? t('qualifications.certificate.hint') : t('files.notConfigured')}
+                  </span>
+                </div>
+              )}
               <div>
                 <button
                   type="submit"

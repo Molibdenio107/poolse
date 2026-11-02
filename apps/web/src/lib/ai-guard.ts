@@ -71,4 +71,6 @@ export const AI_ROLES = {
   // POOLSE-149: reading a staff member's ID photo. The person may file their
   // own; the metered read stays the office's.
   staffIdentity: ['owner', 'admin'],
+  // POOLSE-149: reading a dropped certificate — whoever records a qualification.
+  qualificationCertificate: ['owner', 'admin'],
 } as const satisfies Record<string, readonly string[]>;

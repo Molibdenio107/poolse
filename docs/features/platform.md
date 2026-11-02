@@ -421,6 +421,8 @@ Every model call Poolse pays for comes from one of five readers (`AI_READERS` in
 *Importar fatura*), `id_document` (a student's *Documentos*), `water_report` (a lab report
 dropped on a pool), `pdf_table` (a PDF given to any list importer) and `column_match`
 (the student importer's column mapping).
+Since then: `boletim_template` (POOLSE-142, a club's own forms) and `qualification_certificate`
+(POOLSE-149, a certificate dropped on a staff member's Qualificações), each with its switch.
 
 - **A reader runs only when three things hold**: its platform switch is on, the club's
   tick for it is on (`organization.ai_readers`, empty for a new club), and the web app has

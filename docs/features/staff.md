@@ -173,5 +173,13 @@ a different scan is a different record, i.e. a renewal. It is attached on the pe
 or, since POOLSE-97, from its row on **Staff → Qualificações**, which shows 📎 *Certificado* (a download
 through `/files/:id`, under the file's own read rule) or *Anexar* (the same upload and the same route,
 `PUT qualifications/:id/document`, Owner and Admin). An *em falta* row has no record and shows neither.
+
+**A certificate can come first** (POOLSE-149, 02-11-2026). On the person's Qualificações tab, a
+certificate (PDF or photograph) dropped anywhere on the screen, or picked, is uploaded at once and the
+new-qualification form holds it. With the `qualification_certificate` reader on (switch, club tick, key)
+the form is filled with the type (one of the club's own, matched by name and never created), the issuer
+and the dates, for a person to confirm. Off, the form opens empty around the file and says why. Saving
+creates the record and attaches the file through the same `PUT qualifications/:id/document` as above,
+so it is an ordinary record on Staff → Qualificações, the dashboard card and the alert job.
 The list's **Sem certificado** filter (`?certificate=missing` on `GET /qualifications/expiring`) narrows it
 on the server, before paging, to records with no certificate; *em falta* rows are not among them.

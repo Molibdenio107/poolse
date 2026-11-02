@@ -17,6 +17,7 @@ export const PLATFORM_SWITCHES = [
   'pdf_table_ai',
   'column_match_ai',
   'boletim_template_ai',
+  'qualification_certificate_ai',
 ] as const;
 export type PlatformSwitchName = (typeof PLATFORM_SWITCHES)[number];
 

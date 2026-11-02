@@ -4771,7 +4771,8 @@
         "water_report_ai": "Lab report reading",
         "pdf_table_ai": "Reading lists from PDF",
         "column_match_ai": "Column matching",
-        "boletim_template_ai": "Positions on the club's forms"
+        "boletim_template_ai": "Positions on the club's forms",
+        "qualification_certificate_ai": "Qualification certificates"
       },
       "covers": {
         "id_document_ai": "When a student's ID card photo is uploaded, its number and dates are read and proposed in the form for someone to confirm. Only the image is sent. Each read has a cost.",
@@ -4779,7 +4780,8 @@
         "water_report_ai": "A lab report as a PDF or photo, dropped on a pool, is read and proposed for somebody to confirm. Each read has a cost. Each club also needs its own tick on its page.",
         "pdf_table_ai": "The list importers (students, timetable, partnerships, salaries, inventory, entry times) take a PDF, transcribed as a spreadsheet. Each read has a cost. Each club also needs its own tick on its page.",
         "column_match_ai": "When importing students, columns no synonym recognised are proposed by the model. Only the headings and the shape of each column are sent. Each call has a cost. Each club also needs its own tick on its page.",
-        "boletim_template_ai": "On Facilities → Documents, the club's own membership form and FPN declaration are read and the AI proposes where each detail goes, for somebody to adjust and save. Only the form's image is sent. Each read has a cost."
+        "boletim_template_ai": "On Facilities → Documents, the club's own membership form and FPN declaration are read and the AI proposes where each detail goes, for somebody to adjust and save. Only the form's image is sent. Each read has a cost.",
+        "qualification_certificate_ai": "On a staff member's record → Qualifications, a certificate dropped on the screen is read and the AI proposes its type, issuer and dates, for somebody to confirm and save. Only the certificate is sent. Each read has a cost."
       },
       "on": "On",
       "off": "Off",
@@ -4815,7 +4817,8 @@
         "water_report": "Lab report reading",
         "pdf_table": "Reading lists from PDF",
         "column_match": "Column matching",
-        "boletim_template": "Positions on the club's forms"
+        "boletim_template": "Positions on the club's forms",
+        "qualification_certificate": "Qualification certificates"
       },
       "covers": {
         "energy_invoice": "Under Energy → Import bill, the bill PDF is read and proposed on the form for somebody to confirm.",
@@ -4823,7 +4826,8 @@
         "water_report": "A lab report as a PDF or photo, dropped on a pool, is read and proposed for somebody to confirm.",
         "pdf_table": "The list importers (students, timetable, partnerships, salaries, inventory, entry times) take a PDF, transcribed as a spreadsheet.",
         "column_match": "When importing students, columns no synonym recognised are proposed by the model. Only the headings and the shape of each column are sent.",
-        "boletim_template": "On Facilities → Documents, the AI proposes where each detail goes on the club's own membership form and FPN declaration, for somebody to adjust and save."
+        "boletim_template": "On Facilities → Documents, the AI proposes where each detail goes on the club's own membership form and FPN declaration, for somebody to adjust and save.",
+        "qualification_certificate": "On a staff member's record → Qualifications, the AI proposes the type, issuer and dates of a dropped certificate, for somebody to confirm and save."
       }
     }
   },
@@ -5040,7 +5044,26 @@
       "download": "Certificate",
       "downloadLabel": "Download {name}'s certificate — {type}",
       "attach": "Attach",
-      "attachLabel": "Attach {name}'s certificate — {type}"
+      "attachLabel": "Attach {name}'s certificate — {type}",
+      "drop": "Drop to read the certificate",
+      "choose": "Choose a certificate",
+      "reading": "Reading…",
+      "hint": "PDF or photograph, up to 10 MB. You can also drop the file anywhere on the screen: the certificate goes with the record when you save it.",
+      "held": "This certificate goes with the record when you save it.",
+      "proposed": "Read from the certificate. Check the type, issuer and dates and press Save; the certificate goes with the record.",
+      "forget": "Don't use this certificate",
+      "filed": "Certificate uploaded.",
+      "read": "Certificate uploaded and read. Check the details.",
+      "savedWithout": "Qualification saved, but the certificate was not attached. Attach it on the record below.",
+      "note": {
+        "off": "Automatic reading of certificates is switched off. Fill the details in by hand.",
+        "noKey": "Automatic reading is not configured on this server. Fill the details in by hand.",
+        "capReached": "The club has used this month's automatic reads. Fill the details in by hand.",
+        "unreadable": "The certificate could not be read. Fill the details in by hand.",
+        "nothingFound": "Nothing was found to fill in. Fill the details in by hand.",
+        "notAllowed": "Only the owner and the administrators can use automatic reading.",
+        "rateLimited": "Too many reads in a row. Fill the details in by hand or try again shortly."
+      }
     },
     "title": "Qualifications",
     "subtitle": "Who holds which qualifications, and until when. Green is current, amber expires soon, red has expired.",

@@ -4206,6 +4206,11 @@ staff_contract_version               -- the partner_contract_version shape
   a partnership's contract. Not sealed.
 - Nothing in salaries or vacations reads either table.
 
+### Qualification certificate reader — POOLSE-149 slice D, 2 November 2026
+
+Migration `1794651600000_qualification-certificate-reader`: `ai_reader` gains
+`qualification_certificate`, and `platform_switch` its switch `qualification_certificate_ai` (off).
+
 ### Cancellation notice and push — POOLSE-90 slice 4, 27 October 2026
 
 Migrations `1792836000000_session-audience` (the enum value, alone) and

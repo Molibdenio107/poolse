@@ -59,7 +59,7 @@ test('a reader switch is off, flips on, is audited and alerted, and clubs read i
   assert.equal(flipped.enabled, true);
   assert.equal((await readSwitchesForClubs())[SWITCH], true);
 
-  // All six AI readers are listed (POOLSE-137, POOLSE-142), in name order.
+  // All seven AI readers are listed (POOLSE-137, POOLSE-142, POOLSE-149), in name order.
   const listed = await asOperator(() => controller.switches());
   assert.deepEqual(listed.map((one) => one.name), [
     'boletim_template_ai',
@@ -67,6 +67,7 @@ test('a reader switch is off, flips on, is audited and alerted, and clubs read i
     'energy_invoice_ai',
     'id_document_ai',
     'pdf_table_ai',
+    'qualification_certificate_ai',
     'water_report_ai',
   ]);
   assert.equal(listed.find((one) => one.name === SWITCH)?.enabled, true);
