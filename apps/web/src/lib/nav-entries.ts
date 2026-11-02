@@ -1,4 +1,4 @@
-import { BASE_SPORT, isMultiSport, type PoolseModule, type PoolseSport } from '@poolse/rules';
+import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import type { EntityKind } from '@/components/entity-icon';
 import type { OrganizationKind } from '@/lib/api';
 
@@ -79,6 +79,18 @@ export interface Item {
   badgePerSport?: true;
   /** The sport a generated entry belongs to, set by `visibleSections`, never by hand. */
   sport?: PoolseSport;
+  /**
+   * The label in each sport's group, where the sport has its own word —
+   * POOLSE-150: *Piscinas* for swimming, *Campos* for a court sport, *Salas* for
+   * the gym. Absent for a sport, the entry's `key`.
+   */
+  keyBySport?: Partial<Record<PoolseSport, string>>;
+  /**
+   * Addresses that are this entry's too, for the section the menu shows —
+   * POOLSE-150: a tank's own page (`/dashboard/facilities/pools/…`) is the
+   * Natação section's *Piscinas*.
+   */
+  also?: readonly string[];
 }
 
 /** The counts a menu entry may carry. */
@@ -312,6 +324,32 @@ export const SECTIONS: Item[] = [
     children: [{ href: '/dashboard/calendar/closures', key: 'calendar.closures' }],
   },
   /*
+   * A sport's recintos — POOLSE-150 (Rui, 02-11-2026): the tanks under Natação,
+   * a court sport's courts under it, in the sport's own word. The sport's
+   * section is where they are listed, added and opened; the site page links
+   * here. Staff read the list (a tank's page is everybody's on staff); adding
+   * is the office's, refused by the API besides.
+   */
+  {
+    href: '/dashboard/recintos',
+    key: 'recintos.nav.default',
+    keyBySport: {
+      pool: 'recintos.nav.pool',
+      tennis: 'recintos.nav.courts',
+      padel: 'recintos.nav.courts',
+      football: 'recintos.nav.courts',
+      basketball: 'recintos.nav.courts',
+      handball: 'recintos.nav.courts',
+      volleyball: 'recintos.nav.courts',
+      gym: 'recintos.nav.rooms',
+    },
+    also: ['/dashboard/facilities/pools'],
+    icon: 'pool',
+    roles: STAFF,
+    kinds: ['business'],
+    perSport: true,
+  },
+  /*
    * Faturação — phase 2.2.
    *
    * Its own section rather than a child of Alunos: a document belongs to a
@@ -472,28 +510,29 @@ export function pathOf(href: string): string {
 }
 
 /**
- * One group per sport — POOLSE-125, rules 1 and 2. With swimming alone the
- * list is returned untouched, so a pool club's menu is exactly what it was.
- * With two or more, the `perSport` entries leave the top level and each sport
- * gets a group of its own, standing where the first of them stood, its entries
- * addressed with `?sport=`. The pool's group keeps the entries' children
+ * One group per sport — POOLSE-125, rules 1 and 2, and POOLSE-150: **a business
+ * club with one sport gets its one group too** (Rui, 02-11-2026), holding what
+ * a multi-sport club's group holds, so a pool has one home whatever the number
+ * of sports. A personal tenant has no per-sport entries and is untouched. The
+ * `perSport` entries leave the top level and each sport gets a group of its
+ * own, standing where the first of them stood, its entries addressed with
+ * `?sport=`. The pool's group keeps the entries' children
  * (Épocas, Reposições, Encerramentos) and the calendar's circle; another
  * sport's group has neither yet, because nothing under them reads a sport and
  * a court's warning must not light the pool's entry (rule 4).
  */
 function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] {
   const scoped = sections.filter((section) => section.perSport !== undefined);
-  if (!isMultiSport(sports) || scoped.length === 0) return sections;
+  if (sports.length === 0 || scoped.length === 0) return sections;
 
-  // A sport's section opens on its Calendário, listed first — the handoff's
-  // sidebar and POOLSE-141 rule 3. Only inside a sport's group: a pool-only
-  // menu keeps the order it shipped with.
+  // A sport's recintos are listed first, then its Calendário (Rui, 02-11-2026:
+  // "pools should be the first menu"), and the rest in their menu order.
   const inSection = [...scoped].sort((a, b) => sportPageRank(a.href) - sportPageRank(b.href));
   const groups = sports.map((sport): Item => {
     const children = inSection
       .filter((entry) => forSport(entry, sport))
       .map((entry): Item => {
-        const { badge, children: below, ...rest } = entry;
+        const { badge, children: below, keyBySport, ...rest } = entry;
         // A moved section keeps its children only in the pool's group (Épocas,
         // Reposições, Encerramentos read no sport yet — POOLSE-125). A copied
         // one keeps the children that are per sport themselves.
@@ -505,15 +544,19 @@ function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] 
               : [];
         return {
           ...rest,
+          key: keyBySport?.[sport] ?? entry.key,
           href: withSport(entry.href, sport),
           sport,
           children: kept,
           ...(badge !== undefined && (sport === BASE_SPORT || entry.badgePerSport === true) ? { badge } : {}),
         };
       });
+    // The sport's tab still opens its Calendário (Rui, 02-11-2026), the page
+    // used most days — not the first entry, which is the recintos list.
     const [first] = children as [Item, ...Item[]];
+    const opens = children.find((child) => pathOf(child.href) === '/dashboard/calendar') ?? first;
     return {
-      href: first.href,
+      href: opens.href,
       key: `sport.name.${sport}`,
       icon: sport === BASE_SPORT ? 'pool' : 'facility',
       sport,
@@ -559,9 +602,10 @@ function withSport(href: string, sport: PoolseSport): string {
   return `${href}${href.includes('?') ? '&' : '?'}sport=${sport}`;
 }
 
-/** Calendário first, then the rest in their menu order (a stable sort keeps it). */
+/** The recintos, then Calendário, then the rest in their menu order (a stable sort keeps it). */
 function sportPageRank(href: string): number {
-  return href === '/dashboard/calendar' ? 0 : 1;
+  if (href === '/dashboard/recintos') return 0;
+  return href === '/dashboard/calendar' ? 1 : 2;
 }
 
 /** Every destination this viewer may open, children included, in menu order — the palette's list. */

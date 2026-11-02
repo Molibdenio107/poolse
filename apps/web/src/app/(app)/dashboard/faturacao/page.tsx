@@ -12,6 +12,7 @@ import { FromLink } from '@/components/from-link';
 import { listInvoices, listOutstanding, previewRun } from './invoices.actions';
 import { Pagination } from '@/components/pagination';
 import { lastPage, PAGE_SIZE, readPage, type Paginated } from '@/lib/pagination';
+import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 
 const BASE = '/dashboard/faturacao';
 
@@ -48,10 +49,11 @@ export default async function InvoicingPage({
     view?: string;
     from?: string;
     page?: string;
+    section?: string;
   }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { facilityId: requested = '', month: monthParam, view, from, page } = await searchParams;
+  const { facilityId: requested = '', month: monthParam, view, from, page, section } = await searchParams;
   const back = originBack(from);
 
   /*
@@ -127,7 +129,19 @@ export default async function InvoicingPage({
    * about the whole list: the total owed, and "select all N" for reminders.
    */
   const pageNo = readPage(page);
-  const pageQuery = { facilityId: requested, month: monthParam, view };
+  /*
+   * *Este mês* in two sections — Rui, 02-11-2026: what there is to bill, and
+   * what has been issued, each behind its own pill rather than one under the
+   * other. The second row is his ask, though this page's rule was to extend
+   * ViewTabs: the two are a month's halves, not views of the whole page.
+   */
+  const monthSection = pickSection(['run', 'issued'] as const, section, 'run');
+  const pageQuery = {
+    facilityId: requested,
+    month: monthParam,
+    view,
+    ...(monthSection === 'issued' ? { section: 'issued' } : {}),
+  };
   const pageOf = <T,>(items: T[]): Paginated<T> => {
     const total = items.length;
     const at = Math.min(pageNo, lastPage(total));
@@ -198,20 +212,41 @@ export default async function InvoicingPage({
               month={month}
             />
 
-            <InvoiceRunPanel facilityId={chosen} month={month} run={run} />
+            <SectionPills
+              label={t('invoices.monthSections')}
+              current={monthSection}
+              items={[
+                {
+                  key: 'run',
+                  label: run === null ? t('invoices.runTitle') : `${t('invoices.runTitle')} · ${run.drafts.length}`,
+                  href: sectionHref(BASE, { facilityId: requested || undefined, month: monthParam, from }, 'run'),
+                },
+                {
+                  key: 'issued',
+                  label: issued === null ? t('invoices.issuedTitle') : `${t('invoices.issuedTitle')} · ${issued.invoices.length}`,
+                  href: sectionHref(BASE, { facilityId: requested || undefined, month: monthParam, from }, 'issued'),
+                },
+              ]}
+            />
 
-            {runLoad?.state === 'failed' && <PageError message={t(runLoad.failure.key)} />}
-
-            {issued === null ? (
-              <PageError message={t(failedKey(issuedLoad))} />
-            ) : (
-              <InvoiceList
-                facilityId={chosen}
-                invoices={issuedPage!.items}
-                month={month}
-                pager={<Pagination page={issuedPage!} basePath={BASE} query={pageQuery} />}
-              />
+            {monthSection === 'run' && (
+              <>
+                <InvoiceRunPanel facilityId={chosen} month={month} run={run} />
+                {runLoad?.state === 'failed' && <PageError message={t(runLoad.failure.key)} />}
+              </>
             )}
+
+            {monthSection === 'issued' &&
+              (issued === null ? (
+                <PageError message={t(failedKey(issuedLoad))} />
+              ) : (
+                <InvoiceList
+                  facilityId={chosen}
+                  invoices={issuedPage!.items}
+                  month={month}
+                  pager={<Pagination page={issuedPage!} basePath={BASE} query={pageQuery} />}
+                />
+              ))}
           </>
         )}
       </div>

@@ -28,7 +28,8 @@
     "toProfile": "Voltar ao meu perfil",
     "toStudent": "Voltar ao aluno",
     "toClass": "Voltar à turma",
-    "toInvoice": "Voltar ao documento"
+    "toInvoice": "Voltar ao documento",
+    "toRecintos": "Voltar aos recintos"
   },
   "app": {
     "name": "Poolse",
@@ -1151,7 +1152,7 @@
     "alertNoEmail": "O envio de email não está configurado neste ambiente. Os alertas são registados, mas nada é enviado.",
     "alertNotSent": "Registado, sem envio",
     "title": "Instalações",
-    "subtitle": "Os locais da organização e os tanques em cada um.",
+    "subtitle": "Os locais da organização e os desportos de cada um.",
     "addSite": "Adicionar instalação",
     "create": "Criar instalação",
     "nameLabel": "Nome",
@@ -1432,7 +1433,14 @@
     "waterBackInRange": "A água voltou aos limites",
     "reopenHint": "A última análise está dentro dos limites, mas a piscina continua encerrada. Se foi encerrada por causa da água, levante o encerramento em Encerramentos para a reabrir antes da data.",
     "openClosures": "Abrir Encerramentos",
-    "fromLab": "Do laboratório"
+    "fromLab": "Do laboratório",
+    "sports": "Desportos",
+    "sportOpen": "Ver os recintos",
+    "sportCount": {
+      "pool": "{count, plural, =0 {Nenhuma piscina} one {# piscina} other {# piscinas}}",
+      "courts": "{count, plural, =0 {Nenhum campo} one {# campo} other {# campos}}",
+      "rooms": "{count, plural, =0 {Nenhuma sala} one {# sala} other {# salas}}"
+    }
   },
   "classes": {
     "colour": "Cor da turma",
@@ -3014,7 +3022,7 @@
       "attendanceOf": "de {expected, plural, one {# previsto} other {# previstos}} até agora",
       "collected": "Cobrado no mês",
       "payments": "{count, plural, =0 {Nenhum pagamento ainda} one {# pagamento} other {# pagamentos}} em mensalidades",
-      "noInstructor": "Sem professor atribuído",
+      "noInstructor": "Sem professor",
       "noInstructorToday": "Aulas de hoje por resolver",
       "allCovered": "Todas as aulas de hoje têm professor",
       "byHour": "Hoje, hora a hora",
@@ -3036,7 +3044,19 @@
         "classes": "Turmas",
         "water": "Água",
         "people": "Pessoas"
-      }
+      },
+      "byHourLine": "{people, plural, one {# pessoa} other {# pessoas}} em aula hoje · a hora mais cheia é às {hour}h, com {peak}.",
+      "byHourNone": "Ninguém em aula hoje nestas horas.",
+      "byHourHint": "Cada barra é o número de pessoas em aula nessa hora, pelas inscrições. Toque numa barra para ver as aulas.",
+      "hourLessons": "Aulas às {hour}h",
+      "hourEmpty": "Nenhuma aula nesta hora.",
+      "untitled": "Aula",
+      "lessonPeople": "{count, plural, one {# pessoa} other {# pessoas}}",
+      "openCalendar": "Abrir o calendário",
+      "recintosAt": "Recintos · às {hour}h",
+      "tankPeopleAt": "{count, plural, one {# pessoa} other {# pessoas}} às {hour}h, em {lessons, plural, one {# aula} other {# aulas}}",
+      "tankEmptyAt": "Sem aulas às {hour}h",
+      "noTankLessons": "Algumas aulas desta hora não estão num tanque (parcerias sem piscina marcada)."
     }
   },
   "marketing": {
@@ -3177,7 +3197,7 @@
     "classCancelled": "Esta aula foi cancelada, por isso não há presenças a marcar.",
     "readOnly": "Não tem permissão para marcar presenças.",
     "restricted": "Esta secção é reservada a instrutores, administradores e proprietários.",
-    "attendanceRecorded": "Já há presenças marcadas nesta aula, por isso não pode ser cancelada.",
+    "attendanceRecorded": "Esta aula já terminou e tem presenças marcadas, por isso não pode ser cancelada.",
     "guest": "Reposição",
     "noInsurance": "Sem seguro",
     "trialGuests": "{count, plural, one {Aula experimental: # pessoa} other {Aulas experimentais: # pessoas}}",
@@ -3446,7 +3466,8 @@
       "label": "Legenda",
       "uncovered": "Sem professor",
       "free": "Recinto livre — clique para marcar aula"
-    }
+    },
+    "classEnded": "Esta aula já terminou: só o proprietário ou um administrador a pode cancelar."
   },
   "inventory": {
     "title": "Inventário",
@@ -4017,7 +4038,14 @@
       "noLanes": "Não foi indicada nenhuma pista.",
       "laneNotFound": "Não existe «{value}» neste local.",
       "unknownSubject": "Não foi possível perceber o que é esta marcação."
-    }
+    },
+    "pool": "Piscina",
+    "poolHint": "O horário é de uma piscina: as pistas do ficheiro são as desta piscina.",
+    "choosePool": "Escolha o recinto",
+    "poolRequired": "Escolha primeiro o recinto deste horário.",
+    "recinto": "Recinto",
+    "recintoHint": "O horário é de um recinto: as pistas do ficheiro são as deste recinto. Campos e courts ficam disponíveis quando tiverem unidades marcáveis.",
+    "notYet": "{name} — em breve"
   },
   "spaces": {
     "title": "Espaços",
@@ -4345,7 +4373,10 @@
       "chaseNotSent": "Lembrete registado — o email ainda não saiu.",
       "nothingSent": "Não há nada a enviar: as pessoas escolhidas já não têm valores em atraso ou não têm endereço de email.",
       "referenceIsDocuments": "O email pede a cada pessoa que indique como referência os seus documentos em atraso."
-    }
+    },
+    "selectAll": "Selecionar todos ({count})",
+    "clearSelection": "Limpar seleção",
+    "monthSections": "Secções do mês"
   },
   "reception": {
     "title": "Receção",
@@ -6623,7 +6654,22 @@
     "nameTaken": "Já existe um recinto ou uma piscina com este nome neste local.",
     "sportOff": "Este desporto não está ativo para o clube.",
     "addFailed": "Não foi possível adicionar o recinto.",
-    "archiveFailed": "Não foi possível arquivar o recinto."
+    "archiveFailed": "Não foi possível arquivar o recinto.",
+    "nav": {
+      "default": "Recintos",
+      "pool": "Piscinas",
+      "courts": "Campos",
+      "rooms": "Salas"
+    },
+    "page": {
+      "noSites": "Ainda não há instalações",
+      "noSitesHint": "Crie primeiro uma instalação em Instalações; os recintos ficam dentro dela.",
+      "poolSubtitle": "Os tanques do clube, por instalação. Cada um abre a sua página: água, pistas, equipamento e tarefas.",
+      "addPool": "Adicionar piscina",
+      "courtSubtitle": "Os recintos de {sport}, por instalação.",
+      "notYours": "Esta instalação só é visível para o proprietário, os administradores e a manutenção.",
+      "siteLinks": "Os recintos desta instalação estão na secção de cada desporto:"
+    }
   },
   "familyAccess": {
     "title": "Acesso à app",

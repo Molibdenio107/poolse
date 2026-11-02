@@ -55,6 +55,9 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
+/** The dialogs open now, innermost last — so a stacked one owns the keyboard. */
+const OPEN_STACK: symbol[] = [];
+
 export function Dialog({
   open,
   onClose,
@@ -139,8 +142,14 @@ export function Dialog({
     if (!open) return;
 
     returnTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    // One more on the stack: only the topmost dialog answers the keyboard.
+    const me = Symbol('dialog');
+    OPEN_STACK.push(me);
 
     const onKeyDown = (event: KeyboardEvent): void => {
+      // A dialog opened from inside this one owns Escape and Tab until it closes
+      // (02-11-2026: the timetable import's own clash and drop questions).
+      if (OPEN_STACK[OPEN_STACK.length - 1] !== me) return;
       if (event.key === 'Escape') {
         // A control inside that closes itself on Escape — the turma picker
         // over an earlier choice (POOLSE-110) — marks itself, and the key is
@@ -194,6 +203,8 @@ export function Dialog({
     });
 
     return () => {
+      const at = OPEN_STACK.lastIndexOf(me);
+      if (at !== -1) OPEN_STACK.splice(at, 1);
       document.removeEventListener('keydown', onKeyDown, true);
       document.body.style.overflow = previousOverflow;
       cancelAnimationFrame(focusFirst);

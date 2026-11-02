@@ -1,11 +1,13 @@
-import { getFormatter, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
+import { ChevronRight, Settings, Building2 } from 'lucide-react';
+import { BASE_SPORT, type PoolseSport } from '@poolse/rules';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { backProp, originBack } from '@/lib/back';
-import { ApiError, apiFetch, type Facilities } from '../../../../lib/api';
+import { ApiError, apiFetch, type Facilities, type FacilityDetail, type Me } from '../../../../lib/api';
 import { FromLink } from '@/components/from-link';
-import { Settings, Building2 } from 'lucide-react';
-import { EntityIcon } from '@/components/entity-icon';
-import { PoolClosureNote } from '@/components/pool-closure-note';
+import { LinkBusy } from '@/components/link-busy';
+import { SportIcon, sportNameKey } from '@/components/sport-icon';
+import { readableSports } from '@/lib/sport-scope';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from './facility-forms';
 import { PageError, PageShell, PageEmpty } from '@/components/page-shell';
@@ -25,6 +27,11 @@ import { readAttention } from '@/lib/attention';
  * two-site club a page of balneários) and lives on the site's own tab, one
  * link away, which also drops the per-site `listSpaces` loop this page ran on
  * every visit. The photo gallery went with it and came back the same day.
+ *
+ * **The tanks left the card for a card per sport above the sites** (Rui,
+ * 02-11-2026, after POOLSE-150): each sport the reader works in, its count of
+ * recintos across every site, opening that sport's own list, where tanks and
+ * courts are added and opened.
  */
 export default async function FacilitiesPage({
   searchParams,
@@ -35,7 +42,6 @@ export default async function FacilitiesPage({
   // POOLSE-120: what needs doing at a site and in its tanks, for who can act.
   const attention = await readAttention();
   const back = originBack((await searchParams).from);
-  const format = await getFormatter();
 
   let data: Facilities | null = null;
   let failure: LoadFailure | null = null;
@@ -96,6 +102,10 @@ export default async function FacilitiesPage({
                 {t('facilities.addSite')}
               </FromLink>
             ))}
+
+          {data.canOpenPools && data.facilities.length > 0 && (
+            <SportCards data={data} attention={attention.pools} />
+          )}
 
           {data.facilities.length === 0 ? (
             <PageEmpty
@@ -191,86 +201,6 @@ export default async function FacilitiesPage({
                   </div>
                 </div>
 
-                {facility.pools.length === 0 ? (
-                  <p className="text-sm text-foreground-muted">{t('facilities.noPools')}</p>
-                ) : (
-                  <ul className="flex flex-col divide-y divide-border">
-                    {facility.pools.map((pool) => (
-                      <li
-                        key={pool.id}
-                        className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 first:pt-0"
-                      >
-                        <div className="flex min-w-0 items-center gap-2">
-                          <EntityIcon kind="pool" className="text-foreground-muted" />
-                          <div className="flex min-w-0 flex-col">
-                          {/* A tank's page is staff only; a family reads the name. */}
-                          <span className="flex min-w-0 items-center gap-1">
-                          {data.canOpenPools ? (
-                            <FromLink
-                              href={`/dashboard/facilities/pools/${pool.id}`}
-                              className="truncate text-primary hover:underline"
-                            >
-                              {pool.name}
-                            </FromLink>
-                          ) : (
-                            <span className="truncate">{pool.name}</span>
-                          )}
-                          <AttentionDot
-                            count={attention.pools[pool.id]}
-                            label={t('attention.dot', { count: attention.pools[pool.id] ?? 0 })}
-                            className="ml-1"
-                          />
-                          </span>
-                          <span className="text-sm text-foreground-muted">
-                            {[
-                              t(`facilities.kind.${pool.kind}`),
-                              pool.laneCount === null
-                                ? null
-                                : t('facilities.lanes', { count: pool.laneCount }),
-                              pool.volumeLitres === null
-                                ? null
-                                : t('facilities.volume', {
-                                    litres: format.number(pool.volumeLitres),
-                                  }),
-                              // Shown as one measurement rather than three
-                              // fields, because that is how anyone says it out
-                              // loud: "25 by 12.5".
-                              pool.lengthM === null && pool.widthM === null
-                                ? null
-                                : t('facilities.size', {
-                                    size: [pool.lengthM, pool.widthM]
-                                      .filter((value): value is number => value !== null)
-                                      .map((value) => format.number(value))
-                                      .join(' × '),
-                                  }),
-                              pool.maxDepthM === null
-                                ? null
-                                : t('facilities.depth', {
-                                    depth: format.number(pool.maxDepthM),
-                                  }),
-                            ]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </span>
-                          {/* Shut today — POOLSE-84. */}
-                          <PoolClosureNote closure={pool.closure} />
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {/* Under the tanks it adds to, before the photographs — POOLSE-92 C. */}
-                {data.canManage && (
-                  <FromLink
-                    href={`/dashboard/facilities/pools/new?facilityId=${facility.id}`}
-                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm hover:bg-surface-muted bg-surface shadow-card"
-                  >
-                    {t('facilities.addPool')}
-                  </FromLink>
-                )}
-
                 {/*
                   The site's photographs, back on the card — Rui, 12 October
                   2026: the picture of the place is part of what the card is.
@@ -299,5 +229,97 @@ export default async function FacilitiesPage({
         </>
       )}
     </PageShell>
+  );
+}
+
+/** The word a sport's recintos go by, counted — the menu's own (POOLSE-150). */
+function countKey(sport: PoolseSport): string {
+  if (sport === BASE_SPORT) return 'facilities.sportCount.pool';
+  if (sport === 'gym') return 'facilities.sportCount.rooms';
+  return 'facilities.sportCount.courts';
+}
+
+/**
+ * A card per sport (Rui, 02-11-2026): the sports this reader works in
+ * (`readableSports`, POOLSE-145), each with its recintos across every site and
+ * a way into its list. A tank count is the list's own; another sport's comes
+ * from each site's page read, which only the site's readers get — anybody else
+ * sees the card without a number rather than a wrong one. The pool card carries
+ * the tanks' attention dot, which the tank rows used to.
+ */
+async function SportCards({
+  data,
+  attention,
+}: {
+  data: Facilities;
+  attention: Record<string, number>;
+}): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const me = await apiFetch<Me>('/me').catch(() => null);
+  const membership = me?.memberships[0];
+  const sports = membership === undefined ? [BASE_SPORT] : readableSports(membership);
+  const others = sports.filter((sport) => sport !== BASE_SPORT);
+
+  const counts = new Map<PoolseSport, number>();
+  counts.set(BASE_SPORT, data.facilities.reduce((sum, site) => sum + site.pools.length, 0));
+  if (others.length > 0 && data.canOpenSite) {
+    const details = await Promise.all(
+      data.facilities.map((site) => apiFetch<FacilityDetail>(`/facilities/${site.id}`).catch(() => null)),
+    );
+    if (details.every((detail) => detail !== null)) {
+      for (const sport of others) {
+        counts.set(
+          sport,
+          details.reduce(
+            (sum, detail) => sum + (detail?.playingAreas ?? []).filter((area) => area.sportId === sport).length,
+            0,
+          ),
+        );
+      }
+    }
+  }
+  const poolAttention = data.facilities
+    .flatMap((site) => site.pools)
+    .reduce((sum, pool) => sum + (attention[pool.id] ?? 0), 0);
+
+  return (
+    <section aria-labelledby="facilities-sports" className="flex flex-col gap-3">
+      <h2 id="facilities-sports" className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+        {t('facilities.sports')}
+      </h2>
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {sports.map((sport) => {
+          const count = counts.get(sport);
+          return (
+            <li key={sport} data-sport={sport}>
+              <FromLink
+                href={`/dashboard/recintos?sport=${sport}`}
+                className="group flex h-full items-center gap-4 rounded bg-surface p-5 shadow-card hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                <span
+                  aria-hidden
+                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-chip bg-[rgb(var(--sport-wash)/0.35)] text-foreground"
+                >
+                  <SportIcon sport={sport} className="size-5" />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="flex items-center gap-2 text-lg font-medium">
+                    {t(sportNameKey(sport))}
+                    {sport === BASE_SPORT && (
+                      <AttentionDot count={poolAttention} label={t('attention.dot', { count: poolAttention })} />
+                    )}
+                  </span>
+                  <span className="text-sm text-foreground-muted">
+                    {count === undefined ? t('facilities.sportOpen') : t(countKey(sport), { count })}
+                  </span>
+                </span>
+                <ChevronRight aria-hidden className="size-5 shrink-0 text-foreground-muted group-hover:text-foreground" />
+                <LinkBusy />
+              </FromLink>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

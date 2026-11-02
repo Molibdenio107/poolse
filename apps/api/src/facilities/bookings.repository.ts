@@ -1081,6 +1081,12 @@ export async function assignInstructor(
 
 export interface TimetableImportRequest {
   facilityId: string;
+  /**
+   * The pool the file is for (Rui, 02-11-2026): a timetable is one tank's, and
+   * "Pista 2" names a lane of that tank only. Null reads lanes across the site,
+   * as before — which is ambiguous the moment a site has two pools.
+   */
+  poolId: string | null;
   rows: RawTimetableRow[];
   commit: boolean;
   /**
@@ -1256,6 +1262,14 @@ export async function runTimetableImport(
       [request.facilityId],
     );
     if (site.rowCount === 0) return null;
+    if (request.poolId !== null) {
+      // The pool must be this site's — a pool of another site, or of no club of ours, is not found.
+      const pool = await tx.query(
+        `SELECT 1 FROM pool WHERE id = $1 AND facility_id = $2 AND archived_at IS NULL`,
+        [request.poolId, request.facilityId],
+      );
+      if (pool.rowCount === 0) return null;
+    }
 
     const season = await tx.query<{ id: string }>(
       `SELECT id FROM season WHERE status = 'published' AND archived_at IS NULL LIMIT 1`,
@@ -1293,7 +1307,11 @@ export async function runTimetableImport(
       origin.push(index);
     });
 
-    const context = await timetableContext(tx, request.facilityId, seasonId);
+    const whole = await timetableContext(tx, request.facilityId, seasonId);
+    // Lane names resolve inside the chosen pool only; everything already booked
+    // at the site still counts for clashes, because lanes are distinct rows.
+    const context =
+      request.poolId === null ? whole : { ...whole, lanes: whole.lanes.filter((lane) => lane.poolId === request.poolId) };
     const judged = previewTimetable(kept, context);
     const preview = {
       ...judged,

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { PAGE_SIZE } from '@/lib/pagination';
 import { useLocale, useTranslations } from 'next-intl';
 import { FileText } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
@@ -24,10 +26,12 @@ import { formatDate } from '@/lib/date-format';
  * document with two lines, because that is what a family pays. An adult with no
  * guardian is their own payer and gets their own.
  *
- * **Every draft is selected by default and any of them can be dropped**, so a
- * club can bill the families it has heard back from and leave the rest for
- * Friday. Selecting none is the same as selecting all on the wire, so the button
- * says which it is rather than leaving the operator to guess.
+ * **Nothing is ticked until somebody ticks it** (Rui, 02-11-2026, reversing
+ * "every draft selected by default"): *Selecionar todos* ticks every family on
+ * every page, and the ticks survive paging. Ten families a page, paged here in
+ * the browser, because the run is one preview and the selection spans it. The
+ * issue button sits at the top with the selection's count and total, so a long
+ * run is not a scroll away from its button.
  */
 
 const INITIAL: FormState = { ok: false };
@@ -51,8 +55,9 @@ export function InvoiceRunPanel({
   const locale = useLocale();
   const [confirming, setConfirming] = useState(false);
 
-  // Every draft starts selected. Absent from this set means "issue it".
-  const [dropped, setDropped] = useState<Set<string>>(new Set());
+  // Nothing is ticked until somebody ticks it (Rui, 02-11-2026).
+  const [ticked, setTicked] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
 
   if (run === null) {
     return (
@@ -62,16 +67,24 @@ export function InvoiceRunPanel({
     );
   }
 
-  const chosen = run.drafts.filter((draft) => !dropped.has(draft.payerKey));
+  const chosen = run.drafts.filter((draft) => ticked.has(draft.payerKey));
   const totalCents = chosen.reduce((sum, draft) => sum + draft.totalCents, 0);
+  const allTicked = run.drafts.length > 0 && chosen.length === run.drafts.length;
+  const pages = Math.max(1, Math.ceil(run.drafts.length / PAGE_SIZE));
+  const at = Math.min(page, pages);
+  const shown = run.drafts.slice((at - 1) * PAGE_SIZE, at * PAGE_SIZE);
 
   function toggle(payerKey: string): void {
-    setDropped((current) => {
+    setTicked((current) => {
       const next = new Set(current);
       if (next.has(payerKey)) next.delete(payerKey);
       else next.add(payerKey);
       return next;
     });
+  }
+
+  function toggleAll(): void {
+    setTicked(allTicked ? new Set() : new Set(run!.drafts.map((draft) => draft.payerKey)));
   }
 
   return (
@@ -111,6 +124,29 @@ export function InvoiceRunPanel({
           )}
 
           {/*
+            The selection and its button, at the top — Rui, 02-11-2026: a run of
+            forty families should not be four pages from the button that issues it.
+          */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={toggleAll} className={BUTTON_QUIET}>
+              {allTicked ? t('invoices.clearSelection') : t('invoices.selectAll', { count: run.drafts.length })}
+            </button>
+            <span className="text-sm text-foreground-muted">
+              {t('invoices.selected', { count: chosen.length })}
+              {chosen.length > 0 && ` · ${formatCents(locale, totalCents)}`}
+            </span>
+            <button
+              type="button"
+              disabled={chosen.length === 0}
+              onClick={() => setConfirming(true)}
+              className={`${BUTTON} sm:ml-auto`}
+            >
+              <FileText aria-hidden className="mr-2 inline size-3.5" />
+              {t('invoices.issue', { count: chosen.length })}
+            </button>
+          </div>
+
+          {/*
             Wide content scrolls inside its own container. Without this one long
             student name pushes the whole page sideways, which is the rule the
             shell's `min-w-0` exists to hold up.
@@ -133,13 +169,13 @@ export function InvoiceRunPanel({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {run.drafts.map((draft) => (
+                {shown.map((draft) => (
                   <tr key={draft.payerKey} className="align-top">
                     <td className="py-3">
                       <input
                         type="checkbox"
                         id={`draft-${draft.payerKey}`}
-                        checked={!dropped.has(draft.payerKey)}
+                        checked={ticked.has(draft.payerKey)}
                         onChange={() => toggle(draft.payerKey)}
                         className="size-4 accent-primary"
                       />
@@ -201,15 +237,35 @@ export function InvoiceRunPanel({
             </table>
           </div>
 
-          <button
-            type="button"
-            disabled={chosen.length === 0}
-            onClick={() => setConfirming(true)}
-            className={`${BUTTON} self-start`}
-          >
-            <FileText aria-hidden className="mr-2 inline size-3.5" />
-            {t('invoices.issue', { count: chosen.length })}
-          </button>
+          {pages > 1 && (
+            <nav aria-label={t('pagination.label')} className="flex flex-wrap items-center gap-2 text-sm">
+              <button
+                type="button"
+                disabled={at === 1}
+                onClick={() => setPage(at - 1)}
+                aria-label={t('pagination.previous')}
+                className={BUTTON_QUIET}
+              >
+                <ChevronLeft aria-hidden className="size-4" />
+              </button>
+              <span className="tabular-nums text-foreground-muted">
+                {t('pagination.range', {
+                  from: (at - 1) * PAGE_SIZE + 1,
+                  to: Math.min(at * PAGE_SIZE, run.drafts.length),
+                  total: run.drafts.length,
+                })}
+              </span>
+              <button
+                type="button"
+                disabled={at === pages}
+                onClick={() => setPage(at + 1)}
+                aria-label={t('pagination.next')}
+                className={BUTTON_QUIET}
+              >
+                <ChevronRight aria-hidden className="size-4" />
+              </button>
+            </nav>
+          )}
         </>
       )}
 
@@ -218,11 +274,11 @@ export function InvoiceRunPanel({
           facilityId={facilityId}
           month={month}
           /*
-            The keys go on the wire only when the operator dropped something.
-            An empty list would mean "issue nothing", and sending every key when
-            every key is selected is a longer request that says the same thing.
+            Every family ticked goes as the empty list, which the API reads as
+            the whole run; otherwise the ticked keys. Nothing ticked never gets
+            here: the button is off.
           */
-          payerKeys={dropped.size === 0 ? [] : chosen.map((draft) => draft.payerKey)}
+          payerKeys={allTicked ? [] : chosen.map((draft) => draft.payerKey)}
           count={chosen.length}
           totalCents={totalCents}
           onDone={() => setConfirming(false)}

@@ -177,8 +177,13 @@ export class BookingsController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
+    const rawPool = body['poolId'];
+    if (rawPool !== undefined && rawPool !== null && (typeof rawPool !== 'string' || !/^[0-9a-f-]{36}$/i.test(rawPool))) {
+      throw new BadRequestException('poolId must be a pool id');
+    }
     const result = await runTimetableImport(organizationId, {
       facilityId,
+      poolId: typeof rawPool === 'string' ? rawPool : null,
       rows: readTimetableRows(body['rows']),
       commit: body['commit'] === true,
       drop: readIndexes(body['drop']),

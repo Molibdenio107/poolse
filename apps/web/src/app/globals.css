@@ -225,28 +225,22 @@
     --weather-wind: 90 143 123;
 
     /*
-     * Chart series — POOLSE-52's occupancy on the dashboard.
+     * Chart series — Poolse's own colours (Rui, 02-11-2026: the charts "do not
+     * follow the colour palette"), replacing the generic blue/orange/aqua set of
+     * 19-10-2026. Slot 1 is the brand teal, slot 2 the mobile app's soft orange
+     * (`--app-accent`), slot 3 the brand green — each deepened just enough to
+     * reach 3:1 on the card (3.8, 3.4 and 3.5), because the brand fills
+     * themselves sit near 2.6:1 and a data mark needs 3:1. Teal and green are
+     * closer for colour-blind readers than the old set; every chart carries a
+     * legend in words and a table of its figures, so colour never carries the
+     * series alone. The dark values are the brand's own dark steps, measured
+     * against the dark card, never an automatic flip.
      *
-     * **Not `--primary`, and that is measured rather than preferred.** The brand
-     * teal is a fill, not a data mark: at OKLCH chroma 0.069 it fails a
-     * categorical palette's chroma floor — it reads as grey next to a saturated
-     * neighbour — and it sits at 2.65:1 against white, under the 3:1 a chart
-     * mark needs. Both were run through the validator rather than judged, and
-     * the whole teal family fails the chroma floor: cyan simply has little of it.
-     *
-     * These are slots 1 and 2 of a categorical theme that passes every check on
-     * Poolse's own surfaces — lightness band, chroma floor, CVD separation
-     * (ΔE 24.7 light, 26.8 dark against a target of 8) and contrast. The dark
-     * values are their own steps for the dark ground, never an automatic flip.
-     *
-     * The brand palette is untouched: CLAUDE.md fixes it, and a chart mark is a
-     * different job from a button.
+     * Electricity and turmas are slot 1, gas and parcerias slot 2, water slot 3.
      */
-    --chart-1: 42 120 214;
-    --chart-2: 235 104 52;
-    /* Slot 3, aqua — water on the Energia chart (POOLSE-106). Under 3:1 on white,
-       so that chart ships its figures as a table too (the relief rule). */
-    --chart-3: 27 175 122;
+    --chart-1: 61 141 161;
+    --chart-2: 214 112 40;
+    --chart-3: 104 150 76;
 
     /*
      * Role colours — POOLSE-18.
@@ -388,10 +382,10 @@
     --level-8: 134 94 201;
     --level-none: 92 106 117;
 
-    /* Stepped for the dark surface and validated against it — see the light block. */
-    --chart-1: 57 135 229;
-    --chart-2: 217 89 38;
-    --chart-3: 25 158 112;
+    /* The brand's dark steps, measured against the dark card — see the light block. */
+    --chart-1: 126 186 201;
+    --chart-2: 245 150 80;
+    --chart-3: 154 191 131;
 
     /* Lighter counterparts — same hues, readable on a dark surface. */
     --role-owner: 186 148 235;
@@ -800,10 +794,17 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
 [data-sport='volleyball'] { --sport-wash: var(--sport-volleyball); }
 [data-sport='gym'] { --sport-wash: var(--sport-gym); }
 
-.sport-shell {
+.sport-shell,
+.sport-shell [data-page-sticky] {
   background-color: rgb(var(--background));
   background-image: linear-gradient(rgb(var(--sport-wash) / var(--wash-a)) 0 0);
 }
+/*
+ * A sport page's sticky title-and-tabs band wears the same wash as the page
+ * (Rui, 02-11-2026): painted plain, it ran 24 px past the card on each side
+ * (`-mx-page`) and read as a strip of another size. Still opaque, so content
+ * scrolling under it stays covered. Unlayered, so it beats `bg-background`.
+ */
 
 /*
  * A turma's block on the calendar — POOLSE-139 (Rui, 31-10-2026). The handoff's

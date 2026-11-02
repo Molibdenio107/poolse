@@ -1,8 +1,10 @@
 'use client';
 
+import type { PoolseSport } from '@poolse/rules';
+import { sportNameKey } from '@/components/sport-icon';
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, FileSpreadsheet, Upload, X } from 'lucide-react';
+import { AlertTriangle, FileSpreadsheet, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import {
@@ -15,7 +17,6 @@ import {
 } from './import.actions';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField } from '@/components/ui/field';
-import { Reveal } from '@/components/ui/reveal';
 
 /**
  * Importing the wall timetable — POOLSE-57, the interface.
@@ -52,12 +53,31 @@ function isAccepted(file: File): boolean {
   return ACCEPTED.some((extension) => name.endsWith(extension));
 }
 
+/**
+ * A recinto a timetable file may be for — 02-11-2026. A pool's id is the
+ * pool's (its lanes are what a file names); another sport's recinto is listed
+ * and not choosable (`bookable` false) until its units exist (POOLSE-123).
+ */
+export interface ImportRecinto {
+  id: string;
+  name: string;
+  sportId: PoolseSport;
+  facilityId: string;
+  facilityName: string;
+  bookable: boolean;
+}
+
 export function TimetableImport({
-  facilityId,
+  pools,
   canManage,
   compact = false,
 }: {
-  facilityId: string;
+  /**
+   * Every live pool, with its site (Rui, 02-11-2026): a timetable file is one
+   * tank's, so the import asks which, and "Pista 2" then means that pool's lane
+   * 2 — never whichever pool at the site happens to have one.
+   */
+  pools: ImportRecinto[];
   canManage: boolean;
   /** In the page header, where there is no room for the hint beside it — 9.0. */
   compact?: boolean;
@@ -67,6 +87,39 @@ export function TimetableImport({
   const [open, setOpen] = useState(false);
   /** The dropped file waiting for a yes or a no. */
   const [pending, setPending] = useState<File | null>(null);
+  /*
+   * Which recinto — always asked (Rui, 02-11-2026: "obrigar" a choice), never
+   * remembered or guessed, so a file never lands in a tank nobody picked. A
+   * club with one recinto has nothing to choose.
+   */
+  const [poolId, setPoolId] = useState(pools.length === 1 && pools[0]!.bookable ? pools[0]!.id : '');
+  const facilityId = pools.find((pool) => pool.id === poolId)?.facilityId ?? '';
+  const multiSite = new Set(pools.map((pool) => pool.facilityId)).size > 1;
+  const multiSport = new Set(pools.map((pool) => pool.sportId)).size > 1;
+  const poolOptions = [
+    ...(pools.length === 1 && pools[0]!.bookable ? [] : [{ value: '', label: t('timetableImport.choosePool'), disabled: true }]),
+    ...pools.map((pool) => ({
+      value: pool.id,
+      label: [
+        multiSport ? t(sportNameKey(pool.sportId)) : null,
+        multiSite ? pool.facilityName : null,
+        pool.bookable ? pool.name : t('timetableImport.notYet', { name: pool.name }),
+      ]
+        .filter((part) => part !== null)
+        .join(' · '),
+      disabled: !pool.bookable,
+    })),
+  ];
+  const poolPicker = (
+    <SelectField
+      name="poolId"
+      label={multiSport ? t('timetableImport.recinto') : t('timetableImport.pool')}
+      hint={multiSport ? t('timetableImport.recintoHint') : t('timetableImport.poolHint')}
+      initial={poolId}
+      options={poolOptions}
+      onValueChange={setPoolId}
+    />
+  );
   const readButton = useRef<HTMLButtonElement | null>(null);
 
   const onFile = useCallback((file: File) => setPending(file), []);
@@ -171,38 +224,42 @@ export function TimetableImport({
                   setPending(null);
                   readAction(data);
                 }}
-                className="flex flex-wrap gap-3"
+                className="flex flex-col gap-3"
               >
-                <button ref={readButton} type="submit" className={BUTTON}>
+                {poolPicker}
+                <div className="flex flex-wrap gap-3">
+                <button ref={readButton} type="submit" disabled={poolId === ''} className={BUTTON}>
                   {t('timetableImport.confirmRead')}
                 </button>
                 <button type="button" onClick={() => setPending(null)} className={BUTTON_QUIET}>
                   {t('common.cancel')}
                 </button>
+                </div>
               </form>
             )}
           </div>
         )}
       </Dialog>
 
-      <Reveal open={open}>
-        <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('timetableImport.title')}
-              </h2>
-              <p className="mt-1 text-sm text-foreground-muted">{t('timetableImport.subtitle')}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label={t('common.cancel')}
-              className="rounded p-1 hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              <X aria-hidden className="size-4" />
-            </button>
-          </div>
+      {/*
+        A dialog, not a panel in the header — Rui, 02-11-2026: opened inside the
+        page header it spilled off the right edge and cut its own text. A bottom
+        sheet on a phone. The clash and drop questions open over it; only the
+        topmost dialog answers the keyboard.
+      */}
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t('timetableImport.title')}
+        description={t('timetableImport.subtitle')}
+        closeLabel={t('common.close')}
+        placement="sheet"
+        className="md:max-w-3xl"
+      >
+        <div className="flex flex-col gap-4">
+
+          {/* Step zero — which pool (02-11-2026): the file's lanes are this pool's. */}
+          <div className="max-w-md">{poolPicker}</div>
 
           {/* Step one — the file. */}
           <form action={readAction} className="flex flex-wrap items-center gap-3">
@@ -214,7 +271,7 @@ export function TimetableImport({
               required
               className="text-sm file:mr-3 file:rounded file:border file:border-border file:bg-surface-muted file:px-3 file:py-1.5 file:text-sm"
             />
-            <button type="submit" className={BUTTON_QUIET}>
+            <button type="submit" disabled={poolId === ''} className={BUTTON_QUIET}>
               {t('timetableImport.read')}
             </button>
           </form>
@@ -286,14 +343,18 @@ export function TimetableImport({
                   <form
                     action={(data) => {
                       data.set('facilityId', facilityId);
+                      data.set('poolId', poolId);
                       data.set('rows', JSON.stringify(candidates));
                       data.set('settings', JSON.stringify({ commit: false, drop: dropped }));
                       runAction(data);
                     }}
                   >
-                    <button type="submit" disabled={running || candidates.length === 0} className={BUTTON}>
+                    <button type="submit" disabled={running || candidates.length === 0 || poolId === ''} className={BUTTON}>
                       {t('timetableImport.check')}
                     </button>
+                    {poolId === '' && (
+                      <p className="mt-2 text-sm text-foreground-muted">{t('timetableImport.poolRequired')}</p>
+                    )}
                   </form>
                 </>
               )}
@@ -370,12 +431,13 @@ export function TimetableImport({
                     <form
                       action={(data) => {
                         data.set('facilityId', facilityId);
+                        data.set('poolId', poolId);
                         data.set('rows', JSON.stringify(candidates));
                         data.set('settings', JSON.stringify({ commit: true, drop: dropped }));
                         runAction(data);
                       }}
                     >
-                      <button type="submit" disabled={running} className={BUTTON}>
+                      <button type="submit" disabled={running || poolId === ''} className={BUTTON}>
                         {t('timetableImport.commit', { count: result.summary.importable })}
                       </button>
                     </form>
@@ -384,8 +446,8 @@ export function TimetableImport({
               )}
             </div>
           )}
-        </section>
-      </Reveal>
+        </div>
+      </Dialog>
 
       {showConflicts && result !== undefined && (
         <ConflictDialog
@@ -398,6 +460,7 @@ export function TimetableImport({
             setShowConflicts(false);
             const data = new FormData();
             data.set('facilityId', facilityId);
+            data.set('poolId', poolId);
             data.set('rows', JSON.stringify(candidates));
             data.set('settings', JSON.stringify({ commit: false, drop: dropped }));
             runAction(data);

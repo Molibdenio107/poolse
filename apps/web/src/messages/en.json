@@ -28,7 +28,8 @@
     "toProfile": "Back to my profile",
     "toStudent": "Back to the student",
     "toClass": "Back to the class",
-    "toInvoice": "Back to the document"
+    "toInvoice": "Back to the document",
+    "toRecintos": "Back to the playing areas"
   },
   "app": {
     "name": "Poolse",
@@ -1151,7 +1152,7 @@
     "alertNoEmail": "Email sending is not configured in this environment. Alerts are recorded, but nothing is sent.",
     "alertNotSent": "Recorded, not sent",
     "title": "Facilities",
-    "subtitle": "The organization’s sites, and the pools at each one.",
+    "subtitle": "The organisation's sites and the sports in each.",
     "addSite": "Add a facility",
     "create": "Create facility",
     "nameLabel": "Name",
@@ -1432,7 +1433,14 @@
     "waterBackInRange": "The water is back within the limits",
     "reopenHint": "The latest analysis is within the limits, but the pool is still closed. If it was closed because of the water, lift the closure in Closures to reopen it before that date.",
     "openClosures": "Open Closures",
-    "fromLab": "From the laboratory"
+    "fromLab": "From the laboratory",
+    "sports": "Sports",
+    "sportOpen": "See the playing areas",
+    "sportCount": {
+      "pool": "{count, plural, =0 {No pools} one {# pool} other {# pools}}",
+      "courts": "{count, plural, =0 {No courts} one {# court} other {# courts}}",
+      "rooms": "{count, plural, =0 {No rooms} one {# room} other {# rooms}}"
+    }
   },
   "classes": {
     "colour": "Class colour",
@@ -3014,7 +3022,7 @@
       "attendanceOf": "of {expected} expected so far",
       "collected": "Collected this month",
       "payments": "{count, plural, =0 {No payments yet} one {# fee payment} other {# fee payments}}",
-      "noInstructor": "Without an instructor",
+      "noInstructor": "No instructor",
       "noInstructorToday": "Today's lessons to sort out",
       "allCovered": "Every lesson today has an instructor",
       "byHour": "Today, hour by hour",
@@ -3036,7 +3044,19 @@
         "classes": "Classes",
         "water": "Water",
         "people": "People"
-      }
+      },
+      "byHourLine": "{people, plural, one {# person} other {# people}} in lessons today · the busiest hour is {hour}:00, with {peak}.",
+      "byHourNone": "Nobody in lessons today in these hours.",
+      "byHourHint": "Each bar is how many people are in lessons in that hour, by enrolment. Tap a bar to see its lessons.",
+      "hourLessons": "Lessons at {hour}:00",
+      "hourEmpty": "No lessons in this hour.",
+      "untitled": "Lesson",
+      "lessonPeople": "{count, plural, one {# person} other {# people}}",
+      "openCalendar": "Open the calendar",
+      "recintosAt": "Playing areas · at {hour}:00",
+      "tankPeopleAt": "{count, plural, one {# person} other {# people}} at {hour}:00, in {lessons, plural, one {# lesson} other {# lessons}}",
+      "tankEmptyAt": "No lessons at {hour}:00",
+      "noTankLessons": "Some of this hour's lessons are in no tank (partnerships with no pool booked)."
     }
   },
   "marketing": {
@@ -3177,7 +3197,7 @@
     "classCancelled": "This class was cancelled, so there is no register to take.",
     "readOnly": "You do not have permission to take the register.",
     "restricted": "This section is for instructors, administrators and owners.",
-    "attendanceRecorded": "This class already has attendance recorded, so it cannot be cancelled.",
+    "attendanceRecorded": "This class has ended and has attendance recorded, so it cannot be cancelled.",
     "guest": "Make-up",
     "noInsurance": "No insurance",
     "trialGuests": "{count, plural, one {Trial lesson: # person} other {Trial lessons: # people}}",
@@ -3446,7 +3466,8 @@
       "label": "Legend",
       "uncovered": "No instructor",
       "free": "Free space — click to book a lesson"
-    }
+    },
+    "classEnded": "This class has ended: only the owner or an admin can cancel it."
   },
   "inventory": {
     "title": "Inventory",
@@ -4017,7 +4038,14 @@
       "noLanes": "No lane was given.",
       "laneNotFound": "There is no “{value}” at this site.",
       "unknownSubject": "This booking could not be understood."
-    }
+    },
+    "pool": "Pool",
+    "poolHint": "A timetable is one pool's: the file's lanes are this pool's lanes.",
+    "choosePool": "Choose the playing area",
+    "poolRequired": "Choose this timetable's playing area first.",
+    "recinto": "Playing area",
+    "recintoHint": "A timetable is one playing area's: the file's lanes are this area's. Courts and pitches become available once they have bookable units.",
+    "notYet": "{name} — coming soon"
   },
   "spaces": {
     "title": "Spaces",
@@ -4345,7 +4373,10 @@
       "chaseNotSent": "Reminder recorded — the email has not gone yet.",
       "nothingSent": "Nothing to send: the people chosen no longer owe anything overdue, or have no email address.",
       "referenceIsDocuments": "The email asks each person to give their own overdue documents as the reference."
-    }
+    },
+    "selectAll": "Select all ({count})",
+    "clearSelection": "Clear selection",
+    "monthSections": "This month's sections"
   },
   "reception": {
     "title": "Reception",
@@ -6623,7 +6654,22 @@
     "nameTaken": "A playing area or pool with this name already exists at this site.",
     "sportOff": "This sport is not switched on for the club.",
     "addFailed": "The playing area could not be added.",
-    "archiveFailed": "The playing area could not be archived."
+    "archiveFailed": "The playing area could not be archived.",
+    "nav": {
+      "default": "Playing areas",
+      "pool": "Pools",
+      "courts": "Courts",
+      "rooms": "Rooms"
+    },
+    "page": {
+      "noSites": "No sites yet",
+      "noSitesHint": "Create a site in Facilities first; playing areas sit inside it.",
+      "poolSubtitle": "The club's tanks, by site. Each opens its own page: water, lanes, equipment and tasks.",
+      "addPool": "Add pool",
+      "courtSubtitle": "{sport} playing areas, by site.",
+      "notYours": "This site is visible only to the owner, the administrators and maintenance.",
+      "siteLinks": "This site's playing areas are in each sport's section:"
+    }
   },
   "familyAccess": {
     "title": "App access",

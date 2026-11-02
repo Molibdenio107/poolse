@@ -327,3 +327,39 @@ test('a second trip through the dialog drops the row that was pointed at', async
     });
   });
 });
+
+test('a file is one pool’s: its lanes resolve in the pool chosen, never another at the site (02-11-2026)', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    // A second tank at the same site, with its own Pista 1 and Pista 2.
+    const [small] = await tenant.sql<{ id: string }>(
+      `INSERT INTO pool (organization_id, facility_id, name, kind)
+       VALUES ($1, $2, 'Tanque Pequeno', 'indoor') RETURNING id`,
+      [tenant.organizationId, tenant.facilityId],
+    );
+    await tenant.sql(`UPDATE lane SET name = 'Pista 1' WHERE pool_id = $1 AND position = 1`, [small!.id]);
+    await tenant.sql(
+      `INSERT INTO lane (organization_id, pool_id, name, position) VALUES ($1, $2, 'Pista 2', 2)`,
+      [tenant.organizationId, small!.id],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const bookings = new BookingsController();
+      const rows = [row({ name: 'Bebés', laneNames: ['Pista 2'] })];
+      const done = await bookings.importTimetable(tenant.facilityId, { rows, commit: true, poolId: small!.id });
+      assert.equal(done.created, 1);
+
+      const [placed] = await tenant.sql<{ pool_id: string }>(
+        // The only booking in this club: the one just imported.
+        `SELECT l.pool_id FROM booking_lane bl JOIN lane l ON l.id = bl.lane_id LIMIT 1`,
+      );
+      assert.equal(placed!.pool_id, small!.id, 'Pista 2 is the small pool’s lane 2');
+
+      // A pool that is not this site's is not found.
+      await expectStatus(
+        () => bookings.importTimetable(tenant.facilityId, { rows, poolId: '00000000-0000-4000-8000-000000000000' }),
+        404,
+      );
+    });
+  });
+});

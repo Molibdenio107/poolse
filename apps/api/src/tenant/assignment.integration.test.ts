@@ -285,6 +285,16 @@ test('the register says who may call the lesson off, and the endpoint agrees', a
     const attendance = new AttendanceController();
     const sessions = new SessionsCalendarController();
 
+    // Who, not when: her lesson is still to come, because an ended one is the
+    // office's to cancel (02-11-2026, `cancel-window.integration.test.ts`).
+    await tenant.sql(
+      `UPDATE class_session
+          SET starts_at = date_trunc('minute', now()) + interval '2 days',
+              occurs_on = (now() + interval '2 days')::date
+        WHERE id = $1`,
+      [fix!.sandrasSession],
+    );
+
     await actingAs(tenant, { membershipId: fix!.sandra, roles: ['instructor'] }, async () => {
       const mine = await attendance.register(fix.sandrasSession);
       assert.equal(mine.canCancel, true);

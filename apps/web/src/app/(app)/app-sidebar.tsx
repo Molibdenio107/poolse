@@ -132,10 +132,12 @@ export function AppSidebar({
  */
 export type NavSection = 'site' | PoolseSport;
 
-/** The sport groups POOLSE-125 built — present only with two or more sports. */
+/**
+ * The sport groups POOLSE-125 built — one per sport, a single-sport club's one
+ * included since POOLSE-150, so its sport tab shows too.
+ */
 function groupsOf(sections: Item[]): Item[] {
-  const groups = sections.filter((section) => section.sport !== undefined && section.children !== undefined);
-  return groups.length >= 2 ? groups : [];
+  return sections.filter((section) => section.sport !== undefined && section.children !== undefined);
 }
 
 function sectionOf(
@@ -154,8 +156,8 @@ function sectionOf(
    */
   const matches = (items: Item[]): boolean =>
     items.some((child) => {
-      const path = pathOf(child.href);
-      const here = pathname === path || pathname.startsWith(`${path}/`);
+      const paths = [pathOf(child.href), ...(child.also ?? [])];
+      const here = paths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
       return (here && (child.perSport !== 'copy' || asked !== null)) || matches(child.children ?? []);
     });
   return groups.some((group) => matches(group.children ?? [])) ? sport : 'site';
@@ -642,7 +644,8 @@ function NavItem({
    * Calendário sit at two different addresses under one heading.
    */
   const ofSport = (entry: Item): boolean => entry.sport === undefined || entry.sport === sport;
-  const here = (entry: Item): boolean => isInSection(pathname, pathOf(entry.href)) && ofSport(entry);
+  const here = (entry: Item): boolean =>
+    [pathOf(entry.href), ...(entry.also ?? [])].some((path) => isInSection(pathname, path)) && ofSport(entry);
   const reaches = (entry: Item): boolean => here(entry) || (entry.children ?? []).some(reaches);
   const path = pathOf(item.href);
   const active =

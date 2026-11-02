@@ -262,6 +262,14 @@ tell you that you are about to call off Thursday's class instead of Tuesday's.
 **Scope** is a pair of radios — this occurrence, or this and every future one — with the
 narrow, recoverable choice selected. The past is never affected either way.
 
+**When** (Rui, 02-11-2026): a lesson can be cancelled **until it ends**, by owner, admin or the
+instructor teaching it, even with presenças marked — the marks are kept, because the swimmers were
+there. **Once it has ended**, only an owner or an admin may cancel it, and only if nobody was
+marked (an instructor gets 403 `class_ended`; a marked one is 409 `attendance_recorded` for
+everybody, by trigger). `cancelState` / `mayCancel` in `sessions.repository.ts` are the one
+answer, read by the endpoint and by the register's `canCancel`; the calendar hides *Cancelar*
+on an ended, marked lesson.
+
 Cancelling raises a toast with **Undo**, which restores the session. A class taken down by a
 *closure* refuses the undo and says so: that one is undone by removing the closure.
 
@@ -514,3 +522,26 @@ says its state in words; colour only repeats it.
 
 Under the filters, a legend names the two states a colour alone would not explain:
 *Sem professor* and *Recinto livre*. The phone's agenda (`CalendarAgenda`) is unchanged.
+
+## Importing a timetable asks for its pool (02-11-2026, Rui)
+
+A wall timetable is one pool's. *Importar horário* asks **Piscina** first — in the panel and in the
+dialog a dropped file opens — preselected when the club has one pool, and the preview and the import
+stay off until one is chosen. The API (`poolId` on `POST /bookings/timetable-import/:facilityId`)
+matches the file's lane names against that pool's lanes only, so "Pista 2" is that pool's lane 2,
+never another tank's at the same site; everything already booked at the site still counts for
+clashes. A pool that is not the site's is a 404. The site is the chosen pool's, no longer the club's
+first.
+
+**The calendar opens on a pool** (02-11-2026, Rui, reversing "no tank until somebody chooses one" of
+12-10-2026, which opened the page empty): the one this person last looked at, remembered on this device
+(`lib/calendar-pool.ts`), else the club's first. **The import is a dialog** — a bottom sheet on a phone —
+rather than a panel in the page header, which spilled off the right edge; it starts on the calendar's
+pool and can be changed there.
+
+**The import's recinto is always asked** (Rui, 02-11-2026, revising the same day's "starts on the
+calendar's pool"): the list opens on *Escolha o recinto*, which cannot be re-picked, and nothing is read,
+previewed or written until a recinto is chosen; a club with one recinto has it chosen. It lists **every
+sport's recintos** (each site's own read): a pool is choosable, and a court or pitch is listed *em breve*
+and greyed out until it has bookable units (POOLSE-123) — so the file shape stays one when other sports
+arrive.

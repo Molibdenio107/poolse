@@ -1282,3 +1282,17 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-02** — **A staff record keeps the person's file: address, NIF/NISS, nationality, birthplace, an emergency contact (free text), the ID card's photo, the contract and dropped certificates** (Rui, POOLSE-149). The ID-card photo is stored **sealed**, which **reverses** POOLSE-100's 22-10-2026 call that the number is enough. The contract is versioned, carries an informative type and dates linked to nothing, and follows the pay rule: owner, admin and the person, an Admin never seeing the Owner's. A certificate is dropped per person (a team spreadsheet import was not chosen).
 
 - **2026-11-02** — **A message to a whole sport is the office's** (Rui, POOLSE-146): owner and admin, like a level or the whole club; an instructor still writes only to their own turmas, so POOLSE-146 rule 3's "an instructor may choose a sport audience for their sports" is not built. SBV is seeded for every sport (`sport_id` null), the ticket's default.
+
+- **2026-11-02** — **Faturação's *A faturar* starts with nothing ticked** (Rui), **reversing** "every draft selected by default": ten families a page, *Selecionar todos* across every page, the issue button at the top; *Emitidos* moves behind its own pill on *Este mês*. *Hoje, hora a hora* is kept and explained, a bar opening its lessons. The calendar import asks which pool a file is for.
+
+- **2026-11-02** — **The calendar opens on the pool this person last looked at** (Rui), **reversing** "no tank until somebody chooses one" (12-10-2026), which opened the page empty; the first time, the club's first pool. The timetable import opens as a dialog starting on that pool.
+
+- **2026-11-02** — **Recintos move under their sport, and a single-sport club shows its one sport tab** (Rui, POOLSE-150, to build after the testing week). **The timetable import always asks its recinto** and lists every sport's, courts greyed until POOLSE-123. **Opening an hour on the dashboard turns the Recintos card to that hour.**
+
+- **2026-11-02** — **Charts use Poolse's colours** (Rui), **reversing** the generic categorical set of 19-10-2026: teal, the app's soft orange and green, each deepened to 3:1; electricity teal, gas orange, water green; the hour chart all teal. POOLSE-150's questions answered: recintos are made and edited in their sport's section (the site page links), a single-sport tab holds what a multi-sport one does, each sport's own word (Piscinas, Campos, Salas), grouped by site.
+
+- **2026-11-02** — **POOLSE-150 built: a recinto lives in its sport's section, and a pool-only club shows its one Natação tab** (Rui). The site page's Piscinas and Recintos tabs are gone and its Geral tab links to each sport's list; no address moved. The open point took its default: Instalações keeps no cross-sport list.
+
+- **2026-11-02** — **A sport's recintos are first in its menu, and its tab still opens Calendário; Instalações opens with a card per sport** (Rui). The site cards stop listing tanks; the tanks' attention dot moves to the Natação card. A sport page's sticky title band wears the page's wash rather than a plain strip wider than the card.
+
+- **2026-11-02** — **A lesson can be cancelled until it ends, marks or not; after it ends, only by an owner or an admin and only if nobody was marked** (Rui). **Reverses** "a marked class cannot be cancelled" (1787860800000) for a lesson still running: its marks are kept. An instructor can no longer cancel a lesson after the fact; the office still can when it never happened.

@@ -1151,13 +1151,14 @@ is corrected — a second row saying something different would make "was Ana her
 unanswerable, so the unique index is total rather than partial and a change is an
 UPDATE.
 
-**A marked class cannot be cancelled**, enforced by a trigger on `class_session`
+**A marked class cannot be cancelled once it has ended** (until its `ends_at` it can, and keeps
+its marks — Rui, 02-11-2026, migration 1794652000000), enforced by a trigger on `class_session`
 rather than in a repository method. There are two ways a session gets cancelled —
 a person on the calendar, and `generate_sessions` when a closure covers the day —
 and the generator is the dangerous one: adding an August closure after a term has
 been taught would otherwise silently cancel classes people attended. Only the
 transition *into* cancelled is refused, so removing a closure can still restore a
-class. `packages/db/test/attendance.sql` test 4 covers both paths.
+class. `packages/db/test/attendance.sql` test 4 covers both paths and test 4b the running lesson.
 
 `class_session` gained `UNIQUE (organization_id, id)` in the same migration. It
 was the first table to become a parent since it was written, and that key is what
