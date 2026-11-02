@@ -798,6 +798,16 @@ test('staff details refuse families and a colleague — POOLSE-149', async () =>
     await refused('DELETE staff/:id/identity/photo/front as a family', 403, () =>
       new StaffController().removeIdPhoto(fixture.instructorId, 'front'),
     );
+    await refused('GET staff/:id/contract as a family', 403, () => new StaffController().contract(fixture.instructorId));
+    await refused('PATCH staff/:id/contract as a family', 403, () =>
+      new StaffController().editContract(fixture.instructorId, { kind: 'services' }),
+    );
+    await refused('POST staff/:id/contract/file as a family', 403, () =>
+      new StaffController().fileContract(fixture.instructorId, 'x.pdf', Buffer.from('%PDF-1.4')),
+    );
+    await refused('DELETE staff/:id/contract/file as a family', 403, () =>
+      new StaffController().removeContract(fixture.instructorId),
+    );
   });
   await as(fixture.maintenanceId, ['maintenance'], async () => {
     await refused('GET staff/:id/details as a colleague', 403, () => new StaffController().details(fixture.instructorId));
@@ -809,6 +819,10 @@ test('staff details refuse families and a colleague — POOLSE-149', async () =>
     );
     await refused('DELETE staff/:id/identity/photo/front as a colleague', 403, () =>
       new StaffController().removeIdPhoto(fixture.instructorId, 'front'),
+    );
+    await refused('GET staff/:id/contract as a colleague', 403, () => new StaffController().contract(fixture.instructorId));
+    await refused('POST staff/:id/contract/file as a colleague', 403, () =>
+      new StaffController().fileContract(fixture.instructorId, 'x.pdf', Buffer.from('%PDF-1.4')),
     );
   });
 });

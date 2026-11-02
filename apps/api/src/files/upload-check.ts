@@ -28,8 +28,8 @@ export function judgeUpload(
   if (contentType === null) {
     throw new BadRequestException({ code: 'file_type', message: 'Only PDF, Word, JPEG, PNG and WebP files are accepted' });
   }
-  // A Word document is a contract and nothing else — POOLSE-105.
-  if (contentType === WORD && purpose !== 'agreement_document') {
+  // A Word document is a contract and nothing else — POOLSE-105, POOLSE-149.
+  if (contentType === WORD && purpose !== 'agreement_document' && purpose !== 'staff_contract') {
     throw new BadRequestException({ code: 'file_type', message: 'A Word document is accepted only as a signed contract' });
   }
   // Photos and the logo are images; a document may also be a photograph of one.

@@ -1174,6 +1174,7 @@ overshoot. Exactly one Owner per tenant, enforced; transfer is the only way to c
 - A login's date of birth is theirs (`birth_date_is_theirs`), like their name.
 - **Personal details are a group of their own** (POOLSE-149): `GET/PATCH /staff/:id/details` (`staff/details.repository.ts`), same three readers. NIF and NISS (`isValidNiss`) are the club's to set; the person edits the rest. Morada and NIF are the person row's `address` / `tax_number`. The NISS and emergency contact are erased with the ID document.
 - **The ID document's photograph is sealed and shredded when let go** (POOLSE-149 B): purpose `staff_id_document`, filed only by `POST /staff/:id/identity/photo/:side`; `membership_id_document_photo_shreds` destroys the key of a side that is replaced, removed or retained away. Shown as a link, never a thumbnail: a look by anybody else is an audited read.
+- **A staff contract is the pay rule's** (POOLSE-149 C): `staff_contract` (facts, informative only, read by nothing else) + `staff_contract_version` (the `partner_contract_version` shape), `contract.repository.ts` through `visibleToViewer`. An Admin never reads the Owner's (404) nor writes their own (403 `own_contract`); the read returns `canEdit`.
 
 **A login's name is the person's own.** `PATCH /staff/:id` refuses (`name_is_theirs`) a rename by anybody but the person: Clerk holds one name for them across every club.
 

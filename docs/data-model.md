@@ -4184,6 +4184,28 @@ Migration `1794651400000_staff-id-document-photo`.
   by retention. It acts on the request's own club only and only destroys a key.
 - **`apply_retention()`** clears both columns with the number, so retention shreds the photos.
 
+### Staff contract — POOLSE-149 slice C, 2 November 2026
+
+Migration `1794651500000_staff-contract`.
+
+```
+enum staff_contract_kind: open_ended | fixed_term | uncertain_term | services | internship
+
+staff_contract                       -- what the contract says; informative only
+  id, organization_id, membership_id (unique per club), kind, starts_on, ends_on
+  CHECK fixed_term → ends_on; open_ended → no ends_on; ends_on >= starts_on
+  poolse_app: SELECT, INSERT, UPDATE (kind, starts_on, ends_on) — no DELETE
+
+staff_contract_version               -- the partner_contract_version shape
+  id, organization_id, membership_id, file_id, attached_by, attached_at,
+  replaced_at, replaced_by           -- one open version per person, by partial unique index
+  poolse_app: SELECT, INSERT, UPDATE (replaced_at, replaced_by)
+```
+
+- **`file_purpose`** gains `staff_contract`, and **`stored_file_type`** accepts Word for it, as for
+  a partnership's contract. Not sealed.
+- Nothing in salaries or vacations reads either table.
+
 ### Cancellation notice and push — POOLSE-90 slice 4, 27 October 2026
 
 Migrations `1792836000000_session-audience` (the enum value, alone) and

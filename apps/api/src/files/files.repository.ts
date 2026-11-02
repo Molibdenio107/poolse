@@ -30,7 +30,8 @@ export type FilePurpose =
   | 'meet_results'
   | 'student_document'
   | 'boletim_template'
-  | 'staff_id_document';
+  | 'staff_id_document'
+  | 'staff_contract';
 
 /**
  * Health data, sealed at rest — POOLSE-109. The bucket holds ciphertext, the
@@ -94,6 +95,10 @@ export const RULES: Record<FilePurpose, { write: readonly MemberRole[] | null; r
   // POST /files — the staff record's own route stores and attaches it — and
   // read by the office and, a question about a row, the person (see openFile).
   staff_id_document: { write: null, read: OFFICE },
+  // POOLSE-149: a staff member's contract, PDF or Word. Never through POST
+  // /files — the record's own route files it as a version — and read as pay is:
+  // owner and admin, an Admin never the Owner's, and the person (see openFile).
+  staff_contract: { write: null, read: OFFICE },
 };
 
 export interface StoredFile {
@@ -197,6 +202,8 @@ export async function openFile(
       photo_consented: boolean;
       own_child_photo: boolean;
       id_document_holder: string | null;
+      contract_holder: string | null;
+      contract_holder_is_owner: boolean;
     }>(
       `SELECT f.purpose::text AS purpose, f.storage_key, f.content_type, f.original_name,
               f.byte_size, f.uploaded_by, f.wrapped_key,
@@ -228,8 +235,18 @@ export async function openFile(
               (SELECT m.id FROM membership m
                 WHERE m.organization_id = f.organization_id
                   AND (m.id_document_front_file_id = f.id OR m.id_document_back_file_id = f.id)
-                LIMIT 1) AS id_document_holder
+                LIMIT 1) AS id_document_holder,
+              -- Whose contract this file is, and whether that is the Owner (POOLSE-149).
+              cv.membership_id AS contract_holder,
+              EXISTS (SELECT 1 FROM membership_role r
+                       WHERE r.membership_id = cv.membership_id AND r.organization_id = f.organization_id
+                         AND r.archived_at IS NULL AND r.role = 'owner') AS contract_holder_is_owner
          FROM stored_file f
+         LEFT JOIN LATERAL (
+           SELECT v.membership_id FROM staff_contract_version v
+            WHERE v.organization_id = f.organization_id AND v.file_id = f.id
+            LIMIT 1
+         ) cv ON true
          LEFT JOIN student sp
            ON sp.organization_id = f.organization_id AND sp.photo_file_id = f.id
           AND sp.archived_at IS NULL
@@ -249,6 +266,10 @@ export async function openFile(
     ? row.photo_attached
       ? row.photo_consented && (hasRole(...RULES.student_photo.read) || row.own_child_photo)
       : row.uploaded_by === membershipId
+    : row.purpose === 'staff_contract'
+    ? row.contract_holder === membershipId ||
+      hasRole('owner') ||
+      (hasRole('admin') && row.contract_holder !== null && !row.contract_holder_is_owner)
     : row.purpose === 'staff_id_document'
     ? hasRole(...RULES.staff_id_document.read) || row.id_document_holder === membershipId
     : sealed

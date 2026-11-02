@@ -466,6 +466,28 @@ export interface StaffDetails {
   emergencyRelation: string | null;
 }
 
+/** A staff member's contract — POOLSE-149 (`GET /staff/:id/contract`). Informative only. */
+export type StaffContractKind = 'open_ended' | 'fixed_term' | 'uncertain_term' | 'services' | 'internship';
+
+export interface StaffContractVersion {
+  id: string;
+  fileId: string;
+  contentType: string;
+  originalName: string;
+  attachedAt: string;
+  attachedByName: string | null;
+  replacedAt: string | null;
+}
+
+export interface StaffContract {
+  facts: { kind: StaffContractKind | null; startsOn: string | null; endsOn: string | null } | null;
+  current: StaffContractVersion | null;
+  /** Earlier files, newest first. */
+  history: StaffContractVersion[];
+  /** The guard's own answer: this reader may file and edit it. */
+  canEdit: boolean;
+}
+
 export interface People {
   organizationId: string;
   /** One page of the staff list — POOLSE-29. */

@@ -70,6 +70,24 @@ optional.
 - **Retention.** The NISS and the emergency contact go with the ID document after the person
   leaves (see below).
 
+## Contract (POOLSE-149, 02-11-2026)
+
+A *Contrato* tab on the staff record: the signed contract (PDF, Word or a photograph), dropped
+anywhere on the screen or picked, with earlier versions listed under it; and what it says — tipo
+(sem termo, termo certo, termo incerto, prestação de serviços, estágio), data de início and data de
+fim. **For reading only**: nothing in salaries or vacations reads it (Rui).
+
+- **Who reads it is the pay rule.** The Owner, an Admin and the person. An Admin never sees the
+  Owner's: the API answers 404 and the tab is absent.
+- **Who writes it**: the Owner and an Admin, but not an Admin's own (403 `own_contract`) — the
+  Owner files that, as the Owner writes an Admin's pay. The read returns `canEdit`, the guard's
+  own answer.
+- **Rules.** A termo certo needs its end date; a contrato sem termo has none; the end is not
+  before the start.
+- **Versions.** Filing a new contract keeps the previous one in the history; *Retirar* closes the
+  current one, and it stays in the history too. The facts are named in the change log
+  (`staff.contract_updated`), never valued.
+
 ## Date of birth and identity document (POOLSE-100)
 
 An *Identificação* card on the staff record's General tab. It is read and edited by the Owner, an

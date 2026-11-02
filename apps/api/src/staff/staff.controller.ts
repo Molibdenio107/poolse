@@ -25,6 +25,16 @@ import {
 } from '@poolse/rules';
 import { clubToday } from '../common/club-day.js';
 import {
+  attachContract,
+  CONTRACT_KINDS,
+  readContract,
+  removeContract,
+  writeContractFacts,
+  type ContractFacts,
+  type ContractKind,
+  type StaffContract,
+} from './contract.repository.js';
+import {
   CLUB_DETAIL_FIELDS,
   DETAIL_COLUMNS,
   readDetails,
@@ -118,6 +128,66 @@ export class StaffController {
       throw error;
     }
     return (await readIdentity(organizationId, membershipId, actor))!;
+  }
+
+  /**
+   * The contract — POOLSE-149 slice C. Read as pay is: owner and admin, and
+   * the person; an Admin never the Owner's, which is a 404 (absent, not
+   * refused). Written by owner and admin through the same predicate.
+   */
+  @Get(':membershipId/contract')
+  async contract(@Param('membershipId', new ParseUUIDPipe()) membershipId: string): Promise<StaffContract> {
+    requireOwnOrManaged(membershipId);
+    const found = await readContract(currentTenant().organizationId, membershipId, hasRole('owner'));
+    if (found === null) throw new NotFoundException('No such staff member');
+    return { ...found, canEdit: mayWriteContract(membershipId) };
+  }
+
+  @Patch(':membershipId/contract')
+  async editContract(
+    @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<StaffContract> {
+    requireRole('owner', 'admin');
+    refuseOwnContract(membershipId);
+    const { organizationId } = currentTenant();
+    if (!(await writeContractFacts(organizationId, membershipId, hasRole('owner'), parseContractFacts(body)))) {
+      throw new NotFoundException('No such staff member');
+    }
+    return { ...(await readContract(organizationId, membershipId, hasRole('owner')))!, canEdit: true };
+  }
+
+  /** Files a new contract, PDF or Word; the current one becomes history. */
+  @Post(':membershipId/contract/file')
+  async fileContract(
+    @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
+    @Query('name') name: string | undefined,
+    @Body() body: unknown,
+  ): Promise<{ fileId: string }> {
+    requireRole('owner', 'admin');
+    refuseOwnContract(membershipId);
+    const { bytes, contentType, originalName } = judgeUpload('staff_contract', body, name);
+    const filed = await attachContract(
+      currentTenant().organizationId,
+      membershipId,
+      hasRole('owner'),
+      bytes,
+      contentType,
+      originalName,
+    );
+    if (filed === null) throw new NotFoundException('No such staff member');
+    return filed;
+  }
+
+  /** Takes the current contract off; it stays in the history. */
+  @Delete(':membershipId/contract/file')
+  async removeContract(@Param('membershipId', new ParseUUIDPipe()) membershipId: string): Promise<{ removed: true }> {
+    requireRole('owner', 'admin');
+    refuseOwnContract(membershipId);
+    if (!(await removeContract(currentTenant().organizationId, membershipId, hasRole('owner')))) {
+      throw new NotFoundException('No contract on file');
+    }
+    return { removed: true };
   }
 
   /**
@@ -422,6 +492,55 @@ function requireOwnOrManaged(membershipId: string): string {
 }
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * A contract's facts from a body. Every field is optional; an empty box clears.
+ * A fixed term needs its end and an open-ended contract has none — said under
+ * the field, before the database's CHECK would have said it less helpfully.
+ */
+function parseContractFacts(body: Record<string, unknown>): ContractFacts {
+  const fields: Record<string, string> = {};
+  const day = (field: 'startsOn' | 'endsOn'): string | null => {
+    const raw = typeof body[field] === 'string' ? (body[field] as string).trim() : '';
+    if (raw === '') return null;
+    if (!ISO_DAY.test(raw) || Number.isNaN(Date.parse(`${raw}T12:00:00Z`))) {
+      fields[field] = 'staffContract.errors.dateInvalid';
+      return null;
+    }
+    return raw;
+  };
+  const rawKind = typeof body['kind'] === 'string' ? body['kind'].trim() : '';
+  const kind = rawKind === '' ? null : (CONTRACT_KINDS as readonly string[]).includes(rawKind) ? (rawKind as ContractKind) : null;
+  if (rawKind !== '' && kind === null) fields['kind'] = 'staffContract.errors.kindInvalid';
+  const startsOn = day('startsOn');
+  const endsOn = day('endsOn');
+
+  if (kind === 'fixed_term' && endsOn === null && fields['endsOn'] === undefined) {
+    fields['endsOn'] = 'staffContract.errors.endRequired';
+  }
+  if (kind === 'open_ended' && endsOn !== null) fields['endsOn'] = 'staffContract.errors.endNotAllowed';
+  if (startsOn !== null && endsOn !== null && endsOn < startsOn) fields['endsOn'] = 'staffContract.errors.endBeforeStart';
+
+  if (Object.keys(fields).length > 0) {
+    throw new BadRequestException({ code: 'invalid_contract', message: 'Some fields are not valid', fields });
+  }
+  return { kind, startsOn, endsOn };
+}
+
+/**
+ * Nobody but the Owner writes their own contract — the pay rule
+ * (CLAUDE.md: nobody but the Owner writes their own pay). An Admin's is the
+ * Owner's to file.
+ */
+function mayWriteContract(membershipId: string): boolean {
+  return hasRole('owner') || (hasRole('admin') && membershipId !== currentTenant().membershipId);
+}
+
+function refuseOwnContract(membershipId: string): void {
+  if (!hasRole('owner') && membershipId === currentTenant().membershipId) {
+    throw new ForbiddenException({ code: 'own_contract', message: 'Your own contract is filed by the owner' });
+  }
+}
 
 function photoSide(raw: string): IdPhotoSide {
   if (!(ID_PHOTO_SIDES as readonly string[]).includes(raw)) {

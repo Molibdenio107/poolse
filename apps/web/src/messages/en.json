@@ -6455,6 +6455,47 @@
       "clubsToSet": "The tax and social security numbers are recorded by the owner or an administrator."
     }
   },
+  "staffContract": {
+    "title": "Contract",
+    "document": "Signed contract",
+    "visibility": "Only the owner, the administrators and the person themself can see it. An administrator does not see the owner's contract.",
+    "none": "No contract on file.",
+    "filedBy": "Filed on {date} by {name}",
+    "upload": "Upload contract",
+    "replace": "Replace",
+    "remove": "Take off",
+    "sending": "Sending…",
+    "hint": "PDF, Word or a photograph, up to 10 MB. You can also drop the file anywhere on the screen. The previous one stays in the history.",
+    "drop": "Drop to file the contract",
+    "history": "Earlier versions",
+    "facts": "What the contract says",
+    "factsInformative": "For reference only: it does not change salaries or vacations.",
+    "kind": "Contract type",
+    "startsOn": "Start date",
+    "endsOn": "End date",
+    "endsOnOpen": "An open-ended contract has no end date.",
+    "notRecorded": "Not given",
+    "kinds": {
+      "open_ended": "Open-ended",
+      "fixed_term": "Fixed term",
+      "uncertain_term": "Uncertain term",
+      "services": "Services contract",
+      "internship": "Internship"
+    },
+    "save": "Save",
+    "filed": "Contract filed.",
+    "removed": "Contract taken off. It stays in the history.",
+    "loadFailed": "The contract could not be loaded.",
+    "notAllowed": "You cannot change this contract.",
+    "failed": "Could not save. Try again.",
+    "errors": {
+      "dateInvalid": "Enter a valid date.",
+      "kindInvalid": "Choose a contract type.",
+      "endRequired": "A fixed-term contract needs an end date.",
+      "endNotAllowed": "An open-ended contract has no end date.",
+      "endBeforeStart": "The end date cannot be before the start date."
+    }
+  },
   "meetInbox": {
     "menuBadge": "{count, plural, one {# results file to import} other {# results files to import}}",
     "intro": "Results files that arrived by email at the club's address. Confirm each one with Import, as you would a file dropped on this page.",

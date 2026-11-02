@@ -261,6 +261,9 @@ const TENANT_TABLES = [
   'partner_group_member',
   'partner_group',
   // A contract's versions point at the agreement and the file (POOLSE-105).
+  // POOLSE-149: a staff member's contract, before stored_file and membership.
+  'staff_contract_version',
+  'staff_contract',
   'partner_contract_version',
   'partner_agreement',
   'partner_contact',

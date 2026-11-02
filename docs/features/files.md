@@ -15,6 +15,7 @@ Built 12 October 2026. What a club can upload, who can see it, and how it is kep
 | A student's page, beside the name (28-10-2026) | The student's photograph — **only with a photo consent** granted and not withdrawn | Owner, admin | All staff and the child's own family, while the consent stands; a withdrawal hides it at once |
 | A staff member's page, inside the person's card (28-10-2026) | The photograph of somebody **with no login** | Owner, admin | All staff |
 | A staff member's *Identificação* tab (POOLSE-149, 02-11-2026) | The ID document's photograph, front and back, image or PDF; **sealed**, a look by anybody but the person audited, shredded when replaced, removed or retained away | Owner, admin, the person | Owner, admin, the person |
+| A staff member's *Contrato* tab (POOLSE-149, 02-11-2026) | The signed contract, PDF, Word or a photograph; earlier versions kept | Owner, admin (an Admin never their own) | Owner, admin, the person — an Admin never the Owner's |
 | *O meu perfil* (28-10-2026) | Your own photograph. It is Clerk's, like your name: the avatar at the top right, in every club | You | Wherever your avatar shows |
 
 **Not yet:** the identity document on a student's page, and incident attachments (health

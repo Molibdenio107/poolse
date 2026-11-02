@@ -6455,6 +6455,47 @@
       "clubsToSet": "O NIF e o NISS são registados pelo proprietário ou por um administrador."
     }
   },
+  "staffContract": {
+    "title": "Contrato",
+    "document": "Contrato assinado",
+    "visibility": "Só o proprietário, os administradores e a própria pessoa o veem. Um administrador não vê o contrato do proprietário.",
+    "none": "Nenhum contrato guardado.",
+    "filedBy": "Guardado a {date} por {name}",
+    "upload": "Carregar contrato",
+    "replace": "Substituir",
+    "remove": "Retirar",
+    "sending": "A enviar…",
+    "hint": "PDF, Word ou uma fotografia, até 10 MB. Também pode largar o ficheiro em qualquer ponto do ecrã. O anterior fica no histórico.",
+    "drop": "Largue para guardar o contrato",
+    "history": "Versões anteriores",
+    "facts": "O que o contrato diz",
+    "factsInformative": "Só para consulta: não altera salários nem férias.",
+    "kind": "Tipo de contrato",
+    "startsOn": "Data de início",
+    "endsOn": "Data de fim",
+    "endsOnOpen": "Um contrato sem termo não tem data de fim.",
+    "notRecorded": "Não indicado",
+    "kinds": {
+      "open_ended": "Sem termo",
+      "fixed_term": "Termo certo",
+      "uncertain_term": "Termo incerto",
+      "services": "Prestação de serviços",
+      "internship": "Estágio"
+    },
+    "save": "Guardar",
+    "filed": "Contrato guardado.",
+    "removed": "Contrato retirado. Fica no histórico.",
+    "loadFailed": "Não foi possível carregar o contrato.",
+    "notAllowed": "Não pode alterar este contrato.",
+    "failed": "Não foi possível guardar. Tente de novo.",
+    "errors": {
+      "dateInvalid": "Indique uma data válida.",
+      "kindInvalid": "Escolha um tipo de contrato.",
+      "endRequired": "Um contrato a termo certo precisa de data de fim.",
+      "endNotAllowed": "Um contrato sem termo não tem data de fim.",
+      "endBeforeStart": "A data de fim não pode ser antes da data de início."
+    }
+  },
   "meetInbox": {
     "menuBadge": "{count, plural, one {# ficheiro de resultados por importar} other {# ficheiros de resultados por importar}}",
     "intro": "Ficheiros de resultados que chegaram por email ao endereço do clube. Confirme cada um com Importar, como um ficheiro largado nesta página.",

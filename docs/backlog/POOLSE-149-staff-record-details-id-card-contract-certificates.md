@@ -37,7 +37,7 @@ A club keeps a staff member's file in a drawer today: the address for the contra
 **Slice C — Contrato**
 
 11. A new *Contrato* tab holds one current contract: PDF or Word (`acceptFor('staff_contract')`), dropped or picked, downloaded through `DocumentLink`. Replacing it keeps the earlier one as a version, listed with its date and who filed it.
-12. Beside the file, informative facts: tipo (`sem_termo | termo_certo | termo_incerto | prestacao_servicos | estagio`), data de início, data de fim (required for *termo certo*, refused for *sem termo*). Nothing reads them but this tab. (Rui, 02-11-2026.)
+12. Beside the file, informative facts: tipo (`open_ended | fixed_term | uncertain_term | services | internship`, shown as sem termo, termo certo, termo incerto, prestação de serviços, estágio), data de início, data de fim (required for *termo certo*, refused for *sem termo*). Nothing reads them but this tab. (Rui, 02-11-2026.)
 13. Read and write: owner and admin; the person reads their own. **An Admin never sees the Owner's contract** — absent, not blank, by the pay rule's predicate (`visibleToViewer` in `compensation.repository.ts`). An Admin may not write it either.
 14. The contract file is an ordinary file (not sealed) with read rule `staff_contract` = owner, admin, the person, minus the Owner's for an Admin.
 
@@ -81,6 +81,6 @@ A club keeps a staff member's file in a drawer today: the address for the contra
 
 - [x] A: the Geral fields stored, validated, withheld in the log, absent for other staff, cleared on anonymisation.
 - [x] B: the Identificação tab, sealed photos, audited reads, retention shreds, reader pre-fill.
-- [ ] C: the Contrato tab, versions, informative facts, the Owner hidden from an Admin.
+- [x] C: the Contrato tab, versions, informative facts, the Owner hidden from an Admin.
 - [ ] D: the certificate drop, the new reader behind its switch, records indistinguishable from typed ones.
 - [ ] Role probe extended; `TENANT_TABLES` updated; i18n pt-PT + en; `docs/features/staff.md`, `docs/data-model.md`, `docs/decisions.md`, `CLAUDE.md` (the POOLSE-100 paragraph).

@@ -9,6 +9,7 @@ import {
   type PersonQualifications,
   type QualificationTypes,
   type Me,
+  type StaffContract,
   type StaffDetails,
   type StaffIdentity,
   type StaffRecord,
@@ -23,6 +24,7 @@ import { DetailPage } from '@/components/detail-page';
 import { Reinvite, RoleEditor, StaffForm } from './staff-form';
 import { storageConfigured } from '@/lib/storage-status';
 import { Identification } from './identification';
+import { ContractTab } from './contract-tab';
 import { DetailsCard } from './details-card';
 
 /**
@@ -99,6 +101,12 @@ export default async function StaffMemberPage({
   const qualifications = await outcome(
     apiFetch<PersonQualifications>(`/staff/${membershipId}/qualifications`),
   );
+  /*
+    Contrato — POOLSE-149. The pay rule: an Admin never sees the Owner's, which
+    the API answers as a 404 (absent, not refused) — so it is asked with the
+    page, and that answer hides the tab while a real failure keeps it.
+  */
+  const contract = await outcome(apiFetch<StaffContract>(`/staff/${membershipId}/contract`));
 
   return (
     <DetailPage
@@ -216,6 +224,17 @@ export default async function StaffMemberPage({
               />
             );
           },
+        },
+        {
+          slug: 'contract',
+          labelKey: 'staffContract.title',
+          visible: contract.state === 'ok' || (contract.state === 'failed' && contract.status !== 404),
+          content: () =>
+            contract.state === 'ok' ? (
+              <ContractTab membershipId={membershipId} contract={contract.data} storageReady={storageReady} />
+            ) : contract.state === 'failed' ? (
+              <PageError message={t('staffContract.loadFailed')} />
+            ) : null,
         },
         {
           slug: 'qualifications',
