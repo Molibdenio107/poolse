@@ -359,3 +359,11 @@ one keeps its place, so the tiles stand where the reader learned to look.
 | `sum.recintos` | *Recintos · estado agora*: each tank, a state badge (within limits, out of limits, analysis overdue, no analyses) and pH, free chlorine and temperature, an out-of-range one in amber (module water quality). | `readPoolWater`, judged by `excursions` / `resolveBands`, as the water card is. |
 
 Each tile links to its page (Calendário, Faturação), and each tank to its water tab.
+
+## *Hoje, hora a hora* says what it shows (02-11-2026, Rui)
+
+Each bar is how many people are expected in lessons in that hour (07–21h) — a turma's active
+enrolments, or a partnership group's headcount, counted by `readOccupancyToday` like the rest of the
+*Hoje* card. A sentence above gives the day's total and its busiest hour, a hint says what a bar is,
+and a bar is a button: opening it lists that hour's lessons (time, turma or group, place, instructor,
+people) from the same statement's `lessons`, with a link to the calendar.

@@ -3014,7 +3014,7 @@
       "attendanceOf": "de {expected, plural, one {# previsto} other {# previstos}} até agora",
       "collected": "Cobrado no mês",
       "payments": "{count, plural, =0 {Nenhum pagamento ainda} one {# pagamento} other {# pagamentos}} em mensalidades",
-      "noInstructor": "Sem professor atribuído",
+      "noInstructor": "Sem professor",
       "noInstructorToday": "Aulas de hoje por resolver",
       "allCovered": "Todas as aulas de hoje têm professor",
       "byHour": "Hoje, hora a hora",
@@ -3036,7 +3036,15 @@
         "classes": "Turmas",
         "water": "Água",
         "people": "Pessoas"
-      }
+      },
+      "byHourLine": "{people, plural, one {# pessoa} other {# pessoas}} em aula hoje · a hora mais cheia é às {hour}h, com {peak}.",
+      "byHourNone": "Ninguém em aula hoje nestas horas.",
+      "byHourHint": "Cada barra é o número de pessoas em aula nessa hora, pelas inscrições. Toque numa barra para ver as aulas.",
+      "hourLessons": "Aulas às {hour}h",
+      "hourEmpty": "Nenhuma aula nesta hora.",
+      "untitled": "Aula",
+      "lessonPeople": "{count, plural, one {# pessoa} other {# pessoas}}",
+      "openCalendar": "Abrir o calendário"
     }
   },
   "marketing": {

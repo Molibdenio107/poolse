@@ -15,6 +15,7 @@ import type {
 } from '@/lib/api';
 import { formatCents } from '@/lib/money';
 import { formatReading } from '@/lib/pool-metrics';
+import { HourChart } from './hour-chart';
 import { cn } from '@/lib/utils';
 
 /**
@@ -31,8 +32,6 @@ import { cn } from '@/lib/utils';
  * Colour never carries a figure alone: each tile's line says it in words, a
  * chart bar has its value in a list beside it, and a tank's state is a badge.
  */
-const CHART_FROM = 7;
-const CHART_TO = 21; // inclusive: 15 bars, the handoff's
 
 export async function SummaryBand({ widgets }: { widgets: DashboardWidget[] }): Promise<React.ReactElement> {
   const t = await getTranslations();
@@ -155,7 +154,7 @@ export async function SummaryBand({ widgets }: { widgets: DashboardWidget[] }): 
                   {todayWidget.state === 'error' ? failed : t('dashboard.summary.noLessons')}
                 </p>
               ) : (
-                <HourChart hours={today.hours} nowHour={today.nowHour} />
+                <HourChart hours={today.hours} nowHour={today.nowHour} lessons={today.lessons ?? []} swimmers={today.swimmers} />
               )}
             </section>
           )}
@@ -242,60 +241,3 @@ function Tile({
   );
 }
 
-/**
- * Today hour by hour, 07:00–21:00: the hours gone muted, this hour solid in
- * the primary ink, the hours to come at half strength — two shades rather than
- * the handoff's ink-and-fill, which are one colour in the dark theme. The
- * figures are in a list beside the bars for a screen reader, and each bar's own
- * value is drawn over it.
- */
-async function HourChart({ hours, nowHour }: { hours: number[]; nowHour: number }): Promise<React.ReactElement> {
-  const t = await getTranslations();
-  const range = Array.from({ length: CHART_TO - CHART_FROM + 1 }, (_, i) => CHART_FROM + i);
-  const max = Math.max(1, ...range.map((h) => hours[h] ?? 0));
-  return (
-    <div className="flex flex-col gap-2">
-      <ol aria-label={t('dashboard.summary.byHour')} className="flex h-40 items-end gap-1">
-        {range.map((h) => {
-          const people = hours[h] ?? 0;
-          const when = h < nowHour ? 'past' : h === nowHour ? 'now' : 'next';
-          return (
-            <li key={h} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
-              <span className="sr-only">{t('dashboard.summary.hourLine', { hour: h, people })}</span>
-              {people > 0 && (
-                <span aria-hidden className="text-[10px] tabular-nums text-foreground-muted">
-                  {people}
-                </span>
-              )}
-              <span
-                aria-hidden
-                style={{ height: `${Math.max(people > 0 ? 4 : 1, (people / max) * 100)}%` }}
-                className={cn(
-                  'w-full rounded-t-[2px]',
-                  when === 'past' ? 'bg-foreground/15' : when === 'now' ? 'bg-[rgb(var(--primary-ink))]' : 'bg-primary/45',
-                )}
-              />
-              <span aria-hidden className="text-[10px] tabular-nums text-foreground-muted">
-                {String(h).padStart(2, '0')}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-      <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground-muted">
-        <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2.5 rounded-[2px] bg-foreground/15" />
-          {t('dashboard.summary.legendPast')}
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2.5 rounded-[2px] bg-[rgb(var(--primary-ink))]" />
-          {t('dashboard.summary.legendNow')}
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2.5 rounded-[2px] bg-primary/45" />
-          {t('dashboard.summary.legendNext')}
-        </span>
-      </p>
-    </div>
-  );
-}

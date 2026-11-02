@@ -3014,7 +3014,7 @@
       "attendanceOf": "of {expected} expected so far",
       "collected": "Collected this month",
       "payments": "{count, plural, =0 {No payments yet} one {# fee payment} other {# fee payments}}",
-      "noInstructor": "Without an instructor",
+      "noInstructor": "No instructor",
       "noInstructorToday": "Today's lessons to sort out",
       "allCovered": "Every lesson today has an instructor",
       "byHour": "Today, hour by hour",
@@ -3036,7 +3036,15 @@
         "classes": "Classes",
         "water": "Water",
         "people": "People"
-      }
+      },
+      "byHourLine": "{people, plural, one {# person} other {# people}} in lessons today · the busiest hour is {hour}:00, with {peak}.",
+      "byHourNone": "Nobody in lessons today in these hours.",
+      "byHourHint": "Each bar is how many people are in lessons in that hour, by enrolment. Tap a bar to see its lessons.",
+      "hourLessons": "Lessons at {hour}:00",
+      "hourEmpty": "No lessons in this hour.",
+      "untitled": "Lesson",
+      "lessonPeople": "{count, plural, one {# person} other {# people}}",
+      "openCalendar": "Open the calendar"
     }
   },
   "marketing": {

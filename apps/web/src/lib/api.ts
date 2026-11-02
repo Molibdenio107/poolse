@@ -4723,6 +4723,18 @@ export interface OccupancyTodayWidgetData {
   /** People in the water per local hour, 0–23. */
   hours: number[];
   nowHour: number;
+  /** Today's lessons, from the same statement as `hours` — what a bar lists (02-11-2026). */
+  lessons?: TodayLesson[];
+}
+
+export interface TodayLesson {
+  sessionId: string;
+  title: string | null;
+  place: string | null;
+  instructor: string | null;
+  swimmers: number;
+  startMin: number;
+  endMin: number;
 }
 
 /** `sum.insights` — up to three things that deserve attention, from the AI once it is wired. */

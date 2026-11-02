@@ -144,6 +144,24 @@ export interface OccupancyToday {
   hours: number[];
   /** The hour it is now, at the first site in scope — the chart's "now" bar. */
   nowHour: number;
+  /**
+   * Today's lessons, from the same statement as `hours` — what a bar lists when
+   * it is opened (Rui, 02-11-2026), so the list and the count never disagree.
+   * Minutes are from local midnight; `swimmers` counts as `hours` does.
+   */
+  lessons: TodayLesson[];
+}
+
+export interface TodayLesson {
+  sessionId: string;
+  /** The turma's or the partnership group's name. */
+  title: string | null;
+  /** The recinto or the tank. */
+  place: string | null;
+  instructor: string | null;
+  swimmers: number;
+  startMin: number;
+  endMin: number;
 }
 
 /**
@@ -188,6 +206,7 @@ export async function readOccupancyToday(
       expected_so_far: number;
       hours: number[];
       now_hour: number | null;
+      lessons: TodayLesson[] | null;
     }>(
       `WITH today AS (
          SELECT cs.id, cs.pool_id, cs.starts_at, cs.ends_at,
@@ -210,6 +229,13 @@ export async function readOccupancyToday(
                  AND coalesce(sch.instructor_status::text, 'to_define') IN ('to_define', 'uncovered'))
                   AS without_instructor,
                 coalesce(pa.sport_id, 'pool') AS sport,
+                -- What a bar lists when opened (02-11-2026): who, where, with whom.
+                coalesce(cg.name, cgs.name, pg.name) AS title,
+                coalesce(pa.name, p.name) AS place,
+                person_name(coalesce(cs.substitute_instructor_membership_id,
+                                     cs.instructor_membership_id,
+                                     cg.instructor_membership_id,
+                                     sch.instructor_membership_id)) AS instructor,
                 cs.ends_at <= now() AS done,
                 coalesce(cs.class_group_id, sch.class_group_id) IS NOT NULL AND cs.starts_at <= now() AS started_class,
                 -- Minutes from local midnight, for the hour-by-hour profile.
@@ -222,6 +248,8 @@ export async function readOccupancyToday(
                   ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
            LEFT JOIN class_schedule sch
                   ON sch.id = cs.schedule_id AND sch.organization_id = cs.organization_id
+           LEFT JOIN class_group cgs
+                  ON cgs.id = sch.class_group_id AND cgs.organization_id = sch.organization_id
            LEFT JOIN partner_group pg
                   ON pg.id = sch.partner_group_id AND pg.organization_id = sch.organization_id
            LEFT JOIN pool p
@@ -268,6 +296,11 @@ export async function readOccupancyToday(
                  FROM generate_series(0, 23) h)                                      AS hours,
               (SELECT extract(hour FROM now() AT TIME ZONE coalesce(fx.timezone, 'Europe/Lisbon'))::int
                  FROM facility fx WHERE fx.id = ANY($1::uuid[]) ORDER BY fx.created_at LIMIT 1) AS now_hour,
+              (SELECT coalesce(json_agg(json_build_object(
+                        'sessionId', id, 'title', title, 'place', place, 'instructor', instructor,
+                        'swimmers', swimmers, 'startMin', start_min, 'endMin', end_min)
+                        ORDER BY start_min, title), '[]'::json)
+                 FROM today)                                                         AS lessons,
               (SELECT count(*) FROM today)::int                                    AS classes,
               (SELECT coalesce(sum(swimmers), 0) FROM today)::int                  AS swimmers,
               (SELECT count(*) FROM today WHERE without_instructor)::int           AS without_instructor,
@@ -294,6 +327,7 @@ export async function readOccupancyToday(
       expectedSoFar: row.expected_so_far,
       hours: row.hours,
       nowHour: row.now_hour ?? 0,
+      lessons: row.lessons ?? [],
     };
   });
 }
