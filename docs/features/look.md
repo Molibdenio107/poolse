@@ -109,3 +109,12 @@ action). Its title is one short sentence, and anything after it goes in `hint`.
 A list under a card's own heading (an invoice's payments, a meter's readings, *Em dívida* under
 its card) keeps one muted sentence. A second card inside the first would be a box in a box.
 App mode and the public pages keep their own empty lines.
+
+## Chart colours are Poolse's (02-11-2026, Rui)
+
+Every chart reads `--chart-1/2/3`: **teal** (the brand teal, deepened to 3.8:1 — electricity, turmas),
+**soft orange** (the app's accent, 3.4:1 — gas, parcerias) and **green** (the brand green, 3.5:1 —
+water). The dark theme uses the brand's own dark steps. They replace the generic blue/orange/aqua set of
+19-10-2026; teal and green are closer for a colour-blind reader, so every chart keeps its legend in words
+and its table. *Hoje, hora a hora* is one hue: past hours pale teal, this hour solid teal ink, the hours
+to come the brand teal.

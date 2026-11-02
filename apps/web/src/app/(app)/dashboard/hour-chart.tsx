@@ -21,8 +21,9 @@ const clock = (minutes: number): string =>
  * statement as the rest of the *Hoje* card. A sentence above says the day's
  * total and its busiest hour; a bar is a button, and opening it lists that
  * hour's lessons with their place, instructor and number, linked to the
- * calendar. The hours gone are muted, this hour solid, the hours to come at
- * half strength, and the legend says so in words.
+ * calendar. One brand hue (Rui, 02-11-2026: grey past hours dominated the card):
+ * the hours gone pale teal, this hour solid teal ink and never flat even when
+ * nobody is in, the hours to come the brand teal — and the legend says which.
  */
 export function HourChart({
   hours,
@@ -84,10 +85,10 @@ export function HourChart({
                 )}
                 <span
                   aria-hidden
-                  style={{ height: `${Math.max(people > 0 ? 4 : 1, (people / max) * 100)}%` }}
+                  style={{ height: `${Math.max(people > 0 || when === 'now' ? 4 : 1, (people / max) * 100)}%` }}
                   className={cn(
                     'w-full rounded-t-[2px]',
-                    when === 'past' ? 'bg-foreground/15' : when === 'now' ? 'bg-[rgb(var(--primary-ink))]' : 'bg-primary/45',
+                    when === 'past' ? 'bg-primary/25' : when === 'now' ? 'bg-[rgb(var(--primary-ink))]' : 'bg-primary',
                   )}
                 />
                 <span aria-hidden className="text-[10px] tabular-nums text-foreground-muted">
@@ -101,7 +102,7 @@ export function HourChart({
 
       <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground-muted">
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2.5 rounded-[2px] bg-foreground/15" />
+          <span aria-hidden className="size-2.5 rounded-[2px] bg-primary/25" />
           {t('dashboard.summary.legendPast')}
         </span>
         <span className="inline-flex items-center gap-1.5">
@@ -109,7 +110,7 @@ export function HourChart({
           {t('dashboard.summary.legendNow')}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2.5 rounded-[2px] bg-primary/45" />
+          <span aria-hidden className="size-2.5 rounded-[2px] bg-primary" />
           {t('dashboard.summary.legendNext')}
         </span>
       </p>
