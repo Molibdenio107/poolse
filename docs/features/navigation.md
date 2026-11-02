@@ -343,13 +343,27 @@ Every verdict is the existing one: `excursions`/`resolveBands`, `gradeLabResult`
   Derived from the address (`sectionOf`), never stored.
 - The sidebar lists only the current section: the shared pages, or the sport's header (its
   colour bar, wash, icon and name) and its entries, **Calendário first** (the handoff's order; the
-  sport's tab opens it — 1 November 2026). A pool-only menu keeps Turmas before Calendário. The
-  phone's menu sheet shows the sections as a row above the list.
+  sport's tab opens it — 1 November 2026). The phone's menu sheet shows the sections as a row
+  above the list.
 - A row of tabs too wide for the bar (eight sports on a laptop) shows ‹ / › at its ends (`ScrollArrows`).
 - A sport section's content wears its wash (`SportShell`, `.sport-shell`); shared pages never do.
 - A section that is not current carries the attention dot when something inside needs doing.
-- One sport: no tabs, no header, no wash — nothing changes. `SportIcon` stands in for the
+- **One sport is a section too** (POOLSE-150, 2 November 2026): a business club with swimming
+  alone shows its club tab and a *Natação* tab holding exactly what a multi-sport club's does.
+  A personal tenant has no per-sport entries and keeps its menu. `SportIcon` stands in for the
   handoff's Material Symbols.
+
+## Each recinto under its sport — POOLSE-150 (2 November 2026)
+
+- Every sport's group has a recintos entry, `/dashboard/recintos?sport=`, named in the sport's own
+  word (`keyBySport`): *Piscinas* for swimming, *Campos* for the court and pitch sports, *Salas* for
+  the gym, *Recintos* otherwise. Staff read it; adding is the office's, as the API decides.
+- The page lists the sport's recintos **grouped by site** when the club has more than one: the tanks
+  for swimming (each opening its own page, *Adicionar piscina* per site), another sport's courts in
+  the site page's own panel (add, rename, archive) filtered to that sport.
+- A tank's page (`/dashboard/facilities/pools/…`) belongs to *Natação → Piscinas* (`also` on the
+  entry, read by `sectionOf` and the item's highlight); its Voltar falls back to that list.
+- No address moved: the site page's old `?tab=pools` and `?tab=recintos` fall back to *Geral*.
 
 ## Where a page goes once a club has a second sport — POOLSE-143 (1 November 2026)
 

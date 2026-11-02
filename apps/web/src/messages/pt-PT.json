@@ -28,7 +28,8 @@
     "toProfile": "Voltar ao meu perfil",
     "toStudent": "Voltar ao aluno",
     "toClass": "Voltar à turma",
-    "toInvoice": "Voltar ao documento"
+    "toInvoice": "Voltar ao documento",
+    "toRecintos": "Voltar aos recintos"
   },
   "app": {
     "name": "Poolse",
@@ -6645,7 +6646,22 @@
     "nameTaken": "Já existe um recinto ou uma piscina com este nome neste local.",
     "sportOff": "Este desporto não está ativo para o clube.",
     "addFailed": "Não foi possível adicionar o recinto.",
-    "archiveFailed": "Não foi possível arquivar o recinto."
+    "archiveFailed": "Não foi possível arquivar o recinto.",
+    "nav": {
+      "default": "Recintos",
+      "pool": "Piscinas",
+      "courts": "Campos",
+      "rooms": "Salas"
+    },
+    "page": {
+      "noSites": "Ainda não há instalações",
+      "noSitesHint": "Crie primeiro uma instalação em Instalações; os recintos ficam dentro dela.",
+      "poolSubtitle": "Os tanques do clube, por instalação. Cada um abre a sua página: água, pistas, equipamento e tarefas.",
+      "addPool": "Adicionar piscina",
+      "courtSubtitle": "Os recintos de {sport}, por instalação.",
+      "notYours": "Esta instalação só é visível para o proprietário, os administradores e a manutenção.",
+      "siteLinks": "Os recintos desta instalação estão na secção de cada desporto:"
+    }
   },
   "familyAccess": {
     "title": "Acesso à app",

@@ -32,15 +32,17 @@ XLSX export all still read them.
 
 ## Recintos — courts and pitches (29 October 2026)
 
-The first piece of POOLSE-125 (Rui). A site's page gains a **Recintos** tab, after Piscinas, once the
-club has a sport besides swimming switched on in `/admin` (`/me.sports`), or still has a court from one
-switched off since. A pool club sees no new tab. Owner and admin, as Piscinas.
+The first piece of POOLSE-125 (Rui). **Since POOLSE-150 (2 November 2026) a recinto lives in its
+sport's section**, *Natação → Piscinas*, *Ténis → Campos* and so on (`/dashboard/recintos?sport=`,
+`navigation.md`): the site page's Piscinas and Recintos tabs are gone, and its *Geral* tab opens with
+one link per sport the club has on, each with its count. Instalações keeps the site — details,
+Espaços, maintenance, prices, partnerships, regulation and documents. The rules below are unchanged.
 
 - One list per switched-on sport, and *Adicionar recinto* (sport + name) —
   `POST /facilities/:id/playing-areas`; a name already used by a recinto or a pool on the site is refused.
 - *Arquivar* asks first — `POST /facilities/playing-areas/:id/archive`. A court is not yet in the
   bin (`RESTORABLE`), and the question says so.
-- A pool is still added and archived under Piscinas; its recinto follows by trigger.
+- A pool is still added and archived as a pool (*Natação → Piscinas*); its recinto follows by trigger.
 - The menu groups per sport are built (`navigation.md`). Not built yet: calendars and turmas on a court.
 
 ## Espaços

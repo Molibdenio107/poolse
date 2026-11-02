@@ -61,7 +61,7 @@ export async function SportPending({
                 <h3 className="font-medium">{site.name}</h3>
                 {site.canManage && (
                   <FromLink
-                    href={`/dashboard/facilities/${site.id}?tab=recintos`}
+                    href={`/dashboard/recintos?sport=${sport}`}
                     className="text-sm text-primary underline-offset-2 hover:underline coarse:-my-3 coarse:py-3"
                   >
                     {t('sportPage.manage')}

@@ -5,23 +5,43 @@ import { visibleSections, type Item, type Viewer } from './nav-entries.ts';
 import { commandsFor } from './commands.ts';
 
 /**
- * One menu group per sport — POOLSE-125. The pool-only menu is the one that
- * shipped; a second sport moves Turmas and Calendário into a group per sport.
+ * One menu group per sport — POOLSE-125, and since POOLSE-150 a business club
+ * with one sport gets its one group too, holding what a multi-sport club's does.
  */
 
 const owner: Viewer = { roles: ['owner'], kind: 'business', modules: [...POOLSE_MODULES] };
 
 const flat = (items: Item[]): Item[] => items.flatMap((item) => [item, ...flat(item.children ?? [])]);
 
-test('QA 1: with swimming alone the menu is exactly the one with no sports given', () => {
-  const before = visibleSections(owner);
-  const after = visibleSections({ ...owner, sports: ['pool'] });
-  assert.deepEqual(after, before);
-  assert.equal(flat(after).some((item) => item.sport !== undefined || item.href.includes('?')), false);
+test('POOLSE-150 QA 1: swimming alone gets its one Natação group, holding Calendário, Turmas and Piscinas', () => {
+  const sections = visibleSections({ ...owner, sports: ['pool'] });
+  assert.deepEqual(sections, visibleSections(owner), 'no sports given is swimming');
+  const groups = sections.filter((item) => item.key.startsWith('sport.name.'));
+  assert.deepEqual(groups.map((group) => group.key), ['sport.name.pool']);
   assert.deepEqual(
-    after.map((item) => item.href).filter((href) => href === '/dashboard/classes' || href === '/dashboard/calendar'),
-    ['/dashboard/classes', '/dashboard/calendar'],
+    groups[0]!.children?.map((item) => [item.href, item.key]),
+    [
+      ['/dashboard/calendar?sport=pool', 'calendar.title'],
+      ['/dashboard/classes?sport=pool', 'classes.title'],
+      ['/dashboard/recintos?sport=pool', 'recintos.nav.pool'],
+      ['/dashboard/students?sport=pool', 'students.title'],
+    ],
   );
+  // Turmas and Calendário left the top level, as with two sports.
+  const top = sections.map((item) => item.href);
+  assert.equal(top.includes('/dashboard/classes') || top.includes('/dashboard/calendar'), false);
+});
+
+test('POOLSE-150: a personal tenant keeps its menu — it has no per-sport entries', () => {
+  const personal = visibleSections({ roles: ['owner'], kind: 'personal', modules: [...POOLSE_MODULES], sports: ['pool'] });
+  assert.equal(personal.some((item) => item.key.startsWith('sport.name.')), false);
+});
+
+test('POOLSE-150: each sport names its recintos in its own word', () => {
+  const sections = visibleSections({ ...owner, sports: ['pool', 'tennis', 'gym'] });
+  const word = (sport: string): string | undefined =>
+    sections.find((item) => item.sport === sport)?.children?.find((item) => item.href.startsWith('/dashboard/recintos'))?.key;
+  assert.deepEqual([word('pool'), word('tennis'), word('gym')], ['recintos.nav.pool', 'recintos.nav.courts', 'recintos.nav.rooms']);
 });
 
 test('QA 2: with two sports each gets a group, in order, where Turmas stood, and the shared entries stay', () => {
@@ -37,7 +57,7 @@ test('QA 2: with two sports each gets a group, in order, where Turmas stood, and
   const [poolGroup, tennisGroup] = [sections[pool], sections[tennis]] as [Item, Item];
   assert.deepEqual(
     tennisGroup.children?.map((item) => item.href),
-    ['/dashboard/calendar?sport=tennis', '/dashboard/classes?sport=tennis', '/dashboard/students?sport=tennis'],
+    ['/dashboard/calendar?sport=tennis', '/dashboard/classes?sport=tennis', '/dashboard/recintos?sport=tennis', '/dashboard/students?sport=tennis'],
   );
   // A sport's tab opens its Calendário (POOLSE-141 rule 3, the handoff's sidebar).
   assert.equal(tennisGroup.href, '/dashboard/calendar?sport=tennis');
@@ -82,8 +102,10 @@ test('POOLSE-143: Alunos is shared and copied; Níveis, Avanços and Competiçã
     ],
     'no Competição for a sport without a model',
   );
-  // QA 1: swimming alone keeps every child where it was.
-  const poolOnly = visibleSections(owner).find((item) => item.key === 'students.title');
+  // POOLSE-150: swimming alone has its group too, so Níveis is in its Alunos copy.
+  const poolOnly = visibleSections(owner)
+    .find((item) => item.sport === 'pool')
+    ?.children?.find((item) => item.key === 'students.title');
   assert.equal(poolOnly?.children?.some((item) => item.key === 'students.levels'), true);
 });
 

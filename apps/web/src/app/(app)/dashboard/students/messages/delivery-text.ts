@@ -1,6 +1,5 @@
 import { isPoolseSport } from '@poolse/rules';
 import type { MessageAudience, MessageSummary } from '@/lib/api';
-import { sportNameKey } from '@/components/sport-icon';
 
 /**
  * The sentence for whether a message reached anybody — POOLSE-67.
@@ -39,6 +38,7 @@ export function targetLabel(
   targetName: string | null,
   t: (key: string) => string,
 ): string {
-  if (audience === 'sport' && isPoolseSport(targetName)) return t(sportNameKey(targetName));
+  // The catalogue's key, as `sportNameKey` spells it (kept out of a component import for the unit test).
+  if (audience === 'sport' && isPoolseSport(targetName)) return t(`sport.name.${targetName}`);
   return targetName ?? '';
 }

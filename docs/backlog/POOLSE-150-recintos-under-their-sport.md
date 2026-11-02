@@ -20,7 +20,7 @@ A pool is swimming's recinto as a court is tennis's (POOLSE-122). Today a tank i
 4. **Nothing moves address**: every page keeps its URL, so bookmarks, `FromLink`'s `?from=` and the e2e specs' routes hold; only the menu and `sectionOf` change.
 5. An instructor scoped to some sports (POOLSE-145) sees only their sports' tabs, as today.
 
-**Open:** whether *Instalações* should keep a read-only list of every recinto across sports for the owner. Default: no — the site page links to each sport's list.
+**Open:** whether *Instalações* should keep a read-only list of every recinto across sports for the owner. Default taken: no — the site page links to each sport's list, with its count (built 02-11-2026).
 
 ### Dev notes
 
@@ -39,7 +39,7 @@ A pool is swimming's recinto as a court is tennis's (POOLSE-122). Today a tank i
 
 ### Acceptance criteria
 
-- [ ] A recintos entry per sport; tanks under Natação.
-- [ ] A single-sport business club shows its one sport tab.
-- [ ] No URL changes; phone specs updated.
-- [ ] `docs/features/navigation.md`, `docs/features/facilities.md`, `CLAUDE.md` (the menu paragraph).
+- [x] A recintos entry per sport; tanks under Natação.
+- [x] A single-sport business club shows its one sport tab.
+- [x] No URL changes; phone specs updated.
+- [x] `docs/features/navigation.md`, `docs/features/facilities.md`, `CLAUDE.md` (the menu paragraph).

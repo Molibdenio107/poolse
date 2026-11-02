@@ -56,6 +56,8 @@ const LABELS: readonly (readonly [string, string])[] = [
   ['/app/familia', 'app.family.backToAgenda'],
   ['/app/aulas', 'app.teaching.backTo'],
   ['/app/manutencao', 'app.maintenance.backTo'],
+  // POOLSE-150: a sport's recintos — where a tank's page goes back to.
+  ['/dashboard/recintos', 'back.toRecintos'],
   ['/dashboard/facilities/staff/vacations', 'vacations.backToVacations'],
   ['/dashboard/facilities/staff/qualifications', 'back.toQualifications'],
   ['/dashboard/facilities/staff/salaries', 'back.toSalaries'],

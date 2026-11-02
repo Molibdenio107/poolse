@@ -341,9 +341,23 @@ test('the phone menu: no sidebar, a sheet with the same sections, closed by goin
 
   await openMenu(page);
   const sheet = page.getByRole('dialog');
-  await expect(sheet.getByRole('navigation')).toBeVisible();
+  // The sections row (POOLSE-150: a pool-only club has one too) and the menu.
+  await expect(sheet.getByRole('navigation', { name: /navegação principal|main navigation/i })).toBeVisible();
 
   await sheet.getByRole('link', { name: /^Alunos\b/ }).tap();
   await page.waitForURL(/\/dashboard\/students/);
   await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('POOLSE-150: a pool-only club has its one Natação tab, and the tanks live under it', async ({ page }) => {
+  await open(page, '/dashboard');
+  await openMenu(page);
+  const sheet = page.getByRole('dialog');
+  await sheet.locator('[data-section="pool"]').tap();
+  await page.waitForURL(/sport=pool/);
+
+  await openMenu(page);
+  await page.getByRole('dialog').getByRole('link', { name: /^Piscinas\b/ }).tap();
+  await page.waitForURL(/\/dashboard\/recintos\?sport=pool/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Piscinas' })).toBeVisible();
 });

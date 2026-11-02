@@ -28,7 +28,8 @@
     "toProfile": "Back to my profile",
     "toStudent": "Back to the student",
     "toClass": "Back to the class",
-    "toInvoice": "Back to the document"
+    "toInvoice": "Back to the document",
+    "toRecintos": "Back to the playing areas"
   },
   "app": {
     "name": "Poolse",
@@ -6645,7 +6646,22 @@
     "nameTaken": "A playing area or pool with this name already exists at this site.",
     "sportOff": "This sport is not switched on for the club.",
     "addFailed": "The playing area could not be added.",
-    "archiveFailed": "The playing area could not be archived."
+    "archiveFailed": "The playing area could not be archived.",
+    "nav": {
+      "default": "Playing areas",
+      "pool": "Pools",
+      "courts": "Courts",
+      "rooms": "Rooms"
+    },
+    "page": {
+      "noSites": "No sites yet",
+      "noSitesHint": "Create a site in Facilities first; playing areas sit inside it.",
+      "poolSubtitle": "The club's tanks, by site. Each opens its own page: water, lanes, equipment and tasks.",
+      "addPool": "Add pool",
+      "courtSubtitle": "{sport} playing areas, by site.",
+      "notYours": "This site is visible only to the owner, the administrators and maintenance.",
+      "siteLinks": "This site's playing areas are in each sport's section:"
+    }
   },
   "familyAccess": {
     "title": "App access",

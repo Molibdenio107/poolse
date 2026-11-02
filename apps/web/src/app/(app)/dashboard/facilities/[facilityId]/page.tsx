@@ -1,3 +1,5 @@
+import type { PoolseSport } from '@poolse/rules';
+import { SportIcon, sportNameKey } from '@/components/sport-icon';
 import { RegulationPanel, type ComplaintsSettingsView, type RegulationVersionView } from './regulation-panel';
 import { PaymentInstructionsPanel, TaxPanel } from './tax-panel';
 import { LogoPanel } from './logo-panel';
@@ -20,7 +22,6 @@ import {
   type Students,
 } from '@/lib/api';
 import { EntityIcon } from '@/components/entity-icon';
-import { PoolClosureNote } from '@/components/pool-closure-note';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { DetailPage } from '@/components/detail-page';
 import { CityPicker } from './city-picker';
@@ -36,7 +37,6 @@ import { CategoriesPanel } from './categories-panel';
 import { listCategories } from './categories.actions';
 import { PartnersPanel } from './partners-panel';
 import { listPartners } from './partners.actions';
-import { AttentionDot } from '@/components/attention-dot';
 import { readAttention } from '@/lib/attention';
 import { SpacesPanel } from '../spaces-panel';
 import { listSpaces } from '../spaces.actions';
@@ -49,7 +49,6 @@ import { moduleIsOn } from '@/lib/modules';
 import { backLabelKey, readFrom } from '@/lib/back';
 import { storageConfigured } from '@/lib/storage-status';
 import { clubAddonSports } from '@/lib/modules';
-import { RecintosPanel } from './recintos-panel';
 
 /**
  * One site, in detail — backlog round 3, stories 2 and 3.
@@ -212,7 +211,34 @@ export default async function FacilityPage({
           visible: loaded.canManage,
           labelKey: 'detailTabs.general',
           content: () => (
-            <GeneralTab site={loaded} path={path} from={from} section={section} />
+            <>
+              {/*
+                Where the recintos went — POOLSE-150 (Rui, 02-11-2026): each
+                sport's section is their home now (list, add, open), so the
+                site says where, with each sport's count.
+              */}
+              <section className="flex flex-col gap-2 rounded bg-surface p-5 shadow-card">
+                <p className="text-sm text-foreground-muted">{t('recintos.page.siteLinks')}</p>
+                <ul className="flex flex-wrap gap-x-5 gap-y-2">
+                  {(['pool', ...addonSports] as PoolseSport[]).map((sport) => (
+                    <li key={sport}>
+                      <FromLink
+                        href={`/dashboard/recintos?sport=${sport}`}
+                        className="inline-flex items-center gap-2 text-primary underline-offset-4 hover:underline coarse:-my-3 coarse:py-3"
+                      >
+                        <SportIcon sport={sport} className="size-4" />
+                        {t(sportNameKey(sport))}
+                        {' · '}
+                        {sport === 'pool'
+                          ? `${t('recintos.nav.pool')} ${loaded.pools.length}`
+                          : `${t(sport === 'gym' ? 'recintos.nav.rooms' : 'recintos.nav.courts')} ${courts.filter((area) => area.sportId === sport).length}`}
+                      </FromLink>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+              <GeneralTab site={loaded} path={path} from={from} section={section} />
+            </>
           ),
         },
         {
@@ -372,58 +398,6 @@ export default async function FacilityPage({
                 />
               )
             ),
-        },
-        {
-          slug: 'pools',
-          visible: loaded.canManage,
-          labelKey: 'facilities.pools',
-          badge: { kind: 'count', value: loaded.pools.length },
-          content: () => (
-            <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
-              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('facilities.pools')}
-              </h2>
-
-              {loaded.pools.length === 0 ? (
-                <p className="text-sm text-foreground-muted">{t('facilities.noPools')}</p>
-              ) : (
-                <ul className="flex flex-col divide-y divide-border">
-                  {loaded.pools.map((pool) => (
-                    <li key={pool.id} className="py-3 first:pt-0 last:pb-0">
-                      <FromLink
-                        href={`/dashboard/facilities/pools/${pool.id}`}
-                        className="flex items-center gap-3 rounded hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                      >
-                        <EntityIcon kind="pool" />
-                        <span className="font-medium">{pool.name}</span>
-                        <AttentionDot
-                          count={attention.pools[pool.id]}
-                          label={t('attention.dot', { count: attention.pools[pool.id] ?? 0 })}
-                        />
-                        <span className="text-sm text-foreground-muted">
-                          {t(`facilities.kind.${pool.kind}`)}
-                        </span>
-                      </FromLink>
-                      <PoolClosureNote closure={pool.closure} className="mt-1" />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          ),
-        },
-        {
-          /*
-            Recintos — courts and pitches (Rui, 29-10-2026). After Piscinas, and
-            only when the club has a sport besides swimming switched on in /admin
-            (or a court left from one switched off since), so a pool club sees no
-            new tab.
-          */
-          slug: 'recintos',
-          visible: loaded.canManage && (addonSports.length > 0 || courts.length > 0),
-          labelKey: 'recintos.title',
-          badge: { kind: 'count', value: courts.length },
-          content: () => <RecintosPanel facilityId={facilityId} areas={courts} sports={addonSports} />,
         },
         {
           /*

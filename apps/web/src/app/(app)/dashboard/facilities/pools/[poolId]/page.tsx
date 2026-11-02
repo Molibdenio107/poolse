@@ -54,7 +54,8 @@ export default async function PoolPage({
    * A pool is reached from the site list and from the site itself, and those are
    * different places to be returned to — R4. `lib/back.ts`.
    */
-  const back = backTarget(from, '/dashboard/facilities');
+  // POOLSE-150: a tank's home is its sport's list (Natação → Piscinas).
+  const back = backTarget(from, '/dashboard/recintos?sport=pool');
 
   let pool: (PoolDetail & { canManage: boolean; canRecordAnalysis: boolean }) | null = null;
   let failure: LoadFailure | null = null;
