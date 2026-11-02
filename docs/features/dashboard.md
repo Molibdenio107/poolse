@@ -366,4 +366,4 @@ Each bar is how many people are expected in lessons in that hour (07–21h) — 
 enrolments, or a partnership group's headcount, counted by `readOccupancyToday` like the rest of the
 *Hoje* card. A sentence above gives the day's total and its busiest hour, a hint says what a bar is,
 and a bar is a button: opening it lists that hour's lessons (time, turma or group, place, instructor,
-people) from the same statement's `lessons`, with a link to the calendar.
+people) from the same statement's `lessons`, with a link to the calendar. Opening an hour also turns the *Recintos* card beside it to that hour (*Recintos · às 17h*): how many people are in each tank then, in how many lessons, beside its water (`TodayRow`, which holds the one open hour for both cards; each lesson carries its `poolId`).

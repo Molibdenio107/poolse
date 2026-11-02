@@ -3044,7 +3044,11 @@
       "hourEmpty": "No lessons in this hour.",
       "untitled": "Lesson",
       "lessonPeople": "{count, plural, one {# person} other {# people}}",
-      "openCalendar": "Open the calendar"
+      "openCalendar": "Open the calendar",
+      "recintosAt": "Recintos · at {hour}:00",
+      "tankPeopleAt": "{count, plural, one {# person} other {# people}} at {hour}:00, in {lessons, plural, one {# lesson} other {# lessons}}",
+      "tankEmptyAt": "No lessons at {hour}:00",
+      "noTankLessons": "Some of this hour's lessons are in no tank (partnerships with no pool booked)."
     }
   },
   "marketing": {

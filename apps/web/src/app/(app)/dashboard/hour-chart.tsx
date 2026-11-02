@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { FromLink } from '@/components/from-link';
 import { Reveal } from '@/components/ui/reveal';
@@ -30,19 +29,23 @@ export function HourChart({
   nowHour,
   lessons,
   swimmers,
+  open,
+  onOpen,
 }: {
   hours: number[];
   nowHour: number;
   lessons: TodayLesson[];
   /** The day's people in lessons, as the *Hoje* card counts them. */
   swimmers: number;
+  /** The hour opened, shared with the *Recintos* card beside it (`TodayRow`). */
+  open: number | null;
+  onOpen: (hour: number | null) => void;
 }): React.ReactElement {
   const t = useTranslations();
   const range = Array.from({ length: CHART_TO - CHART_FROM + 1 }, (_, i) => CHART_FROM + i);
   const max = Math.max(1, ...range.map((h) => hours[h] ?? 0));
   const peakHour = range.reduce((best, h) => ((hours[h] ?? 0) > (hours[best] ?? 0) ? h : best), range[0]!);
   const peak = hours[peakHour] ?? 0;
-  const [open, setOpen] = useState<number | null>(null);
   const inHour = (h: number): TodayLesson[] =>
     lessons.filter((lesson) => lesson.startMin < (h + 1) * 60 && lesson.endMin > h * 60);
   const shown = open === null ? [] : inHour(open);
@@ -68,7 +71,7 @@ export function HourChart({
                 aria-label={label}
                 aria-pressed={open === h}
                 aria-controls="hour-chart-lessons"
-                onClick={() => setOpen(open === h ? null : h)}
+                onClick={() => onOpen(open === h ? null : h)}
                 className={cn(
                   'flex h-full w-full flex-col items-center justify-end gap-1 rounded-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
                   open === h && 'bg-surface-muted',

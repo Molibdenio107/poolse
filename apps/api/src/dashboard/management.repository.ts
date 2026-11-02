@@ -154,6 +154,8 @@ export interface OccupancyToday {
 
 export interface TodayLesson {
   sessionId: string;
+  /** The tank it is in, where it has one — the *Recintos* card's per-hour count (02-11-2026). */
+  poolId: string | null;
   /** The turma's or the partnership group's name. */
   title: string | null;
   /** The recinto or the tank. */
@@ -297,7 +299,7 @@ export async function readOccupancyToday(
               (SELECT extract(hour FROM now() AT TIME ZONE coalesce(fx.timezone, 'Europe/Lisbon'))::int
                  FROM facility fx WHERE fx.id = ANY($1::uuid[]) ORDER BY fx.created_at LIMIT 1) AS now_hour,
               (SELECT coalesce(json_agg(json_build_object(
-                        'sessionId', id, 'title', title, 'place', place, 'instructor', instructor,
+                        'sessionId', id, 'poolId', pool_id, 'title', title, 'place', place, 'instructor', instructor,
                         'swimmers', swimmers, 'startMin', start_min, 'endMin', end_min)
                         ORDER BY start_min, title), '[]'::json)
                  FROM today)                                                         AS lessons,

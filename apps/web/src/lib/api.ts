@@ -4729,6 +4729,7 @@ export interface OccupancyTodayWidgetData {
 
 export interface TodayLesson {
   sessionId: string;
+  poolId: string | null;
   title: string | null;
   place: string | null;
   instructor: string | null;

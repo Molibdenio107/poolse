@@ -3044,7 +3044,11 @@
       "hourEmpty": "Nenhuma aula nesta hora.",
       "untitled": "Aula",
       "lessonPeople": "{count, plural, one {# pessoa} other {# pessoas}}",
-      "openCalendar": "Abrir o calendário"
+      "openCalendar": "Abrir o calendário",
+      "recintosAt": "Recintos · às {hour}h",
+      "tankPeopleAt": "{count, plural, one {# pessoa} other {# pessoas}} às {hour}h, em {lessons, plural, one {# aula} other {# aulas}}",
+      "tankEmptyAt": "Sem aulas às {hour}h",
+      "noTankLessons": "Algumas aulas desta hora não estão num tanque (parcerias sem piscina marcada)."
     }
   },
   "marketing": {

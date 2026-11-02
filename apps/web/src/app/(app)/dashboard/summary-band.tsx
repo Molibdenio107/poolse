@@ -15,7 +15,7 @@ import type {
 } from '@/lib/api';
 import { formatCents } from '@/lib/money';
 import { formatReading } from '@/lib/pool-metrics';
-import { HourChart } from './hour-chart';
+import { TodayRow } from './today-row';
 import { cn } from '@/lib/utils';
 
 /**
@@ -143,72 +143,20 @@ export async function SummaryBand({ widgets }: { widgets: DashboardWidget[] }): 
       </div>
 
       {(todayWidget !== undefined || recintosWidget !== undefined) && (
-        <div className="grid grid-cols-1 gap-page-gap lg:grid-cols-3">
-          {todayWidget !== undefined && (
-            <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card lg:col-span-2">
-              <h3 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('dashboard.summary.byHour')}
-              </h3>
-              {today === null ? (
-                <p className="text-sm text-foreground-muted">
-                  {todayWidget.state === 'error' ? failed : t('dashboard.summary.noLessons')}
-                </p>
-              ) : (
-                <HourChart hours={today.hours} nowHour={today.nowHour} lessons={today.lessons ?? []} swimmers={today.swimmers} />
-              )}
-            </section>
-          )}
-          {recintosWidget !== undefined && (
-            <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
-              <h3 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('dashboard.summary.recintos')}
-              </h3>
-              {recintos === null ? (
-                <p className="text-sm text-foreground-muted">
-                  {recintosWidget.state === 'error' ? failed : t('dashboard.summary.noTanks')}
-                </p>
-              ) : (
-                <ul className="flex flex-col divide-y divide-border">
-                  {recintos.pools.map((pool) => (
-                    <li key={pool.poolId} className="flex flex-col gap-1 py-2 first:pt-0 last:pb-0">
-                      <span className="flex flex-wrap items-center justify-between gap-2">
-                        <FromLink
-                          href={`/dashboard/facilities/pools/${pool.poolId}?tab=water`}
-                          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                        >
-                          {pool.poolName}
-                        </FromLink>
-                        <Badge tone={TANK_TONE[pool.state]}>{t(`dashboard.summary.tank.${pool.state}`)}</Badge>
-                      </span>
-                      {pool.readings.length > 0 && (
-                        <span className="font-mono text-xs tabular-nums text-foreground-muted">
-                          {pool.readings.map((reading, index) => (
-                            <span key={reading.metric} className={cn(reading.out && 'font-semibold text-warning')}>
-                              {index > 0 && ' · '}
-                              {t(`facilities.metric.${reading.metric}`)} {formatReading(reading.value, locale)}
-                              {reading.unit === '' || reading.unit === 'pH' ? '' : ` ${reading.unit}`}
-                            </span>
-                          ))}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          )}
-        </div>
+        <TodayRow
+          today={today}
+          todayShown={todayWidget !== undefined}
+          todayFailed={todayWidget?.state === 'error'}
+          recintos={recintos}
+          recintosShown={recintosWidget !== undefined}
+          recintosFailed={recintosWidget?.state === 'error'}
+        />
       )}
     </div>
   );
 }
 
-const TANK_TONE: Record<RecintosWidgetData['pools'][number]['state'], BadgeTone> = {
-  ok: 'ok',
-  warn: 'late',
-  due: 'pending',
-  none: 'muted',
-};
+
 
 /** A figure, its name and a line saying what it means — the handoff's KPI tile. */
 function Tile({
