@@ -287,78 +287,17 @@ BEGIN
 END;
 $fn$;
 
-CREATE OR REPLACE FUNCTION merge_memberships(
-  p_organization_id uuid,
-  p_keep_id         uuid,
-  p_absorb_id       uuid
-) RETURNS integer
-LANGUAGE plpgsql
-AS $fn$
-DECLARE
-  v_moved integer := 0;
-  v_count integer;
-  r       RECORD;
+-- `merge_memberships` carries the new columns. **Rewritten in place**, as
+-- 1793872800000 does: that migration changed the function through its live
+-- definition, so a body copied from the last file that spells it out would
+-- silently undo those fixes (it did, in this branch's first draft).
+DO $do$
+DECLARE def text; rewritten text;
 BEGIN
-  IF p_keep_id = p_absorb_id THEN
-    RAISE EXCEPTION 'A person cannot be merged into themselves';
-  END IF;
-
-  -- Both must be live and in this tenant. This is also what makes the function
-  -- idempotent: the second run finds the absorbed record archived and stops.
-  PERFORM 1 FROM membership
-   WHERE id = p_keep_id AND organization_id = p_organization_id AND archived_at IS NULL;
-  IF NOT FOUND THEN RETURN 0; END IF;
-
-  PERFORM 1 FROM membership
-   WHERE id = p_absorb_id AND organization_id = p_organization_id AND archived_at IS NULL;
-  IF NOT FOUND THEN RETURN 0; END IF;
-
-  /*
-   * What is not a duplicate — sweep of 15-10-2026.
-   *
-   * Absorbing the Owner moved the `owner` row onto the survivor and archived the
-   * Owner: an Admin could merge themselves with the Owner and be the Owner, the
-   * invite matrix and `transfer_ownership` walked round. Ownership changes hands
-   * only by transfer. Two records that each have their own login are two
-   * people, and a support membership is Poolse's, never the club's.
-   */
-  IF EXISTS (
-    SELECT 1 FROM membership_role
-     WHERE membership_id = p_absorb_id AND role = 'owner' AND archived_at IS NULL
-  ) THEN
-    RAISE EXCEPTION 'merge_absorbs_owner' USING ERRCODE = 'P0001';
-  END IF;
-
-  IF (SELECT count(*) FROM membership
-       WHERE id IN (p_keep_id, p_absorb_id) AND app_user_id IS NOT NULL) = 2 THEN
-    RAISE EXCEPTION 'merge_two_logins' USING ERRCODE = 'P0001';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1 FROM membership
-     WHERE id IN (p_keep_id, p_absorb_id) AND support_grant_id IS NOT NULL
-  ) THEN
-    RAISE EXCEPTION 'merge_support' USING ERRCODE = 'P0001';
-  END IF;
-
-  /*
-   * Field-level merge, stated once: non-null wins over null, and on a genuine
-   * conflict the more recently updated record wins. The discarded value is not
-   * lost — `merge_candidates` reported it before this ran, and the absorbed row
-   * keeps it.
-   */
-  UPDATE membership k
-     SET first_name = CASE WHEN k.first_name IS NULL THEN a.first_name
-                           WHEN a.updated_at > k.updated_at AND a.first_name IS NOT NULL
-                             THEN a.first_name ELSE k.first_name END,
-         last_name  = CASE WHEN k.last_name IS NULL THEN a.last_name
-                           WHEN a.updated_at > k.updated_at AND a.last_name IS NOT NULL
-                             THEN a.last_name ELSE k.last_name END,
-         phone      = coalesce(k.phone, a.phone),
-         address    = coalesce(k.address, a.address),
-         tax_number = coalesce(k.tax_number, a.tax_number),
-         birth_date = coalesce(k.birth_date, a.birth_date),
-         -- POOLSE-149: the staff record's details, non-null wins.
+  def := replace(pg_get_functiondef('merge_memberships(uuid,uuid,uuid)'::regprocedure), chr(13), '');
+  rewritten := replace(def,
+    '         birth_date = coalesce(k.birth_date, a.birth_date),' || chr(10),
+    '         birth_date = coalesce(k.birth_date, a.birth_date),' || chr(10) || $lines$         -- POOLSE-149: the staff record's details, non-null wins.
          locality           = coalesce(k.locality, a.locality),
          postal_code        = coalesce(k.postal_code, a.postal_code),
          niss               = coalesce(k.niss, a.niss),
@@ -367,115 +306,11 @@ BEGIN
          emergency_name     = coalesce(k.emergency_name, a.emergency_name),
          emergency_phone    = coalesce(k.emergency_phone, a.emergency_phone),
          emergency_relation = coalesce(k.emergency_relation, a.emergency_relation),
-         email      = coalesce(k.email, a.email),
-         -- A login is identity, and the survivor's own wins. Two people with two
-         -- logins is not a duplicate this function should be resolving.
-         app_user_id = coalesce(k.app_user_id, a.app_user_id)
-    FROM membership a
-   WHERE k.id = p_keep_id
-     AND a.id = p_absorb_id
-     -- The identity constraint refuses club-held names on somebody Clerk names.
-     -- Where the survivor gains a login, its own columns must go.
-     AND true;
-
-  -- Clerk owns the name and email where there is a login; clear ours rather than
-  -- leave two answers to the same question.
-  UPDATE membership
-     SET first_name = NULL, last_name = NULL, email = NULL
-   WHERE id = p_keep_id AND app_user_id IS NOT NULL;
-
-  -- Roles the survivor does not already hold.
-  UPDATE membership_role mr
-     SET membership_id = p_keep_id
-   WHERE mr.membership_id = p_absorb_id
-     AND mr.archived_at IS NULL
-     AND NOT EXISTS (
-       SELECT 1 FROM membership_role keep
-        WHERE keep.membership_id = p_keep_id
-          AND keep.role = mr.role
-          AND keep.archived_at IS NULL
-     );
-  GET DIAGNOSTICS v_count = ROW_COUNT;
-  v_moved := v_moved + v_count;
-
-  -- Whatever is left is a role both held. Archive rather than delete.
-  UPDATE membership_role SET archived_at = now()
-   WHERE membership_id = p_absorb_id AND archived_at IS NULL;
-
-  -- Guardianships the survivor does not already have over the same student.
-  UPDATE guardian_link gl
-     SET guardian_membership_id = p_keep_id
-   WHERE gl.guardian_membership_id = p_absorb_id
-     AND gl.archived_at IS NULL
-     AND NOT EXISTS (
-       SELECT 1 FROM guardian_link keep
-        WHERE keep.guardian_membership_id = p_keep_id
-          AND keep.student_id = gl.student_id
-          AND keep.archived_at IS NULL
-     );
-  GET DIAGNOSTICS v_count = ROW_COUNT;
-  v_moved := v_moved + v_count;
-
-  UPDATE guardian_link SET archived_at = now()
-   WHERE guardian_membership_id = p_absorb_id AND archived_at IS NULL;
-
-  /*
-   * Everything else, discovered rather than listed.
-   *
-   * Excludes the two handled above, and `membership` itself — the merged_into
-   * pointer is set deliberately below and must not be swept up by a loop that
-   * repoints every reference.
-   */
-  FOR r IN
-    SELECT DISTINCT cl.relname AS table_name, att.attname AS column_name
-      FROM pg_constraint c
-      JOIN pg_class cl ON cl.oid = c.conrelid
-      JOIN pg_class ref ON ref.oid = c.confrelid
-      JOIN unnest(c.conkey) AS k(attnum) ON true
-      JOIN pg_attribute att ON att.attrelid = c.conrelid AND att.attnum = k.attnum
-     WHERE c.contype = 'f'
-       AND ref.relname = 'membership'
-       AND att.attname LIKE '%membership_id'
-       AND cl.relname NOT IN ('membership', 'membership_role', 'guardian_link')
-       /*
-        * Only what the caller may change. The insert-only history tables
-        * (audit_log, invoice, incident, …) hold no UPDATE for poolse_app, and one
-        * UPDATE statement against them failed the whole merge with 42501 — it had
-        * never run as the app login. Their rows stay with the absorbed record,
-        * which points at the survivor through `merged_into`: history is not
-        * rewritten, which is also what an insert-only table is for.
-        */
-       AND has_column_privilege(current_user, c.conrelid, att.attname, 'UPDATE')
-  LOOP
-    EXECUTE format(
-      'UPDATE %I SET %I = $1 WHERE %I = $2 AND organization_id = $3',
-      r.table_name, r.column_name, r.column_name
-    ) USING p_keep_id, p_absorb_id, p_organization_id;
-
-    GET DIAGNOSTICS v_count = ROW_COUNT;
-    v_moved := v_moved + v_count;
-  END LOOP;
-
-  -- And the student side of the relation, which points at a person by a column
-  -- that does not end in `membership_id` on every table.
-  UPDATE student SET membership_id = p_keep_id
-   WHERE membership_id = p_absorb_id AND organization_id = p_organization_id;
-  GET DIAGNOSTICS v_count = ROW_COUNT;
-  v_moved := v_moved + v_count;
-
-  UPDATE membership
-     SET archived_at = now(), merged_into = p_keep_id
-   WHERE id = p_absorb_id;
-
-  INSERT INTO audit_log (organization_id, action, entity_type, entity_id, data)
-  VALUES (
-    p_organization_id, 'person.merged', 'membership', p_keep_id,
-    jsonb_build_object('absorbed', p_absorb_id, 'rowsRepointed', v_moved)
-  );
-
-  RETURN v_moved;
-END;
-$fn$;
+$lines$);
+  IF rewritten = def THEN RAISE EXCEPTION 'merge_memberships: the birth_date line was not found'; END IF;
+  EXECUTE rewritten;
+END
+$do$;
 
 -- Down Migration
 
@@ -707,186 +542,24 @@ BEGIN
 END;
 $fn$;
 
-CREATE OR REPLACE FUNCTION merge_memberships(
-  p_organization_id uuid,
-  p_keep_id         uuid,
-  p_absorb_id       uuid
-) RETURNS integer
-LANGUAGE plpgsql
-AS $fn$
-DECLARE
-  v_moved integer := 0;
-  v_count integer;
-  r       RECORD;
+DO $do$
+DECLARE def text; rewritten text;
 BEGIN
-  IF p_keep_id = p_absorb_id THEN
-    RAISE EXCEPTION 'A person cannot be merged into themselves';
-  END IF;
-
-  -- Both must be live and in this tenant. This is also what makes the function
-  -- idempotent: the second run finds the absorbed record archived and stops.
-  PERFORM 1 FROM membership
-   WHERE id = p_keep_id AND organization_id = p_organization_id AND archived_at IS NULL;
-  IF NOT FOUND THEN RETURN 0; END IF;
-
-  PERFORM 1 FROM membership
-   WHERE id = p_absorb_id AND organization_id = p_organization_id AND archived_at IS NULL;
-  IF NOT FOUND THEN RETURN 0; END IF;
-
-  /*
-   * What is not a duplicate — sweep of 15-10-2026.
-   *
-   * Absorbing the Owner moved the `owner` row onto the survivor and archived the
-   * Owner: an Admin could merge themselves with the Owner and be the Owner, the
-   * invite matrix and `transfer_ownership` walked round. Ownership changes hands
-   * only by transfer. Two records that each have their own login are two
-   * people, and a support membership is Poolse's, never the club's.
-   */
-  IF EXISTS (
-    SELECT 1 FROM membership_role
-     WHERE membership_id = p_absorb_id AND role = 'owner' AND archived_at IS NULL
-  ) THEN
-    RAISE EXCEPTION 'merge_absorbs_owner' USING ERRCODE = 'P0001';
-  END IF;
-
-  IF (SELECT count(*) FROM membership
-       WHERE id IN (p_keep_id, p_absorb_id) AND app_user_id IS NOT NULL) = 2 THEN
-    RAISE EXCEPTION 'merge_two_logins' USING ERRCODE = 'P0001';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1 FROM membership
-     WHERE id IN (p_keep_id, p_absorb_id) AND support_grant_id IS NOT NULL
-  ) THEN
-    RAISE EXCEPTION 'merge_support' USING ERRCODE = 'P0001';
-  END IF;
-
-  /*
-   * Field-level merge, stated once: non-null wins over null, and on a genuine
-   * conflict the more recently updated record wins. The discarded value is not
-   * lost — `merge_candidates` reported it before this ran, and the absorbed row
-   * keeps it.
-   */
-  UPDATE membership k
-     SET first_name = CASE WHEN k.first_name IS NULL THEN a.first_name
-                           WHEN a.updated_at > k.updated_at AND a.first_name IS NOT NULL
-                             THEN a.first_name ELSE k.first_name END,
-         last_name  = CASE WHEN k.last_name IS NULL THEN a.last_name
-                           WHEN a.updated_at > k.updated_at AND a.last_name IS NOT NULL
-                             THEN a.last_name ELSE k.last_name END,
-         phone      = coalesce(k.phone, a.phone),
-         address    = coalesce(k.address, a.address),
-         tax_number = coalesce(k.tax_number, a.tax_number),
-         birth_date = coalesce(k.birth_date, a.birth_date),
-         email      = coalesce(k.email, a.email),
-         -- A login is identity, and the survivor's own wins. Two people with two
-         -- logins is not a duplicate this function should be resolving.
-         app_user_id = coalesce(k.app_user_id, a.app_user_id)
-    FROM membership a
-   WHERE k.id = p_keep_id
-     AND a.id = p_absorb_id
-     -- The identity constraint refuses club-held names on somebody Clerk names.
-     -- Where the survivor gains a login, its own columns must go.
-     AND true;
-
-  -- Clerk owns the name and email where there is a login; clear ours rather than
-  -- leave two answers to the same question.
-  UPDATE membership
-     SET first_name = NULL, last_name = NULL, email = NULL
-   WHERE id = p_keep_id AND app_user_id IS NOT NULL;
-
-  -- Roles the survivor does not already hold.
-  UPDATE membership_role mr
-     SET membership_id = p_keep_id
-   WHERE mr.membership_id = p_absorb_id
-     AND mr.archived_at IS NULL
-     AND NOT EXISTS (
-       SELECT 1 FROM membership_role keep
-        WHERE keep.membership_id = p_keep_id
-          AND keep.role = mr.role
-          AND keep.archived_at IS NULL
-     );
-  GET DIAGNOSTICS v_count = ROW_COUNT;
-  v_moved := v_moved + v_count;
-
-  -- Whatever is left is a role both held. Archive rather than delete.
-  UPDATE membership_role SET archived_at = now()
-   WHERE membership_id = p_absorb_id AND archived_at IS NULL;
-
-  -- Guardianships the survivor does not already have over the same student.
-  UPDATE guardian_link gl
-     SET guardian_membership_id = p_keep_id
-   WHERE gl.guardian_membership_id = p_absorb_id
-     AND gl.archived_at IS NULL
-     AND NOT EXISTS (
-       SELECT 1 FROM guardian_link keep
-        WHERE keep.guardian_membership_id = p_keep_id
-          AND keep.student_id = gl.student_id
-          AND keep.archived_at IS NULL
-     );
-  GET DIAGNOSTICS v_count = ROW_COUNT;
-  v_moved := v_moved + v_count;
-
-  UPDATE guardian_link SET archived_at = now()
-   WHERE guardian_membership_id = p_absorb_id AND archived_at IS NULL;
-
-  /*
-   * Everything else, discovered rather than listed.
-   *
-   * Excludes the two handled above, and `membership` itself — the merged_into
-   * pointer is set deliberately below and must not be swept up by a loop that
-   * repoints every reference.
-   */
-  FOR r IN
-    SELECT DISTINCT cl.relname AS table_name, att.attname AS column_name
-      FROM pg_constraint c
-      JOIN pg_class cl ON cl.oid = c.conrelid
-      JOIN pg_class ref ON ref.oid = c.confrelid
-      JOIN unnest(c.conkey) AS k(attnum) ON true
-      JOIN pg_attribute att ON att.attrelid = c.conrelid AND att.attnum = k.attnum
-     WHERE c.contype = 'f'
-       AND ref.relname = 'membership'
-       AND att.attname LIKE '%membership_id'
-       AND cl.relname NOT IN ('membership', 'membership_role', 'guardian_link')
-       /*
-        * Only what the caller may change. The insert-only history tables
-        * (audit_log, invoice, incident, …) hold no UPDATE for poolse_app, and one
-        * UPDATE statement against them failed the whole merge with 42501 — it had
-        * never run as the app login. Their rows stay with the absorbed record,
-        * which points at the survivor through `merged_into`: history is not
-        * rewritten, which is also what an insert-only table is for.
-        */
-       AND has_column_privilege(current_user, c.conrelid, att.attname, 'UPDATE')
-  LOOP
-    EXECUTE format(
-      'UPDATE %I SET %I = $1 WHERE %I = $2 AND organization_id = $3',
-      r.table_name, r.column_name, r.column_name
-    ) USING p_keep_id, p_absorb_id, p_organization_id;
-
-    GET DIAGNOSTICS v_count = ROW_COUNT;
-    v_moved := v_moved + v_count;
-  END LOOP;
-
-  -- And the student side of the relation, which points at a person by a column
-  -- that does not end in `membership_id` on every table.
-  UPDATE student SET membership_id = p_keep_id
-   WHERE membership_id = p_absorb_id AND organization_id = p_organization_id;
-  GET DIAGNOSTICS v_count = ROW_COUNT;
-  v_moved := v_moved + v_count;
-
-  UPDATE membership
-     SET archived_at = now(), merged_into = p_keep_id
-   WHERE id = p_absorb_id;
-
-  INSERT INTO audit_log (organization_id, action, entity_type, entity_id, data)
-  VALUES (
-    p_organization_id, 'person.merged', 'membership', p_keep_id,
-    jsonb_build_object('absorbed', p_absorb_id, 'rowsRepointed', v_moved)
-  );
-
-  RETURN v_moved;
-END;
-$fn$;
+  def := replace(pg_get_functiondef('merge_memberships(uuid,uuid,uuid)'::regprocedure), chr(13), '');
+  rewritten := replace(def, $lines$         -- POOLSE-149: the staff record's details, non-null wins.
+         locality           = coalesce(k.locality, a.locality),
+         postal_code        = coalesce(k.postal_code, a.postal_code),
+         niss               = coalesce(k.niss, a.niss),
+         nationality        = coalesce(k.nationality, a.nationality),
+         birthplace         = coalesce(k.birthplace, a.birthplace),
+         emergency_name     = coalesce(k.emergency_name, a.emergency_name),
+         emergency_phone    = coalesce(k.emergency_phone, a.emergency_phone),
+         emergency_relation = coalesce(k.emergency_relation, a.emergency_relation),
+$lines$, '');
+  IF rewritten = def THEN RAISE EXCEPTION 'merge_memberships: the POOLSE-149 lines were not found'; END IF;
+  EXECUTE rewritten;
+END
+$do$;
 
 ALTER TABLE membership
   DROP CONSTRAINT IF EXISTS membership_details_not_blank,
