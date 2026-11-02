@@ -2,6 +2,8 @@
 
 > Part of the Poolse backlog. Conventions in [CONVENTIONS.md](./CONVENTIONS.md) apply to this ticket and are not repeated here.
 
+> **Parked until after go-live (Rui, 02-11-2026).**
+
 **Type:** Improvement · **Area:** Students · **Priority:** Low
 **Depends on:** POOLSE-06 and POOLSE-16 (shared age boundary logic), POOLSE-17 (date of birth on the Person)
 

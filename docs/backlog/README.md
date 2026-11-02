@@ -59,7 +59,7 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-30](./POOLSE-30-search-filters-as-you-type.md) | Search filters as you type | Global | Medium | POOLSE-29 (search resets pagination to page 1) | 2 |
 | [POOLSE-31](./POOLSE-31-encerramentos-page.md) | Encerramentos page | Settings / Calendar | High | POOLSE-13 (attendance states, for what a cancelled o… | 2 |
 | [POOLSE-32](./POOLSE-32-names-read-first-name-surname.md) | Names read first name + surname | Global | Medium | POOLSE-17 (one Person record holding the name parts)… | 2 |
-| [POOLSE-33](./POOLSE-33-age-bracket-icon-on-the-avatar.md) | Age-bracket icon on the avatar | Students | Low | POOLSE-06 and POOLSE-16 (shared age boundary logic),… | 2 |
+| [POOLSE-33](./POOLSE-33-age-bracket-icon-on-the-avatar.md) | Age-bracket icon on the avatar | Students | Low — **parked until after go-live (02-11-2026)** | POOLSE-06 and POOLSE-16 (shared age boundary logic),… | 2 |
 | [POOLSE-34](./POOLSE-34-move-ferias-under-the-people-menu.md) | Move Férias under the People menu | Navigation | Low | POOLSE-35 (Pessoas becomes the staff section, which … | 2 |
 | [POOLSE-35](./POOLSE-35-pessoas-is-staff-only-alunos-holds-the-rest.md) | Pessoas is staff only; Alunos holds the rest | Navigation / People | High | POOLSE-17 (one Person, many roles), POOLSE-18 (role … | 2 |
 | [POOLSE-36](./POOLSE-36-menu-order-pessoas-below-instalacoes.md) | Menu order — Pessoas below Instalações *(superseded)* | Navigation | Low | — | 1 |
@@ -82,7 +82,7 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-53](./POOLSE-53-sem-professor-alerts.md) | "Sem professor" alerts | Scheduling / Staff | High | POOLSE-46, 49 | 1 |
 | [POOLSE-54](./POOLSE-54-exporting-the-grid.md) | Exporting the grid — PDF and Excel | Scheduling / Export | Medium | POOLSE-49, 52 | — |
 | [POOLSE-55](./POOLSE-55-reference-schedule-seed.md) | The reference schedule as seed, and the verification pass | Scheduling / Seed data | High | all of 43–54 | — |
-| [POOLSE-56](./POOLSE-56-a-full-slot-takes-no-more.md) | A full slot takes no more classes | Scheduling / Data integrity | High | POOLSE-51 | 1 |
+| [POOLSE-56](./POOLSE-56-a-full-slot-takes-no-more.md) | A full slot takes no more classes | Scheduling / Data integrity | **Closed, not built (02-11-2026)** | POOLSE-51 | 0 |
 | [POOLSE-57](./POOLSE-57-importing-the-wall-timetable.md) | Importing the wall timetable | Scheduling / Import | High | POOLSE-48, 51 | — |
 | [POOLSE-58](./POOLSE-58-staff-salaries.md) | Staff salaries | Staff / Payroll | High — the next slice | — | — |
 | [POOLSE-59](./POOLSE-59-importing-and-exporting-salaries.md) | Importing and exporting salaries | Staff / Payroll / Import | Medium | POOLSE-58 | — |

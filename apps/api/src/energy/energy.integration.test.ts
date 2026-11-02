@@ -166,8 +166,12 @@ test('5.1 — a dial does not run backwards, and the refusal quotes the neighbou
       // The same instant twice is a conversation, not an overwrite.
       await expectStatus(() => controller.record(id, { takenAt: firstOf(1), value: 41300 }), 409);
 
-      // Archive it, and the corrected figure lands on the same key.
-      await controller.unrecord(id, { takenAt: firstOf(1) });
+      // Maintenance archives nothing (Rui, 02-11-2026): withdrawing it is the office's.
+      await expectStatus(() => controller.unrecord(id, { takenAt: firstOf(1) }), 403);
+      await actingAs(tenant, { roles: ['admin'] }, () =>
+        new EnergyController().unrecord(id, { takenAt: firstOf(1) }),
+      );
+      // Then the corrected figure lands on the same key.
       await controller.record(id, { takenAt: firstOf(1), value: 41300 });
       const { readings } = await controller.one(id);
       assert.deepEqual(readings.map((r) => r.value), [41300]);

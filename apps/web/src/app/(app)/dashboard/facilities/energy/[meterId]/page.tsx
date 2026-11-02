@@ -287,7 +287,8 @@ export default async function MeterPage({
                           </span>
                         </span>
 
-                        {canRecord && <RemoveReading meter={meter} takenAt={reading.takenAt} />}
+                        {/* Archiving is the office's (POOLSE-03), never maintenance's. */}
+                        {canRecord && canPlan && <RemoveReading meter={meter} takenAt={reading.takenAt} />}
                       </li>
                     ))}
                   </ul>

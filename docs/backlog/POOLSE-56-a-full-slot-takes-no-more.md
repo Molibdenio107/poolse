@@ -2,6 +2,8 @@
 
 > Part of the Poolse backlog. Conventions in [CONVENTIONS.md](./CONVENTIONS.md) apply to this ticket and are not repeated here.
 
+> **Closed — not to be built (Rui, 02-11-2026).** The calendar's *Sem pista* column makes a stacked hour visible, and the lane rule (no two classes on one pista) stays as it is.
+
 **Type:** Bug / rule · **Area:** Scheduling / Data integrity · **Priority:** High — the rule is stated and half-enforced
 
 ### PO — why this exists

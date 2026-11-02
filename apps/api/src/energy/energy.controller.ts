@@ -372,13 +372,17 @@ export class EnergyController {
     return { archived: true };
   }
 
-  /** A reading that never happened. Same audience as recording one. */
+  /**
+   * A reading that never happened. Owner and admin, as every archive (Rui,
+   * 02-11-2026, POOLSE-03): maintenance records readings and asks the office
+   * to withdraw a wrong one — it archives nothing.
+   */
   @Post('meters/:meterId/readings/archive')
   async unrecord(
     @Param('meterId') meterId: string,
     @Body() body: Record<string, unknown>,
   ): Promise<{ archived: true }> {
-    requireRole(...ENERGY);
+    requireCanArchive();
     const { organizationId } = currentTenant();
 
     const takenAt = moment(body['takenAt'], 'takenAt');

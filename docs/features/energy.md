@@ -47,7 +47,8 @@ neighbouring figure in its DETAIL (`energy_index_backwards|<previous>|<value>`,
 was 41 235". An interval meter is not judged.
 
 A reading is **removed by archiving** (`archived_at`), never edited: it is a claim about a
-moment. An archived reading leaves the series, so the corrected figure typed against the
+moment. **Owner and admin archive one** (Rui, 02-11-2026, POOLSE-03): maintenance records
+readings and asks the office to withdraw a wrong one. An archived reading leaves the series, so the corrected figure typed against the
 same instant revives the row and is judged against its new neighbours. A live reading at
 the same instant is a 409 (`reading_duplicate`), not an overwrite.
 
