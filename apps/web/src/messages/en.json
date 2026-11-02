@@ -4025,7 +4025,11 @@
       "noLanes": "No lane was given.",
       "laneNotFound": "There is no “{value}” at this site.",
       "unknownSubject": "This booking could not be understood."
-    }
+    },
+    "pool": "Pool",
+    "poolHint": "A timetable is one pool's: the file's lanes are this pool's lanes.",
+    "choosePool": "Choose the pool",
+    "poolRequired": "Choose this timetable's pool first."
   },
   "spaces": {
     "title": "Spaces",

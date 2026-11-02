@@ -4025,7 +4025,11 @@
       "noLanes": "Não foi indicada nenhuma pista.",
       "laneNotFound": "Não existe «{value}» neste local.",
       "unknownSubject": "Não foi possível perceber o que é esta marcação."
-    }
+    },
+    "pool": "Piscina",
+    "poolHint": "O horário é de uma piscina: as pistas do ficheiro são as desta piscina.",
+    "choosePool": "Escolha a piscina",
+    "poolRequired": "Escolha primeiro a piscina deste horário."
   },
   "spaces": {
     "title": "Espaços",

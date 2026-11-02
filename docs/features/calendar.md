@@ -514,3 +514,13 @@ says its state in words; colour only repeats it.
 
 Under the filters, a legend names the two states a colour alone would not explain:
 *Sem professor* and *Recinto livre*. The phone's agenda (`CalendarAgenda`) is unchanged.
+
+## Importing a timetable asks for its pool (02-11-2026, Rui)
+
+A wall timetable is one pool's. *Importar horário* asks **Piscina** first — in the panel and in the
+dialog a dropped file opens — preselected when the club has one pool, and the preview and the import
+stay off until one is chosen. The API (`poolId` on `POST /bookings/timetable-import/:facilityId`)
+matches the file's lane names against that pool's lanes only, so "Pista 2" is that pool's lane 2,
+never another tank's at the same site; everything already booked at the site still counts for
+clashes. A pool that is not the site's is a 404. The site is the chosen pool's, no longer the club's
+first.

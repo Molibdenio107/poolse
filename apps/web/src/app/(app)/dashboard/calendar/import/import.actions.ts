@@ -211,6 +211,8 @@ export async function runTimetableImportAction(
 
   try {
     const result = await apiPost<TimetableResult>(`/bookings/timetable-import/${facilityId}`, {
+      // The pool the file is for (02-11-2026): lane names match that pool only.
+      poolId: String(formData.get('poolId') ?? '') || null,
       rows,
       commit: settings.commit === true,
       drop: Array.isArray(settings.drop) ? settings.drop : [],

@@ -9,6 +9,7 @@ import {
   type CalendarClosure,
   type Classes,
   type Closures,
+  type Facilities,
   type FacilityGrid,
 } from '@/lib/api';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
@@ -26,7 +27,7 @@ import { CalendarAgenda } from './calendar-agenda';
 import { bookingKey, slotKey } from '@/lib/slot-key';
 import { GenerateSeason } from './calendar-forms';
 import { PageError, PageShell } from '@/components/page-shell';
-import { TimetableImport } from './import/import-panel';
+import { TimetableImport, type ImportPool } from './import/import-panel';
 import { moduleIsOn } from '@/lib/modules';
 import { formatDate, formatDateRange, formatDayMonth, formatDayMonthShort } from '@/lib/date-format';
 import { backProp, originBack } from '@/lib/back';
@@ -405,6 +406,23 @@ export default async function CalendarPage({
     };
   });
 
+  /*
+   * The pools a timetable file may be for, with their sites (Rui, 02-11-2026):
+   * the import asks which, so "Pista 2" is that pool's lane. Best-effort: no
+   * answer, no import button, and the week still draws.
+   */
+  const importPools: ImportPool[] =
+    calendar?.canManage === true
+      ? await apiFetch<Facilities>('/facilities').then(
+          (answer) =>
+            answer.facilities.flatMap((site) =>
+              // `/facilities` lists live pools only.
+              site.pools.map((pool) => ({ id: pool.id, name: pool.name, facilityId: site.id, facilityName: site.name })),
+            ),
+          () => [],
+        )
+      : [];
+
   return (
     <PageShell
       back={backProp(back, t)}
@@ -422,12 +440,8 @@ export default async function CalendarPage({
         still works from up here.
       */
       actions={
-        classes?.facilities[0] === undefined ? undefined : (
-          <TimetableImport
-            facilityId={classes.facilities[0].id}
-            canManage={calendar?.canManage ?? false}
-            compact
-          />
+        importPools.length === 0 ? undefined : (
+          <TimetableImport pools={importPools} canManage={calendar?.canManage ?? false} compact />
         )
       }
     >
