@@ -6396,6 +6396,32 @@
       "numberRequired": "Enter the document number.",
       "ccInvalid": "This Cartão de Cidadão number is not valid. Check the 12 characters, for example 12345678 9 ZZ1.",
       "numberInvalid": "Use only letters, digits and hyphens (3 to 30 characters)."
+    },
+    "photo": {
+      "title": "Document photograph",
+      "intro": "Front and back of the identity document, stored encrypted. Every look by somebody else is recorded. They are deleted {months, plural, one {# month} other {# months}} after the person leaves the club.",
+      "hint": "An image or a PDF, up to 10 MB. You can also drop the file anywhere on the screen.",
+      "side": {
+        "front": "Front",
+        "back": "Back"
+      },
+      "drop": {
+        "front": "Drop to file the front",
+        "back": "Drop to file the back"
+      },
+      "none": "No photograph on file.",
+      "filedOn": "Filed on {date}",
+      "upload": "Upload",
+      "replace": "Replace",
+      "sending": "Sending…",
+      "remove": "Remove",
+      "removeTitle": "Remove the photograph?",
+      "removeBody": "The photograph is destroyed and cannot be recovered. The document number stays as it is.",
+      "removeConfirm": "Remove",
+      "filed": "Photograph filed.",
+      "read": "Photograph filed and read. Check the type and number below.",
+      "removed": "Photograph removed.",
+      "proposed": "Read from the photograph. Check the type and number and press Save."
     }
   },
   "staffDetails": {

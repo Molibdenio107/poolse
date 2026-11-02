@@ -6396,6 +6396,32 @@
       "numberRequired": "Indique o número do documento.",
       "ccInvalid": "Este número de Cartão de Cidadão não é válido. Confira os 12 caracteres, por exemplo 12345678 9 ZZ1.",
       "numberInvalid": "Use só letras, números e hífenes (3 a 30 caracteres)."
+    },
+    "photo": {
+      "title": "Fotografia do documento",
+      "intro": "Frente e verso do documento de identificação, guardados cifrados. Cada consulta por outra pessoa fica registada. São apagados {months, plural, one {# mês} other {# meses}} depois de a pessoa sair do clube.",
+      "hint": "Uma imagem ou um PDF, até 10 MB. Também pode largar o ficheiro em qualquer ponto do ecrã.",
+      "side": {
+        "front": "Frente",
+        "back": "Verso"
+      },
+      "drop": {
+        "front": "Largue para guardar a frente",
+        "back": "Largue para guardar o verso"
+      },
+      "none": "Nenhuma fotografia guardada.",
+      "filedOn": "Guardada a {date}",
+      "upload": "Carregar",
+      "replace": "Substituir",
+      "sending": "A enviar…",
+      "remove": "Remover",
+      "removeTitle": "Remover a fotografia?",
+      "removeBody": "A fotografia é destruída e não pode ser recuperada. O número do documento fica como está.",
+      "removeConfirm": "Remover",
+      "filed": "Fotografia guardada.",
+      "read": "Fotografia guardada e lida. Confirme o tipo e o número abaixo.",
+      "removed": "Fotografia removida.",
+      "proposed": "Lido da fotografia. Confirme o tipo e o número e carregue em Guardar."
     }
   },
   "staffDetails": {

@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   ConflictException,
+  Delete,
   ForbiddenException,
   Get,
   NotFoundException,
@@ -10,7 +11,10 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+
+  Query,
 } from '@nestjs/common';
+import { judgeUpload } from '../files/upload-check.js';
 import {
   isIdDocumentType,
   isValidCcNumber,
@@ -29,9 +33,13 @@ import {
   type StaffDetails,
 } from './details.repository.js';
 import {
+  attachIdPhoto,
   BirthDateIsTheirsError,
+  ID_PHOTO_SIDES,
   readIdentity,
+  removeIdPhoto,
   writeIdentity,
+  type IdPhotoSide,
   type IdentityEdit,
   type StaffIdentity,
 } from './identity.repository.js';
@@ -110,6 +118,46 @@ export class StaffController {
       throw error;
     }
     return (await readIdentity(organizationId, membershipId, actor))!;
+  }
+
+  /**
+   * The ID document's photograph, one side at a time — POOLSE-149 slice B.
+   * The same three people as the number. One step, never `POST /files` then an
+   * attach: the file is sealed, registered and attached in one transaction, and
+   * the side's previous photograph is shredded as it is replaced.
+   */
+  @Post(':membershipId/identity/photo/:side')
+  async fileIdPhoto(
+    @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
+    @Param('side') side: string,
+    @Query('name') name: string | undefined,
+    @Body() body: unknown,
+  ): Promise<{ fileId: string }> {
+    requireOwnOrManaged(membershipId);
+    const { bytes, contentType, originalName } = judgeUpload('staff_id_document', body, name);
+    const filed = await attachIdPhoto(
+      currentTenant().organizationId,
+      membershipId,
+      photoSide(side),
+      bytes,
+      contentType,
+      originalName,
+    );
+    if (filed === null) throw new NotFoundException('No such staff member');
+    return filed;
+  }
+
+  /** Takes a side's photograph off; the database shreds it. */
+  @Delete(':membershipId/identity/photo/:side')
+  async removeIdPhoto(
+    @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
+    @Param('side') side: string,
+  ): Promise<{ removed: true }> {
+    requireOwnOrManaged(membershipId);
+    if (!(await removeIdPhoto(currentTenant().organizationId, membershipId, photoSide(side)))) {
+      throw new NotFoundException('No photograph on that side');
+    }
+    return { removed: true };
   }
 
   /**
@@ -374,6 +422,13 @@ function requireOwnOrManaged(membershipId: string): string {
 }
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function photoSide(raw: string): IdPhotoSide {
+  if (!(ID_PHOTO_SIDES as readonly string[]).includes(raw)) {
+    throw new BadRequestException({ code: 'invalid_side', message: 'side is front or back' });
+  }
+  return raw as IdPhotoSide;
+}
 
 const DETAIL_LIMITS: Partial<Record<keyof StaffDetails, number>> = {
   address: 200,

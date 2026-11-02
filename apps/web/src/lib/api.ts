@@ -436,8 +436,19 @@ export interface StaffIdentity {
   birthDate: string | null;
   /** `login`: theirs, set in O meu perfil. `record`: the club's, edited on the staff record. */
   birthDateSource: 'login' | 'record';
-  idDocument: { type: 'cc' | 'passport' | 'residence_permit' | 'other'; number: string } | null;
+  idDocument: { type: StaffIdDocumentType; number: string } | null;
   retentionMonths: number;
+  /** The document's photographs (POOLSE-149): sealed files, read at `/files/<fileId>`. */
+  photos: { front: StaffIdPhoto | null; back: StaffIdPhoto | null };
+}
+
+export type StaffIdDocumentType = 'cc' | 'passport' | 'residence_permit' | 'other';
+
+export interface StaffIdPhoto {
+  fileId: string;
+  contentType: string;
+  originalName: string;
+  createdAt: string;
 }
 
 /** A staff member's personal details — POOLSE-149 (`GET /staff/:id/details`). */

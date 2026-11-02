@@ -792,11 +792,23 @@ test('staff details refuse families and a colleague — POOLSE-149', async () =>
     await refused('PATCH staff/:id/details as a family', 403, () =>
       new StaffController().editDetails(fixture.instructorId, { locality: 'Lisboa' }),
     );
+    await refused('POST staff/:id/identity/photo/front as a family', 403, () =>
+      new StaffController().fileIdPhoto(fixture.instructorId, 'front', 'x.jpg', Buffer.from([0xff, 0xd8, 0xff])),
+    );
+    await refused('DELETE staff/:id/identity/photo/front as a family', 403, () =>
+      new StaffController().removeIdPhoto(fixture.instructorId, 'front'),
+    );
   });
   await as(fixture.maintenanceId, ['maintenance'], async () => {
     await refused('GET staff/:id/details as a colleague', 403, () => new StaffController().details(fixture.instructorId));
     await refused('PATCH staff/:id/details as a colleague', 403, () =>
       new StaffController().editDetails(fixture.instructorId, { locality: 'Lisboa' }),
+    );
+    await refused('POST staff/:id/identity/photo/front as a colleague', 403, () =>
+      new StaffController().fileIdPhoto(fixture.instructorId, 'front', 'x.jpg', Buffer.from([0xff, 0xd8, 0xff])),
+    );
+    await refused('DELETE staff/:id/identity/photo/front as a colleague', 403, () =>
+      new StaffController().removeIdPhoto(fixture.instructorId, 'front'),
     );
   });
 });

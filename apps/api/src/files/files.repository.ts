@@ -29,7 +29,8 @@ export type FilePurpose =
   | 'medical_certificate'
   | 'meet_results'
   | 'student_document'
-  | 'boletim_template';
+  | 'boletim_template'
+  | 'staff_id_document';
 
 /**
  * Health data, sealed at rest — POOLSE-109. The bucket holds ciphertext, the
@@ -39,7 +40,13 @@ export type FilePurpose =
  * Incident attachments switch on by joining (and the `stored_file_sealed`
  * CHECK names them already).
  */
-export const SEALED_PURPOSES: ReadonlySet<FilePurpose> = new Set<FilePurpose>(['medical_certificate', 'incident_attachment']);
+export const SEALED_PURPOSES: ReadonlySet<FilePurpose> = new Set<FilePurpose>([
+  'medical_certificate',
+  'incident_attachment',
+  // POOLSE-149: a staff member's ID document photograph. Not health data, but
+  // a copy of an identity card is the document fraud starts from.
+  'staff_id_document',
+]);
 
 const OFFICE: readonly MemberRole[] = ['owner', 'admin'];
 const STAFF: readonly MemberRole[] = ['owner', 'admin', 'instructor', 'maintenance'];
@@ -83,6 +90,10 @@ export const RULES: Record<FilePurpose, { write: readonly MemberRole[] | null; r
   // POOLSE-142: the club's own boletim, an image of its paper form. The office
   // configures it and prints it; a family never reads the blank.
   boletim_template: { write: OFFICE, read: OFFICE },
+  // POOLSE-149: the photograph of a staff member's ID document. Never through
+  // POST /files — the staff record's own route stores and attaches it — and
+  // read by the office and, a question about a row, the person (see openFile).
+  staff_id_document: { write: null, read: OFFICE },
 };
 
 export interface StoredFile {
@@ -185,6 +196,7 @@ export async function openFile(
       photo_attached: boolean;
       photo_consented: boolean;
       own_child_photo: boolean;
+      id_document_holder: string | null;
     }>(
       `SELECT f.purpose::text AS purpose, f.storage_key, f.content_type, f.original_name,
               f.byte_size, f.uploaded_by, f.wrapped_key,
@@ -211,7 +223,12 @@ export async function openFile(
                  sp.membership_id = $2
                  OR EXISTS (SELECT 1 FROM guardian_link gl
                              WHERE gl.student_id = sp.id AND gl.guardian_membership_id = $2
-                               AND gl.archived_at IS NULL))) AS own_child_photo
+                               AND gl.archived_at IS NULL))) AS own_child_photo,
+              -- Whose ID document this photograph is (POOLSE-149).
+              (SELECT m.id FROM membership m
+                WHERE m.organization_id = f.organization_id
+                  AND (m.id_document_front_file_id = f.id OR m.id_document_back_file_id = f.id)
+                LIMIT 1) AS id_document_holder
          FROM stored_file f
          LEFT JOIN student sp
            ON sp.organization_id = f.organization_id AND sp.photo_file_id = f.id
@@ -232,6 +249,8 @@ export async function openFile(
     ? row.photo_attached
       ? row.photo_consented && (hasRole(...RULES.student_photo.read) || row.own_child_photo)
       : row.uploaded_by === membershipId
+    : row.purpose === 'staff_id_document'
+    ? hasRole(...RULES.staff_id_document.read) || row.id_document_holder === membershipId
     : sealed
     ? hasRole(...RULES[row.purpose].read) || row.own_child_certificate
     : hasRole(...RULES[row.purpose].read) ||
@@ -253,14 +272,28 @@ export async function openFile(
   // Health data: every download is on the record — who (the audit row's
   // actor), whose, when — written before a byte leaves (POOLSE-109, BA 3).
   if (row.wrapped_key === null) return null;
-  await withOrg(organizationId, (tx) =>
-    recordAudit(tx, {
-      action: 'file.read',
-      entityType: 'stored_file',
-      entityId: fileId,
-      data: { purpose: row.purpose, studentId: row.leave_student_id },
-    }),
-  );
+  // An ID document's photograph is audited as its number is (POOLSE-100): who
+  // opened whose, and never the person's own look at theirs.
+  if (row.purpose !== 'staff_id_document' || row.id_document_holder !== membershipId) {
+    await withOrg(organizationId, (tx) =>
+      recordAudit(
+        tx,
+        row.purpose === 'staff_id_document'
+          ? {
+              action: 'membership.id_document_read',
+              entityType: 'membership',
+              entityId: row.id_document_holder ?? fileId,
+              data: { fileId },
+            }
+          : {
+              action: 'file.read',
+              entityType: 'stored_file',
+              entityId: fileId,
+              data: { purpose: row.purpose, studentId: row.leave_student_id },
+            },
+      ),
+    );
+  }
   const body = openSealedFile(
     await getObjectBytes(row.storage_key),
     row.wrapped_key,

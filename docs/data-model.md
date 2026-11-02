@@ -4171,6 +4171,19 @@ Migration `1794651300000_staff-details`.
 - **`merge_memberships`** keeps the survivor's value and takes the absorbed one's where it has
   none, as for the other person columns.
 
+### Staff ID document photograph — POOLSE-149 slice B, 2 November 2026
+
+Migration `1794651400000_staff-id-document-photo`.
+
+- **`file_purpose`** gains `staff_id_document`, and **`stored_file_sealed`** names it: the bucket
+  holds ciphertext, the row the file's wrapped key.
+- **`membership.id_document_front_file_id` / `id_document_back_file_id`**, composite FKs to
+  `stored_file`.
+- **`membership_id_document_photo_shreds`** (AFTER UPDATE of either column) calls the definer
+  `staff_id_document_shred(org, file)` on the file a column lets go — replaced, removed or cleared
+  by retention. It acts on the request's own club only and only destroys a key.
+- **`apply_retention()`** clears both columns with the number, so retention shreds the photos.
+
 ### Cancellation notice and push — POOLSE-90 slice 4, 27 October 2026
 
 Migrations `1792836000000_session-audience` (the enum value, alone) and

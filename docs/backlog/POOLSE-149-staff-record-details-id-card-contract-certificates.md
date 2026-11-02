@@ -53,7 +53,7 @@ A club keeps a staff member's file in a drawer today: the address for the contra
 
 - `write-migration` applies to slices A–C. Membership columns: `address_line`, `locality`, `postal_code`, `niss`, `nationality`, `birthplace`, `emergency_name`, `emergency_phone`, `emergency_relation`. Each needs `GRANT UPDATE (col)` paired with the table-wide `REVOKE` (POOLSE-73's rule). They are cleared on anonymisation, so add them to the retention path and to `retention.integration.test.ts`.
 - Slice A reuses the shape of `students/identity.ts` (one group, one `SELECT` builder, one parser). It does not import the student's file: the field lists differ (no filiação, no SNS), and sharing would couple two lists that will drift on purpose.
-- Slice B: `membership.id_document_front_file_id` / `_back_file_id`, attached by `PUT /staff/:id/identity/photo?side=front|back`, which re-checks the purpose in its transaction. The `id-document-agent.ts` reader is reused as is, and its metering reader stays `id_document`.
+- Slice B: `membership.id_document_front_file_id` / `_back_file_id`, attached by `POST /staff/:id/identity/photo/:side` (raw bytes, one step), which re-checks the purpose in its transaction. The `id-document-agent.ts` reader is reused as is, and its metering reader stays `id_document`.
 - Slice C: `staff_contract` (current: kind, starts_on, ends_on, document_file_id) and `staff_contract_version` (insert-only bar closing), the `partner_contract_version` shape. `GET/PUT /staff/:id/contract`; the Owner predicate goes in SQL, never in the controller.
 - Slice D: a new value `qualification_certificate` in `AI_READERS`, the `ai_reader` enum and `PLATFORM_SWITCHES`, and `lib/qualification-certificate-agent.ts` behind `guardAiCall` + `metered`. The prompt names concepts, never one issuer's layout.
 - **The trap:** a tab whose visibility is decided by a `.catch(() => null)` vanishes on a 500. Use `outcome()`: `refused` hides, `failed` shows `PageError`.
@@ -80,7 +80,7 @@ A club keeps a staff member's file in a drawer today: the address for the contra
 ### Acceptance criteria
 
 - [x] A: the Geral fields stored, validated, withheld in the log, absent for other staff, cleared on anonymisation.
-- [ ] B: the Identificação tab, sealed photos, audited reads, retention shreds, reader pre-fill.
+- [x] B: the Identificação tab, sealed photos, audited reads, retention shreds, reader pre-fill.
 - [ ] C: the Contrato tab, versions, informative facts, the Owner hidden from an Admin.
 - [ ] D: the certificate drop, the new reader behind its switch, records indistinguishable from typed ones.
 - [ ] Role probe extended; `TENANT_TABLES` updated; i18n pt-PT + en; `docs/features/staff.md`, `docs/data-model.md`, `docs/decisions.md`, `CLAUDE.md` (the POOLSE-100 paragraph).

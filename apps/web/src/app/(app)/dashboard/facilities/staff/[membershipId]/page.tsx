@@ -22,7 +22,7 @@ import { RoleBadges } from '@/components/role-badge';
 import { DetailPage } from '@/components/detail-page';
 import { Reinvite, RoleEditor, StaffForm } from './staff-form';
 import { storageConfigured } from '@/lib/storage-status';
-import { IdentityCard } from './identity-card';
+import { Identification } from './identification';
 import { DetailsCard } from './details-card';
 
 /**
@@ -119,14 +119,8 @@ export default async function StaffMemberPage({
           slug: 'general',
           labelKey: 'detailTabs.general',
           content: async () => {
-            /*
-              Identificação — POOLSE-100. Asked with the tab: the API answers the
-              owner, an admin and the person, and a refusal is no card at all.
-              Every answer to somebody else is an audited read of the number.
-            */
-            const [identity, details, me] = await Promise.all([
-              outcome(apiFetch<StaffIdentity>(`/staff/${membershipId}/identity`)),
-              // POOLSE-149: the same three readers; a refusal is no card.
+            // POOLSE-149: owner, admin and the person; a refusal is no card.
+            const [details, me] = await Promise.all([
               outcome(apiFetch<StaffDetails>(`/staff/${membershipId}/details`)),
               apiFetch<Me>('/me').catch(() => null),
             ]);
@@ -192,16 +186,34 @@ export default async function StaffMemberPage({
                 <DetailsCard membershipId={membershipId} details={details.data} canManage={viewer.canArchive} />
               )}
               {details.state === 'failed' && <PageError message={t('staffDetails.loadFailed')} />}
-
-              {identity.state === 'ok' && (
-                <IdentityCard
-                  membershipId={membershipId}
-                  identity={identity.data}
-                  own={me?.memberships[0]?.membershipId === membershipId}
-                />
-              )}
-              {identity.state === 'failed' && <PageError message={t('staffIdentity.loadFailed')} />}
             </>
+            );
+          },
+        },
+        {
+          /*
+            Identificação — POOLSE-100's number and POOLSE-149's photograph.
+            Whoever can open this record (owner, admin, the person) is whom the
+            identity route answers, so the tab is always offered; the read is
+            asked when the tab opens, because every answer to somebody else is
+            an audited read of the number.
+          */
+          slug: 'identification',
+          labelKey: 'staffIdentity.title',
+          content: async () => {
+            const [identity, me] = await Promise.all([
+              outcome(apiFetch<StaffIdentity>(`/staff/${membershipId}/identity`)),
+              apiFetch<Me>('/me').catch(() => null),
+            ]);
+            if (identity.state === 'failed') return <PageError message={t('staffIdentity.loadFailed')} />;
+            if (identity.state !== 'ok') return <p className="text-sm text-foreground-muted">{t('staffIdentity.notAllowed')}</p>;
+            return (
+              <Identification
+                membershipId={membershipId}
+                identity={identity.data}
+                own={me?.memberships[0]?.membershipId === membershipId}
+                storageReady={storageReady}
+              />
             );
           },
         },

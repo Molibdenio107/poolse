@@ -6,7 +6,7 @@ import { ID_DOCUMENT_TYPES } from '@poolse/rules';
 import { SelectField, TextField } from '@/components/ui/field';
 import { formatDate } from '@/lib/date-format';
 import { useSavedAction } from '@/lib/saved';
-import type { StaffIdentity } from '@/lib/api';
+import type { StaffIdDocumentType, StaffIdentity } from '@/lib/api';
 import type { FormState } from '../../../actions';
 import { saveIdentityAction } from './identity.actions';
 
@@ -25,11 +25,14 @@ export function IdentityCard({
   membershipId,
   identity,
   own,
+  proposal = null,
 }: {
   membershipId: string;
   identity: StaffIdentity;
   /** The reader is the person on the record. */
   own: boolean;
+  /** What the reader proposed from the photograph (POOLSE-149), for a person to confirm. */
+  proposal?: { type: StaffIdDocumentType | null; number: string | null } | null;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(saveIdentityAction, INITIAL);
@@ -46,6 +49,10 @@ export function IdentityCard({
         <Lock className="mt-0.5 size-3.5 shrink-0" aria-hidden />
         {t('staffIdentity.visibility')}
       </p>
+
+      {proposal !== null && (
+        <p className="rounded-sm bg-surface-muted p-3 text-sm">{t('staffIdentity.photo.proposed')}</p>
+      )}
 
       <form action={action} className="flex flex-col gap-3">
         <input type="hidden" name="membershipId" value={membershipId} />
@@ -71,7 +78,7 @@ export function IdentityCard({
         <SelectField
           name="idDocumentType"
           label={t('staffIdentity.documentType')}
-          initial={identity.idDocument?.type ?? ''}
+          initial={proposal?.type ?? identity.idDocument?.type ?? ''}
           options={[
             { value: '', label: t('staffIdentity.noDocument') },
             ...ID_DOCUMENT_TYPES.map((type) => ({ value: type, label: t(`staffIdentity.type.${type}`) })),
@@ -81,7 +88,7 @@ export function IdentityCard({
         <TextField
           name="idDocumentNumber"
           label={t('staffIdentity.documentNumber')}
-          initial={identity.idDocument?.number ?? ''}
+          initial={proposal?.number ?? identity.idDocument?.number ?? ''}
           hint={t('staffIdentity.purpose', { months: identity.retentionMonths })}
           {...error('idDocumentNumber')}
         />

@@ -89,6 +89,17 @@ Admin, or the person on their own record. Anyone else gets a 403, and the card i
     deleting.
 - **It has its own route** (`GET/PATCH /staff/:id/identity`), so the number is never in the staff
   record, the list, the export or an import.
+- **Since POOLSE-149 it is its own tab, *Identificação***, with the document's photograph above
+  the number: front and back, an image or a PDF, filed by the Owner, an Admin or the person
+  (`POST /staff/:id/identity/photo/:side`, raw bytes, one step) and removed after a confirmation
+  (`DELETE …/photo/:side`).
+  - The file is **sealed** (purpose `staff_id_document`). It is shown as a link, never drawn on
+    the page, and every look by anybody but the person writes `membership.id_document_read`.
+  - A replaced or removed side is **shredded** by the database; retention shreds both with the
+    number.
+  - With the `id_document` reader on (switch, club tick, key) and an owner or admin filing the
+    front, the type and number are proposed in the card for a person to confirm. Off, the card
+    says so and the fields are typed.
 
 ## Qualifications
 

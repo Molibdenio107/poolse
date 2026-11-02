@@ -68,4 +68,7 @@ export const AI_ROLES = {
   qualifying: ['owner', 'admin', 'instructor'],
   // POOLSE-142: the club's boletim is placed by the office.
   boletimTemplate: ['owner', 'admin'],
+  // POOLSE-149: reading a staff member's ID photo. The person may file their
+  // own; the metered read stays the office's.
+  staffIdentity: ['owner', 'admin'],
 } as const satisfies Record<string, readonly string[]>;
