@@ -1286,3 +1286,5 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-02** — **Faturação's *A faturar* starts with nothing ticked** (Rui), **reversing** "every draft selected by default": ten families a page, *Selecionar todos* across every page, the issue button at the top; *Emitidos* moves behind its own pill on *Este mês*. *Hoje, hora a hora* is kept and explained, a bar opening its lessons. The calendar import asks which pool a file is for.
 
 - **2026-11-02** — **The calendar opens on the pool this person last looked at** (Rui), **reversing** "no tank until somebody chooses one" (12-10-2026), which opened the page empty; the first time, the club's first pool. The timetable import opens as a dialog starting on that pool.
+
+- **2026-11-02** — **Recintos move under their sport, and a single-sport club shows its one sport tab** (Rui, POOLSE-150, to build after the testing week). **The timetable import always asks its recinto** and lists every sport's, courts greyed until POOLSE-123. **Opening an hour on the dashboard turns the Recintos card to that hour.**

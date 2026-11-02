@@ -171,6 +171,7 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-147](./POOLSE-147-calendar-card-lists-the-students.md) | **Built 01-11-2026.** The calendar's class card lists the turma's active students (hover, informative only) instead of always saying nobody is enrolled — hard-coded `people: []` since round 6 | Calendar | High (pre go-live) | — | 0 |
 | [POOLSE-148](./POOLSE-148-a-level-per-sport.md) | **Built 01-11-2026** (Atividade revert of another sport's level open). A student holds a level in each sport they do (swimming on `student.level_id`, others in `student_sport_level`); advancement runs per sport on its own ladder — slices A (schema + record), B (lists), C (advancement) | Students / Levels | Medium | POOLSE-126, 143 | 1 |
 | [POOLSE-149](./POOLSE-149-staff-record-details-id-card-contract-certificates.md) | **Built 02-11-2026.** The staff record holds address, NIF/NISS, nationality and an emergency contact; an *Identificação* tab with the sealed ID-card photo; a versioned *Contrato* tab (informative only); a certificate drop on *Qualificações* — slices A–D | Staff / Personal data | Medium (pilot) | POOLSE-100, 27, 97, 105, 109, 137 | 1 |
+| [POOLSE-150](./POOLSE-150-recintos-under-their-sport.md) | Each recinto lives under its sport (Piscinas in Natação, courts in Ténis), and a single-sport club shows its one sport tab; Instalações keeps the site | Navigation / Facilities | Medium (pilot) | POOLSE-122, 125, 141 | 1 |
 
 ## To discuss — raised 01-11-2026, parked until after the pilot has used the app
 
