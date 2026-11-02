@@ -426,7 +426,8 @@ export function SelectField({
   className,
 }: Common & {
   initial?: string;
-  options: { value: string; label: string }[];
+  /** `disabled`: listed but not choosable — a recinto with nothing bookable yet (02-11-2026). */
+  options: { value: string; label: string; disabled?: boolean }[];
   /**
    * Told what was chosen, for a parent that derives something from it.
    *
@@ -468,7 +469,7 @@ export function SelectField({
         className={cn(CONTROL_LINE, shown !== undefined && INVALID)}
       >
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option key={option.value} value={option.value} disabled={option.disabled === true}>
             {option.label}
           </option>
         ))}

@@ -530,3 +530,10 @@ first.
 (`lib/calendar-pool.ts`), else the club's first. **The import is a dialog** — a bottom sheet on a phone —
 rather than a panel in the page header, which spilled off the right edge; it starts on the calendar's
 pool and can be changed there.
+
+**The import's recinto is always asked** (Rui, 02-11-2026, revising the same day's "starts on the
+calendar's pool"): the list opens on *Escolha o recinto*, which cannot be re-picked, and nothing is read,
+previewed or written until a recinto is chosen; a club with one recinto has it chosen. It lists **every
+sport's recintos** (each site's own read): a pool is choosable, and a court or pitch is listed *em breve*
+and greyed out until it has bookable units (POOLSE-123) — so the file shape stays one when other sports
+arrive.

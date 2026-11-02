@@ -1,6 +1,7 @@
 'use client';
 
-import { rememberedPool } from '@/lib/calendar-pool';
+import type { PoolseSport } from '@poolse/rules';
+import { sportNameKey } from '@/components/sport-icon';
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, FileSpreadsheet, Upload } from 'lucide-react';
@@ -52,11 +53,18 @@ function isAccepted(file: File): boolean {
   return ACCEPTED.some((extension) => name.endsWith(extension));
 }
 
-export interface ImportPool {
+/**
+ * A recinto a timetable file may be for — 02-11-2026. A pool's id is the
+ * pool's (its lanes are what a file names); another sport's recinto is listed
+ * and not choosable (`bookable` false) until its units exist (POOLSE-123).
+ */
+export interface ImportRecinto {
   id: string;
   name: string;
+  sportId: PoolseSport;
   facilityId: string;
   facilityName: string;
+  bookable: boolean;
 }
 
 export function TimetableImport({
@@ -69,7 +77,7 @@ export function TimetableImport({
    * tank's, so the import asks which, and "Pista 2" then means that pool's lane
    * 2 — never whichever pool at the site happens to have one.
    */
-  pools: ImportPool[];
+  pools: ImportRecinto[];
   canManage: boolean;
   /** In the page header, where there is no room for the hint beside it — 9.0. */
   compact?: boolean;
@@ -79,25 +87,34 @@ export function TimetableImport({
   const [open, setOpen] = useState(false);
   /** The dropped file waiting for a yes or a no. */
   const [pending, setPending] = useState<File | null>(null);
-  // One pool is the answer; several are a question, asked before anything is read.
-  // It starts on the pool the calendar is showing (`lib/calendar-pool.ts`).
-  const [poolId, setPoolId] = useState(pools.length === 1 ? pools[0]!.id : '');
-  const poolIds = pools.map((pool) => pool.id).join(',');
-  useEffect(() => {
-    if (!open && pending === null) return;
-    setPoolId((current) => current || rememberedPool(poolIds.split(',').filter((id) => id !== '')));
-  }, [open, pending, poolIds]);
+  /*
+   * Which recinto — always asked (Rui, 02-11-2026: "obrigar" a choice), never
+   * remembered or guessed, so a file never lands in a tank nobody picked. A
+   * club with one recinto has nothing to choose.
+   */
+  const [poolId, setPoolId] = useState(pools.length === 1 && pools[0]!.bookable ? pools[0]!.id : '');
   const facilityId = pools.find((pool) => pool.id === poolId)?.facilityId ?? '';
   const multiSite = new Set(pools.map((pool) => pool.facilityId)).size > 1;
+  const multiSport = new Set(pools.map((pool) => pool.sportId)).size > 1;
   const poolOptions = [
-    ...(pools.length === 1 ? [] : [{ value: '', label: t('timetableImport.choosePool') }]),
-    ...pools.map((pool) => ({ value: pool.id, label: multiSite ? `${pool.facilityName} · ${pool.name}` : pool.name })),
+    ...(pools.length === 1 && pools[0]!.bookable ? [] : [{ value: '', label: t('timetableImport.choosePool'), disabled: true }]),
+    ...pools.map((pool) => ({
+      value: pool.id,
+      label: [
+        multiSport ? t(sportNameKey(pool.sportId)) : null,
+        multiSite ? pool.facilityName : null,
+        pool.bookable ? pool.name : t('timetableImport.notYet', { name: pool.name }),
+      ]
+        .filter((part) => part !== null)
+        .join(' · '),
+      disabled: !pool.bookable,
+    })),
   ];
   const poolPicker = (
     <SelectField
       name="poolId"
-      label={t('timetableImport.pool')}
-      hint={t('timetableImport.poolHint')}
+      label={multiSport ? t('timetableImport.recinto') : t('timetableImport.pool')}
+      hint={multiSport ? t('timetableImport.recintoHint') : t('timetableImport.poolHint')}
       initial={poolId}
       options={poolOptions}
       onValueChange={setPoolId}
@@ -254,7 +271,7 @@ export function TimetableImport({
               required
               className="text-sm file:mr-3 file:rounded file:border file:border-border file:bg-surface-muted file:px-3 file:py-1.5 file:text-sm"
             />
-            <button type="submit" className={BUTTON_QUIET}>
+            <button type="submit" disabled={poolId === ''} className={BUTTON_QUIET}>
               {t('timetableImport.read')}
             </button>
           </form>

@@ -3045,7 +3045,7 @@
       "untitled": "Lesson",
       "lessonPeople": "{count, plural, one {# person} other {# people}}",
       "openCalendar": "Open the calendar",
-      "recintosAt": "Recintos · at {hour}:00",
+      "recintosAt": "Playing areas · at {hour}:00",
       "tankPeopleAt": "{count, plural, one {# person} other {# people}} at {hour}:00, in {lessons, plural, one {# lesson} other {# lessons}}",
       "tankEmptyAt": "No lessons at {hour}:00",
       "noTankLessons": "Some of this hour's lessons are in no tank (partnerships with no pool booked)."
@@ -4032,8 +4032,11 @@
     },
     "pool": "Pool",
     "poolHint": "A timetable is one pool's: the file's lanes are this pool's lanes.",
-    "choosePool": "Choose the pool",
-    "poolRequired": "Choose this timetable's pool first."
+    "choosePool": "Choose the playing area",
+    "poolRequired": "Choose this timetable's playing area first.",
+    "recinto": "Playing area",
+    "recintoHint": "A timetable is one playing area's: the file's lanes are this area's. Courts and pitches become available once they have bookable units.",
+    "notYet": "{name} — coming soon"
   },
   "spaces": {
     "title": "Spaces",

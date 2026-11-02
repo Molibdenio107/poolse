@@ -1,3 +1,4 @@
+import type { PoolseSport } from '@poolse/rules';
 import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -10,6 +11,7 @@ import {
   type Classes,
   type Closures,
   type Facilities,
+  type FacilityDetail,
   type FacilityGrid,
 } from '@/lib/api';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
@@ -27,7 +29,7 @@ import { CalendarAgenda } from './calendar-agenda';
 import { bookingKey, slotKey } from '@/lib/slot-key';
 import { GenerateSeason } from './calendar-forms';
 import { PageError, PageShell } from '@/components/page-shell';
-import { TimetableImport, type ImportPool } from './import/import-panel';
+import { TimetableImport, type ImportRecinto } from './import/import-panel';
 import { moduleIsOn } from '@/lib/modules';
 import { formatDate, formatDateRange, formatDayMonth, formatDayMonthShort } from '@/lib/date-format';
 import { backProp, originBack } from '@/lib/back';
@@ -407,20 +409,43 @@ export default async function CalendarPage({
   });
 
   /*
-   * The pools a timetable file may be for, with their sites (Rui, 02-11-2026):
-   * the import asks which, so "Pista 2" is that pool's lane. Best-effort: no
-   * answer, no import button, and the week still draws.
+   * The recintos a timetable file may be for, with their sites and sports (Rui,
+   * 02-11-2026): the import asks which, so "Pista 2" is that pool's lane. A
+   * pool is bookable; another sport's recinto is listed and not choosable
+   * until its units exist (POOLSE-123). Each site's recintos come from its own
+   * page's read. Best-effort: no answer, no import button, and the week draws.
    */
-  const importPools: ImportPool[] =
+  const importPools: ImportRecinto[] =
     calendar?.canManage === true
-      ? await apiFetch<Facilities>('/facilities').then(
-          (answer) =>
-            answer.facilities.flatMap((site) =>
-              // `/facilities` lists live pools only.
-              site.pools.map((pool) => ({ id: pool.id, name: pool.name, facilityId: site.id, facilityName: site.name })),
+      ? await apiFetch<Facilities>('/facilities')
+          .then((answer) =>
+            Promise.all(
+              answer.facilities.map((site) =>
+                apiFetch<FacilityDetail>(`/facilities/${site.id}`).then(
+                  (detail) =>
+                    detail.playingAreas.map((area) => ({
+                      id: area.poolId ?? area.id,
+                      name: area.name,
+                      sportId: area.sportId as PoolseSport,
+                      facilityId: site.id,
+                      facilityName: site.name,
+                      bookable: area.poolId !== null,
+                    })),
+                  // A site whose page will not load still offers its pools.
+                  () =>
+                    site.pools.map((pool) => ({
+                      id: pool.id,
+                      name: pool.name,
+                      sportId: 'pool' as PoolseSport,
+                      facilityId: site.id,
+                      facilityName: site.name,
+                      bookable: true,
+                    })),
+                ),
+              ),
             ),
-          () => [],
-        )
+          )
+          .then((perSite) => perSite.flat(), () => [])
       : [];
 
   return (

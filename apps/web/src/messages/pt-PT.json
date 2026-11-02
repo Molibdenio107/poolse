@@ -4032,8 +4032,11 @@
     },
     "pool": "Piscina",
     "poolHint": "O horário é de uma piscina: as pistas do ficheiro são as desta piscina.",
-    "choosePool": "Escolha a piscina",
-    "poolRequired": "Escolha primeiro a piscina deste horário."
+    "choosePool": "Escolha o recinto",
+    "poolRequired": "Escolha primeiro o recinto deste horário.",
+    "recinto": "Recinto",
+    "recintoHint": "O horário é de um recinto: as pistas do ficheiro são as deste recinto. Campos e courts ficam disponíveis quando tiverem unidades marcáveis.",
+    "notYet": "{name} — em breve"
   },
   "spaces": {
     "title": "Espaços",
