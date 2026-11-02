@@ -4353,7 +4353,10 @@
       "chaseNotSent": "Reminder recorded — the email has not gone yet.",
       "nothingSent": "Nothing to send: the people chosen no longer owe anything overdue, or have no email address.",
       "referenceIsDocuments": "The email asks each person to give their own overdue documents as the reference."
-    }
+    },
+    "selectAll": "Select all ({count})",
+    "clearSelection": "Clear selection",
+    "monthSections": "This month's sections"
   },
   "reception": {
     "title": "Reception",

@@ -229,3 +229,12 @@ Its **Voltar** is the page shell's, like every record's (POOLSE-104 A): back to 
 Below `md` the three tables — the month's run, the issued documents and *Em dívida* — become one card per row through `.table-stack`. Each cell is a "label  value" line, and the label comes from its `data-label`. The table is the same element, so the run's checkboxes and the reminder ticks work as on a desk. From `md` up nothing changes (POOLSE-88 phone views).
 
 **Selecting the overdue (POOLSE-104 D).** The checkbox column's header, *Selecionar todos em atraso*, ticks every overdue row shown — never one that is open but not yet due — keeping any row ticked by hand. It is indeterminate while only some are ticked, and a click with every overdue row ticked clears the selection. It replaced the *Escolher o que está em atraso* button. Below `md` the table un-clips that one header cell as a labelled line above the cards (the same element, moved by CSS) and hides the column titles the cards already carry.
+
+## *Este mês* in two sections (02-11-2026, Rui)
+
+*Este mês* has a second pill row, **A faturar · n** and **Emitidos · n** (`?section=issued`), so the
+run and the issued list are no longer one under the other. *A faturar* shows ten families a page,
+paged in the browser so the selection spans the whole run. **Nothing is ticked until somebody ticks
+it** — this reverses "every draft selected by default" — and *Selecionar todos (n)* ticks every
+family on every page (*Limpar seleção* undoes it). The selection's count and total and *Emitir n
+documentos* sit at the top of the card. Every family ticked goes to the API as the whole run.

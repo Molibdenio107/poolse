@@ -4353,7 +4353,10 @@
       "chaseNotSent": "Lembrete registado — o email ainda não saiu.",
       "nothingSent": "Não há nada a enviar: as pessoas escolhidas já não têm valores em atraso ou não têm endereço de email.",
       "referenceIsDocuments": "O email pede a cada pessoa que indique como referência os seus documentos em atraso."
-    }
+    },
+    "selectAll": "Selecionar todos ({count})",
+    "clearSelection": "Limpar seleção",
+    "monthSections": "Secções do mês"
   },
   "reception": {
     "title": "Receção",
