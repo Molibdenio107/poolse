@@ -327,8 +327,12 @@ export default async function CalendarPage({
                 label: t('attendance.mark'),
               },
           // Nothing to call off twice, and nothing for somebody who may not.
+          // A lesson can be called off until it ends; once ended, only if
+          // nobody was marked (Rui, 02-11-2026) — the API decides either way.
           cancel:
-            calendar?.canManage === true && !cancelled
+            calendar?.canManage === true &&
+            !cancelled &&
+            !(session.registerTaken && Date.parse(session.startsAt) + session.durationMinutes * 60_000 <= Date.now())
               ? {
                   className: session.className,
                   when: `${formatDate(session.localDate)}, ${session.localTime}`,

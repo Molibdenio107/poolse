@@ -960,6 +960,41 @@ export async function removeFutureSessions(
 }
 
 /**
+ * Whether a lesson may still be called off — Rui, 02-11-2026. Until it ends,
+ * by whoever may cancel it at all, marks or not (the marks are kept). Once it
+ * has ended, only an owner or an admin, and only a lesson nobody marked: a
+ * marked one is a record, and the trigger refuses it whatever the caller.
+ *
+ * `ended` is the database's clock against the lesson's own `ends_at`, the
+ * same comparison the trigger makes, so the screen and the refusal agree.
+ */
+export interface CancelState {
+  ended: boolean;
+  marked: boolean;
+}
+
+export async function cancelState(organizationId: string, sessionId: string): Promise<CancelState | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<CancelState>(
+      `SELECT now() >= cs.ends_at AS ended,
+              EXISTS (SELECT 1 FROM attendance a
+                       WHERE a.class_session_id = cs.id
+                         AND a.organization_id = cs.organization_id) AS marked
+         FROM class_session cs
+        WHERE cs.id = $1`,
+      [sessionId],
+    );
+    return rows[0] ?? null;
+  });
+}
+
+/** The answer `cancelState` gives a reader: may they cancel this lesson now? */
+export function mayCancel(state: CancelState, management: boolean, own: boolean): boolean {
+  if (!state.ended) return management || own;
+  return management && !state.marked;
+}
+
+/**
  * Who is allowed to remove this class — POOLSE-14, criterion 7.
  *
  * Owner and admin always. The assigned instructor may remove their *own*

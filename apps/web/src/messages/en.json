@@ -3197,7 +3197,7 @@
     "classCancelled": "This class was cancelled, so there is no register to take.",
     "readOnly": "You do not have permission to take the register.",
     "restricted": "This section is for instructors, administrators and owners.",
-    "attendanceRecorded": "This class already has attendance recorded, so it cannot be cancelled.",
+    "attendanceRecorded": "This class has ended and has attendance recorded, so it cannot be cancelled.",
     "guest": "Make-up",
     "noInsurance": "No insurance",
     "trialGuests": "{count, plural, one {Trial lesson: # person} other {Trial lessons: # people}}",
@@ -3466,7 +3466,8 @@
       "label": "Legend",
       "uncovered": "No instructor",
       "free": "Free space — click to book a lesson"
-    }
+    },
+    "classEnded": "This class has ended: only the owner or an admin can cancel it."
   },
   "inventory": {
     "title": "Inventory",

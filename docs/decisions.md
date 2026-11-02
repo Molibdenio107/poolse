@@ -1294,3 +1294,5 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-02** — **POOLSE-150 built: a recinto lives in its sport's section, and a pool-only club shows its one Natação tab** (Rui). The site page's Piscinas and Recintos tabs are gone and its Geral tab links to each sport's list; no address moved. The open point took its default: Instalações keeps no cross-sport list.
 
 - **2026-11-02** — **A sport's recintos are first in its menu, and its tab still opens Calendário; Instalações opens with a card per sport** (Rui). The site cards stop listing tanks; the tanks' attention dot moves to the Natação card. A sport page's sticky title band wears the page's wash rather than a plain strip wider than the card.
+
+- **2026-11-02** — **A lesson can be cancelled until it ends, marks or not; after it ends, only by an owner or an admin and only if nobody was marked** (Rui). **Reverses** "a marked class cannot be cancelled" (1787860800000) for a lesson still running: its marks are kept. An instructor can no longer cancel a lesson after the fact; the office still can when it never happened.

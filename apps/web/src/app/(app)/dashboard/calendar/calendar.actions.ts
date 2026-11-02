@@ -38,6 +38,9 @@ function failure(error: unknown, errorKey: string): FormState {
     if (error.code === 'not_your_class') {
       return { ok: false, errorKey: 'calendar.notYourClass' };
     }
+    if (error.code === 'class_ended') {
+      return { ok: false, errorKey: 'calendar.classEnded' };
+    }
     if (error.status < 500) return { ok: false, errorKey };
     return { ok: false, errorKey, detail: `${error.status} ${error.message}`.trim() };
   }

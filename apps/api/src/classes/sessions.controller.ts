@@ -39,6 +39,7 @@ import {
   sessionsForStudent,
   updateClosure,
   cancelSession,
+  cancelState,
   restoreSession,
   setSubstitute,
   type Closure,
@@ -620,6 +621,25 @@ export class SessionsCalendarController {
     const reason = typeof body['reason'] === 'string' ? body['reason'].trim() : '';
     if (reason.length > MAX_REASON) {
       throw new BadRequestException(`reason may be at most ${MAX_REASON} characters`);
+    }
+
+    // A lesson that has ended is the office's to cancel, and only unmarked
+    // (Rui, 02-11-2026); until it ends, whoever may cancel it, marks or not.
+    if (body['scope'] !== 'future') {
+      const state = await cancelState(organizationId, id);
+      if (state === null) throw new NotFoundException('No such class');
+      if (state.ended && !hasRole('owner', 'admin')) {
+        throw new ForbiddenException({
+          code: 'class_ended',
+          message: 'A lesson that has ended is cancelled by an owner or an admin',
+        });
+      }
+      if (state.ended && state.marked) {
+        throw new ConflictException({
+          code: 'attendance_recorded',
+          message: 'Attendance has been recorded for this class',
+        });
+      }
     }
 
     if (body['scope'] === 'future') {

@@ -231,6 +231,43 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
+-- Test 4b — until it ends, a marked lesson can still be called off (Rui,
+-- 02-11-2026), and the marks stay: the swimmers were there.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE v_org uuid; v_group uuid; v_pool uuid; v_instructor uuid; v_session uuid;
+        v_ana uuid; v_status text; n int;
+BEGIN
+  v_org := (SELECT id FROM organization WHERE slug = 'clube-presencas');
+  v_group := (SELECT id FROM class_group WHERE organization_id = v_org LIMIT 1);
+  v_pool := (SELECT id FROM pool WHERE organization_id = v_org LIMIT 1);
+  v_instructor := (SELECT id FROM membership WHERE organization_id = v_org LIMIT 1);
+  v_ana := (SELECT id FROM student WHERE organization_id = v_org AND first_name = 'Ana' LIMIT 1);
+
+  -- Started ten minutes ago, 45 minutes long: running now.
+  INSERT INTO class_session (organization_id, class_group_id, pool_id,
+                             starts_at, duration_minutes, instructor_membership_id)
+  VALUES (v_org, v_group, v_pool, date_trunc('minute', now()) - interval '10 minutes', 45, v_instructor)
+  RETURNING id INTO v_session;
+  INSERT INTO attendance (organization_id, class_session_id, student_id, status,
+                          recorded_by_membership_id)
+  VALUES (v_org, v_session, v_ana, 'present', v_instructor);
+
+  UPDATE class_session SET status = 'cancelled' WHERE id = v_session;
+  SELECT status INTO v_status FROM class_session WHERE id = v_session;
+  IF v_status <> 'cancelled' THEN
+    RAISE EXCEPTION 'FAIL test 4b: a running, marked lesson refused to be cancelled';
+  END IF;
+  SELECT count(*) INTO n FROM attendance WHERE class_session_id = v_session;
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 4b: cancelling took the marks with it (% left)', n;
+  END IF;
+
+  RAISE NOTICE 'PASS test 4b: a lesson still running cancels, marks and all';
+END $$;
+
+-- ---------------------------------------------------------------------------
 -- Test 5 — an unmarked class is still cancellable, and a cancelled one restorable
 --
 -- The other half of test 4. A rule that refused every cancellation would be a

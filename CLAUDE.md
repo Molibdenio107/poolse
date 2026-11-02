@@ -1022,7 +1022,9 @@ the card silently vanishes from the classes that were rearranged. A lookup that 
 **A turma's lessons follow its pattern on their own.** 11 October 2026, Rui's call. Every write that changes a weekly pattern — placing, a series move, duplicating, a timetable import, adding or removing a slot — tops up the season's lessons through `syncSeasonLessons` (`classes/lesson-sync.ts`), **from today to the end of the published season, never the past**, so a turma placed today owes no register for September. It is `generate_sessions`, idempotent, so the *Gerar a época* button stays for after a closure. **A clash (two turmas, one instructor, one hour) leaves out only the turmas in it** — `generate_sessions` takes a skip list — and the calendar names it (`grid.lessonsClash`); the *Gerar a época* button still refuses on a clash. Removing a slot cancels its future, untaught lessons — never deletes them, never touches one with a register.
 
 **A taught class is a record, not a plan.** One row in `attendance` for a session means it
-happened, so it does not move and it is not cancelled. `Session.registerTaken` carries the
+happened, so it does not move, and once it has ended it is not cancelled. **Until its end a lesson
+can be called off, marks kept** (Rui, 02-11-2026); after it, only owner or admin and only unmarked —
+`cancelState` / `mayCancel` in `sessions.repository.ts`, read by the endpoint and the register's `canCancel`. `Session.registerTaken` carries the
 fact to the screen; the move endpoint asks the same question itself. The block stays
 draggable — round 6 settled that a block which looks like every other block and silently
 refuses reads as a broken grid — so the refusal is a sentence, not a disabled control.

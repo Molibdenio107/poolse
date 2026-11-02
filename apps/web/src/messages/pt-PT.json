@@ -3197,7 +3197,7 @@
     "classCancelled": "Esta aula foi cancelada, por isso não há presenças a marcar.",
     "readOnly": "Não tem permissão para marcar presenças.",
     "restricted": "Esta secção é reservada a instrutores, administradores e proprietários.",
-    "attendanceRecorded": "Já há presenças marcadas nesta aula, por isso não pode ser cancelada.",
+    "attendanceRecorded": "Esta aula já terminou e tem presenças marcadas, por isso não pode ser cancelada.",
     "guest": "Reposição",
     "noInsurance": "Sem seguro",
     "trialGuests": "{count, plural, one {Aula experimental: # pessoa} other {Aulas experimentais: # pessoas}}",
@@ -3466,7 +3466,8 @@
       "label": "Legenda",
       "uncovered": "Sem professor",
       "free": "Recinto livre — clique para marcar aula"
-    }
+    },
+    "classEnded": "Esta aula já terminou: só o proprietário ou um administrador a pode cancelar."
   },
   "inventory": {
     "title": "Inventário",

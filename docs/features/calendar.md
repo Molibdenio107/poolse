@@ -262,6 +262,14 @@ tell you that you are about to call off Thursday's class instead of Tuesday's.
 **Scope** is a pair of radios — this occurrence, or this and every future one — with the
 narrow, recoverable choice selected. The past is never affected either way.
 
+**When** (Rui, 02-11-2026): a lesson can be cancelled **until it ends**, by owner, admin or the
+instructor teaching it, even with presenças marked — the marks are kept, because the swimmers were
+there. **Once it has ended**, only an owner or an admin may cancel it, and only if nobody was
+marked (an instructor gets 403 `class_ended`; a marked one is 409 `attendance_recorded` for
+everybody, by trigger). `cancelState` / `mayCancel` in `sessions.repository.ts` are the one
+answer, read by the endpoint and by the register's `canCancel`; the calendar hides *Cancelar*
+on an ended, marked lesson.
+
 Cancelling raises a toast with **Undo**, which restores the session. A class taken down by a
 *closure* refuses the undo and says so: that one is undone by removing the closure.
 

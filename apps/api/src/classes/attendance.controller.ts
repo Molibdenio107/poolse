@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
-import { isOwnClass } from './sessions.repository.js';
+import { cancelState, isOwnClass, mayCancel } from './sessions.repository.js';
 import { isMySession, requireMySession } from '../tenant/assignment.js';
 import {
   findRegister,
@@ -96,11 +96,15 @@ export class AttendanceController {
      */
     const management = hasRole('owner', 'admin');
     const mine = await isMySession(id);
+    const state = await cancelState(organizationId, id);
     return {
       ...register,
       organizationId,
       canRecord: mine,
-      canCancel: management || (await isOwnClass(organizationId, id, membershipId)),
+      // Until it ends, marks or not; after, the office and only unmarked (02-11-2026).
+      canCancel:
+        state !== null &&
+        mayCancel(state, management, management || (await isOwnClass(organizationId, id, membershipId))),
       canEndSeries: management,
       feedback: management || mine ? await sessionFeedback(organizationId, id, management ? null : membershipId) : [],
       notices: await sessionNotices(organizationId, id),
