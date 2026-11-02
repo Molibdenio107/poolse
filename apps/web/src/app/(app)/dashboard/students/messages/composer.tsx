@@ -7,6 +7,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
 import type { AudienceOptions, MessageAudience } from '@/lib/api';
+import { sportNameKey } from '@/components/sport-icon';
 import {
   previewMessageAction,
   sendMessageAction,
@@ -53,6 +54,8 @@ export function MessageComposer({
     ...(options.classGroups.length > 0 ? (['class_group'] as const) : []),
     ...(options.levels.length > 0 ? (['level'] as const) : []),
     ...(options.facilities.length > 1 ? (['facility'] as const) : []),
+    // POOLSE-146: only where the club has a second sport (the API sends none otherwise).
+    ...((options.sports ?? []).length > 1 ? (['sport'] as const) : []),
     ...(canAddressClub ? (['organization'] as const) : []),
   ];
 
@@ -68,7 +71,9 @@ export function MessageComposer({
         ? options.levels
         : audience === 'facility'
           ? options.facilities
-          : [];
+          : audience === 'sport'
+            ? (options.sports ?? []).map((sport) => ({ id: sport, name: t(sportNameKey(sport)), detail: null }))
+            : [];
   const startTarget =
     targets.find((option) => option.id === initial.targetId)?.id ?? targets[0]?.id ?? '';
 

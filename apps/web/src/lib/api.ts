@@ -4943,7 +4943,7 @@ export interface EnergyCostsWidgetData {
  * Messages to families — POOLSE-67
  * ------------------------------------------------------------------------- */
 
-export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization' | 'closure' | 'session';
+export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization' | 'closure' | 'session' | 'sport';
 
 /** Who a message is written for — a closure's warning also reaches partners and leads. */
 export type RecipientKind = 'student' | 'partner' | 'lead';
@@ -5009,6 +5009,8 @@ export interface AudienceOptions {
   classGroups: AudienceOption[];
   levels: AudienceOption[];
   facilities: AudienceOption[];
+  /** POOLSE-146: the club's sports, only where it has more than one, and only for the office. */
+  sports?: PoolseSport[];
 }
 
 /* ---------------------------------------------------------------------------

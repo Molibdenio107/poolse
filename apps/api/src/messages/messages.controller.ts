@@ -1,3 +1,4 @@
+import { isPoolseSport } from '@poolse/rules';
 import {
   BadRequestException,
   Body,
@@ -191,11 +192,23 @@ function readTarget(body: Record<string, unknown>): MessageTarget {
   const audience = body['audience'];
   if (typeof audience !== 'string' || !MESSAGE_AUDIENCES.includes(audience as MessageAudience)) {
     throw new BadRequestException({
-      message: 'audience must be one of class_group, level, facility, organization, closure',
+      message: 'audience must be one of class_group, level, facility, organization, closure, sport',
       fields: { audience: 'messages.error.audienceRequired' },
     });
   }
   if (audience === 'organization') return { audience, targetId: null };
+  // POOLSE-146: a sport is a key of the platform's catalogue, not a uuid.
+  if (audience === 'sport') {
+    const sport = body['targetId'];
+    if (!isPoolseSport(sport)) {
+      throw new BadRequestException({
+        code: 'invalid_target',
+        message: 'targetId is a sport for this audience',
+        fields: { targetId: 'messages.error.targetRequired' },
+      });
+    }
+    return { audience, targetId: sport };
+  }
 
   const targetId = body['targetId'];
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

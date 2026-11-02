@@ -1,4 +1,6 @@
+import { isPoolseSport } from '@poolse/rules';
 import type { MessageAudience, MessageSummary } from '@/lib/api';
+import { sportNameKey } from '@/components/sport-icon';
 
 /**
  * The sentence for whether a message reached anybody — POOLSE-67.
@@ -26,4 +28,17 @@ export function deliveryKey(
 /** "Turma · Cadetes", or "Todo o clube" — the key and the name to fill it with. */
 export function audienceKey(audience: MessageAudience): string {
   return `messages.to.${audience}`;
+}
+
+/**
+ * The name a message's target is shown by. A sport's is the reader's language
+ * (POOLSE-146): the API sends the key, and the catalogue names it.
+ */
+export function targetLabel(
+  audience: MessageAudience,
+  targetName: string | null,
+  t: (key: string) => string,
+): string {
+  if (audience === 'sport' && isPoolseSport(targetName)) return t(sportNameKey(targetName));
+  return targetName ?? '';
 }

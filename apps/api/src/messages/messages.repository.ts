@@ -26,7 +26,7 @@ import { TOTAL_COUNT, windowed, type PageQuery, type Paginated } from '../common
  * `closure` (12 October 2026) is the families of turmas a closure took a lesson
  * from. It is written from the closure itself, never offered in the composer.
  */
-export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization' | 'closure' | 'session';
+export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization' | 'closure' | 'session' | 'sport';
 
 /**
  * What a person may address a message to. `session` is not here: a cancellation
@@ -39,6 +39,8 @@ export const MESSAGE_AUDIENCES: readonly MessageAudience[] = [
   'facility',
   'organization',
   'closure',
+  // POOLSE-146: every family in one sport — owner and admin, as a level or the club is.
+  'sport',
 ];
 
 /** What a message is addressed to. `targetId` is null only for the whole club. */
@@ -116,6 +118,8 @@ export interface AudienceOptions {
   classGroups: AudienceOption[];
   levels: AudienceOption[];
   facilities: AudienceOption[];
+  /** POOLSE-146: the club's sports, only where it has more than one — keys the web translates. */
+  sports: string[];
 }
 
 /** The send would cross the daily ceiling. The figures come from the database. */
@@ -139,16 +143,17 @@ export function quotaRefusal(error: unknown): QuotaRefusal | null {
   return { kind, limit: figures[0]!, used: figures[1]!, requested: figures[2]! };
 }
 
-/** The five columns `message_recipients()` takes after the organization. */
-function targetParams(
-  target: MessageTarget,
-): [string, string | null, string | null, string | null, string | null] {
+/** The columns `message_recipients()` takes after the organization; the sport is POOLSE-146's. */
+type RecipientParams = [string, string | null, string | null, string | null, string | null, string | null];
+
+function targetParams(target: MessageTarget): RecipientParams {
   return [
     target.audience,
     target.audience === 'class_group' ? target.targetId : null,
     target.audience === 'level' ? target.targetId : null,
     target.audience === 'facility' ? target.targetId : null,
     target.audience === 'closure' ? target.targetId : null,
+    target.audience === 'sport' ? target.targetId : null,
   ];
 }
 
@@ -162,6 +167,16 @@ function targetParams(
  */
 export async function targetExists(organizationId: string, target: MessageTarget): Promise<boolean> {
   if (target.audience === 'organization') return true;
+  // A sport the club has on — the catalogue is the platform's, so not a row of ours.
+  if (target.audience === 'sport') {
+    return withOrg(organizationId, async (tx) => {
+      const { rows } = await tx.query<{ on: boolean }>(
+        'SELECT $1 = ANY (enabled_sports::text[]) AS on FROM organization WHERE id = $2',
+        [target.targetId, organizationId],
+      );
+      return rows[0]?.on === true;
+    });
+  }
   const table =
     target.audience === 'class_group'
       ? 'class_group'
@@ -207,7 +222,7 @@ export async function previewMessage(
       opted_out_count: number;
       unreachable: UnreachableStudent[] | null;
     }>(
-      `WITH everyone AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6)),
+      `WITH everyone AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6, $7)),
             -- Who is written to: REACHED, above, shared by the preview and the send.
             r AS (${REACHED}),
             -- One row per person written *for*: a student, a partner or a lead —
@@ -290,7 +305,7 @@ export async function sendSessionNoticeIn(
     tx,
     organizationId,
     sentByMembershipId,
-    ['session', classGroupId, null, null, null],
+    ['session', classGroupId, null, null, null, null],
     null,
     sessionId,
     subject,
@@ -303,7 +318,7 @@ async function insertMessageIn(
   tx: Tx,
   organizationId: string,
   sentByMembershipId: string,
-  recipientParams: [string, string | null, string | null, string | null, string | null],
+  recipientParams: RecipientParams,
   rowClassGroupId: string | null,
   rowSessionId: string | null,
   subject: string,
@@ -312,15 +327,15 @@ async function insertMessageIn(
 ): Promise<{ id: string; addressCount: number }> {
   {
     const { rows } = await tx.query<{ id: string | null; address_count: number }>(
-      `WITH everyone AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6)),
+      `WITH everyone AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6, $7)),
             -- Who is written to: REACHED, above, shared by the preview and the send.
             r AS (${REACHED}),
             n AS (SELECT count(DISTINCT email)::int AS address_count FROM r WHERE email IS NOT NULL),
             m AS (
               INSERT INTO message (organization_id, audience, class_group_id, level_id,
                                    facility_id, closure_id, class_session_id, subject, body,
-                                   sent_by_membership_id, address_count)
-              SELECT $1, $2::message_audience, $10, $4, $5, $6, $11, $7, $8, $9, n.address_count
+                                   sent_by_membership_id, address_count, sport_id)
+              SELECT $1, $2::message_audience, $11, $4, $5, $6, $12, $8, $9, $10, n.address_count, $7
                 FROM n
                WHERE n.address_count > 0
               RETURNING id, address_count
@@ -384,8 +399,10 @@ interface SummaryRow {
 
 const SUMMARY_COLUMNS = `
   m.id, m.audience,
-  coalesce(m.class_group_id, m.level_id, m.facility_id, m.closure_id, m.class_session_id) AS target_id,
-  coalesce(cg.name, lv.name, f.name, cl.reason, scg.name) AS target_name,
+  coalesce(coalesce(m.class_group_id, m.level_id, m.facility_id, m.closure_id, m.class_session_id)::text,
+           m.sport_id) AS target_id,
+  -- A sport's name is the reader's language: the key, which the web translates (POOLSE-146).
+  coalesce(cg.name, lv.name, f.name, cl.reason, scg.name, m.sport_id) AS target_name,
   m.subject, m.sent_at,
   person_name(m.sent_by_membership_id) AS sent_by_name,
   m.address_count,
@@ -552,7 +569,7 @@ export async function listAudienceOptions(
     );
 
     if (turmaIds !== null) {
-      return { classGroups: groups.rows, levels: [], facilities: [] };
+      return { classGroups: groups.rows, levels: [], facilities: [], sports: [] };
     }
 
     const levels = await tx.query<AudienceOption>(
@@ -564,7 +581,19 @@ export async function listAudienceOptions(
         WHERE archived_at IS NULL ORDER BY name`,
     );
 
-    return { classGroups: groups.rows, levels: levels.rows, facilities: facilities.rows };
+    // POOLSE-146: a sport audience only where the club has more than one.
+    const { rows: club } = await tx.query<{ sports: string[] }>(
+      'SELECT enabled_sports::text[] AS sports FROM organization WHERE id = $1',
+      [organizationId],
+    );
+    const sports = club[0]?.sports ?? [];
+
+    return {
+      classGroups: groups.rows,
+      levels: levels.rows,
+      facilities: facilities.rows,
+      sports: sports.length > 1 ? sports : [],
+    };
   });
 }
 

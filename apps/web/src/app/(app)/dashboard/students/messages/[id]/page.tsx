@@ -6,7 +6,7 @@ import { backTarget } from '@/lib/back';
 import { formatStamp } from '@/lib/date-format';
 import { PageError, PageShell, ScrollX } from '@/components/page-shell';
 import { DetailPage } from '@/components/detail-page';
-import { audienceKey, deliveryKey } from '../delivery-text';
+import { audienceKey, targetLabel, deliveryKey } from '../delivery-text';
 import { ArchiveMessage } from './archive-message';
 
 /**
@@ -90,7 +90,7 @@ export default async function MessagePage({
           <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
             <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-[max-content_1fr]">
               <dt className="text-foreground-muted">{t('messages.field.audience')}</dt>
-              <dd>{t(audienceKey(loaded.audience) as never, { name: loaded.targetName ?? '' })}</dd>
+              <dd>{t(audienceKey(loaded.audience) as never, { name: targetLabel(loaded.audience, loaded.targetName, t as (key: string) => string) })}</dd>
               <dt className="text-foreground-muted">{t('messages.sentAt')}</dt>
               <dd>
                 {formatStamp(loaded.sentAt)}

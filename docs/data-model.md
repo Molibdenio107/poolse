@@ -4224,6 +4224,17 @@ Migration `1794651700000_membership-sports`.
 - Switching a sport off for a club with instructors still in it is refused by the platform's own
   path (409 `sport_has_staff`, naming them), not by a trigger.
 
+### A message to a sport — POOLSE-146 slice a, 2 November 2026
+
+Migrations `1794651800000_message-sport-audience` (the enum value, alone) and
+`1794651800001_message-sport`.
+
+- **`message_audience`** gains `sport`; **`message.sport_id`** (plain FK to `sport`) names it, and
+  `message_audience_target` extends to it.
+- **`message_recipients_all` / `message_recipients`** gain a trailing `p_sport_id text DEFAULT NULL`
+  (dropped and made again: a new signature); the `sport` branch is an active enrolment in a live turma
+  whose recinto has that sport, a turma with no recinto being swimming's.
+
 ### Cancellation notice and push — POOLSE-90 slice 4, 27 October 2026
 
 Migrations `1792836000000_session-audience` (the enum value, alone) and

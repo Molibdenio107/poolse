@@ -107,3 +107,12 @@ audience uses.
   too (slice 4b): *Aula mudou: Golfinhos, 28-10-2026*, from when to when, only this week. Later
   moves record nothing.
 - **A closure's warning is also pushed** to the people it reached, when it is sent.
+
+## To a sport (POOLSE-146, 02-11-2026)
+
+In a club with more than one sport, the composer's *Para* offers *Uma modalidade*: every family with an
+active turma in that sport (a turma's sport is its recinto's; one with none is swimming's). A student in
+two sports is written to once. Owner and admin only, like a level or the whole club — an instructor still
+writes to their own turmas (Rui, 02-11-2026). The preview and the send count through the same
+`message_recipients()`, and the daily ceiling stays per club. The history names the sport in the reader's
+language.

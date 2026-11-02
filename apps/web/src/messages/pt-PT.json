@@ -4919,21 +4919,24 @@
       "facility": "Instalação: {name}",
       "organization": "Todo o clube",
       "closure": "Encerramento: {name}",
-      "session": "Aviso de aula: {name}"
+      "session": "Aviso de aula: {name}",
+      "sport": "Modalidade: {name}"
     },
     "audience": {
       "class_group": "Uma turma",
       "level": "Um nível",
       "facility": "Uma instalação",
       "organization": "Todo o clube",
-      "closure": "Encerramento"
+      "closure": "Encerramento",
+      "sport": "Uma modalidade"
     },
     "field": {
       "audience": "Para",
       "target": {
         "class_group": "Turma",
         "level": "Nível",
-        "facility": "Instalação"
+        "facility": "Instalação",
+        "sport": "Modalidade"
       },
       "subject": "Assunto",
       "body": "Mensagem",

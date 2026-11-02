@@ -37,7 +37,7 @@ Two small things the 01-11-2026 brainstorm pulled in once an instructor belongs 
 
 ### Acceptance criteria
 
-- [ ] `sport` audience through the one recipients function; composer offers it only when multi-sport.
+- [x] `sport` audience through the one recipients function; composer offers it only when multi-sport. (Slice a, 02-11-2026; owner and admin only — Rui.)
 - [ ] `qualification_type.sport_id`; predicate in `qualification_status()` only.
 - [ ] Rule 6 proved by test.
 - [ ] `docs/features/messages.md`, `docs/features/staff.md`, `docs/data-model.md`.

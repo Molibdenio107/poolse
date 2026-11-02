@@ -8,7 +8,7 @@ import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { backProp, originBack } from '@/lib/back';
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
-import { audienceKey, deliveryKey } from './delivery-text';
+import { audienceKey, targetLabel, deliveryKey } from './delivery-text';
 
 /**
  * Mensagens — POOLSE-67.
@@ -101,7 +101,7 @@ export default async function MessagesPage({
                       </span>
                     </div>
                     <p className="text-sm text-foreground-muted">
-                      {t(audienceKey(message.audience) as never, { name: message.targetName ?? '' })}
+                      {t(audienceKey(message.audience) as never, { name: targetLabel(message.audience, message.targetName, t as (key: string) => string) })}
                       {message.sentByName !== null &&
                         ` · ${t('messages.sentBy', { name: message.sentByName })}`}
                     </p>

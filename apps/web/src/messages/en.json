@@ -4919,21 +4919,24 @@
       "facility": "Site: {name}",
       "organization": "The whole club",
       "closure": "Closure: {name}",
-      "session": "Lesson notice: {name}"
+      "session": "Lesson notice: {name}",
+      "sport": "Sport: {name}"
     },
     "audience": {
       "class_group": "A class group",
       "level": "A level",
       "facility": "A site",
       "organization": "The whole club",
-      "closure": "Closure"
+      "closure": "Closure",
+      "sport": "A sport"
     },
     "field": {
       "audience": "To",
       "target": {
         "class_group": "Class group",
         "level": "Level",
-        "facility": "Site"
+        "facility": "Site",
+        "sport": "Sport"
       },
       "subject": "Subject",
       "body": "Message",
