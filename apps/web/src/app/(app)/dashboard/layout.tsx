@@ -1,3 +1,4 @@
+import { readableSports } from '@/lib/sport-scope';
 import * as Sentry from '@sentry/nextjs';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
@@ -104,8 +105,9 @@ async function currentViewer(): Promise<Viewer> {
       // No membership: nothing to show. A membership from an API that predates
       // the field: everything on (`modulesOf`).
       modules: membership === undefined ? [] : modulesOf(membership),
-      // POOLSE-125: one menu group per sport once a second is on.
-      sports: membership?.sports ?? [BASE_SPORT],
+      // POOLSE-125: one menu group per sport once a second is on — POOLSE-145:
+      // the sports this reader may read, so an instructor sees only theirs.
+      sports: membership === undefined ? [BASE_SPORT] : readableSports(membership),
       organizationName: membership?.organizationName ?? null,
       suspended:
         membership?.suspendedAt != null

@@ -22,6 +22,8 @@ export interface TenantContext {
    * Absent is every sport, which is what a background job's context means.
    */
   mySports?: readonly string[];
+  /** The sports this club has on — what `mySports` is compared with (`sportScope`). */
+  clubSports?: readonly string[];
 }
 
 /**

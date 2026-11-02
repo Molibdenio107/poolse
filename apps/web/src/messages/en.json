@@ -290,7 +290,8 @@
       "format": "The format is not valid.",
       "invalid": "Invalid value.",
       "toast": "Fix the marked fields: {fields}."
-    }
+    },
+    "sportNotYours": "This belongs to a sport you do not teach. Your sports are chosen by the owner or an administrator, on your staff record."
   },
   "pagination": {
     "label": "Pagination",

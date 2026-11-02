@@ -822,6 +822,11 @@ export interface StudentQuery {
   sport?: string | null;
   /** Only students in turmas of two or more sports. */
   multiSport?: boolean;
+  /**
+   * Only students with an active turma in one of these sports — POOLSE-145, a
+   * scoped instructor's whole register (`sportScope()`). Null is everybody.
+   */
+  withinSports?: readonly string[] | null;
 }
 
 /**
@@ -855,6 +860,8 @@ const STUDENT_SPORTS = (alias: string): string => `
  */
 export async function studentSportCounts(
   organizationId: string,
+  /** POOLSE-145: a scoped instructor's chips count only their sports' students. Null is everybody. */
+  withinSports: readonly string[] | null = null,
 ): Promise<{ total: number; bySport: { sport: string; count: number }[]; multi: number; none: number }> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
@@ -864,7 +871,10 @@ export async function studentSportCounts(
       none: number;
     }>(
       `WITH x AS (
-         SELECT s.id, ${STUDENT_SPORTS('s')} AS sports FROM student s WHERE s.archived_at IS NULL
+         SELECT s.id, sports FROM (
+           SELECT s.id, ${STUDENT_SPORTS('s')} AS sports FROM student s WHERE s.archived_at IS NULL
+         ) s
+          WHERE $1::text[] IS NULL OR sports && $1::text[]
        )
        SELECT (SELECT count(*) FROM x)::int AS total,
               (SELECT coalesce(json_agg(json_build_object('sport', sport, 'count', n) ORDER BY sport), '[]'::json)
@@ -872,6 +882,7 @@ export async function studentSportCounts(
               (SELECT count(*) FROM x WHERE cardinality(sports) > 1)::int AS multi,
               -- *Sem modalidade* — POOLSE-143: in no live turma, so in no sport's group.
               (SELECT count(*) FROM x WHERE cardinality(sports) = 0)::int AS none`,
+      [withinSports === null ? null : [...withinSports]],
     );
     return { total: rows[0]!.total, bySport: rows[0]!.by_sport, multi: rows[0]!.multi, none: rows[0]!.none };
   });
@@ -976,6 +987,8 @@ export async function listStudents(
               OR ($7::text = 'none' AND cardinality(${STUDENT_SPORTS('s')}) = 0)
               OR $7::text = ANY(${STUDENT_SPORTS('s')}))
          AND (NOT $8::boolean OR cardinality(${STUDENT_SPORTS('s')}) > 1)
+         -- POOLSE-145: a scoped instructor reads their sports' students only.
+         AND ($9::text[] IS NULL OR ${STUDENT_SPORTS('s')} && $9::text[])
        /*
         * The window goes here, inside the statement that carries the tenant
         * scope, the search and the sort — POOLSE-29. Never a page taken from a
@@ -1003,6 +1016,7 @@ export async function listStudents(
         query.toInvite ?? false,
         query.sport ?? null,
         query.multiSport ?? false,
+        query.withinSports === undefined || query.withinSports === null ? null : [...query.withinSports],
       ],
     );
 
@@ -1114,6 +1128,25 @@ export async function exportStudents(
     });
 
     return students;
+  });
+}
+
+/**
+ * Whether a student has an active turma in one of these sports — POOLSE-145,
+ * the record's door for a scoped instructor. True when there is no such student,
+ * so the caller's own 404 still answers that.
+ */
+export async function studentInSports(
+  organizationId: string,
+  studentId: string,
+  sports: readonly string[],
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ within: boolean }>(
+      `SELECT ${STUDENT_SPORTS('s')} && $2::text[] AS within FROM student s WHERE s.id = $1`,
+      [studentId, [...sports]],
+    );
+    return rows[0]?.within ?? true;
   });
 }
 

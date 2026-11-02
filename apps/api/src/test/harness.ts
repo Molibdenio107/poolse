@@ -644,15 +644,17 @@ export async function actingAs<T>(
 ): Promise<T> {
   const membershipId = options.membershipId ?? tenant.ownerMembershipId;
 
-  const [row] = await tenant.sql<{ app_user_id: string | null }>(
-    'SELECT app_user_id FROM membership WHERE id = $1',
+  const [row] = await tenant.sql<{ app_user_id: string | null; sports: string[] | null }>(
+    'SELECT app_user_id, sports::text[] AS sports FROM membership WHERE id = $1',
     [membershipId],
   );
-  // What the membership lookup would carry: the club's switched-off modules (POOLSE-87).
-  const [org] = await tenant.sql<{ disabled: string[] }>(
-    'SELECT disabled_modules::text[] AS disabled FROM organization WHERE id = $1',
+  // What the membership lookup would carry: the club's switched-off modules
+  // (POOLSE-87), and its sports and the person's (POOLSE-145).
+  const [org] = await tenant.sql<{ disabled: string[]; sports: string[] }>(
+    'SELECT disabled_modules::text[] AS disabled, enabled_sports::text[] AS sports FROM organization WHERE id = $1',
     [tenant.organizationId],
   );
+  const clubSports = org?.sports ?? ['pool'];
 
   return authStorage.run(
     {
@@ -667,6 +669,8 @@ export async function actingAs<T>(
           appUserId: row?.app_user_id ?? '',
           roles: options.roles,
           disabledModules: org?.disabled ?? [],
+          clubSports,
+          mySports: clubSports.filter((sport) => (row?.sports ?? ['pool']).includes(sport)),
           ...(options.support === true ? { support: true } : {}),
         },
         fn,

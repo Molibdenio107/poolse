@@ -150,6 +150,7 @@ export class TenantMiddleware implements NestMiddleware {
       support: membership.supportExpiresAt !== null,
       disabledModules: membership.disabledModules,
       mySports: membership.mySports,
+      clubSports: membership.sports,
     };
 
     /*

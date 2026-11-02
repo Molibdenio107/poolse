@@ -1,7 +1,9 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole } from '../tenant/roles.js';
+import { sportScope } from '../tenant/sport-scope.js';
 import { mayActForStudent } from './redemption.repository.js';
+import { studentInSports } from './students.repository.js';
 
 /**
  * A student's own pages — their record, timetable, calendar and swim records.
@@ -15,8 +17,18 @@ import { mayActForStudent } from './redemption.repository.js';
  * 12 October 2026: these routes answered any member about any child.
  */
 export async function requireActsForStudent(studentId: string): Promise<void> {
-  if (hasRole('owner', 'admin', 'instructor')) return;
   const { organizationId, membershipId } = currentTenant();
+  if (hasRole('owner', 'admin', 'instructor')) {
+    /*
+     * POOLSE-145: an instructor scoped to some sports reads only students with
+     * an active turma in one of them — or their own child, as any family does.
+     * A 403 naming the reason: they may well have seen the name on a register.
+     */
+    const scope = sportScope();
+    if (scope === null || (await studentInSports(organizationId, studentId, scope))) return;
+    if (await mayActForStudent(organizationId, membershipId, studentId)) return;
+    throw new ForbiddenException({ code: 'sport_not_yours', message: 'This student is in none of your sports' });
+  }
   if (!(await mayActForStudent(organizationId, membershipId, studentId))) {
     throw new NotFoundException('No such student');
   }

@@ -26,6 +26,10 @@ export function describeLoad(error: unknown): LoadFailure {
     if (error.status === 403 && error.code === 'module_disabled') {
       return { key: 'common.moduleDisabled', detail: '' };
     }
+    // POOLSE-145: an instructor asked for a sport, or a student, outside their sports.
+    if (error.status === 403 && error.code === 'sport_not_yours') {
+      return { key: 'common.sportNotYours', detail: '' };
+    }
     if (error.status === 403) return { key: 'common.notAllowed', detail: '' };
     if (error.status === 404) return { key: 'common.notFound', detail: '' };
 

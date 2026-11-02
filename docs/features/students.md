@@ -640,3 +640,27 @@ A student in two sports holds a level in each, and the two are independent (Rui,
   by a tennis move.
 - **Not yet:** reverting another sport's level change from Atividade. It is recorded, but its revert
   needs its own path. POOLSE-148 says so.
+
+## An instructor reads their sports' students (POOLSE-145, 02-11-2026)
+
+The sports a staff member belongs to (set on their record) decide whose students an instructor
+reads. `sportScope()` in `tenant/sport-scope.ts` is the one decision; `requireSport` refuses on it and
+every list filters by it.
+
+- **Owner and admin read every sport**; so does anybody who is not an instructor, and **an instructor
+  who belongs to every sport the club has on** — every instructor of a pool-only club, which is
+  therefore unchanged.
+- **Alunos.** Another sport in `?sport=` is a 403 `sport_not_yours`, never an empty list; so is
+  *Sem modalidade*. No sport asked for lists students with an active turma in one of the
+  instructor's sports, and the *Modalidades* chips count those only.
+- **A student's record** (and their timetable, calendar and times — every route behind
+  `requireActsForStudent`) opens for an instructor only when the student has an active turma in one
+  of their sports, or is their own child. Otherwise a 403 `sport_not_yours`, which the screen says
+  in words.
+- **Another sport's cards are absent, not blank.** A tennis instructor reading a student who also
+  swims gets no swimming level and no federation licence in the JSON, and only their sports' levels
+  and cards on *Turmas*.
+- **A stand-in** (POOLSE-53) taking one lesson of another sport takes its register — the register
+  has its own guard — and reads nothing more.
+- **The menu** offers a scoped instructor only their sports' sections (`readableSports`, web).
+- Levels, advancement, lesson feedback and competition are scoped in slice c.

@@ -170,14 +170,22 @@ test('a sport’s Níveis is its own ladder, and its Avanços the proposals onto
   });
 });
 
-test('an instructor may still filter any sport — a convenience, not a boundary (QA 7)', async () => {
+/*
+ * QA 7 was "a convenience, not a boundary" until POOLSE-145 made it one: an
+ * instructor reads only the sports they belong to. Everybody belongs to
+ * swimming until told otherwise, so tennis is now a 403 for them — and the
+ * owner, who reads every sport, still filters any.
+ */
+test('the filter is an instructor’s boundary since POOLSE-145; the owner filters any sport (QA 7)', async () => {
   await withScratchTenant(async (tenant) => {
     await enableTennis(tenant.organizationId);
+    const tennis = () =>
+      new StudentsController().list(undefined, undefined, undefined, undefined, undefined, undefined, 'tennis');
     await actingAs(tenant, { roles: ['instructor'] }, async () => {
-      const result = await new StudentsController().list(
-        undefined, undefined, undefined, undefined, undefined, undefined, 'tennis',
-      );
-      assert.deepEqual(result.students.items, []);
+      await expectStatus(tennis, 403);
+    });
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      assert.deepEqual((await tennis()).students.items, []);
     });
   });
 });

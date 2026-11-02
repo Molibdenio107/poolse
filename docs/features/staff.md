@@ -81,7 +81,8 @@ club is unchanged.
   the person reads theirs. The staff list shows a chip per person's sport.
 - **Rules.** Never empty; only a sport the club has on. A sport with instructors assigned stays on
   for the club: the platform refuses to switch it off (409 `sport_has_staff`) and names them.
-- **What it decides** — an instructor reads only their sports' students — is slice b, not yet built.
+- **What it decides** (slice b): an instructor reads only their sports' students. See *Alunos per
+  sport* in `students.md`.
 
 ## Contract (POOLSE-149, 02-11-2026)
 

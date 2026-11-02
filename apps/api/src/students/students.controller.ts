@@ -1,4 +1,5 @@
 import { readSportFilter } from './sport-filter.js';
+import { requireSport, sportScope } from '../tenant/sport-scope.js';
 import { EnrollmentClashError, clashConflict } from '../classes/enrollment-clash.js';
 import {
   BadRequestException,
@@ -409,6 +410,11 @@ export class StudentsController {
     const { organizationId } = currentTenant();
     // POOLSE-143: a sport the club has on, or `none`; anything else is a 400.
     const sportFilter = await readSportFilter(organizationId, sport);
+    // POOLSE-145: another sport is a 403, never an empty list; no sport asked
+    // for is the reader's own sports (null for owner, admin and anybody whose
+    // sports are all the club's — a pool-only club reads as before).
+    requireSport(sportFilter);
+    const scope = sportFilter === null ? sportScope() : null;
 
     // All three are tenant-scoped reads on the same organization; together they
     // cost one round trip instead of three.
@@ -428,6 +434,7 @@ export class StudentsController {
           // *Modalidades* — multi-sport Slice 3, validated since POOLSE-143.
           sport: sportFilter,
           multiSport: multi === '1',
+          withinSports: scope,
         },
         readPageQuery(page, limit),
       ),
@@ -435,7 +442,7 @@ export class StudentsController {
       // filter list every ladder.
       listLevels(organizationId, sportFilter === 'none' ? null : sportFilter),
       ageOfMajority(organizationId),
-      sportCounts === '1' ? studentSportCounts(organizationId) : Promise.resolve(undefined),
+      sportCounts === '1' ? studentSportCounts(organizationId, sportScope()) : Promise.resolve(undefined),
     ]);
 
     // POOLSE-131: the SNS number for owner and admin only.
@@ -452,7 +459,15 @@ export class StudentsController {
       // their own turmas by the endpoint; support invites nobody.
       canInviteFamilies: currentTenant().support !== true,
       ageOfMajority: majority,
-      ...(counts === undefined ? {} : { sportCounts: counts }),
+      ...(counts === undefined
+        ? {}
+        : {
+            // POOLSE-145: a scoped instructor's chips are their own sports.
+            sportCounts: ((within) =>
+              within === null ? counts : { ...counts, bySport: counts.bySport.filter((one) => within.includes(one.sport)) })(
+              sportScope(),
+            ),
+          }),
     };
   }
 
@@ -466,7 +481,7 @@ export class StudentsController {
     // indistinguishable from here, which is the point.
     if (!found) throw new NotFoundException('No such student');
     // POOLSE-131: the SNS number for owner and admin only — a family included.
-    const student = { ...found, identity: forReader(found.identity, hasRole('owner', 'admin')) };
+    const student = withinScope({ ...found, identity: forReader(found.identity, hasRole('owner', 'admin')) });
 
     // So the record can hide a control its owner may not use. Not access
     // control — SensitiveController and RecordsController each enforce their own
@@ -855,6 +870,30 @@ export class LevelsController {
 function isSportLevelMismatch(error: unknown): boolean {
   const detail = (error as { detail?: unknown }).detail;
   return typeof detail === 'string' && detail.startsWith('sport_level_mismatch|');
+}
+
+/**
+ * A record read by an instructor scoped to some sports — POOLSE-145 rule 4. The
+ * identity, contacts and attendance stay; another sport's cards are **absent**,
+ * not blank: swimming's level and the federation licence (competition is
+ * swimming's) unless swimming is theirs, and the other sports' levels but theirs.
+ */
+function withinScope<T extends { levelId: string | null; levelName: string | null; federationLicence: string | null; sportLevels?: { sport: string }[] }>(
+  student: T,
+): T {
+  const scope = sportScope();
+  if (scope === null) return student;
+  const scoped: T = {
+    ...student,
+    ...(student.sportLevels === undefined ? {} : { sportLevels: student.sportLevels.filter((one) => scope.includes(one.sport)) }),
+  };
+  if (!scope.includes('pool')) {
+    const record = scoped as Record<string, unknown>;
+    delete record['levelId'];
+    delete record['levelName'];
+    delete record['federationLicence'];
+  }
+  return scoped;
 }
 
 function sportLevelMismatch(): BadRequestException {

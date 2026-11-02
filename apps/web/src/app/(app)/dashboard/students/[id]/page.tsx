@@ -1,3 +1,4 @@
+import { readableSports } from '@/lib/sport-scope';
 import { SportLevelForm } from './sport-level-form';
 import { cn } from '@/lib/utils';
 import { AttendanceStrip, type StripLesson } from '@/components/attendance-strip';
@@ -126,7 +127,10 @@ export default async function StudentPage({
     timetable = timetableResult.entries;
     credits = creditsResult.credits;
   } catch (error) {
-    if (error instanceof ApiError && (error.status === 404 || error.status === 403)) {
+    if (error instanceof ApiError && error.code === 'sport_not_yours') {
+      // POOLSE-145: the student exists and is not in the reader's sports.
+      failure = describeLoad(error);
+    } else if (error instanceof ApiError && (error.status === 404 || error.status === 403)) {
       missing = true;
     } else {
       failure = describeLoad(error);
@@ -227,8 +231,12 @@ export default async function StudentPage({
   const turmas = [...new Map(timetable.map((entry) => [entry.classGroupId, entry])).values()];
   // Each turma's sport, only for a club with a second sport (Slice 5): the same
   // `/me` the layout reads, which Next answers once per render.
-  const clubSports = await apiFetch<Me>('/me').then((me) => me.memberships[0]?.sports ?? [], () => []);
+  const viewerMembership = await apiFetch<Me>('/me').then((me) => me.memberships[0] ?? null, () => null);
+  const clubSports = viewerMembership?.sports ?? [];
   const multiSport = isMultiSport(clubSports);
+  // POOLSE-145: an instructor scoped to some sports sees only their cards; the
+  // API leaves the other sport's fields out of the record as well.
+  const readable = viewerMembership === null ? clubSports : readableSports(viewerMembership);
 
   const storageReady = await storageConfigured();
 
@@ -420,10 +428,12 @@ export default async function StudentPage({
                       {family ? t('family.recordHint') : t('students.readOnly')}
                     </p>
                     <dl className="flex flex-col gap-3">
-                      <Row
-                        label={t('students.level')}
-                        value={loaded.levelName ?? t('students.noLevel')}
-                      />
+                      {'levelName' in loaded && (
+                        <Row
+                          label={t('students.level')}
+                          value={loaded.levelName ?? t('students.noLevel')}
+                        />
+                      )}
                       <Row
                         label={t('students.birthDate')}
                         value={loaded.birthDate === null ? null : formatDate(loaded.birthDate)}
@@ -441,10 +451,12 @@ export default async function StudentPage({
                       <Row label={t('students.contactEmail')} value={loaded.contactEmail} />
                       <Row label={t('students.contactPhone')} value={loaded.contactPhone} />
                       <Row label={t('students.taxNumber')} value={loaded.taxNumber} />
-                      <Row
-                        label={t('students.federationLicence')}
-                        value={loaded.federationLicence}
-                      />
+                      {'federationLicence' in loaded && (
+                        <Row
+                          label={t('students.federationLicence')}
+                          value={loaded.federationLicence}
+                        />
+                      )}
                       {/* POOLSE-131: read-only, and the SNS number only as "registado". */}
                       <Row
                         label={t('students.identity.addressLine')}
@@ -642,10 +654,12 @@ export default async function StudentPage({
                     ...turmas.map((entry) => entry.sport),
                     ...(loaded.sportLevels ?? []).map((held) => held.sport),
                   ]),
-                ].map((sport) => ({
-                  sport,
-                  entries: turmas.filter((entry) => entry.sport === sport),
-                }))
+                ]
+                  .filter((sport) => readable.includes(sport))
+                  .map((sport) => ({
+                    sport,
+                    entries: turmas.filter((entry) => entry.sport === sport),
+                  }))
               : [{ sport: null, entries: turmas }];
             /*
              * Each sport's own level (POOLSE-148), on its card: swimming's is the
