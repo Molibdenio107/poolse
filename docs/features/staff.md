@@ -52,6 +52,24 @@ Sweep of 15 October 2026:
   (`POST /people/merge` answers 409). History stays with the absorbed record, which points at the
   survivor (`merged_into`).
 
+## Personal details (POOLSE-149, 02-11-2026)
+
+A *Dados pessoais* card on the staff record's General tab: morada, código postal, localidade,
+nacionalidade, naturalidade, NIF, NISS and an emergency contact (nome, telefone, relação). All
+optional.
+
+- **Who.** The Owner, an Admin and the person on their own record read and edit it
+  (`GET/PATCH /staff/:id/details`). Anybody else gets a 403, and the card is not shown.
+- **NIF and NISS are the club's.** The person reads theirs but cannot change them (403
+  `forbidden_role`). Everything else the person keeps up to date themself.
+- **Checks.** The NIF passes `isValidNif` and the NISS `isValidNiss`; the postcode is 0000-000.
+  A refusal lands under its field and keeps what was typed. One NIF is one person in a club (409
+  `tax_number_taken`).
+- **The change log** (`membership.details_updated`) names the fields that moved, never their
+  values.
+- **Retention.** The NISS and the emergency contact go with the ID document after the person
+  leaves (see below).
+
 ## Date of birth and identity document (POOLSE-100)
 
 An *Identificação* card on the staff record's General tab. It is read and edited by the Owner, an

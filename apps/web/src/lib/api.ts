@@ -440,6 +440,21 @@ export interface StaffIdentity {
   retentionMonths: number;
 }
 
+/** A staff member's personal details — POOLSE-149 (`GET /staff/:id/details`). */
+export interface StaffDetails {
+  address: string | null;
+  locality: string | null;
+  postalCode: string | null;
+  taxNumber: string | null;
+  niss: string | null;
+  /** ISO 3166-1 alpha-2. */
+  nationality: string | null;
+  birthplace: string | null;
+  emergencyName: string | null;
+  emergencyPhone: string | null;
+  emergencyRelation: string | null;
+}
+
 export interface People {
   organizationId: string;
   /** One page of the staff list — POOLSE-29. */

@@ -786,6 +786,21 @@ test('a staff identity refuses families and a colleague — POOLSE-100', async (
   });
 });
 
+test('staff details refuse families and a colleague — POOLSE-149', async () => {
+  await asEach(async () => {
+    await refused('GET staff/:id/details as a family', 403, () => new StaffController().details(fixture.instructorId));
+    await refused('PATCH staff/:id/details as a family', 403, () =>
+      new StaffController().editDetails(fixture.instructorId, { locality: 'Lisboa' }),
+    );
+  });
+  await as(fixture.maintenanceId, ['maintenance'], async () => {
+    await refused('GET staff/:id/details as a colleague', 403, () => new StaffController().details(fixture.instructorId));
+    await refused('PATCH staff/:id/details as a colleague', 403, () =>
+      new StaffController().editDetails(fixture.instructorId, { locality: 'Lisboa' }),
+    );
+  });
+});
+
 test('invoice reminders refuse a guardian and a student (403) — POOLSE-86', async () => {
   await asEach(async () => {
     const invoices = new InvoicesController();

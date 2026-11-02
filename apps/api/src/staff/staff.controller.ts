@@ -11,8 +11,23 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { isIdDocumentType, isValidCcNumber, normalizeCcNumber } from '@poolse/rules';
+import {
+  isIdDocumentType,
+  isValidCcNumber,
+  isValidNif,
+  isValidNiss,
+  normalizeCcNumber,
+  normalizeNiss,
+} from '@poolse/rules';
 import { clubToday } from '../common/club-day.js';
+import {
+  CLUB_DETAIL_FIELDS,
+  DETAIL_COLUMNS,
+  readDetails,
+  TaxNumberTakenError,
+  writeDetails,
+  type StaffDetails,
+} from './details.repository.js';
 import {
   BirthDateIsTheirsError,
   readIdentity,
@@ -95,6 +110,60 @@ export class StaffController {
       throw error;
     }
     return (await readIdentity(organizationId, membershipId, actor))!;
+  }
+
+  /**
+   * Personal details — POOLSE-149 slice A. Owner and admin, and the person on
+   * their own record, as for the identity document. The person edits their
+   * address, nationality, birthplace and emergency contact; the NIF and NISS
+   * are the club's (`CLUB_DETAIL_FIELDS`), and changing one of those as anybody
+   * else is refused rather than ignored.
+   */
+  @Get(':membershipId/details')
+  async details(@Param('membershipId', new ParseUUIDPipe()) membershipId: string): Promise<StaffDetails> {
+    requireOwnOrManaged(membershipId);
+    const found = await readDetails(currentTenant().organizationId, membershipId);
+    if (found === null) throw new NotFoundException('No such staff member');
+    return found;
+  }
+
+  @Patch(':membershipId/details')
+  async editDetails(
+    @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<StaffDetails> {
+    requireOwnOrManaged(membershipId);
+    const { organizationId } = currentTenant();
+    const edit = parseDetails(body);
+
+    const was = await readDetails(organizationId, membershipId);
+    if (was === null) throw new NotFoundException('No such staff member');
+    if (!hasRole('owner', 'admin')) {
+      const clubs = CLUB_DETAIL_FIELDS.filter((field) => edit[field] !== undefined && edit[field] !== was[field]);
+      if (clubs.length > 0) {
+        throw new ForbiddenException({
+          code: 'forbidden_role',
+          message: 'The NIF and NISS are recorded by an owner or an administrator',
+          fields: Object.fromEntries(clubs.map((field) => [field, 'staffDetails.errors.clubsToSet'])),
+        });
+      }
+    }
+
+    try {
+      if (!(await writeDetails(organizationId, membershipId, edit))) {
+        throw new NotFoundException('No such staff member');
+      }
+    } catch (error) {
+      if (error instanceof TaxNumberTakenError) {
+        throw new ConflictException({
+          code: 'tax_number_taken',
+          message: 'Another person in this club already has that NIF',
+          fields: { taxNumber: 'staffDetails.errors.taxNumberTaken' },
+        });
+      }
+      throw error;
+    }
+    return (await readDetails(organizationId, membershipId))!;
   }
 
   /**
@@ -305,6 +374,68 @@ function requireOwnOrManaged(membershipId: string): string {
 }
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+const DETAIL_LIMITS: Partial<Record<keyof StaffDetails, number>> = {
+  address: 200,
+  locality: 100,
+  birthplace: 120,
+  emergencyName: 160,
+  emergencyPhone: 40,
+  emergencyRelation: 60,
+};
+
+/**
+ * The details from a body. An absent key is not asked about; an empty box
+ * clears; a value that cannot be what it says is refused under its field, never
+ * read as "clear it" (CLAUDE.md, the NIF rule).
+ */
+function parseDetails(body: Record<string, unknown>): Partial<StaffDetails> {
+  const fields: Record<string, string> = {};
+  const edit: Partial<StaffDetails> = {};
+
+  for (const [field] of DETAIL_COLUMNS) {
+    const raw = body[field];
+    if (raw === undefined) continue;
+    if (raw !== null && typeof raw !== 'string') {
+      fields[field] = 'staffDetails.errors.invalid';
+      continue;
+    }
+    const value = (raw ?? '').trim().replace(/\s+/g, ' ');
+    if (value === '') {
+      edit[field] = null;
+      continue;
+    }
+    const limit = DETAIL_LIMITS[field];
+    if (limit !== undefined && value.length > limit) {
+      fields[field] = 'staffDetails.errors.tooLong';
+      continue;
+    }
+
+    if (field === 'postalCode') {
+      const code = value.replace(/\s/g, '');
+      if (/^\d{4}-\d{3}$/.test(code)) edit[field] = code;
+      else fields[field] = 'staffDetails.errors.postalCodeInvalid';
+    } else if (field === 'taxNumber') {
+      const nif = value.replace(/\s/g, '');
+      if (isValidNif(nif)) edit[field] = nif;
+      else fields[field] = 'staffDetails.errors.nifInvalid';
+    } else if (field === 'niss') {
+      if (isValidNiss(value)) edit[field] = normalizeNiss(value);
+      else fields[field] = 'staffDetails.errors.nissInvalid';
+    } else if (field === 'nationality') {
+      const country = value.toUpperCase();
+      if (/^[A-Z]{2}$/.test(country)) edit[field] = country;
+      else fields[field] = 'staffDetails.errors.invalid';
+    } else {
+      edit[field] = value;
+    }
+  }
+
+  if (Object.keys(fields).length > 0) {
+    throw new BadRequestException({ code: 'invalid_details', message: 'Some fields are not valid', fields });
+  }
+  return edit;
+}
 
 function parseIdentity(body: Record<string, unknown>): IdentityEdit {
   const fields: Record<string, string> = {};

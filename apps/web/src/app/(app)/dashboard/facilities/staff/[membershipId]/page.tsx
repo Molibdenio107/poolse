@@ -9,6 +9,7 @@ import {
   type PersonQualifications,
   type QualificationTypes,
   type Me,
+  type StaffDetails,
   type StaffIdentity,
   type StaffRecord,
 } from '@/lib/api';
@@ -22,6 +23,7 @@ import { DetailPage } from '@/components/detail-page';
 import { Reinvite, RoleEditor, StaffForm } from './staff-form';
 import { storageConfigured } from '@/lib/storage-status';
 import { IdentityCard } from './identity-card';
+import { DetailsCard } from './details-card';
 
 /**
  * One staff member — POOLSE-39.
@@ -122,8 +124,10 @@ export default async function StaffMemberPage({
               owner, an admin and the person, and a refusal is no card at all.
               Every answer to somebody else is an audited read of the number.
             */
-            const [identity, me] = await Promise.all([
+            const [identity, details, me] = await Promise.all([
               outcome(apiFetch<StaffIdentity>(`/staff/${membershipId}/identity`)),
+              // POOLSE-149: the same three readers; a refusal is no card.
+              outcome(apiFetch<StaffDetails>(`/staff/${membershipId}/details`)),
               apiFetch<Me>('/me').catch(() => null),
             ]);
             return (
@@ -183,6 +187,11 @@ export default async function StaffMemberPage({
                   />
                 </div>
               </section>
+
+              {details.state === 'ok' && (
+                <DetailsCard membershipId={membershipId} details={details.data} canManage={viewer.canArchive} />
+              )}
+              {details.state === 'failed' && <PageError message={t('staffDetails.loadFailed')} />}
 
               {identity.state === 'ok' && (
                 <IdentityCard

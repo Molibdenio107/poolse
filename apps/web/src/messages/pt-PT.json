@@ -6398,6 +6398,37 @@
       "numberInvalid": "Use só letras, números e hífenes (3 a 30 caracteres)."
     }
   },
+  "staffDetails": {
+    "title": "Dados pessoais",
+    "visibility": "Só o proprietário, os administradores e a própria pessoa veem estes dados.",
+    "address": "Morada",
+    "postalCode": "Código postal",
+    "locality": "Localidade",
+    "nationality": "Nacionalidade",
+    "birthplace": "Naturalidade",
+    "notRecorded": "Não indicado",
+    "taxNumber": "NIF",
+    "niss": "NISS",
+    "nissHint": "Número de Segurança Social, 11 algarismos.",
+    "emergency": "Contacto de emergência",
+    "emergencyName": "Nome",
+    "emergencyPhone": "Telefone",
+    "emergencyRelation": "Relação",
+    "emergencyRelationPlaceholder": "Por exemplo, mãe",
+    "save": "Guardar",
+    "loadFailed": "Não foi possível carregar os dados pessoais.",
+    "notAllowed": "Não pode alterar estes dados.",
+    "failed": "Não foi possível guardar. Tente de novo.",
+    "errors": {
+      "invalid": "Valor inválido.",
+      "tooLong": "Texto demasiado longo.",
+      "postalCodeInvalid": "Use o formato 0000-000.",
+      "nifInvalid": "Este NIF não é válido. Confira os 9 algarismos.",
+      "nissInvalid": "Este NISS não é válido. Confira os 11 algarismos.",
+      "taxNumberTaken": "Outra pessoa deste clube já tem este NIF.",
+      "clubsToSet": "O NIF e o NISS são registados pelo proprietário ou por um administrador."
+    }
+  },
   "meetInbox": {
     "menuBadge": "{count, plural, one {# ficheiro de resultados por importar} other {# ficheiros de resultados por importar}}",
     "intro": "Ficheiros de resultados que chegaram por email ao endereço do clube. Confirme cada um com Importar, como um ficheiro largado nesta página.",

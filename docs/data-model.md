@@ -4154,6 +4154,23 @@ Migration `1792922400000_staff-identity`.
 - The date of birth did not move: a login's is `app_user.birth_date` (theirs), and a no-login
   person's is `membership.birth_date`.
 
+### Staff details — POOLSE-149 slice A, 2 November 2026
+
+Migration `1794651300000_staff-details`.
+
+- **`membership`** gains `locality`, `postal_code` (0000-000), `niss` (eleven digits starting 1
+  or 2, by CHECK; the check digit is `isValidNiss` in `@poolse/rules`), `nationality` (ISO
+  alpha-2), `birthplace`, and the emergency contact as free text: `emergency_name`,
+  `emergency_phone`, `emergency_relation`. No blank strings, by CHECK.
+- **Morada and NIF are the existing `address` and `tax_number`**: one person row, shared with a
+  guardian's hat.
+- **`apply_retention()`**: a guardian anonymised with a student loses all of them. A departed staff
+  member loses `niss` and the emergency contact with the ID document,
+  `id_document_retention_months` after the membership was archived. Address, NIF and
+  nationality stay.
+- **`merge_memberships`** keeps the survivor's value and takes the absorbed one's where it has
+  none, as for the other person columns.
+
 ### Cancellation notice and push — POOLSE-90 slice 4, 27 October 2026
 
 Migrations `1792836000000_session-audience` (the enum value, alone) and

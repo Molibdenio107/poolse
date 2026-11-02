@@ -352,8 +352,8 @@ export default async function StudentsPage({
                 <FromLink
                   key={entry.sport}
                   href={pageHref('/dashboard/students', { search, levelId, ...flags, sport: entry.sport, multi: undefined }, 1)}
-                  aria-current={sportFilter === entry.sport ? 'page' : undefined}
-                  className={subMenuPillClass(sportFilter === entry.sport)}
+                  // Off a sport's own page (`!sportPage`), no sport pill is the current one.
+                  className={subMenuPillClass(false)}
                 >
                   <SportIcon sport={entry.sport} className="size-4" />
                   {t(sportNameKey(entry.sport))}

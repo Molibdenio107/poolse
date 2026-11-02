@@ -51,3 +51,22 @@ export function isValidCcNumber(raw: string): boolean {
   }
   return sum % 10 === 0;
 }
+
+/** A NISS as it is stored and compared: digits only. */
+export function normalizeNiss(raw: string): string {
+  return raw.replace(/[\s.-]/g, '');
+}
+
+/**
+ * The Número de Identificação da Segurança Social — POOLSE-149. Eleven digits,
+ * the first 1 (a person) or 2 (an employer), the last a check digit: the first
+ * ten weighted 29, 23, 19, 17, 13, 11, 7, 5, 3, 2, and the check is 9 minus the
+ * sum's last digit. Spaces, dots and dashes are tolerated, as for the CC.
+ */
+export function isValidNiss(raw: string): boolean {
+  const value = normalizeNiss(raw);
+  if (!/^[12]\d{10}$/.test(value)) return false;
+  const weights = [29, 23, 19, 17, 13, 11, 7, 5, 3, 2];
+  const sum = weights.reduce((total, weight, index) => total + weight * Number(value[index]), 0);
+  return 9 - (sum % 10) === Number(value[10]);
+}

@@ -6398,6 +6398,37 @@
       "numberInvalid": "Use only letters, digits and hyphens (3 to 30 characters)."
     }
   },
+  "staffDetails": {
+    "title": "Personal details",
+    "visibility": "Only the owner, the administrators and the person themself can see these details.",
+    "address": "Address",
+    "postalCode": "Postcode",
+    "locality": "Town",
+    "nationality": "Nationality",
+    "birthplace": "Place of birth",
+    "notRecorded": "Not given",
+    "taxNumber": "Tax number (NIF)",
+    "niss": "Social security number (NISS)",
+    "nissHint": "Segurança Social number, 11 digits.",
+    "emergency": "Emergency contact",
+    "emergencyName": "Name",
+    "emergencyPhone": "Phone",
+    "emergencyRelation": "Relationship",
+    "emergencyRelationPlaceholder": "For example, mother",
+    "save": "Save",
+    "loadFailed": "The personal details could not be loaded.",
+    "notAllowed": "You cannot change these details.",
+    "failed": "Could not save. Try again.",
+    "errors": {
+      "invalid": "Invalid value.",
+      "tooLong": "Text too long.",
+      "postalCodeInvalid": "Use the format 0000-000.",
+      "nifInvalid": "This tax number is not valid. Check the 9 digits.",
+      "nissInvalid": "This NISS is not valid. Check the 11 digits.",
+      "taxNumberTaken": "Somebody else in this club already has this tax number.",
+      "clubsToSet": "The tax and social security numbers are recorded by the owner or an administrator."
+    }
+  },
   "meetInbox": {
     "menuBadge": "{count, plural, one {# results file to import} other {# results files to import}}",
     "intro": "Results files that arrived by email at the club's address. Confirm each one with Import, as you would a file dropped on this page.",
