@@ -1,3 +1,4 @@
+import { requireCompetition } from '../tenant/sport-scope.js';
 import {
   BadRequestException,
   Body,
@@ -50,6 +51,7 @@ export class MeetInboxController {
   @Get()
   async list(@Query('page') page?: string): Promise<InboxResponse> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     const list = await listInbox(organizationId, readPageQuery(page, INBOX_PAGE));
     return {
@@ -63,6 +65,7 @@ export class MeetInboxController {
   @Get('count')
   async count(): Promise<{ pending: number }> {
     requireRole(...TEACHING);
+    requireCompetition();
     return { pending: await pendingInboxCount(currentTenant().organizationId) };
   }
 
@@ -73,6 +76,7 @@ export class MeetInboxController {
   @Get(':id/file')
   async file(@Param('id', new ParseUUIDPipe()) id: string): Promise<StreamableFile> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     const found = await inboxFile(organizationId, id);
     if (found === null) throw new NotFoundException('No such file');

@@ -77,6 +77,8 @@ export async function listProposals(
   page: PageQuery,
   /** One sport's queue — a sport's *Avanços* (POOLSE-143): proposals onto its ladder. */
   sport: string | null = null,
+  /** POOLSE-145: a scoped instructor's queue — proposals onto one of these ladders. Null is every one. */
+  withinSports: readonly string[] | null = null,
 ): Promise<Paginated<TransferProposal>> {
   return withOrg(organizationId, async (tx) => {
     const run = (limit: number, offset: number) =>
@@ -147,9 +149,10 @@ export async function listProposals(
             AND s.archived_at IS NULL
             -- In the sport's own group, inside the same statement as the window.
             AND ($3::text IS NULL OR tl.sport_id = $3::text)
+            AND ($4::text[] IS NULL OR tl.sport_id = ANY ($4::text[]))
           ORDER BY p.generated_at, ${nameOrder('s')}
           LIMIT $1 OFFSET $2`,
-        [limit, offset, sport],
+        [limit, offset, sport, withinSports === null ? null : [...withinSports]],
       );
 
     return windowed(page, run, (row) => ({
@@ -440,8 +443,10 @@ export async function dismissProposal(
 export async function readyNoSeat(
   organizationId: string,
   page: PageQuery,
+  /** POOLSE-145: as the queue's. */
+  withinSports: readonly string[] | null = null,
 ): Promise<Paginated<TransferProposal>> {
-  const all = await listProposals(organizationId, { ...page, limit: 500, offset: 0 });
+  const all = await listProposals(organizationId, { ...page, limit: 500, offset: 0 }, null, withinSports);
   const stuck = all.items.filter((proposal) => proposal.candidates.length === 0);
 
   /*

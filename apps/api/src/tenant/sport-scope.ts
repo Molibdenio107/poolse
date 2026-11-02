@@ -42,3 +42,12 @@ export function requireSport(sport: string | null): void {
     message: sport === 'none' ? 'Students in no sport are read by the office' : `You do not teach ${sport}`,
   });
 }
+
+/**
+ * Competition is swimming's (`COMPETITION_SPORTS` on the web): the FPN's
+ * meets, entry times and a swimmer's times. Its routes ask for it by name, so
+ * an instructor who does not teach swimming is refused them (POOLSE-145).
+ */
+export function requireCompetition(): void {
+  requireSport('pool');
+}

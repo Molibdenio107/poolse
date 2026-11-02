@@ -1,3 +1,4 @@
+import { requireCompetition } from '../tenant/sport-scope.js';
 import {
   BadRequestException,
   ForbiddenException,
@@ -58,6 +59,8 @@ export class RecordsController {
   async read(@Param('studentId') studentId: string): Promise<ProgressionResponse> {
     // Security review, 12 October 2026: this answered any member, a guardian included. A family reads its own child only.
     await requireActsForStudent(studentId);
+    // POOLSE-145: a swimmer's times are competition, and competition is swimming's.
+    requireCompetition();
     const { organizationId } = currentTenant();
 
     const progression = await progressionFor(organizationId, studentId);
@@ -85,6 +88,7 @@ export class RecordsController {
     @Body() body: Record<string, unknown>,
   ): Promise<{ id: string }> {
     requireRole('owner', 'admin', 'instructor');
+    requireCompetition();
     const { organizationId } = currentTenant();
 
     let id: string | null;
@@ -160,6 +164,7 @@ export class RecordsController {
     @Body() body: Record<string, unknown>,
   ): Promise<{ saved: true }> {
     requireRole('owner', 'admin', 'instructor');
+    requireCompetition();
     const { organizationId } = currentTenant();
 
     const raw = typeof body['stroke'] === 'string' ? body['stroke'].trim() : '';

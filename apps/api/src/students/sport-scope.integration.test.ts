@@ -1,7 +1,11 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import pg from 'pg';
-import { StudentsController } from './students.controller.js';
+import { AdvancementController, StudentsController } from './students.controller.js';
+import { RecordsController } from './records.controller.js';
+import { QualifyingController } from '../qualifying/qualifying.controller.js';
+import { MeetsController } from '../meets/meets.controller.js';
+import { TimetableController } from '../classes/classes.controller.js';
 import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant, type ScratchTenant } from '../test/harness.js';
 
 /**
@@ -51,6 +55,14 @@ async function aClub(tenant: ScratchTenant): Promise<Club> {
      VALUES ($1, $2, $3, 'Ténis Iniciação', $4) RETURNING id`,
     [org, tenant.seasonId, tenant.facilityId, court!.id],
   );
+  // A weekly slot each, so the timetable has something to show.
+  for (const [group, weekday] of [[swim!.id, 2], [tennis!.id, 3]] as const) {
+    await tenant.sql(
+      `INSERT INTO class_schedule (organization_id, class_group_id, weekday, start_time, duration_minutes)
+       VALUES ($1, $2, $3, TIME '18:00', 45)`,
+      [org, group, weekday],
+    );
+  }
   const [swimLevel] = await tenant.sql<{ id: string }>(
     `INSERT INTO student_level (organization_id, name, sort_order) VALUES ($1, 'Golfinho', 99) RETURNING id`,
     [org],
@@ -110,6 +122,8 @@ test('POOLSE-145 b — a tennis-only instructor reads tennis students, and nothi
       assert.equal('levelName' in carla, false);
       assert.equal('federationLicence' in carla, false);
       assert.equal(carla.firstName, 'Carla');
+      // Times are swimming's: the record does not offer them.
+      assert.equal(carla.canViewProgress, false);
       // Ana is swimming only: not theirs to open.
       await expectStatus(() => new StudentsController().one(club.ana), 403);
       await expectStatus(() => new StudentsController().one(club.duarte), 403);
@@ -143,5 +157,52 @@ test('POOLSE-145 b — in a pool-only club an instructor reads every student, as
       assert.ok(ids(await list('none')).includes(student!.id));
       await new StudentsController().one(student!.id);
     });
+  });
+});
+
+test('POOLSE-145 c — levels, the queue, competition, times and the timetable follow the same scope', async () => {
+  await withScratchTenant(async (tenant) => {
+    const club = await aClub(tenant);
+    await tenant.sql(
+      `INSERT INTO student_level (organization_id, name, sort_order, sport_id) VALUES ($1, 'Ténis 1', 1, 'tennis')`,
+      [tenant.organizationId],
+    );
+
+    await actingAs(tenant, { membershipId: club.tennisCoach, roles: ['instructor'] }, async () => {
+      // The ladders a scoped instructor is offered are their sports' only.
+      const levels = (await list()).levels;
+      assert.ok(levels.length > 0);
+      assert.ok(levels.every((level) => level.sportId === 'tennis'));
+
+      // The advancement queue: another sport is a 403; no sport is their own.
+      const queue = new AdvancementController();
+      await expectStatus(() => queue.list(undefined, undefined, 'pool'), 403);
+      await queue.list();
+      await queue.noSeat();
+
+      // Competition and a swimmer's times are swimming's.
+      await expectStatus(() => new QualifyingController().read(), 403);
+      await expectStatus(() => new MeetsController().list(), 403);
+      await expectStatus(() => new RecordsController().read(club.carla), 403);
+
+      // Carla's timetable carries her tennis turma and not her swimming one.
+      const { entries } = await new TimetableController().read(club.carla);
+      assert.ok(entries.length > 0);
+      assert.ok(entries.every((entry) => entry.sport === 'tennis'));
+    });
+
+    // An instructor in both sports, and the owner, read all of it as before.
+    for (const reader of [
+      { membershipId: club.poolCoach, roles: ['instructor' as const] },
+      { roles: ['owner' as const] },
+    ]) {
+      await actingAs(tenant, reader, async () => {
+        await new QualifyingController().read();
+        await new MeetsController().list();
+        await new RecordsController().read(club.carla);
+        const { entries } = await new TimetableController().read(club.carla);
+        assert.deepEqual([...new Set(entries.map((entry) => entry.sport))].sort(), ['pool', 'tennis']);
+      });
+    }
   });
 });

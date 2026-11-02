@@ -1,3 +1,4 @@
+import { requireCompetition } from '../tenant/sport-scope.js';
 import {
   BadRequestException,
   Body,
@@ -56,6 +57,7 @@ export class MeetsController {
   @Get()
   async list(@Query('page') page?: string, @Query('limit') limit?: string): Promise<MeetsResponse> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     const meets = await listMeets(organizationId, readPageQuery(page, limit));
     return {
@@ -72,6 +74,7 @@ export class MeetsController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<MeetDetail & { canArchive: boolean; organizationId: string }> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     const meet = await findMeet(organizationId, id);
     if (meet === null) throw new NotFoundException('No such meet');
@@ -86,6 +89,7 @@ export class MeetsController {
   @Post('import')
   async import(@Body() body: Record<string, unknown>): Promise<ImportPreview> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId, membershipId } = currentTenant();
     if (!membershipId) throw new BadRequestException('No membership');
     try {

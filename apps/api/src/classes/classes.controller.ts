@@ -1,3 +1,4 @@
+import { sportScope } from '../tenant/sport-scope.js';
 import { EnrollmentClashError, clashConflict } from './enrollment-clash.js';
 import { listEnrollmentClashes, type EnrollmentClashRow } from './classes.repository.js';
 import {
@@ -423,7 +424,11 @@ export class TimetableController {
     // Security review, 12 October 2026: this answered any member, a guardian included. A family reads its own child only.
     await requireActsForStudent(studentId);
     const { organizationId } = currentTenant();
-    return { entries: await timetableFor(organizationId, studentId) };
+    const entries = await timetableFor(organizationId, studentId);
+    // POOLSE-145: a scoped instructor reads their sports' turmas only — another
+    // sport's cards are absent (rule 4). Attendance stays whole elsewhere.
+    const scope = sportScope();
+    return { entries: scope === null ? entries : entries.filter((entry) => scope.includes(entry.sport)) };
   }
 }
 

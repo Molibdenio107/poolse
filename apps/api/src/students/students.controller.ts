@@ -440,7 +440,10 @@ export class StudentsController {
       ),
       // A sport's register lists that sport's ladder (POOLSE-143); `none` and no
       // filter list every ladder.
-      listLevels(organizationId, sportFilter === 'none' ? null : sportFilter),
+      listLevels(organizationId, sportFilter === 'none' ? null : sportFilter).then((levels) =>
+        // POOLSE-145: a scoped instructor's ladders are their sports' only.
+        scope === null ? levels : levels.filter((level) => scope.includes(level.sportId)),
+      ),
       ageOfMajority(organizationId),
       sportCounts === '1' ? studentSportCounts(organizationId, sportScope()) : Promise.resolve(undefined),
     ]);
@@ -491,7 +494,8 @@ export class StudentsController {
       return {
         ...student,
         canViewSensitive: true,
-        canViewProgress: true,
+        // POOLSE-145: times are competition, which is swimming's (`requireCompetition`).
+        canViewProgress: ((scope) => scope === null || scope.includes('pool'))(sportScope()),
         familyView: false,
         cover: await studentCover(organizationId, id),
       };
@@ -1470,7 +1474,16 @@ export class AdvancementController {
     const { organizationId } = currentTenant();
     const filter = await readSportFilter(organizationId, sport);
     if (filter === 'none') throw new BadRequestException('sport must be a sport');
-    return { proposals: await listProposals(organizationId, readPageQuery(page, limit), filter) };
+    // POOLSE-145: another sport's queue is a 403; no sport is the reader's own.
+    requireSport(filter);
+    return {
+      proposals: await listProposals(
+        organizationId,
+        readPageQuery(page, limit),
+        filter,
+        filter === null ? sportScope() : null,
+      ),
+    };
   }
 
   /**
@@ -1487,7 +1500,7 @@ export class AdvancementController {
   ): Promise<{ proposals: Paginated<TransferProposal> }> {
     requireRole('owner', 'admin', 'instructor');
     const { organizationId } = currentTenant();
-    return { proposals: await readyNoSeat(organizationId, readPageQuery(page, limit)) };
+    return { proposals: await readyNoSeat(organizationId, readPageQuery(page, limit), sportScope()) };
   }
 
   @Post(':id/confirm')

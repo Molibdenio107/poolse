@@ -43,3 +43,5 @@ Rui, 28-10-2026: each sport gets *"a separate main screen containing energy, cal
 - [ ] `sport` scope on nav entries; single-sport collapse proven by snapshot.
 - [ ] `?sport=` filter on the three list endpoints with validation.
 - [ ] Circles scoped to the sport group.
+
+> **Updated by POOLSE-145 (02-11-2026):** `?sport=` is now validated against the *reader's* sports as well as the club's — another sport is a 403 `sport_not_yours` for a scoped instructor (`requireSport`), and the menu offers them only their sports (`readableSports`).

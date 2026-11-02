@@ -53,7 +53,10 @@ export default async function ProgressPage({
       apiFetch<Progression>(`/students/${id}/progression`),
     ]);
   } catch (error) {
-    if (error instanceof ApiError && (error.status === 404 || error.status === 403)) {
+    if (error instanceof ApiError && error.code === 'sport_not_yours') {
+      // POOLSE-145: times are swimming's, and this reader does not teach it.
+      failure = describeLoad(error);
+    } else if (error instanceof ApiError && (error.status === 404 || error.status === 403)) {
       missing = true;
     } else {
       failure = describeLoad(error);

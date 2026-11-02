@@ -663,4 +663,12 @@ every list filters by it.
 - **A stand-in** (POOLSE-53) taking one lesson of another sport takes its register — the register
   has its own guard — and reads nothing more.
 - **The menu** offers a scoped instructor only their sports' sections (`readableSports`, web).
-- Levels, advancement, lesson feedback and competition are scoped in slice c.
+- **Levels** (slice c): a scoped instructor's register offers their sports' ladders only.
+- **Avanços**: another sport's queue is a 403; no sport asked for is their sports' proposals, *sem
+  vaga* included.
+- **Competition and times are swimming's** (`requireCompetition()`): qualifying, meets, the results
+  inbox and a swimmer's *Progressão* refuse an instructor who does not teach swimming, and the
+  record does not offer *Progressão* (`canViewProgress`).
+- **The timetable** answers a scoped instructor their sports' turmas only. The attendance strip and
+  the student's calendar stay whole: attendance is read as before (rule 4).
+- **Lesson feedback** needs nothing new: an instructor already reads only the lessons they taught.

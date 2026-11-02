@@ -7,6 +7,7 @@ import { SubscriptionController } from '../billing/subscription.controller.js';
 import { QualifyingController } from '../qualifying/qualifying.controller.js';
 import { InvoicesController } from '../billing/invoices.controller.js';
 import { OwnEmailPreferenceController } from '../notifications/email-preferences.controller.js';
+import pg from 'pg';
 import assert from 'node:assert/strict';
 import { ArchiveController } from '../archive/archive.controller.js';
 import { ActivityController } from '../activity/activity.controller.js';
@@ -1389,4 +1390,42 @@ test('GET attention answers a guardian and a student with an empty map', async (
       who.label,
     );
   });
+});
+
+// --------------------------------------------------------------------------
+// POOLSE-145 — a sport-only instructor, against every sport-scoped route
+// --------------------------------------------------------------------------
+
+test('a tennis-only instructor is refused every swimming route (403) — POOLSE-145', async () => {
+  const org = tenantRef.organizationId;
+  // Switching a sport on is the platform's; the test does it on the owner login.
+  const owner = new pg.Client({ connectionString: process.env['DATABASE_URL'] });
+  await owner.connect();
+  await owner.query("UPDATE organization SET enabled_sports = '{pool,tennis}' WHERE id = $1", [org]);
+  await owner.query("UPDATE membership SET sports = '{tennis}' WHERE id = $1", [fixture.instructorId]);
+  try {
+    await as(fixture.instructorId, ['instructor'], async () => {
+      const students = new StudentsController();
+      await refused('GET students?sport=pool', 403, () =>
+        students.list(undefined, undefined, undefined, undefined, undefined, undefined, 'pool'),
+      );
+      await refused('GET students?sport=none', 403, () =>
+        students.list(undefined, undefined, undefined, undefined, undefined, undefined, 'none'),
+      );
+      await refused('GET students/:alice', 403, () => students.one(fixture.aliceId));
+      await refused('GET transfer-proposals?sport=pool', 403, () =>
+        new AdvancementController().list(undefined, undefined, 'pool'),
+      );
+      await refused('GET qualifying', 403, () => new QualifyingController().read());
+      await refused('GET meets', 403, () => new MeetsController().list());
+      await refused('GET students/:alice/progression', 403, () => new RecordsController().read(fixture.aliceId));
+      // No sport asked for is an absence, never a row of swimming.
+      const mine = await students.list();
+      assert.ok(mine.students.items.every((one) => (one.sports ?? []).includes('tennis')));
+    });
+  } finally {
+    await owner.query("UPDATE membership SET sports = '{pool}' WHERE id = $1", [fixture.instructorId]);
+    await owner.query("UPDATE organization SET enabled_sports = '{pool}' WHERE id = $1", [org]);
+    await owner.end();
+  }
 });

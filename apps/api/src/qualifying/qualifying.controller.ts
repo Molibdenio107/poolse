@@ -1,3 +1,4 @@
+import { requireCompetition } from '../tenant/sport-scope.js';
 import {
   BadRequestException,
   Body,
@@ -69,6 +70,7 @@ export class QualifyingController {
   @Get()
   async read(@Query('season') season?: string): Promise<QualifyingOverview & Flags> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     const seasonId = season !== undefined && /^[0-9a-f-]{36}$/i.test(season) ? season : null;
     return { ...(await overview(organizationId, seasonId)), ...flags(organizationId) };
@@ -77,6 +79,7 @@ export class QualifyingController {
   @Post('age-groups')
   async addAgeGroup(@Body() body: Record<string, unknown>): Promise<{ id: string }> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     const seasonId = uuid(body['seasonId'], 'seasonId');
     try {
@@ -94,6 +97,7 @@ export class QualifyingController {
   @Post('age-groups/fpn')
   async addFpnAgeGroups(@Body() body: Record<string, unknown>): Promise<{ created: number; ids: string[] }> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     const seasonId = uuid(body['seasonId'], 'seasonId');
     try {
@@ -109,6 +113,7 @@ export class QualifyingController {
     @Body() body: Record<string, unknown>,
   ): Promise<{ saved: true }> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     let found: boolean;
     try {
@@ -131,6 +136,7 @@ export class QualifyingController {
   @Post('standards')
   async addStandard(@Body() body: Record<string, unknown>): Promise<{ id: string }> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     const seasonId = uuid(body['seasonId'], 'seasonId');
     try {
@@ -143,6 +149,7 @@ export class QualifyingController {
   @Get('standards/:id')
   async standard(@Param('id', new ParseUUIDPipe()) id: string): Promise<StandardDetail & Flags> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     const found = await findStandard(organizationId, id);
     if (found === null) throw new NotFoundException('No such standard');
@@ -155,6 +162,7 @@ export class QualifyingController {
     @Body() body: Record<string, unknown>,
   ): Promise<{ saved: true }> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     let found: boolean;
     try {
@@ -187,6 +195,7 @@ export class QualifyingController {
     @Body() body: Record<string, unknown>,
   ): Promise<{ added: number; changed: number; cleared: number }> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     const raw = Array.isArray(body['times']) ? body['times'] : [];
     if (raw.length > MAX_TIMES) throw new BadRequestException('Too many times');
@@ -241,6 +250,7 @@ export class QualifyingController {
     @Body() body: Record<string, unknown>,
   ): Promise<ImportResult> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     const course = body['course'];
     if (!COURSES.includes(course as Course)) throw new BadRequestException('course must be scm or lcm');
@@ -274,6 +284,7 @@ export class QualifyingController {
     @Query('margin') margin?: string,
   ): Promise<Board & { organizationId: string }> {
     requireRole(...TEACHING);
+    requireCompetition();
     const { organizationId } = currentTenant();
     const parsed = Number(margin);
     const marginMs =
