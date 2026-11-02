@@ -13,7 +13,7 @@ const owner: Viewer = { roles: ['owner'], kind: 'business', modules: [...POOLSE_
 
 const flat = (items: Item[]): Item[] => items.flatMap((item) => [item, ...flat(item.children ?? [])]);
 
-test('POOLSE-150 QA 1: swimming alone gets its one Natação group, holding Calendário, Turmas and Piscinas', () => {
+test('POOLSE-150 QA 1: swimming alone gets its one Natação group, Piscinas first, and its tab opens Calendário', () => {
   const sections = visibleSections({ ...owner, sports: ['pool'] });
   assert.deepEqual(sections, visibleSections(owner), 'no sports given is swimming');
   const groups = sections.filter((item) => item.key.startsWith('sport.name.'));
@@ -21,12 +21,14 @@ test('POOLSE-150 QA 1: swimming alone gets its one Natação group, holding Cale
   assert.deepEqual(
     groups[0]!.children?.map((item) => [item.href, item.key]),
     [
+      ['/dashboard/recintos?sport=pool', 'recintos.nav.pool'],
       ['/dashboard/calendar?sport=pool', 'calendar.title'],
       ['/dashboard/classes?sport=pool', 'classes.title'],
-      ['/dashboard/recintos?sport=pool', 'recintos.nav.pool'],
       ['/dashboard/students?sport=pool', 'students.title'],
     ],
   );
+  // Listed first, but the tab still opens the calendar (Rui, 02-11-2026).
+  assert.equal(groups[0]!.href, '/dashboard/calendar?sport=pool');
   // Turmas and Calendário left the top level, as with two sports.
   const top = sections.map((item) => item.href);
   assert.equal(top.includes('/dashboard/classes') || top.includes('/dashboard/calendar'), false);
@@ -57,7 +59,7 @@ test('QA 2: with two sports each gets a group, in order, where Turmas stood, and
   const [poolGroup, tennisGroup] = [sections[pool], sections[tennis]] as [Item, Item];
   assert.deepEqual(
     tennisGroup.children?.map((item) => item.href),
-    ['/dashboard/calendar?sport=tennis', '/dashboard/classes?sport=tennis', '/dashboard/recintos?sport=tennis', '/dashboard/students?sport=tennis'],
+    ['/dashboard/recintos?sport=tennis', '/dashboard/calendar?sport=tennis', '/dashboard/classes?sport=tennis', '/dashboard/students?sport=tennis'],
   );
   // A sport's tab opens its Calendário (POOLSE-141 rule 3, the handoff's sidebar).
   assert.equal(tennisGroup.href, '/dashboard/calendar?sport=tennis');

@@ -1152,7 +1152,7 @@
     "alertNoEmail": "O envio de email não está configurado neste ambiente. Os alertas são registados, mas nada é enviado.",
     "alertNotSent": "Registado, sem envio",
     "title": "Instalações",
-    "subtitle": "Os locais da organização e os tanques em cada um.",
+    "subtitle": "Os locais da organização e os desportos de cada um.",
     "addSite": "Adicionar instalação",
     "create": "Criar instalação",
     "nameLabel": "Nome",
@@ -1433,7 +1433,14 @@
     "waterBackInRange": "A água voltou aos limites",
     "reopenHint": "A última análise está dentro dos limites, mas a piscina continua encerrada. Se foi encerrada por causa da água, levante o encerramento em Encerramentos para a reabrir antes da data.",
     "openClosures": "Abrir Encerramentos",
-    "fromLab": "Do laboratório"
+    "fromLab": "Do laboratório",
+    "sports": "Desportos",
+    "sportOpen": "Ver os recintos",
+    "sportCount": {
+      "pool": "{count, plural, =0 {Nenhuma piscina} one {# piscina} other {# piscinas}}",
+      "courts": "{count, plural, =0 {Nenhum campo} one {# campo} other {# campos}}",
+      "rooms": "{count, plural, =0 {Nenhuma sala} one {# sala} other {# salas}}"
+    }
   },
   "classes": {
     "colour": "Cor da turma",

@@ -525,9 +525,8 @@ function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] 
   const scoped = sections.filter((section) => section.perSport !== undefined);
   if (sports.length === 0 || scoped.length === 0) return sections;
 
-  // A sport's section opens on its Calendário, listed first — the handoff's
-  // sidebar and POOLSE-141 rule 3. Only inside a sport's group: a pool-only
-  // menu keeps the order it shipped with.
+  // A sport's recintos are listed first, then its Calendário (Rui, 02-11-2026:
+  // "pools should be the first menu"), and the rest in their menu order.
   const inSection = [...scoped].sort((a, b) => sportPageRank(a.href) - sportPageRank(b.href));
   const groups = sports.map((sport): Item => {
     const children = inSection
@@ -552,9 +551,12 @@ function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] 
           ...(badge !== undefined && (sport === BASE_SPORT || entry.badgePerSport === true) ? { badge } : {}),
         };
       });
+    // The sport's tab still opens its Calendário (Rui, 02-11-2026), the page
+    // used most days — not the first entry, which is the recintos list.
     const [first] = children as [Item, ...Item[]];
+    const opens = children.find((child) => pathOf(child.href) === '/dashboard/calendar') ?? first;
     return {
-      href: first.href,
+      href: opens.href,
       key: `sport.name.${sport}`,
       icon: sport === BASE_SPORT ? 'pool' : 'facility',
       sport,
@@ -600,9 +602,10 @@ function withSport(href: string, sport: PoolseSport): string {
   return `${href}${href.includes('?') ? '&' : '?'}sport=${sport}`;
 }
 
-/** Calendário first, then the rest in their menu order (a stable sort keeps it). */
+/** The recintos, then Calendário, then the rest in their menu order (a stable sort keeps it). */
 function sportPageRank(href: string): number {
-  return href === '/dashboard/calendar' ? 0 : 1;
+  if (href === '/dashboard/recintos') return 0;
+  return href === '/dashboard/calendar' ? 1 : 2;
 }
 
 /** Every destination this viewer may open, children included, in menu order — the palette's list. */

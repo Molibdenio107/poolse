@@ -358,12 +358,18 @@ Every verdict is the existing one: `excursions`/`resolveBands`, `gradeLabResult`
 - Every sport's group has a recintos entry, `/dashboard/recintos?sport=`, named in the sport's own
   word (`keyBySport`): *Piscinas* for swimming, *Campos* for the court and pitch sports, *Salas* for
   the gym, *Recintos* otherwise. Staff read it; adding is the office's, as the API decides.
+  **It is listed first in its sport's group**, before Calendário (Rui, 02-11-2026); the sport's
+  tab still opens Calendário (`sportPageRank`, and the group's `href` looks the calendar up).
 - The page lists the sport's recintos **grouped by site** when the club has more than one: the tanks
   for swimming (each opening its own page, *Adicionar piscina* per site), another sport's courts in
   the site page's own panel (add, rename, archive) filtered to that sport.
 - A tank's page (`/dashboard/facilities/pools/…`) belongs to *Natação → Piscinas* (`also` on the
   entry, read by `sectionOf` and the item's highlight); its Voltar falls back to that list.
 - No address moved: the site page's old `?tab=pools` and `?tab=recintos` fall back to *Geral*.
+- *Instalações* opens with a card per sport the reader works in (`readableSports`), its count of
+  recintos across every site, each opening that sport's list; the site cards no longer list tanks.
+- On a sport's page the sticky title-and-tabs band wears the page's wash (`.sport-shell
+  [data-page-sticky]`), so it no longer reads as a strip wider than the card beneath it.
 
 ## Where a page goes once a club has a second sport — POOLSE-143 (1 November 2026)
 

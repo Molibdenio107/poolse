@@ -36,7 +36,9 @@ The first piece of POOLSE-125 (Rui). **Since POOLSE-150 (2 November 2026) a reci
 sport's section**, *Natação → Piscinas*, *Ténis → Campos* and so on (`/dashboard/recintos?sport=`,
 `navigation.md`): the site page's Piscinas and Recintos tabs are gone, and its *Geral* tab opens with
 one link per sport the club has on, each with its count. Instalações keeps the site — details,
-Espaços, maintenance, prices, partnerships, regulation and documents. The rules below are unchanged.
+Espaços, maintenance, prices, partnerships, regulation and documents. The *Instalações* list opens
+with a card per sport (its recintos counted across sites, linking to that sport's list) above the
+site cards, which no longer list tanks (Rui, 02-11-2026). The rules below are unchanged.
 
 - One list per switched-on sport, and *Adicionar recinto* (sport + name) —
   `POST /facilities/:id/playing-areas`; a name already used by a recinto or a pool on the site is refused.

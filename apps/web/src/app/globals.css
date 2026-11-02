@@ -794,10 +794,17 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
 [data-sport='volleyball'] { --sport-wash: var(--sport-volleyball); }
 [data-sport='gym'] { --sport-wash: var(--sport-gym); }
 
-.sport-shell {
+.sport-shell,
+.sport-shell [data-page-sticky] {
   background-color: rgb(var(--background));
   background-image: linear-gradient(rgb(var(--sport-wash) / var(--wash-a)) 0 0);
 }
+/*
+ * A sport page's sticky title-and-tabs band wears the same wash as the page
+ * (Rui, 02-11-2026): painted plain, it ran 24 px past the card on each side
+ * (`-mx-page`) and read as a strip of another size. Still opaque, so content
+ * scrolling under it stays covered. Unlayered, so it beats `bg-background`.
+ */
 
 /*
  * A turma's block on the calendar — POOLSE-139 (Rui, 31-10-2026). The handoff's

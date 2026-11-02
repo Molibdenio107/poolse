@@ -1152,7 +1152,7 @@
     "alertNoEmail": "Email sending is not configured in this environment. Alerts are recorded, but nothing is sent.",
     "alertNotSent": "Recorded, not sent",
     "title": "Facilities",
-    "subtitle": "The organization’s sites, and the pools at each one.",
+    "subtitle": "The organisation's sites and the sports in each.",
     "addSite": "Add a facility",
     "create": "Create facility",
     "nameLabel": "Name",
@@ -1433,7 +1433,14 @@
     "waterBackInRange": "The water is back within the limits",
     "reopenHint": "The latest analysis is within the limits, but the pool is still closed. If it was closed because of the water, lift the closure in Closures to reopen it before that date.",
     "openClosures": "Open Closures",
-    "fromLab": "From the laboratory"
+    "fromLab": "From the laboratory",
+    "sports": "Sports",
+    "sportOpen": "See the playing areas",
+    "sportCount": {
+      "pool": "{count, plural, =0 {No pools} one {# pool} other {# pools}}",
+      "courts": "{count, plural, =0 {No courts} one {# court} other {# courts}}",
+      "rooms": "{count, plural, =0 {No rooms} one {# room} other {# rooms}}"
+    }
   },
   "classes": {
     "colour": "Class colour",
