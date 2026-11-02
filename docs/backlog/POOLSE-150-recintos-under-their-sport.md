@@ -14,9 +14,9 @@ A pool is swimming's recinto as a court is tennis's (POOLSE-122). Today a tank i
 
 ### BA — rules
 
-1. Each sport's section gains a **recintos** entry: *Piscinas* in Natação (the tanks, each opening its existing page), *Recintos* in another sport (its courts or pitches). One entry, `perSport: true`, filtered by the recinto's sport.
-2. **Instalações keeps the site**: its details, *Espaços*, maintenance, energy, inventory, incidents and staff. The site page's tank list becomes a link to the sport's *Piscinas*, not a second home.
-3. **A single-sport business club shows its one sport tab** in the top bar (POOLSE-141), holding the per-sport sections (Turmas, Calendário, Níveis, Avanços, Competição, Piscinas) exactly as a multi-sport club's swimming tab does. This changes `groupBySport`'s gate from `isMultiSport` to "a business club with at least one sport". A personal tenant keeps today's menu.
+1. Each sport's section gains a **recintos** entry named in **the sport's own word** (Rui, 02-11-2026): *Piscinas* in Natação, *Campos* for ténis, padel, futebol, basquetebol, andebol and voleibol, *Salas* for ginásio; *Recintos* where none is set. One entry, `perSport: true`, filtered by the recinto's sport. **Grouped by site** when the club has more than one (Rui); a single-site club sees a plain list.
+2. **The sport's section is the recinto's home** (Rui): its list adds, opens and edits tanks (or courts). The site page's *Piscinas* and *Recintos* tabs go, leaving a one-line link to each sport's list. **Instalações keeps the site**: its details, *Espaços*, maintenance, energy, inventory, incidents and staff.
+3. **A single-sport business club shows its one sport tab** in the top bar (POOLSE-141), holding **exactly what a multi-sport club's Natação tab holds** (Rui): Calendário, Turmas, Alunos (filtered copy), Níveis, Avanços, Competição, plus Piscinas; the club's tab keeps Painel, Instalações, Energia, Receção, Faturação and the shared Alunos. This changes `groupBySport`'s gate from `isMultiSport` to "a business club with at least one sport". A personal tenant keeps today's menu.
 4. **Nothing moves address**: every page keeps its URL, so bookmarks, `FromLink`'s `?from=` and the e2e specs' routes hold; only the menu and `sectionOf` change.
 5. An instructor scoped to some sports (POOLSE-145) sees only their sports' tabs, as today.
 
