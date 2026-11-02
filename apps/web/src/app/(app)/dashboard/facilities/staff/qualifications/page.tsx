@@ -1,3 +1,4 @@
+import type { PoolseSport } from '@poolse/rules';
 import { FromLink } from '@/components/from-link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -60,6 +61,8 @@ export default async function QualificationsPage({
   let failure: LoadFailure | null = null;
   let notPermitted = false;
 
+  // POOLSE-146: a type's sport is offered where the club has more than one.
+  let meSports: PoolseSport[] = [];
   try {
     const [loadedList, loadedTypes, me] = await Promise.all([
       apiFetch<Paginated<ExpiringQualification>>(
@@ -74,6 +77,7 @@ export default async function QualificationsPage({
     list = loadedList;
     types = loadedTypes;
     organizationId = me?.memberships[0]?.organizationId ?? '';
+    meSports = me?.memberships[0]?.sports ?? [];
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) notPermitted = true;
     else failure = describeLoad(error);
@@ -212,7 +216,12 @@ export default async function QualificationsPage({
       )}
 
       {types !== null && current === 'types' && (
-        <TypesPanel organizationId={organizationId} types={types.types} amberDays={types.amberDays} />
+        <TypesPanel
+          organizationId={organizationId}
+          types={types.types}
+          amberDays={types.amberDays}
+          sports={meSports}
+        />
       )}
     </PageShell>
   );

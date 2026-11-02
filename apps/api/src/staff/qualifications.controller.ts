@@ -1,3 +1,4 @@
+import { isPoolseSport } from '@poolse/rules';
 import {
   BadRequestException,
   Body,
@@ -226,10 +227,27 @@ function readType(body: Record<string, unknown>): TypeInput {
     fields['blocksAssignment'] = 'qualifications.error.blockNeedsRequired';
   }
 
+  // POOLSE-146: the sport it is for. Absent is not asked about (a pool-only
+  // club's form); empty is every sport; anything else must be a sport.
+  let sportId: string | null | undefined;
+  if (body['sportId'] !== undefined) {
+    const raw = typeof body['sportId'] === 'string' ? body['sportId'].trim() : body['sportId'];
+    if (raw === null || raw === '') sportId = null;
+    else if (isPoolseSport(raw)) sportId = raw;
+    else fields['sportId'] = 'qualifications.error.sport';
+  }
+
   if (Object.keys(fields).length > 0) {
     throw new BadRequestException({ message: 'invalid qualification type', fields });
   }
-  return { name, defaultValidityMonths, amberDays, requiredToTeach, blocksAssignment };
+  return {
+    name,
+    defaultValidityMonths,
+    amberDays,
+    requiredToTeach,
+    blocksAssignment,
+    ...(sportId === undefined ? {} : { sportId }),
+  };
 }
 
 function optionalDate(

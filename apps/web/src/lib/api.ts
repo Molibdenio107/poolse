@@ -5026,6 +5026,8 @@ export interface QualificationType {
   amberDays: number | null;
   requiredToTeach: boolean;
   blocksAssignment: boolean;
+  /** The sport it is for — POOLSE-146; null is every sport. */
+  sportId?: PoolseSport | null;
 }
 
 export interface QualificationTypes {

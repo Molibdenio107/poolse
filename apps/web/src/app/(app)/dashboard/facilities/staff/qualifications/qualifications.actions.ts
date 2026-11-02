@@ -130,6 +130,8 @@ function typeBody(formData: FormData): Record<string, unknown> {
     amberDays: optionalNumber(formData, 'amberDays'),
     requiredToTeach: formData.get('requiredToTeach') === 'on',
     blocksAssignment: formData.get('blocksAssignment') === 'on',
+    // POOLSE-146: only when the form offered it — absent keeps the type's sport.
+    ...(formData.has('sportId') ? { sportId: text(formData, 'sportId') } : {}),
   };
 }
 

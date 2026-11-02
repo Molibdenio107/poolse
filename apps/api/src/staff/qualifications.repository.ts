@@ -24,6 +24,8 @@ export interface QualificationType {
   amberDays: number | null;
   requiredToTeach: boolean;
   blocksAssignment: boolean;
+  /** The sport it is for — POOLSE-146; null is every sport. */
+  sportId: string | null;
 }
 
 export interface QualificationRecord {
@@ -86,6 +88,8 @@ export interface TypeInput {
   amberDays: number | null;
   requiredToTeach: boolean;
   blocksAssignment: boolean;
+  /** Undefined: not asked about (a pool-only club's form). Null: every sport. */
+  sportId?: string | null;
 }
 
 export interface QualificationInput {
@@ -123,8 +127,9 @@ export async function listTypes(organizationId: string): Promise<QualificationTy
       amber_days: number | null;
       required_to_teach: boolean;
       blocks_assignment: boolean;
+      sport_id: string | null;
     }>(
-      `SELECT id, name, default_validity_months, amber_days, required_to_teach, blocks_assignment
+      `SELECT id, name, default_validity_months, amber_days, required_to_teach, blocks_assignment, sport_id
          FROM qualification_type
         WHERE archived_at IS NULL
         ORDER BY lower(name)`,
@@ -136,6 +141,7 @@ export async function listTypes(organizationId: string): Promise<QualificationTy
       amberDays: row.amber_days,
       requiredToTeach: row.required_to_teach,
       blocksAssignment: row.blocks_assignment,
+      sportId: row.sport_id,
     }));
   });
 }
@@ -151,8 +157,8 @@ export async function createType(organizationId: string, input: TypeInput): Prom
       .query<{ id: string }>(
         `INSERT INTO qualification_type
            (organization_id, name, default_validity_months, amber_days, required_to_teach,
-            blocks_assignment)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+            blocks_assignment, sport_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
         [
           organizationId,
           input.name,
@@ -160,6 +166,7 @@ export async function createType(organizationId: string, input: TypeInput): Prom
           input.amberDays,
           input.requiredToTeach,
           input.blocksAssignment,
+          input.sportId ?? null,
         ],
       )
       .catch(asDuplicate);
@@ -183,7 +190,9 @@ export async function updateType(
       .query(
         `UPDATE qualification_type
             SET name = $2, default_validity_months = $3, amber_days = $4,
-                required_to_teach = $5, blocks_assignment = $6
+                required_to_teach = $5, blocks_assignment = $6,
+                -- POOLSE-146: a form that did not offer the sport keeps it.
+                sport_id = CASE WHEN $7::boolean THEN $8::text ELSE sport_id END
           WHERE id = $1 AND archived_at IS NULL`,
         [
           typeId,
@@ -192,6 +201,8 @@ export async function updateType(
           input.amberDays,
           input.requiredToTeach,
           input.blocksAssignment,
+          input.sportId !== undefined,
+          input.sportId ?? null,
         ],
       )
       .catch(asDuplicate);
@@ -285,6 +296,8 @@ export async function personQualifications(
          FROM qualification_type t
         WHERE t.archived_at IS NULL
           AND t.required_to_teach
+          -- POOLSE-146: only a type of one of their sports (null is every sport).
+          AND public.qualification_applies(t.sport_id, (SELECT sports::text[] FROM membership WHERE id = $1))
           AND EXISTS (SELECT 1 FROM membership_role r
                        WHERE r.membership_id = $1 AND r.role = 'instructor'
                          AND r.archived_at IS NULL)
@@ -447,6 +460,7 @@ export async function listExpiring(
                JOIN membership m ON m.id = r.membership_id AND m.archived_at IS NULL
               WHERE t.archived_at IS NULL
                 AND t.required_to_teach
+                AND public.qualification_applies(t.sport_id, m.sports::text[])
                 AND NOT EXISTS (SELECT 1 FROM qualification_current c
                                  WHERE c.membership_id = r.membership_id
                                    AND c.qualification_type_id = t.id)
@@ -504,6 +518,7 @@ export async function readQualificationsWidget(
                  JOIN membership_role r ON r.role = 'instructor' AND r.archived_at IS NULL
                  JOIN membership m ON m.id = r.membership_id AND m.archived_at IS NULL
                 WHERE t.archived_at IS NULL AND t.required_to_teach
+                  AND public.qualification_applies(t.sport_id, m.sports::text[])
                   AND NOT EXISTS (SELECT 1 FROM qualification_current q
                                    WHERE q.membership_id = r.membership_id
                                      AND q.qualification_type_id = t.id)) AS missing

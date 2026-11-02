@@ -5130,7 +5130,9 @@
       "required": "Required to teach",
       "requiredHint": "Anybody who teaches without a record of this type shows as “missing”.",
       "blocks": "Block new assignments",
-      "blocksHint": "With the qualification expired, the instructor cannot be put on a new class group or a new booking. It never removes them from class groups they already have, and a one-week stand-in is still possible."
+      "blocksHint": "With the qualification expired, the instructor cannot be put on a new class group or a new booking. It never removes them from class groups they already have, and a one-week stand-in is still possible.",
+      "sport": "Sport",
+      "sportHint": "A required qualification is missing only for this sport's instructors."
     },
     "error": {
       "nameRequired": "Write a name.",
@@ -5144,13 +5146,15 @@
       "date": "Enter a valid date.",
       "expiresBeforeIssued": "The expiry cannot be before the issue date.",
       "saveFailed": "Could not save.",
-      "archiveFailed": "Could not archive."
+      "archiveFailed": "Could not archive.",
+      "sport": "Choose a sport."
     },
     "historyLineNoExpiry": "Issued {issued} · does not expire",
     "section": {
       "nav": "Qualification sections",
       "types": "Types"
-    }
+    },
+    "everySport": "Every sport"
   },
   "import": {
     "ai": {

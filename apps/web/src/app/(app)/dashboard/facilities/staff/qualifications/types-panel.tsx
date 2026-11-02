@@ -4,7 +4,10 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/dialog';
-import { TextField } from '@/components/ui/field';
+import { SelectField, TextField } from '@/components/ui/field';
+import { SportChip } from '@/components/sport-chip';
+import { sportNameKey } from '@/components/sport-icon';
+import type { PoolseSport } from '@poolse/rules';
 import { useToast } from '@/components/ui/toast';
 import { useSavedAction } from '@/lib/saved';
 import type { QualificationType } from '@/lib/api';
@@ -32,10 +35,13 @@ const PRIMARY =  'inline-flex h-control items-center justify-center px-4 text-co
 function TypeForm({
   organizationId,
   type,
+  sports,
   onSaved,
 }: {
   organizationId: string;
   type: QualificationType | null;
+  /** POOLSE-146: the club's sports, only where it has more than one. */
+  sports: readonly PoolseSport[];
   /** Called once per successful save: empties the create form, closes an edit. */
   onSaved: () => void;
 }): React.ReactElement {
@@ -85,6 +91,19 @@ function TypeForm({
           hint={t('qualifications.field.typeWindowHint')}
           error={error('amberDays')}
         />
+        {sports.length > 1 && (
+          <SelectField
+            name="sportId"
+            label={t('qualifications.field.sport')}
+            initial={type?.sportId ?? ''}
+            hint={t('qualifications.field.sportHint')}
+            options={[
+              { value: '', label: t('qualifications.everySport') },
+              ...sports.map((sport) => ({ value: sport, label: t(sportNameKey(sport)) })),
+            ]}
+            error={error('sportId')}
+          />
+        )}
       </div>
       <label className="flex items-start gap-2 text-sm">
         <input
@@ -132,10 +151,13 @@ export function TypesPanel({
   organizationId,
   types,
   amberDays,
+  sports = [],
 }: {
   organizationId: string;
   types: QualificationType[];
   amberDays: number;
+  /** POOLSE-146: the club's sports; a type's sport is offered only where there are two. */
+  sports?: readonly PoolseSport[];
 }): React.ReactElement {
   const t = useTranslations();
   const router = useRouter();
@@ -194,7 +216,10 @@ export function TypesPanel({
           <li key={type.id} className="flex flex-col gap-3 py-3 first:pt-0">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="flex flex-col">
-                <span className="font-medium">{type.name}</span>
+                <span className="flex flex-wrap items-center gap-2 font-medium">
+                  {type.name}
+                  {sports.length > 1 && type.sportId != null && <SportChip sport={type.sportId} />}
+                </span>
                 <span className="text-sm text-foreground-muted">
                   {[
                     type.defaultValidityMonths === null
@@ -202,6 +227,7 @@ export function TypesPanel({
                       : t('qualifications.validityMonths', { months: type.defaultValidityMonths }),
                     type.requiredToTeach ? t('qualifications.requiredLabel') : null,
                     type.blocksAssignment ? t('qualifications.blocksLabel') : null,
+                    sports.length > 1 && type.sportId == null ? t('qualifications.everySport') : null,
                   ]
                     .filter((part) => part !== null)
                     .join(' · ')}
@@ -226,7 +252,7 @@ export function TypesPanel({
               </span>
             </div>
             {editing === type.id && (
-              <TypeForm organizationId={organizationId} type={type} onSaved={() => setEditing(null)} />
+              <TypeForm organizationId={organizationId} type={type} sports={sports} onSaved={() => setEditing(null)} />
             )}
           </li>
         ))}
@@ -262,6 +288,7 @@ export function TypesPanel({
           key={createKey}
           organizationId={organizationId}
           type={null}
+          sports={sports}
           onSaved={() => setCreateKey((key) => key + 1)}
         />
       </div>

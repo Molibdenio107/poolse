@@ -173,6 +173,12 @@ and emails the person and the club's owners and admins after it commits. Widenin
 reaches the people newly inside it, once. Nothing is sent until an email provider is configured; the
 record is kept either way.
 
+**Per sport** (POOLSE-146, 02-11-2026). In a club with more than one sport, a type says which sport it
+is for (*Todos os desportos* by default). A required type is *em falta* only for an instructor of its
+sport (their record's *Desportos*), the daily alert emails nobody about another sport's title, and
+*bloquear novas atribuições* blocks only that sport's turmas. TPTD and ISN are swimming's; SBV, first
+aid, is every sport's. A pool-only club reads exactly as before.
+
 **Who can do what.**
 
 | | Owner | Admin | The person themselves | Others |

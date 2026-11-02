@@ -38,6 +38,6 @@ Two small things the 01-11-2026 brainstorm pulled in once an instructor belongs 
 ### Acceptance criteria
 
 - [x] `sport` audience through the one recipients function; composer offers it only when multi-sport. (Slice a, 02-11-2026; owner and admin only — Rui.)
-- [ ] `qualification_type.sport_id`; predicate in `qualification_status()` only.
-- [ ] Rule 6 proved by test.
-- [ ] `docs/features/messages.md`, `docs/features/staff.md`, `docs/data-model.md`.
+- [x] `qualification_type.sport_id`; predicate in one place — `qualification_applies()`, since `qualification_status()` judges an expiry and knows no person (slice b, 02-11-2026).
+- [x] Rule 6 proved by test (`qualifications-per-sport.integration.test.ts`).
+- [x] `docs/features/messages.md`, `docs/features/staff.md`, `docs/data-model.md`.

@@ -5130,7 +5130,9 @@
       "required": "Exigida para dar aulas",
       "requiredHint": "Quem dá aulas sem um registo deste tipo aparece como «em falta».",
       "blocks": "Bloquear novas atribuições",
-      "blocksHint": "Com a qualificação expirada, o professor não pode ser posto numa turma nova nem numa marcação nova. Nunca o retira das turmas que já tem, e uma substituição de uma semana continua possível."
+      "blocksHint": "Com a qualificação expirada, o professor não pode ser posto numa turma nova nem numa marcação nova. Nunca o retira das turmas que já tem, e uma substituição de uma semana continua possível.",
+      "sport": "Desporto",
+      "sportHint": "Uma qualificação exigida só fica em falta para os professores deste desporto."
     },
     "error": {
       "nameRequired": "Escreva um nome.",
@@ -5144,13 +5146,15 @@
       "date": "Indique uma data válida.",
       "expiresBeforeIssued": "A validade não pode ser anterior à emissão.",
       "saveFailed": "Não foi possível guardar.",
-      "archiveFailed": "Não foi possível arquivar."
+      "archiveFailed": "Não foi possível arquivar.",
+      "sport": "Escolha um desporto."
     },
     "historyLineNoExpiry": "Emitida a {issued} · sem data de validade",
     "section": {
       "nav": "Secções das qualificações",
       "types": "Tipos"
-    }
+    },
+    "everySport": "Todos os desportos"
   },
   "import": {
     "ai": {

@@ -81,7 +81,10 @@ export async function raiseQualificationAlerts(organizationId: string): Promise<
                 c.qualification_type_id, c.expires_on
            FROM qualification_current c
            JOIN membership m ON m.id = c.membership_id AND m.archived_at IS NULL
+           JOIN qualification_type t ON t.id = c.qualification_type_id
           WHERE c.status IN ('amber', 'red')
+            -- POOLSE-146: nobody is emailed about another sport's title.
+            AND public.qualification_applies(t.sport_id, m.sports::text[])
        ),
        inserted AS (
          INSERT INTO qualification_alert (organization_id, qualification_id, threshold, recipients)

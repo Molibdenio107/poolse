@@ -4235,6 +4235,18 @@ Migrations `1794651800000_message-sport-audience` (the enum value, alone) and
   (dropped and made again: a new signature); the `sport` branch is an active enrolment in a live turma
   whose recinto has that sport, a turma with no recinto being swimming's.
 
+### A qualification type's sport — POOLSE-146 slice b, 2 November 2026
+
+Migration `1794651900000_qualification-type-sport`.
+
+- **`qualification_type.sport_id`** (plain FK to `sport`); null is every sport. The seeded TPTD (by its
+  exact seeded name) and ISN (`counts_as_lifeguard`) are `pool`; SBV stays every sport's, and so does
+  every type a club made itself. `seed_qualification_types` seeds the same.
+- **`qualification_applies(type sport, sports text[])`** is the one definition — read by the *em falta*
+  queries, the alert job and `qualification_assignment_allowed`, which now asks the turma's sport (its
+  recinto's, swimming without one). `qualification_status()` is unchanged: it judges an expiry and knows
+  no person.
+
 ### Cancellation notice and push — POOLSE-90 slice 4, 27 October 2026
 
 Migrations `1792836000000_session-audience` (the enum value, alone) and
