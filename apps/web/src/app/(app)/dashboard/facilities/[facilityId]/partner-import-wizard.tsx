@@ -24,6 +24,7 @@ import {
   type ReadState,
 } from './partner-import.actions';
 import { Reveal } from '@/components/ui/reveal';
+import { ConfirmButton } from '@/components/confirm-action';
 
 /**
  * The partnerships sheet, in four steps — POOLSE-48.
@@ -791,14 +792,24 @@ function PreviewStep({
       />
 
       <div className="flex flex-wrap gap-3">
-        <button type="submit" disabled={pending || creating + updating === 0} className={BUTTON}>
+        {/* Asks first (Rui, 04-11-2026). */}
+        <ConfirmButton
+          title={t('confirm.alunos.importPartnersTitle', {
+            partners: newPartners,
+            groups: creating + updating,
+          })}
+          message={t('confirm.alunos.importPartnersMessage', { creating, updating })}
+          confirmLabel={t('confirm.alunos.importConfirm')}
+          disabled={pending || creating + updating === 0}
+          className={BUTTON}
+        >
           {pending
             ? t('students.import.importing')
             : t('partnerImport.importCount', {
                 partners: newPartners,
                 groups: creating + updating,
               })}
-        </button>
+        </ConfirmButton>
         <button type="button" onClick={onBack} className={BUTTON_QUIET}>
           {t('students.import.backToMapping')}
         </button>

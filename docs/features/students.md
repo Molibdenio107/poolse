@@ -672,3 +672,39 @@ every list filters by it.
 - **The timetable** answers a scoped instructor their sports' turmas only. The attendance strip and
   the student's calendar stay whole: attendance is read as before (rule 4).
 - **Lesson feedback** needs nothing new: an instructor already reads only the lessons they taught.
+
+## Alunos as a table — POOLSE-164 (4 November 2026)
+
+- **One *Filtros* row.** Search, *Desporto* (multi-sport clubs, shared register only), *Nível*, *Turma* (with
+  *Sem turma*), *Seguro* (com seguro / caducado / sem seguro), *Em atraso* (owner and admin) and *Por convidar*,
+  then *Limpar*. Every filter is in the URL (`modalidade`, `levelId`, `classGroupId`, `insurance`, `overdue=1`,
+  `invite=pending`); a select's prompt is its bare name ("Nível") and no option carries a count. On a phone the
+  row scrolls sideways. The old `sort=overdue`, `multi=1` and `sport=none` links still work.
+- **`?modalidade=` is a filter, `?sport=` is a place** (Rui, 04-11-2026). The shared register's *Desporto*
+  narrows the list and the menu stays on the club's section; `?sport=` is a sport's own *Alunos*, reached from its
+  tab, and the menu follows it. Both reach the API as `sport`.
+- **The count** ("63 alunos") sits in the table's top-right corner, filtered or not.
+- **Long text keeps its start and ends in "…"** — "Hidroginást…" — by `shorten` (`lib/shorten.ts`):
+  the name (its link's title holds the whole), the level and the turmas through `ShortText`
+  (`components/short-text.tsx`), whose `Hint` opens on hover and keyboard focus and whose screen-reader text
+  is the whole. The record's own page always says it in full. On a desk *Arquivar* is an icon square.
+- **The table.** Nome, Idade (a link: youngest first, `order=age`, no birth date last), Desportos (multi-sport
+  only), Nível, Turmas (active enrolments in live turmas), Seguro, Mensalidade (owner and admin), Acesso (the
+  family's last visit — the student's own login or a live guardian's), and *Arquivar*. Below `md` it is
+  `.table-stack` cards. The seguro is three words from `INSURANCE_STATE` (a live seguro line covering
+  `club_today()`, else one that ended, else never); it is information and gates nothing.
+- **The turma filter's options** are `turmas` on the list read (`listTurmaOptions`): live turmas, narrowed to the
+  `?sport=` and to an instructor's own sports.
+- **Exportar** carries the turma and seguro filters too, as it does the others, and writes two more columns:
+  *Turmas* (names separated by `;`) after the level, and *Seguro* last — export-only, the Portuguese words in both
+  locales, read back by nothing (no import field may claim its header, `sheet.test.ts`).
+- **Importar reads a *Turma* column** (found as Turma, Turmas, Aula, Grupo, Classe, Class, Group…; "Grupo de
+  nível" stays the level's). Optional: a name matched accent- and case-blind enrols the student through
+  `insertEnrollment`, several split on `;` or, when the whole cell is no turma, on `,`. Two live turmas sharing a
+  name resolve to the published season's, else the row warns *ambígua*. An unknown name is a warning and the
+  student still imports. For a student already in the register a turma is a blank to fill: only enrolments
+  they lack are added, never removed, so the round trip changes nothing. At commit each enrolment has its own
+  savepoint: a full turma or a time clash refuses that one and is listed by line on the result screen (`matchTurmas`
+  in `import.ts`, `enrolmentsRefused` on the result).
+- *Convidar membros* sits on the header's right; *Convidar aluno* stays above the list. The page is `width="wide"`,
+  the second wide page after the calendar.

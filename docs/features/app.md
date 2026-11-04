@@ -216,3 +216,16 @@ Each home's own screens wear tabs; everything else in app mode is a screen deepe
 ## Not yet
 
 - The real-device passes (slice 5): one installed iPhone and one Android, recorded here.
+
+## Avisos on Início — POOLSE-166 (4 November 2026)
+
+The family home (guardians and students alike) reads `GET /app/avisos` best effort: the live avisos for the
+reader's own students. They open as a bottom sheet (`placement="sheet"`) on arriving and stay as a card at the
+top of *Início*. *Fechar* is per session (`sessionStorage` key `poolse.avisos.closed`, read in a try/catch);
+only the office ends an aviso. The text is the club's, as plain text. `docs/features/messages.md`, *Avisos*.
+
+## The staff board on the working homes — POOLSE-169 (4 November 2026)
+
+The instructor's *Hoje* (`/app/aulas`) and the maintenance home (`/app/manutencao`) open on the staff board,
+the same one as the Painel's (`StaffBoardHome`, `GET /staff-notes`), with *Novo recado* in the page's header.
+Two notes to a row on a phone. A failure is one muted line, never the page. `docs/features/dashboard.md`.

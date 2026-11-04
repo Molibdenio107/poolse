@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/dialog';
+import { ConfirmButton } from '@/components/confirm-action';
 import { CONTROL_LINE } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
 import { formatStamp } from '@/lib/date-format';
@@ -81,10 +82,13 @@ export function PublicLinkPanel({
       {link.url === null ? (
         <div className="flex flex-col items-start gap-3">
           <p className="text-sm">{t('publicWater.manage.off')}</p>
-          <button
-            type="button"
+          {/* Publishing asks first too (Rui, 04-11-2026). */}
+          <ConfirmButton
+            title={t('confirm.instalacoes.publicPageOnTitle', { pool: poolName })}
+            message={t('confirm.instalacoes.publicPageOnMessage')}
+            confirmLabel={t('confirm.instalacoes.turnOn')}
             disabled={pending}
-            onClick={() =>
+            onConfirm={() =>
               run(
                 () => issuePublicLinkAction(organizationId, poolId, false),
                 t('publicWater.manage.turnedOn'),
@@ -93,7 +97,7 @@ export function PublicLinkPanel({
             className={PRIMARY}
           >
             {t('publicWater.manage.turnOn')}
-          </button>
+          </ConfirmButton>
         </div>
       ) : (
         <div className="flex flex-col gap-4">

@@ -2,6 +2,7 @@
 
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
+import { ConfirmButton } from '@/components/confirm-action';
 import { reissueAction, type InviteState } from '../../actions';
 import { InvitationLink } from './invitation-link';
 
@@ -31,14 +32,16 @@ export function ReissueButton({
       <form action={action} className="flex items-center gap-2">
         <input type="hidden" name="organizationId" value={organizationId} />
         <input type="hidden" name="invitationId" value={invitationId} />
-        <button
-          type="submit"
+        {/* Asks first (Rui, 04-11-2026); the question says what the hint did. */}
+        <ConfirmButton
+          title={t('confirm.equipa.reissueTitle')}
+          message={t('confirm.equipa.reissueMessage')}
+          confirmLabel={t('invite.reissue')}
           disabled={pending}
-          title={t('invite.reissueHint')}
           className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-primary/50 hover:text-primary disabled:opacity-60 bg-surface shadow-card"
         >
           {pending ? t('common.working') : t('invite.reissue')}
-        </button>
+        </ConfirmButton>
       </form>
 
       {state.invitation !== undefined && (

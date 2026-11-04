@@ -6,6 +6,7 @@ import { today } from '@/lib/dates';
 import { useTranslations } from 'next-intl';
 import { formatSwimTime, INDIVIDUAL_EVENTS, parseSwimTime, type SwimEvent } from '@poolse/rules';
 import { Dialog } from '@/components/ui/dialog';
+import { ConfirmButton } from '@/components/confirm-action';
 import { SelectField, TextField, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
 import type { Course, EntryTime, FederationAgeGroup } from '@/lib/api';
@@ -479,9 +480,16 @@ export function FpnAgeGroupsButton({
       <input type="hidden" name="seasonId" value={seasonId} />
       {returnTo !== undefined && <input type="hidden" name="returnTo" value={returnTo} />}
       <div>
-        <button type="submit" disabled={pending} className={PRIMARY}>
+        {/* Asks first (Rui, 04-11-2026). */}
+        <ConfirmButton
+          title={t('confirm.alunos.fpnTitle')}
+          message={t('confirm.alunos.fpnMessage')}
+          confirmLabel={t('confirm.alunos.fpnConfirm')}
+          disabled={pending}
+          className={PRIMARY}
+        >
           {pending ? t('common.working') : t('qualifying.fpnCreate')}
-        </button>
+        </ConfirmButton>
       </div>
       <p className="text-sm text-foreground-muted">{t('qualifying.fpnCreateHint')}</p>
       <FormError state={state} />

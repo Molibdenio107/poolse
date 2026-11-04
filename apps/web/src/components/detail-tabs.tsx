@@ -87,7 +87,8 @@ export function DetailTabs({
   const search = useSearchParams();
   const [pending, startTransition] = useTransition();
   // A tab rendered on the server takes a round trip: say so in the corner (POOLSE-98).
-  useBusyWhile(pending, 'load');
+  // A tab rendered on the server is a navigation: washed like a link (POOLSE-159).
+  useBusyWhile(pending, 'load', 'navigate');
   const [chosen, setChosen] = useState(rendered);
   const [dirty, setDirty] = useState(false);
   const [resetKey, setResetKey] = useState(0);

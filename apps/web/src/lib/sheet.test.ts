@@ -401,3 +401,21 @@ test('identity headers map, and never take the name or a phone', () => {
   assert.equal(mapping.snsNumber, 7);
   assert.equal(mapping.birthplace, 8);
 });
+
+test('a turma column is found under the names clubs give it, and the seguro column is nobody’s', () => {
+  // POOLSE-164 (Rui: "Turma can be a similar name — aula, grupo…").
+  for (const header of ['Turma', 'Turmas', 'Aula', 'Grupo', 'Classe', 'Class', 'Group']) {
+    assert.equal(guessMapping(['Nome', header]).turmas, 1, `"${header}" should map to turmas`);
+  }
+  // "Grupo de nível" stays the level's.
+  const levelled = guessMapping(['Nome', 'Grupo de nível', 'Turma']);
+  assert.equal(levelled.levelName, 1);
+  assert.equal(levelled.turmas, 2);
+  // The export-only *Seguro* column must never be read as anything.
+  for (const header of ['Seguro', 'Insurance']) {
+    const mapping = guessMapping(['Nome', header]);
+    for (const [field, column] of Object.entries(mapping)) {
+      assert.notEqual(column, 1, `"${header}" was claimed by ${field}`);
+    }
+  }
+});

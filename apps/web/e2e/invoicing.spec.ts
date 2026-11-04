@@ -56,7 +56,8 @@ test('QA 1 — Voltar on a document returns to Em dívida, or to the month it wa
   await expect(page).toHaveURL(/view=owing/);
   await expect(page.getByRole('heading', { name: /em dívida|outstanding/i }).first()).toBeVisible();
 
-  await visit(page, `/dashboard/faturacao?facilityId=${owed.facilityId}&month=2026-09`);
+  // A month's documents are its *Emitidos* section since 02-11-2026.
+  await visit(page, `/dashboard/faturacao?facilityId=${owed.facilityId}&month=2026-09&section=issued`);
   await page.getByRole('link', { name: doc.documentNo, exact: true }).first().click();
   await expect(page.getByRole('heading', { level: 1, name: doc.documentNo })).toBeVisible();
   await page.getByRole('link', { name: BACK }).click();
@@ -90,7 +91,8 @@ test('QA 2 — no Configuração on Faturação; the books are on Dados do clube
   const original = (await first.locator('span.font-medium').first().textContent())!.trim();
   for (const name of [`${original} E2E`, original]) {
     await first.getByRole('button', { name: /editar livro|edit book/i }).click();
-    const field = first.getByLabel(/^nome$|^name$/i);
+    // A required field's label carries its `*` (Rui, 01-11-2026).
+    const field = first.getByLabel(/^nome\b|^name\b/i);
     await field.fill(name);
     await first.getByRole('button', { name: /^guardar$|^save$/i }).click();
     await expect(first.locator('span.font-medium').first()).toHaveText(name);

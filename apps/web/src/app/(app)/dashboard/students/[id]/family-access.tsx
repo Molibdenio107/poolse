@@ -7,6 +7,7 @@ import { CheckCircle2, Clock, Mail, Share2, Smartphone, UserX } from 'lucide-rea
 import { useSavedAction } from '@/lib/saved';
 import { TextField } from '@/components/ui/field';
 import { formatDate } from '@/lib/date-format';
+import { ConfirmButton } from '@/components/confirm-action';
 import {
   inviteFamilyAction,
   reissueFamilyAction,
@@ -150,17 +151,36 @@ function InviteeRow({
                 <input type="hidden" name="studentId" value={studentId} />
                 <input type="hidden" name="invitationId" value={invitee.invitation.id} />
                 <input type="hidden" name="rowKey" value={rowKey} />
-                <button type="submit" disabled={busy} className={SECONDARY}>
+                {/* Asks first: the old link stops working (Rui, 04-11-2026). */}
+                <ConfirmButton
+                  title={t('confirm.alunos.newLinkTitle', { name: invitee.name })}
+                  message={t(
+                    invitee.invitation.email === null
+                      ? 'confirm.alunos.newLinkMessage'
+                      : 'confirm.alunos.newLinkMessageEmail',
+                    { email: invitee.invitation.email ?? '' },
+                  )}
+                  confirmLabel={t('familyAccess.newLink')}
+                  disabled={busy}
+                  className={SECONDARY}
+                >
                   <Share2 className="size-4" aria-hidden />
                   {busy && renewing ? t('common.working') : t('familyAccess.newLink')}
-                </button>
+                </ConfirmButton>
               </form>
               <form action={revokeAction}>
                 <input type="hidden" name="studentId" value={studentId} />
                 <input type="hidden" name="invitationId" value={invitee.invitation.id} />
-                <button type="submit" disabled={busy} className={SECONDARY}>
+                <ConfirmButton
+                  title={t('confirm.alunos.revokeTitle', { name: invitee.name })}
+                  message={t('confirm.alunos.revokeMessage')}
+                  confirmLabel={t('familyAccess.revoke')}
+                  tone="danger"
+                  disabled={busy}
+                  className={SECONDARY}
+                >
                   {t('familyAccess.revoke')}
-                </button>
+                </ConfirmButton>
               </form>
             </div>
           ) : (

@@ -23,12 +23,15 @@ import {
   addFeeAction,
   archiveFeeAction,
   markPaidAction,
+  archiveExternalChargeAction,
+  recordExternalChargeAction,
   repriceFeeAction,
   saveSocioAction,
   updateFeeAction,
 } from './fees.actions';
 import { formatDate } from '@/lib/date-format';
 import { Reveal } from '@/components/ui/reveal';
+import { ConfirmAction, ConfirmButton } from '@/components/confirm-action';
 
 /**
  * What this student pays — POOLSE-42, AC3.
@@ -935,10 +938,19 @@ function FeeRow({
             <form action={reprice}>
               <input type="hidden" name="studentId" value={studentId} />
               <input type="hidden" name="feeId" value={line.id} />
-              <button type="submit" disabled={repricing} className={BUTTON_QUIET}>
+              {/* Asks first (Rui, 04-11-2026). */}
+              <ConfirmButton
+                title={t('confirm.alunos.repriceTitle', { name: lineLabel(line, t) })}
+                message={t('confirm.alunos.repriceMessage', {
+                  amount: formatCents(locale, line.planAmountCentsNow),
+                })}
+                confirmLabel={t('confirm.alunos.repriceConfirm')}
+                disabled={repricing}
+                className={BUTTON_QUIET}
+              >
                 <RefreshCw aria-hidden className="mr-1 inline size-3.5" />
                 {t('fees.reprice')}
-              </button>
+              </ConfirmButton>
             </form>
           )}
 
@@ -954,14 +966,17 @@ function FeeRow({
           <form action={archive}>
             <input type="hidden" name="studentId" value={studentId} />
             <input type="hidden" name="feeId" value={line.id} />
-            <button
-              type="submit"
+            <ConfirmButton
+              title={t('confirm.alunos.feeLineTitle', { name: lineLabel(line, t) })}
+              message={t('confirm.alunos.feeLineMessage')}
+              confirmLabel={t('confirm.alunos.feeLineConfirm')}
+              tone="danger"
               disabled={archiving}
               className={BUTTON_QUIET}
-              aria-label={t('fees.removeLine')}
+              ariaLabel={t('fees.removeLine')}
             >
               <Trash2 aria-hidden className="size-3.5" />
-            </button>
+            </ConfirmButton>
           </form>
         </span>
       </div>
@@ -993,6 +1008,8 @@ function FeeRow({
           onCurrent={onCurrent}
         />
       </div>
+
+      <ExternalCharges studentId={studentId} line={line} />
 
       <Reveal open={editing}>
         <EditFeeForm
@@ -1046,9 +1063,14 @@ function PaidToggle({
 }): React.ReactElement {
   const t = useTranslations();
   const [, markPaid, marking] = useSavedAction(markPaidAction, INITIAL);
+  // Invoiced outside Poolse (POOLSE-163): settled with no payment of Poolse's to
+  // undo here — the line's own *Anular* is the way back.
+  const external = period !== null && line.externalCharges.some((charge) => charge.occurrenceOn === period);
 
   return (
-    <form action={markPaid} className="flex items-end gap-2">
+    // Wraps on a phone: two columns of `w-full` side by side pushed the period
+    // select past the card on WebKit (e2e, 04-11-2026).
+    <form action={markPaid} className="flex flex-wrap items-end gap-2">
       <input type="hidden" name="studentId" value={studentId} />
       <input type="hidden" name="feeId" value={line.id} />
       <input type="hidden" name="isPaid" value={showingPaid ? 'false' : 'true'} />
@@ -1056,13 +1078,21 @@ function PaidToggle({
 
       <span className={FIELD_COLUMN}>
         <span className={FIELD_LABEL}>{t('fees.paidHeading')}</span>
-        <button
-          type="submit"
-          role="checkbox"
-          aria-checked={showingPaid}
+        {/*
+          Asks first, both ways (Rui, 04-11-2026). The trigger is a plain button
+          now, so its words carry the state — they already did, in every state.
+        */}
+        <ConfirmButton
+          title={t(showingPaid ? 'confirm.alunos.unpaidTitle' : 'confirm.alunos.paidTitle', {
+            name: lineLabel(line, t),
+            date: period === null ? '' : formatDate(period),
+          })}
+          message={t(showingPaid ? 'confirm.alunos.unpaidMessage' : 'confirm.alunos.paidMessage')}
+          confirmLabel={t(showingPaid ? 'confirm.alunos.unpaidConfirm' : 'confirm.alunos.paidConfirm')}
+          tone={showingPaid ? 'danger' : 'primary'}
           // An ended line has no occurrence to settle, so there is nothing to
           // press — and pressing it would write a payment for a null period.
-          disabled={marking || period === null}
+          disabled={marking || period === null || external}
           className={cn(
             'flex h-control items-center gap-2 rounded border px-2.5 text-sm disabled:opacity-60',
             'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
@@ -1087,8 +1117,10 @@ function PaidToggle({
           >
             {showingPaid && <Check className="size-3" />}
           </span>
-          {showingPaid
-            ? onCurrent
+          {external
+            ? t('fees.external.toggle')
+            : showingPaid
+            ? onCurrent && line.paidOn !== null
               ? t('fees.paidOn', { date: formatDate(line.paidOn) })
               : t('fees.paidLabel')
             : onCurrent && line.isOverdue
@@ -1096,7 +1128,7 @@ function PaidToggle({
               : onCurrent
                 ? t('fees.dueBy', { date: formatDate(line.dueOn) })
                 : t('fees.notPaid')}
-        </button>
+        </ConfirmButton>
       </span>
 
       {/*
@@ -1117,7 +1149,7 @@ function PaidToggle({
             id={`period-${line.id}`}
             value={period ?? ''}
             onChange={(event) => onPeriod(event.target.value)}
-            className={cn(CONTROL_LINE, 'w-auto tabular-nums')}
+            className={cn(CONTROL_LINE, 'w-auto max-w-full tabular-nums')}
           >
             {choices.map((choice) => (
               <option key={choice} value={choice}>
@@ -1762,5 +1794,74 @@ function SocioForm({
         {t('fees.save')}
       </button>
     </form>
+  );
+}
+
+/**
+ * Invoiced outside Poolse — POOLSE-163 (Rui, 04-11-2026). The desk's own program
+ * issued the fatura, so Poolse must neither bill the occurrence again nor show
+ * it owed: each mark is listed with its number, and the current occurrence can
+ * be marked while it is unsettled. Both directions ask first.
+ */
+function ExternalCharges({ studentId, line }: { studentId: string; line: StudentFeeLine }): React.ReactElement | null {
+  const t = useTranslations();
+  const [, record, recording] = useSavedAction(recordExternalChargeAction, INITIAL);
+  const [, archive, archiving] = useSavedAction(archiveExternalChargeAction, INITIAL);
+  const [reference, setReference] = useSeeded<string>('');
+  const canMark = line.currentPeriodStart !== null && !line.isPaid;
+  if (line.externalCharges.length === 0 && !canMark) return null;
+
+  return (
+    <div className="flex flex-col gap-1 text-sm">
+      {line.externalCharges.map((charge) => (
+        <form key={charge.id} action={archive} className="flex flex-wrap items-center gap-x-3">
+          <input type="hidden" name="studentId" value={studentId} />
+          <input type="hidden" name="feeId" value={line.id} />
+          <input type="hidden" name="chargeId" value={charge.id} />
+          {/* Plain text, never a link: the number is somebody else's document. */}
+          <span className="text-foreground-muted">
+            {t('fees.external.invoiced', { number: charge.reference, date: formatDate(charge.occurrenceOn) })}
+          </span>
+          <ConfirmButton
+            title={t('fees.external.archiveTitle', { number: charge.reference })}
+            message={t('fees.external.archiveMessage')}
+            confirmLabel={t('fees.external.archive')}
+            tone="danger"
+            disabled={archiving}
+            className="rounded text-primary hover:underline"
+          >
+            {t('fees.external.archive')}
+          </ConfirmButton>
+        </form>
+      ))}
+      {canMark && (
+        <ConfirmAction
+          action={record}
+          pending={recording}
+          fields={{ studentId, feeId: line.id, occurrenceOn: line.currentPeriodStart ?? '' }}
+          title={t('fees.external.recordTitle', { date: formatDate(line.currentPeriodStart) })}
+          message={t('fees.external.recordMessage')}
+          confirmLabel={t('fees.external.record')}
+          trigger={t('fees.external.recordButton')}
+          triggerClassName="self-start rounded text-primary hover:underline"
+        >
+          <div className={FIELD_COLUMN}>
+            <label htmlFor={`external-${line.id}`} className={FIELD_LABEL}>
+              {t('fees.external.number')}
+            </label>
+            <input
+              id={`external-${line.id}`}
+              name="reference"
+              required
+              maxLength={60}
+              value={reference}
+              onChange={(event) => setReference(event.target.value)}
+              placeholder="FT 2026/12"
+              className={CONTROL_LINE}
+            />
+          </div>
+        </ConfirmAction>
+      )}
+    </div>
   );
 }

@@ -17,6 +17,8 @@ import type {
   TasksWidgetData,
   WaterWidgetData,
   QualificationsWidgetData,
+  StaffNotesWidgetData,
+  WeatherWidgetData,
 } from '@/lib/api';
 import { formatCents } from '@/lib/money';
 import { cn } from '@/lib/utils';
@@ -24,6 +26,9 @@ import { ConsumptionBars } from '@/components/consumption-bars';
 import { centsToText } from '@/lib/energy-invoice';
 import { formatDate } from '@/lib/date-format';
 import { WidgetCard } from './widget-card';
+import { StaffBoard } from '@/components/staff-notes';
+import { WeatherIcon, WindIcon, WINDY_KMH, weatherKind } from '@/components/weather-icon';
+import { formatDayMonthShort } from '@/lib/date-format';
 import { QualificationStatus } from '@/components/qualification-status';
 import { MyTurmasCard, NextClassCard, TrainingPlanCard, WeekCard } from './instructor-widgets';
 import { moduleIsOn } from '@/lib/modules';
@@ -64,6 +69,13 @@ export async function renderWidget(
 ): Promise<React.ReactElement | null> {
   const childId = family?.selectedId ?? null;
   switch (widget.id) {
+    case 'ops.weather':
+      return <WeatherCard widget={widget} />;
+    case 'staff.notes':
+      // No note pinned: nothing, so the band is not drawn either (POOLSE-169).
+      return widget.state === 'ok' && (widget.data as StaffNotesWidgetData | null)?.notes.length === 0 ? null : (
+        <NotesCard widget={widget} />
+      );
     case 'mgmt.money.period':
       return <MoneyCard widget={widget} />;
     case 'mgmt.occupancy.today':
@@ -131,6 +143,98 @@ export async function renderWidget(
 }
 
 /* -------------------------------------------------------------------------- */
+
+/** "18°" — a reading rounded to the degree, or a dash for none. */
+function degrees(value: number | null): string {
+  return value === null ? '—' : `${Math.round(value)}°`;
+}
+
+/**
+ * The weather at the site being looked at — POOLSE-170. Now (icon and word,
+ * the temperature, a wind flag past `WINDY_KMH`), today's high and low, and the
+ * three days after, one row on any screen. Titled by the city, because a
+ * temperature with no place on it reads as the pool's water. No link (Rui,
+ * 04-11-2026): the card is the weather, not a way into the site page.
+ */
+async function WeatherCard({ widget }: { widget: DashboardWidget }): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const locale = await getLocale();
+  const data = widget.data as WeatherWidgetData | null;
+  const now = data?.weather;
+  const today = now?.days[0];
+
+  return (
+    <WidgetCard
+      widget={widget}
+      title={data === null ? t('weather.title') : (data.city ?? data.facilityName)}
+      href={null}
+      linkLabel=""
+      emptyMessage={t('weather.unavailable')}
+    >
+      {now !== undefined && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span className="flex items-center gap-2">
+              <WeatherIcon code={now.weatherCode} isDay={now.isDay} className="size-8" />
+              <span className="text-3xl font-semibold">{degrees(now.temperatureC)}</span>
+            </span>
+            <span className="flex flex-col text-sm">
+              <span>{t(`weather.${weatherKind(now.weatherCode)}`)}</span>
+              {today !== undefined && (
+                <span className="text-foreground-muted">
+                  {t('dashboard.weather.highLow', { high: degrees(today.maxC), low: degrees(today.minC) })}
+                </span>
+              )}
+            </span>
+            {now.windSpeedKmh !== null && now.windSpeedKmh >= WINDY_KMH && (
+              <span className="flex items-center gap-1.5 text-sm text-foreground-muted">
+                <WindIcon />
+                {t('weather.wind', { value: Math.round(now.windSpeedKmh) })}
+              </span>
+            )}
+          </div>
+          {now.days.length > 1 && (
+            <ul className="grid grid-cols-3 gap-2">
+              {now.days.slice(1, 4).map((day) => (
+                <li key={day.date} className="flex flex-col items-center gap-0.5 rounded-sm bg-surface-muted p-2 text-center">
+                  <span className="text-xs font-medium">{formatDayMonthShort(day.date, locale)}</span>
+                  <WeatherIcon code={day.weatherCode} />
+                  {/* The icon is decorative; the word carries the condition. */}
+                  <span className="text-xs text-foreground-muted">{t(`weather.${weatherKind(day.weatherCode)}`)}</span>
+                  <span className="text-xs">
+                    {degrees(day.maxC)} / {degrees(day.minC)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </WidgetCard>
+  );
+}
+
+/**
+ * The staff board — POOLSE-169. Always sent to staff, empty included, because
+ * the card is where a note is written; a failure is the shared card's, and its
+ * link is the Painel itself, the board's only page.
+ */
+async function NotesCard({ widget }: { widget: DashboardWidget }): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const data = widget.data as StaffNotesWidgetData | null;
+  if (widget.state !== 'ok' || data === null) {
+    return (
+      <WidgetCard
+        widget={widget}
+        title={t('staffNotes.title')}
+        href="/dashboard"
+        linkLabel={t('common.tryAgain')}
+        emptyMessage={t('staffNotes.empty')}
+      />
+    );
+  }
+  return <StaffBoard notes={data.notes} className="min-w-0" />;
+}
 
 /** The jobs that are mine, and the ones nobody has taken — slice 4.3's panel. */
 async function TasksCard({ widget }: { widget: DashboardWidget }): Promise<React.ReactElement> {

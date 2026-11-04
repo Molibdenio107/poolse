@@ -10,6 +10,7 @@ import { assertPlatformRoleIsNarrow, assertRlsApplies } from '@poolse/db';
 import { AppModule, IDENTITY_ONLY_ROUTES, PUBLIC_ROUTES } from './app.module.js';
 import { assertEveryRouteHasAModule } from './tenant/modules.js';
 import { BadInputFilter } from './tenant/bad-input.filter.js';
+import { serverTiming } from './common/server-timing.js';
 
 /**
  * Secrets the app cannot start without. Checked together so a fresh clone with a
@@ -105,6 +106,9 @@ async function bootstrap(): Promise<void> {
    * lines rather than a dependency, because this is the whole of what is needed.
    */
   app.disable('x-powered-by');
+  // POOLSE-171: total, database time and query count on every response; first,
+  // so it measures everything after it.
+  app.use(serverTiming);
   app.use((_request: unknown, response: { setHeader(name: string, value: string): void }, next: () => void) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('X-Frame-Options', 'DENY');

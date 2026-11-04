@@ -52,14 +52,27 @@ interface MyVacationsResponse {
   balance: Balance;
   requests: VacationRequest[];
   holidays: Holiday[];
-  /** So the tab bar can hide a map the API would refuse anyway. */
+  /** Whether this reader decides leave — owner or admin. The queue carries its own `canDecide`. */
   canApprove: boolean;
 }
+
+/**
+ * A queue row. For a worker who is not the office the kind and the words are
+ * null — dates and names only (POOLSE-157): "baixa médica" beside a colleague's
+ * name is health data, and the team map already shows that they are away.
+ */
+type QueueRequest = Omit<VacationRequest, 'kind' | 'reason'> & {
+  kind: LeaveKind | null;
+  reason: string | null;
+  othersOff: { name: string | null; day: string }[];
+};
 
 interface ApprovalQueueResponse {
   organizationId: string;
   /** One page of the queue — POOLSE-29. */
-  requests: Paginated<VacationRequest & { othersOff: { name: string | null; day: string }[] }>;
+  requests: Paginated<QueueRequest>;
+  /** Approve and refuse are the office's; everybody else reads. */
+  canDecide: boolean;
 }
 
 interface TeamResponse {
@@ -72,12 +85,11 @@ interface TeamResponse {
 /**
  * Leave — backlog round 3, stories 6, 7 and 8.
  *
- * Three surfaces with three different audiences, and the split is the important
- * part: `/vacations/mine` is yours and needs no role at all, while the queue and
- * the team map are `owner` and `admin` only. An instructor may ask for time off;
- * they may not read when their colleagues are away, which is staff
- * administration and lives with the people who run the organization — the same
- * line story 8 drew for People.
+ * Three surfaces, every working role (POOLSE-157, Rui 04-11-2026, reversing
+ * story 8's office-only queue and map): a worker files their own leave, reads
+ * the queue as dates and names, and reads the team map, which was only ever
+ * names and approved days. Deciding a request, and the kind and the words of a
+ * colleague's, stay with `owner` and `admin`.
  */
 @PoolseModule('vacations')
 @Controller('vacations')
@@ -195,8 +207,9 @@ export class VacationsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ): Promise<ApprovalQueueResponse> {
-    requireRole('owner', 'admin');
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
+    const canDecide = hasRole('owner', 'admin');
 
     const requests = await listPendingRequests(organizationId, readPageQuery(page, limit));
 
@@ -212,11 +225,15 @@ export class VacationsController {
     const withCover = await Promise.all(
       requests.items.map(async (request) => ({
         ...request,
+        // Withheld here rather than blanked on screen: a field the payload
+        // carries is a field anybody with the developer tools can read.
+        kind: canDecide ? request.kind : null,
+        reason: canDecide ? request.reason : null,
         othersOff: await othersOffOn(organizationId, request.membershipId, request.days),
       })),
     );
 
-    return { organizationId, requests: { ...requests, items: withCover } };
+    return { organizationId, requests: { ...requests, items: withCover }, canDecide };
   }
 
   @Post('requests/:id/approve')
@@ -320,7 +337,8 @@ export class VacationsController {
   /** The team map — story 8. */
   @Get('team')
   async team(@Query('year') yearRaw?: string): Promise<TeamResponse> {
-    requireRole('owner', 'admin');
+    // Every working role — POOLSE-157. Names and approved days, nothing else.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
     const year = parseYear(yearRaw);
 

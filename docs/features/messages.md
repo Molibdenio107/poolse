@@ -116,3 +116,27 @@ two sports is written to once. Owner and admin only, like a level or the whole c
 writes to their own turmas (Rui, 02-11-2026). The preview and the send count through the same
 `message_recipients()`, and the daily ceiling stays per club. The history names the sport in the reader's
 language.
+
+## Avisos — POOLSE-166 (4 November 2026)
+
+**A notice shown in the app between two dates, never emailed.** *Alunos → Avisos*.
+
+- **Who posts.** Owner and admin to any audience (turma, nível, instalação, desporto, clube); an instructor to
+  their own turmas, as with messages (`turmaScope()`). No approval step for an instructor's aviso (the ticket's
+  open point; default taken). `POST /avisos` takes the audience, `subject`, `body`, `shownFrom`, `shownUntil`;
+  the window is two club days in order, the last not already past. An audience with nobody in it today is a 409.
+- **Who sees.** `GET /app/avisos` (guardian, student): every aviso whose window holds today and whose audience
+  reaches one of the reader's own students (their own record or a live guardian link), decided live by
+  `message_recipients_all()`. Shown on the family home (*Início*) as a sheet on opening and as a card.
+  *Fechar* hides the sheet for the session (`sessionStorage`); the card stays; the next session shows the
+  sheet again.
+- **Who ends one.** `DELETE /avisos/:id`: owner and admin any, an instructor only their own (403
+  `not_your_aviso`). It asks first, and the toast's *Anular* brings it back through the bin (`aviso` in
+  `RESTORABLE`). An ended or past aviso shows nowhere in the app.
+- **Never mail.** No address is kept on its recipient rows; `deliverMessage` reads only `channel = 'email'`,
+  inside the sender, so neither the request nor the hourly retry can send one. The daily ceiling does not count
+  it. *Mensagens* lists email only, and `DELETE /messages/:id` does not end an aviso.
+- **The list.** *Ativos*, *Próximos*, *Passados* behind `SectionPills`, each with its window, audience, how many
+  students it reached and who posted it; *Novo aviso* folded above.
+- **Not built.** Email or push for an aviso; a read receipt; rich text. A per-sport copy of the menu entry: the
+  list is not filtered by sport, so a copy would show the same page under every sport.

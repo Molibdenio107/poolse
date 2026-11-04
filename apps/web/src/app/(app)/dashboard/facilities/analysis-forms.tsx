@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
+import { ConfirmButton } from '@/components/confirm-action';
 import { POOL_METRICS, type PoolMetric } from '@/lib/pool-metrics';
 import { describeBand, type BandMap, type BandOverride } from '@/lib/water';
 import {
@@ -140,15 +141,18 @@ export function ArchiveAnalysisButton({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="poolId" value={poolId} />
       <input type="hidden" name="analysisId" value={analysisId} />
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.instalacoes.analysisRemoveTitle')}
+        message={t('confirm.instalacoes.analysisRemoveMessage')}
+        confirmLabel={t('common.remove')}
+        tone="danger"
         disabled={pending}
-        aria-label={t('facilities.archiveAnalysis')}
-        title={t('facilities.archiveAnalysis')}
+        ariaLabel={t('facilities.archiveAnalysis')}
         className="rounded p-1 text-foreground-muted transition-colors hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
       >
         <Trash2 aria-hidden className="size-4" />
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

@@ -15,6 +15,7 @@ import {
   setRoleAction,
 } from './staff.actions';
 import { Reveal } from '@/components/ui/reveal';
+import { ConfirmButton } from '@/components/confirm-action';
 
 const INITIAL: FormState = { ok: false };
 
@@ -165,6 +166,7 @@ export function RoleEditor({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(setRoleAction, INITIAL);
+  const who = staff.shortName ?? staff.email ?? '';
 
   return (
     <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
@@ -200,15 +202,18 @@ export function RoleEditor({
                 nobody could read it. `aria-label` carries the same sentence,
                 and the row below says it in visible text.
               */}
-              <button
-                type="submit"
+              {/* Asks first (Rui, 04-11-2026). */}
+              <ConfirmButton
+                title={t('confirm.equipa.removeRoleTitle', { role: t(`roles.${role}`), name: who })}
+                message={t('confirm.equipa.removeRoleMessage', { role: t(`roles.${role}`), name: who })}
+                confirmLabel={t('confirm.equipa.remove')}
+                tone="danger"
                 disabled={pending || !mine}
-                aria-label={says}
-                title={says}
+                ariaLabel={says}
                 className="rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
               >
                 <RoleBadge role={role} />
-              </button>
+              </ConfirmButton>
             </form>
             );
           })
@@ -237,13 +242,16 @@ export function RoleEditor({
               <input type="hidden" name="membershipId" value={staff.membershipId} />
               <input type="hidden" name="role" value={role} />
               <input type="hidden" name="grant" value="true" />
-              <button
-                type="submit"
+              {/* Asks first (Rui, 04-11-2026). */}
+              <ConfirmButton
+                title={t('confirm.equipa.grantRoleTitle', { role: t(`roles.${role}`), name: who })}
+                message={t('confirm.equipa.grantRoleMessage', { role: t(`roles.${role}`), name: who })}
+                confirmLabel={t('confirm.equipa.grant')}
                 disabled={pending}
                 className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-dashed border-border text-foreground-muted hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
               >
                 + {t(`roles.${role}`)}
-              </button>
+              </ConfirmButton>
             </form>
           ))}
       </div>
@@ -282,13 +290,17 @@ export function Reinvite({
         <form action={cancel} className="inline-flex">
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="membershipId" value={staff.membershipId} />
-          <button
-            type="submit"
+          {/* Asks first (Rui, 04-11-2026). */}
+          <ConfirmButton
+            title={t('confirm.equipa.cancelReinviteTitle', { email: staff.pendingInvite.email })}
+            message={t('confirm.equipa.cancelReinviteMessage')}
+            confirmLabel={t('staff.reinviteCancel')}
+            tone="danger"
             disabled={cancelling}
             className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm disabled:opacity-60 bg-surface shadow-card"
           >
             {cancelling ? t('common.working') : t('staff.reinviteCancel')}
-          </button>
+          </ConfirmButton>
         </form>
       </section>
     );

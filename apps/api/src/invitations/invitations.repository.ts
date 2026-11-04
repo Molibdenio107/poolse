@@ -41,8 +41,14 @@ export interface OrganizationMember {
    * matter entirely — see PersonAvatar on the web side.
    */
   avatarUrl: string | null;
-  /** The sports this person belongs to — POOLSE-145; the list shows a chip per sport. */
+  /** The sports this person belongs to — POOLSE-145; the list marks one column per sport. */
   sports?: string[];
+  /**
+   * When their login last used Poolse — POOLSE-130's `app_user.last_seen_at`,
+   * shown in the staff table's *Acesso* column (POOLSE-158). Null with no login,
+   * or a login that has not been back since the column existed.
+   */
+  lastSeenAt?: string | null;
 }
 
 export type InvitationDelivery = 'pending' | 'sent' | 'failed' | 'not_configured';
@@ -283,6 +289,12 @@ export interface MemberQuery {
    * that the unfiltered list would never have shown them (QA 30.9).
    */
   search: string | null;
+  /**
+   * One sport, `none`, or null for every sport — POOLSE-158. Read by
+   * `readSportFilter`, so a sport the club does not have is a 400 before this
+   * runs; `none` is somebody whose `membership.sports` is empty.
+   */
+  sport?: string | null;
 }
 
 export async function listMembers(
@@ -305,6 +317,7 @@ export async function listMembers(
       avatar_url: string | null;
       birth_date: string | null;
       sports: string[];
+      last_seen_at: Date | null;
     }>(`
       SELECT ${TOTAL_COUNT},
              m.id                AS membership_id,
@@ -326,6 +339,7 @@ export async function listMembers(
              -- birthday without a second round trip per row — round 4.
              u.birth_date        AS birth_date,
              m.sports::text[]    AS sports,
+             u.last_seen_at      AS last_seen_at,
              -- Before acceptance there is no account, so the address the invite
              -- went to is the only name this person has here.
              coalesce(u.cached_email::text, m.email::text, i.email::text) AS email,
@@ -409,6 +423,13 @@ export async function listMembers(
           * print one, and searching by a field somebody cannot see returns rows
           * that look like they do not match.
           */
+         -- The staff table's sport filter, in the same statement as the
+         -- window so page 2 is never shorter than page 1 (POOLSE-158).
+         AND (
+           $6::text IS NULL
+           OR ($6 = 'none' AND cardinality(m.sports) = 0)
+           OR ($6 <> 'none' AND $6 = ANY (m.sports::text[]))
+         )
          AND ${searchPredicate(
            `coalesce(person_name(m.id), '') || ' ' ||
             coalesce(u.cached_email::text, m.email::text, i.email::text, '')`,
@@ -417,7 +438,7 @@ export async function listMembers(
        GROUP BY m.id, m.app_user_id, m.status, m.created_at,
                 m.first_name, m.last_name, m.email,
                 u.cached_first_name, u.cached_last_name, u.cached_avatar_url,
-                u.cached_email, u.birth_date, i.email, m.sports
+                u.cached_email, u.birth_date, u.last_seen_at, i.email, m.sports
        /*
         * By name, not by when the row was made. A staff list is something you
         * scan for somebody, and creation order is meaningless to the person
@@ -429,7 +450,7 @@ export async function listMembers(
         */
        ORDER BY ${personOrder('m.id')}, m.created_at
        LIMIT $4 OFFSET $5
-    `, [query.scope, query.role, query.search, limit, offset]);
+    `, [query.scope, query.role, query.search, limit, offset, query.sport ?? null]);
 
     return windowed(page, run, (row) => ({
       membershipId: row.membership_id,
@@ -444,6 +465,7 @@ export async function listMembers(
       avatarUrl: row.avatar_url,
       birthDate: row.birth_date,
       sports: row.sports,
+      lastSeenAt: row.last_seen_at === null ? null : row.last_seen_at.toISOString(),
     }));
   });
 }

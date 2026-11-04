@@ -348,16 +348,23 @@ const COLOUR_INDEX: Record<string, number> = {
  * whole reason these are tokens. Null for anything unrecognised, so a value from
  * a newer build is simply not painted rather than rendering as `rgb(var())`.
  */
-export function classColourVar(colour: string | null | undefined): string | null {
+export function classColourVar(
+  colour: string | null | undefined,
+  /** A turma's own colour, or a level's — two sets since POOLSE-168. */
+  set: 'class' | 'level' = 'class',
+): string | null {
   if (colour === null || colour === undefined) return null;
   const index = COLOUR_INDEX[colour];
-  return index === undefined ? null : `rgb(var(--level-${index}))`;
+  return index === undefined ? null : `rgb(var(--${set}-${index}))`;
 }
+
+/** A tint: which set and which of its eight — POOLSE-168. */
+export type Tint = { set: 'class' | 'level'; index: number };
 
 export function levelTint(
   booking: Pick<GridBooking, 'subjectType' | 'levelId'> & { classColour?: string | null },
   order: ReadonlyMap<string, number>,
-): number | null {
+): Tint | null {
   if (booking.subjectType !== 'turma') return null;
 
   /*
@@ -369,13 +376,13 @@ export function levelTint(
    * the grid falls back to, which is what every uncoloured club goes on seeing.
    */
   const chosen = booking.classColour ?? null;
-  if (chosen !== null && COLOUR_INDEX[chosen] !== undefined) return COLOUR_INDEX[chosen]!;
+  if (chosen !== null && COLOUR_INDEX[chosen] !== undefined) return { set: 'class', index: COLOUR_INDEX[chosen]! };
 
   if (booking.levelId === null) return null;
 
   const chosenByLevel = order.get(booking.levelId);
   if (chosenByLevel === undefined) return null;
-  return chosenByLevel;
+  return { set: 'level', index: chosenByLevel };
 }
 
 /**

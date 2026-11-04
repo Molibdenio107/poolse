@@ -412,7 +412,9 @@ function refuseNotPayable(error: unknown): unknown {
   return error;
 }
 
-const SOURCES: PaymentSource[] = ['manual', 'mbway', 'sepa'];
+const SOURCES: PaymentSource[] = ['manual', 'mbway', 'sepa', 'external_invoice'];
+/** An external invoice's number — POOLSE-162; the CHECK holds the same bound. */
+const MAX_EXTERNAL_NUMBER = 60;
 const CHANNELS: ChaseChannel[] = ['email', 'phone', 'message', 'in_person', 'letter'];
 
 function readPayment(body: Record<string, unknown>): PaymentInput {
@@ -427,14 +429,25 @@ function readPayment(body: Record<string, unknown>): PaymentInput {
 
   const source = String(body['source'] ?? 'manual');
   if (!SOURCES.includes(source as PaymentSource)) {
-    throw new BadRequestException('source must be manual, mbway or sepa');
+    throw new BadRequestException('source must be manual, mbway, sepa or external_invoice');
+  }
+
+  const reference = optionalText(body['reference'], 'reference');
+  // Paid by an invoice issued outside Poolse: its number is the whole record of
+  // which one (POOLSE-162), so it is required — and said under the field.
+  if (source === 'external_invoice' && (reference === null || reference.length > MAX_EXTERNAL_NUMBER)) {
+    throw new BadRequestException({
+      code: 'external_number_required',
+      message: 'A payment by an external invoice names its number',
+      fields: { reference: 'invoices.externalNumberRequired' },
+    });
   }
 
   return {
     amountCents,
     paidOn: optionalDate(body['paidOn'], 'paidOn') ?? today(),
     source: source as PaymentSource,
-    reference: optionalText(body['reference'], 'reference'),
+    reference,
     notes: optionalText(body['notes'], 'notes', MAX_NOTES),
   };
 }

@@ -72,9 +72,15 @@ export function FamilyFees({ fees }: { fees: StudentFees }): React.ReactElement 
                       <AlertTriangle aria-hidden className="attention size-3.5" />
                     ) : null}
                     {line.isPaid
-                      ? line.paidOn === null
-                        ? t('fees.paidLabel')
-                        : t('fees.paidOn', { date: formatDate(line.paidOn) })
+                      ? line.externalCharges.some((charge) => charge.occurrenceOn === line.currentPeriodStart)
+                        ? t('fees.external.invoicedShort', {
+                            number:
+                              line.externalCharges.find((charge) => charge.occurrenceOn === line.currentPeriodStart)
+                                ?.reference ?? '',
+                          })
+                        : line.paidOn === null
+                          ? t('fees.paidLabel')
+                          : t('fees.paidOn', { date: formatDate(line.paidOn) })
                       : line.isOverdue
                         ? t('fees.overdueSince', { date: formatDate(line.dueOn) })
                         : line.dueOn === null

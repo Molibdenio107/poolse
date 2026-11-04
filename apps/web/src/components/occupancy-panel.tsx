@@ -34,10 +34,15 @@ import { cn } from '@/lib/utils';
 export async function OccupancyPanel({
   occupancy,
   facilityId,
+  calendarHref = '/dashboard/calendar',
+  calendarLabel,
 }: {
   occupancy: Occupancy;
   /** The site, for the capacity link; null where the caller has none. */
   facilityId?: string | null;
+  /** Where *Abrir* goes, and its words — the sport's calendar, named (POOLSE-151). */
+  calendarHref?: string;
+  calendarLabel?: string;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
@@ -152,10 +157,10 @@ export async function OccupancyPanel({
           )}
           {hasGrid && (
             <FromLink
-              href="/dashboard/calendar"
+              href={calendarHref}
               className="inline-flex items-center gap-1.5 self-start rounded text-sm text-primary hover:underline coarse:-my-3 coarse:py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
-              {t('occupancy.free.openGrid')}
+              {calendarLabel ?? t('occupancy.free.openGrid')}
               <ArrowRight aria-hidden className="size-4" />
             </FromLink>
           )}

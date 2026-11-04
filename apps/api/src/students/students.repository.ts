@@ -237,6 +237,17 @@ export interface Student {
    * On lists only; absent on a single record, which reads its turmas instead.
    */
   sports?: string[];
+  /** The turmas the student is in now (active enrolments) — the Alunos table, POOLSE-164. */
+  turmas?: { id: string; name: string }[];
+  /** Seguro today: covered, lapsed (had one, none covers today), or never — POOLSE-164. */
+  insuranceState?: 'insured' | 'lapsed' | 'never';
+  /**
+   * The family's last visit to the app — the student's own login or a live
+   * guardian's, the most recent (POOLSE-130's `last_seen_at`). `familyHasLogin`
+   * tells "never came back" from "has no login at all".
+   */
+  familyLastSeenAt?: string | null;
+  familyHasLogin?: boolean;
   socioNumber: string | null;
   /** Sócio desde, `YYYY-MM-DD` — POOLSE-134. Carried by the export only. */
   socioSince?: string | null;
@@ -760,8 +771,16 @@ const PAYMENT_STATE = `(
                ELSE current_period_start(sf.starts_on, sf.ends_on, fp.months)
              END AS period_start
     ) cur
-    LEFT JOIN student_fee_payment pay
-           ON pay.student_fee_id = sf.id AND pay.period_start = cur.period_start
+    -- Settled: a payment, or invoiced outside Poolse (POOLSE-163).
+    LEFT JOIN LATERAL (
+      SELECT p0.id FROM student_fee_payment p0
+       WHERE p0.student_fee_id = sf.id AND p0.period_start = cur.period_start
+      UNION ALL
+      SELECT x.id FROM student_fee_external_charge x
+       WHERE x.student_fee_id = sf.id AND x.organization_id = sf.organization_id
+         AND x.occurrence_on = cur.period_start AND x.archived_at IS NULL
+      LIMIT 1
+    ) pay ON true
    WHERE sf.student_id = s.id AND sf.archived_at IS NULL AND cur.period_start IS NOT NULL
 )`;
 
@@ -822,6 +841,12 @@ export interface StudentQuery {
   sport?: string | null;
   /** Only students in turmas of two or more sports. */
   multiSport?: boolean;
+  /** Only students with an active enrolment in this turma — POOLSE-164. */
+  classGroupId?: string | null;
+  /** Only students whose seguro is in this state today — POOLSE-164. */
+  insurance?: 'insured' | 'lapsed' | 'never' | null;
+  /** `age`: youngest first; otherwise by name — POOLSE-164. */
+  order?: 'name' | 'age';
   /**
    * Only students with an active turma in one of these sports — POOLSE-145, a
    * scoped instructor's whole register (`sportScope()`). Null is everybody.
@@ -853,6 +878,45 @@ const STUDENT_SPORTS = (alias: string): string => `
          WHERE e.student_id = ${alias}.id AND e.organization_id = ${alias}.organization_id
            AND e.status = 'active'
          ORDER BY 1)`;
+
+/** The turmas a student is in now — active enrolments in live turmas, by name (POOLSE-164). */
+const STUDENT_TURMAS = `
+  (SELECT coalesce(json_agg(json_build_object('id', cg.id, 'name', cg.name) ORDER BY cg.name), '[]'::json)
+     FROM enrollment e
+     JOIN class_group cg ON cg.id = e.class_group_id AND cg.organization_id = e.organization_id
+    WHERE e.student_id = s.id AND e.organization_id = s.organization_id
+      AND e.status = 'active' AND cg.archived_at IS NULL)`;
+
+/**
+ * The seguro today, in three words (POOLSE-164): a live seguro line covers
+ * today, there were seguro lines but none covers today, or there never was one.
+ * "Today" is the club's, as everywhere.
+ */
+const INSURANCE_STATE = `
+  (CASE WHEN EXISTS (SELECT 1 FROM student_fee sf
+                      WHERE sf.student_id = s.id AND sf.organization_id = s.organization_id
+                        AND sf.archived_at IS NULL AND sf.kind = 'seguro'
+                        AND club_today() BETWEEN sf.covers_from AND sf.covers_to)
+        THEN 'insured'
+        WHEN EXISTS (SELECT 1 FROM student_fee sf
+                      WHERE sf.student_id = s.id AND sf.organization_id = s.organization_id
+                        AND sf.archived_at IS NULL AND sf.kind = 'seguro')
+        THEN 'lapsed'
+        ELSE 'never' END)`;
+
+/**
+ * The family's logins — the student's own and every live guardian's (POOLSE-164):
+ * the most recent visit, and whether any of them has a login at all.
+ */
+const FAMILY_LOGINS = `
+  (SELECT max(u.last_seen_at) AS last_seen, count(u.id) > 0 AS has_login
+     FROM membership m
+     JOIN app_user u ON u.id = m.app_user_id
+    WHERE m.organization_id = s.organization_id AND m.archived_at IS NULL
+      AND (m.id = s.membership_id
+           OR m.id IN (SELECT gl.guardian_membership_id FROM guardian_link gl
+                        WHERE gl.student_id = s.id AND gl.organization_id = s.organization_id
+                          AND gl.archived_at IS NULL)))`;
 
 /**
  * How many live students have an active turma of each sport, and in two or more —
@@ -948,8 +1012,14 @@ export async function listStudents(
              ${PHOTO_CONSENT} AS photo_consent,
              ${IS_ADULT_STUDENT} AS is_adult_student,
              ${IS_GUARDIAN} AS is_guardian,
-             ${STUDENT_SPORTS('s')}::text[] AS sports
+             ${STUDENT_SPORTS('s')}::text[] AS sports,
+             ${STUDENT_TURMAS} AS turmas,
+             ${INSURANCE_STATE} AS insurance_state,
+             fam.last_seen AS family_last_seen_at,
+             fam.has_login AS family_has_login
         FROM student s
+        -- The family's logins (POOLSE-164).
+        LEFT JOIN LATERAL ${FAMILY_LOGINS} fam ON true
         -- The level this list reads: a sport's own, on a sport's register (POOLSE-148).
         LEFT JOIN student_level l
                ON l.id = ${LIST_LEVEL('s', '$7')}
@@ -989,6 +1059,12 @@ export async function listStudents(
          AND (NOT $8::boolean OR cardinality(${STUDENT_SPORTS('s')}) > 1)
          -- POOLSE-145: a scoped instructor reads their sports' students only.
          AND ($9::text[] IS NULL OR ${STUDENT_SPORTS('s')} && $9::text[])
+         -- POOLSE-164: one turma, and the seguro's state today.
+         AND ($10::uuid IS NULL OR EXISTS (
+               SELECT 1 FROM enrollment e
+                WHERE e.student_id = s.id AND e.organization_id = s.organization_id
+                  AND e.status = 'active' AND e.class_group_id = $10::uuid))
+         AND ($11::text IS NULL OR ${INSURANCE_STATE} = $11::text)
        /*
         * The window goes here, inside the statement that carries the tenant
         * scope, the search and the sort — POOLSE-29. Never a page taken from a
@@ -1004,7 +1080,9 @@ export async function listStudents(
         * differently between two queries. A total order is what makes paging
         * stable, which POOLSE-29 criterion 4 asks for.
         */
-       ORDER BY ${nameOrder('s')}, s.id
+       -- Youngest first when asked (POOLSE-164); by name otherwise, and as the tie-break.
+       ORDER BY CASE WHEN $12::text = 'age' THEN s.birth_date END DESC NULLS LAST,
+                ${nameOrder('s')}, s.id
        LIMIT $3 OFFSET $4
       `,
       [
@@ -1017,6 +1095,9 @@ export async function listStudents(
         query.sport ?? null,
         query.multiSport ?? false,
         query.withinSports === undefined || query.withinSports === null ? null : [...query.withinSports],
+        query.classGroupId ?? null,
+        query.insurance ?? null,
+        query.order ?? 'name',
       ],
     );
 
@@ -1077,7 +1158,10 @@ export async function exportStudents(
              ${PAYMENT_STATE} AS payment_state,
              ${GUARDIANS} AS guardians,
              ${PHOTO_KEY} AS photo_file_id,
-             ${PHOTO_CONSENT} AS photo_consent
+             ${PHOTO_CONSENT} AS photo_consent,
+             -- The table's columns, in the file too (POOLSE-164).
+             ${STUDENT_TURMAS} AS turmas,
+             ${INSURANCE_STATE} AS insurance_state
         FROM student s
         LEFT JOIN student_level l
                ON l.id = s.level_id AND l.organization_id = s.organization_id
@@ -1096,6 +1180,12 @@ export async function exportStudents(
               OR ($6::text = 'none' AND cardinality(${STUDENT_SPORTS('s')}) = 0)
               OR $6::text = ANY(${STUDENT_SPORTS('s')}))
          AND (NOT $7::boolean OR cardinality(${STUDENT_SPORTS('s')}) > 1)
+         -- POOLSE-164: the turma and seguro filters travel to the file too.
+         AND ($8::uuid IS NULL OR EXISTS (
+               SELECT 1 FROM enrollment e
+                WHERE e.student_id = s.id AND e.organization_id = s.organization_id
+                  AND e.status = 'active' AND e.class_group_id = $8::uuid))
+         AND ($9::text IS NULL OR ${INSURANCE_STATE} = $9::text)
        ORDER BY ${nameOrder('s')}, s.id
        LIMIT $3
       `,
@@ -1107,6 +1197,8 @@ export async function exportStudents(
         query.overdueOnly === true,
         query.sport ?? null,
         query.multiSport === true,
+        query.classGroupId ?? null,
+        query.insurance ?? null,
       ],
     );
 
@@ -1792,6 +1884,10 @@ function toStudent(row: {
   is_guardian: boolean;
   sports?: string[];
   left_on?: string | null;
+  turmas?: { id: string; name: string }[] | null;
+  insurance_state?: 'insured' | 'lapsed' | 'never';
+  family_last_seen_at?: Date | null;
+  family_has_login?: boolean;
   health_erases_on?: string | null;
   identity_erases_on?: string | null;
   health_erased_at?: Date | null;
@@ -1840,6 +1936,14 @@ function toStudent(row: {
     isAdultStudent: row.is_adult_student,
     isGuardian: row.is_guardian,
     ...(row.sports === undefined ? {} : { sports: row.sports }),
+    ...(row.insurance_state === undefined
+      ? {}
+      : {
+          turmas: row.turmas ?? [],
+          insuranceState: row.insurance_state,
+          familyLastSeenAt: row.family_last_seen_at?.toISOString() ?? null,
+          familyHasLogin: row.family_has_login ?? false,
+        }),
   };
 }
 
@@ -2628,5 +2732,30 @@ export async function mergePeople(
       [organizationId, keepId, absorbId],
     );
     return rows[0]?.merge_memberships ?? 0;
+  });
+}
+
+/**
+ * The live turmas, for the Alunos *Turma* filter — POOLSE-164. On a sport's own
+ * register only that sport's (by the turma's recinto, `pool` without one), and
+ * for a scoped instructor only their sports' (POOLSE-145).
+ */
+export async function listTurmaOptions(
+  organizationId: string,
+  sport: string | null,
+  within: readonly string[] | null,
+): Promise<{ id: string; name: string }[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string; name: string }>(
+      `SELECT g.id, g.name
+         FROM class_group g
+         LEFT JOIN playing_area pa ON pa.id = g.playing_area_id AND pa.organization_id = g.organization_id
+        WHERE g.archived_at IS NULL
+          AND ($1::text IS NULL OR coalesce(pa.sport_id, 'pool') = $1::text)
+          AND ($2::text[] IS NULL OR coalesce(pa.sport_id, 'pool') = ANY($2::text[]))
+        ORDER BY lower(g.name), g.id`,
+      [sport, within === null ? null : [...within]],
+    );
+    return rows;
   });
 }

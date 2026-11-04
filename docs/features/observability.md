@@ -120,6 +120,16 @@ green — and is on fire. It is answered exactly rather than inferred: the row c
 working; counting it as ill-health would make the strictest tenant look the sickest. The count
 is reported next to the others and decides nothing.
 
+## Server-Timing — POOLSE-171 (4 November 2026)
+
+Every API response carries `Server-Timing: total;dur=…, db;dur=…, queries;desc="…"` — the request's time,
+the time it spent waiting on Postgres and how many queries it ran. One middleware
+(`common/server-timing.ts`, first in `main.ts`) opens a measurement per request; `@poolse/db`'s pool wrapper
+(`query-timing.ts`) times every query on a pooled connection into it. Three numbers and nothing identifying —
+no query text, no tenant. A header, never a row: per-tenant counts stay `RequestStatsInterceptor`'s.
+`PERF_LOG_FILE`, set only on a machine being measured, also appends one JSON line per request (ids masked) for
+the perf spec; never set it in production. How it is used: [`docs/perf/README.md`](../perf/README.md).
+
 ## Sentry
 
 Optional and off by default. Set `SENTRY_DSN` (API and Next server) and

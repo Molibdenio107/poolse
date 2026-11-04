@@ -203,6 +203,12 @@ export interface StudentFeeLine {
    * rather than a claim.
    */
   paidPeriods: string[];
+  /**
+   * Occurrences invoiced outside Poolse — POOLSE-163: each live mark, its day and
+   * the external document's number. The current occurrence marked so counts as
+   * settled (`isPaid`), and the monthly run leaves it out.
+   */
+  externalCharges: { id: string; occurrenceOn: string; reference: string }[];
   /** Past its due date and unsettled. What the list column and the penalty read. */
   isOverdue: boolean;
   /**
@@ -959,6 +965,7 @@ async function readStudentFees(
       is_paid: boolean;
       paid_on: string | null;
       paid_periods: string[];
+      external_charges: { id: string; occurrenceOn: string; reference: string }[] | null;
       is_overdue: boolean;
       plan_amount_cents_now: number | null;
       band_changed: boolean;
@@ -989,12 +996,15 @@ async function readStudentFees(
               to_char(sf.ends_on, 'YYYY-MM-DD') AS ends_on,
               to_char(cur.period_start, 'YYYY-MM-DD') AS current_period_start,
               to_char(fee_due_on(cur.period_start, f.payment_due_day), 'YYYY-MM-DD') AS due_on,
-              (pay.id IS NOT NULL) AS is_paid,
+              -- Settled by a payment, or invoiced outside Poolse (POOLSE-163).
+              (pay.id IS NOT NULL OR ext_now.id IS NOT NULL) AS is_paid,
               coalesce(paid_hist.periods, ARRAY[]::text[]) AS paid_periods,
+              ext_all.charges AS external_charges,
               to_char(pay.paid_on, 'YYYY-MM-DD') AS paid_on,
               -- Overdue is a fact about today, so it is decided here rather than
               -- on the client, where a stale page would age into a wrong answer.
               (pay.id IS NULL
+               AND ext_now.id IS NULL
                AND cur.period_start IS NOT NULL
                AND fee_due_on(cur.period_start, f.payment_due_day) < club_today()) AS is_overdue,
               -- Only when it differs. Null is "no marker", decided here so the
@@ -1042,6 +1052,19 @@ async function readStudentFees(
          ) cur ON true
          LEFT JOIN student_fee_payment pay
                 ON pay.student_fee_id = sf.id AND pay.period_start = cur.period_start
+         -- Invoiced outside Poolse, this occurrence and every one (POOLSE-163).
+         LEFT JOIN student_fee_external_charge ext_now
+                ON ext_now.student_fee_id = sf.id AND ext_now.organization_id = sf.organization_id
+               AND ext_now.occurrence_on = cur.period_start AND ext_now.archived_at IS NULL
+         LEFT JOIN LATERAL (
+           SELECT json_agg(json_build_object(
+                    'id', x.id,
+                    'occurrenceOn', to_char(x.occurrence_on, 'YYYY-MM-DD'),
+                    'reference', x.reference) ORDER BY x.occurrence_on DESC) AS charges
+             FROM student_fee_external_charge x
+            WHERE x.student_fee_id = sf.id AND x.organization_id = sf.organization_id
+              AND x.archived_at IS NULL
+         ) ext_all ON true
          /*
           * Every period this line has been settled for — round 5, ticket 10.0.
           *
@@ -1130,8 +1153,16 @@ async function readStudentFees(
            CROSS JOIN LATERAL (
              SELECT current_period_start(sf.starts_on, sf.ends_on, fp.months) AS period_start
            ) cur
-           LEFT JOIN student_fee_payment pay
-                  ON pay.student_fee_id = sf.id AND pay.period_start = cur.period_start
+           -- Settled: a payment, or invoiced outside Poolse (POOLSE-163).
+           LEFT JOIN LATERAL (
+             SELECT p0.id FROM student_fee_payment p0
+              WHERE p0.student_fee_id = sf.id AND p0.period_start = cur.period_start
+             UNION ALL
+             SELECT x.id FROM student_fee_external_charge x
+              WHERE x.student_fee_id = sf.id AND x.organization_id = sf.organization_id
+                AND x.occurrence_on = cur.period_start AND x.archived_at IS NULL
+             LIMIT 1
+           ) pay ON true
           WHERE sf.student_id = $1 AND sf.archived_at IS NULL
             AND pay.id IS NULL AND cur.period_start IS NOT NULL
             AND fee_due_on(cur.period_start, f.payment_due_day) < club_today()
@@ -1428,6 +1459,7 @@ async function readStudentFees(
         isPaid: row.is_paid,
         paidOn: row.paid_on,
         paidPeriods: row.paid_periods,
+        externalCharges: row.external_charges ?? [],
         isOverdue: row.is_overdue,
         planAmountCentsNow: row.plan_amount_cents_now,
         bandChanged: row.band_changed,
@@ -2283,5 +2315,96 @@ export async function setSocio(
       quotaRemoved: false,
       quotaKept: false,
     };
+  });
+}
+
+/** The occurrence is already on a live Poolse document (or marked already): `document` names it. */
+export class AlreadyChargedError extends Error {
+  constructor(readonly document: string) {
+    super('already charged');
+  }
+}
+
+/**
+ * Marks one occurrence of a fee line as invoiced outside Poolse — POOLSE-163.
+ *
+ * The occurrence defaults to the line's current one; a line charged once has a
+ * single occurrence, its `starts_on`. A live Poolse document, or an earlier
+ * mark, is refused by the table's own trigger (`external_charge_already_charged`
+ * in DETAIL), answered here as `AlreadyChargedError`. Null: no such line on
+ * this student.
+ */
+export async function recordExternalCharge(
+  organizationId: string,
+  studentId: string,
+  feeId: string,
+  input: { occurrenceOn: string | null; reference: string },
+): Promise<string | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows: line } = await tx.query<{ occurrence: string | null }>(
+      `SELECT to_char(CASE WHEN sf.fee_period_id IS NULL THEN sf.starts_on
+                           ELSE current_period_start(sf.starts_on, sf.ends_on, fp.months) END,
+                      'YYYY-MM-DD') AS occurrence
+         FROM student_fee sf
+         LEFT JOIN fee_period fp ON fp.id = sf.fee_period_id
+        WHERE sf.id = $1 AND sf.student_id = $2 AND sf.archived_at IS NULL`,
+      [feeId, studentId],
+    );
+    if (line[0] === undefined) return null;
+    const occurrenceOn = input.occurrenceOn ?? line[0].occurrence;
+    if (occurrenceOn === null) return null;
+
+    let id: string;
+    try {
+      const { rows } = await tx.query<{ id: string }>(
+        `INSERT INTO student_fee_external_charge
+           (organization_id, student_fee_id, occurrence_on, reference, recorded_by_membership_id)
+         VALUES ($1, $2, $3::date, $4, $5)
+         RETURNING id`,
+        [organizationId, feeId, occurrenceOn, input.reference, currentTenant().membershipId ?? null],
+      );
+      id = rows[0]!.id;
+    } catch (error) {
+      const detail = (error as { detail?: string }).detail;
+      if (detail?.startsWith('external_charge_already_charged|') === true) {
+        throw new AlreadyChargedError(detail.slice('external_charge_already_charged|'.length));
+      }
+      throw error;
+    }
+
+    await recordAudit(tx, {
+      action: 'student_fee.external_charge',
+      entityType: 'student',
+      entityId: studentId,
+      data: { feeId, occurrenceOn, reference: input.reference },
+    });
+    return id;
+  });
+}
+
+/** Undoes a mark — archived, so the next run offers the occurrence again. False: no such live mark. */
+export async function archiveExternalCharge(
+  organizationId: string,
+  studentId: string,
+  chargeId: string,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ student_fee_id: string; occurrence_on: string; reference: string }>(
+      `UPDATE student_fee_external_charge x SET archived_at = now()
+         FROM student_fee sf
+        WHERE x.id = $1 AND x.archived_at IS NULL
+          AND sf.id = x.student_fee_id AND sf.organization_id = x.organization_id AND sf.student_id = $2
+        RETURNING x.student_fee_id, to_char(x.occurrence_on, 'YYYY-MM-DD') AS occurrence_on, x.reference`,
+      [chargeId, studentId],
+    );
+    const row = rows[0];
+    if (row === undefined) return false;
+    await recordAudit(tx, {
+      action: 'student_fee.external_charge_archived',
+      entityType: 'student',
+      entityId: studentId,
+      data: { feeId: row.student_fee_id, occurrenceOn: row.occurrence_on, reference: row.reference },
+    });
+    return true;
   });
 }

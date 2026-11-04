@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { RotateCcw } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
+import { ConfirmButton } from '@/components/confirm-action';
 import { restoreArchiveAction, type RestoreState } from './archive.actions';
 
 const INITIAL: RestoreState = { ok: false };
@@ -33,15 +34,18 @@ export function RestoreButton({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <form action={dispatch}>
-        <button
-          type="submit"
+        {/* Asks first (Rui, 04-11-2026). */}
+        <ConfirmButton
+          title={t('confirm.instalacoes.restoreTitle', { name })}
+          message={t('confirm.instalacoes.restoreMessage')}
+          confirmLabel={t('archive.restore')}
           disabled={pending}
-          aria-label={t('archive.restoreNamed', { name })}
+          ariaLabel={t('archive.restoreNamed', { name })}
           className={BUTTON}
         >
           <RotateCcw className="size-4" aria-hidden />
           {pending ? t('common.working') : t('archive.restore')}
-        </button>
+        </ConfirmButton>
       </form>
       {state.ok === false && state.parentEntryId !== undefined && (
         <ParentRestoreButton
@@ -71,10 +75,16 @@ function ParentRestoreButton({
 
   return (
     <form action={dispatch}>
-      <button type="submit" disabled={pending} className={BUTTON}>
+      <ConfirmButton
+        title={t('confirm.instalacoes.restoreParentTitle', { name })}
+        message={t('confirm.instalacoes.restoreParentMessage')}
+        confirmLabel={t('archive.restore')}
+        disabled={pending}
+        className={BUTTON}
+      >
         <RotateCcw className="size-4" aria-hidden />
         {pending ? t('common.working') : t('archive.restoreParent', { name })}
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

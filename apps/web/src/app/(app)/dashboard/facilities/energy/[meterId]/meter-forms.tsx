@@ -6,6 +6,7 @@ import { Check, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import type { EnergyMeter } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
+import { ConfirmButton } from '@/components/confirm-action';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { METER_CARRIER_OPTIONS, METER_KINDS } from '../../energy-panel';
@@ -124,15 +125,18 @@ export function RemoveReading({
       <input type="hidden" name="facilityId" value={meter.facilityId} />
       <input type="hidden" name="meterId" value={meter.id} />
       <input type="hidden" name="takenAt" value={takenAt} />
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.instalacoes.readingRemoveTitle')}
+        message={t('confirm.instalacoes.readingRemoveMessage')}
+        confirmLabel={t('common.remove')}
+        tone="danger"
         disabled={pending}
-        aria-label={t('energy.removeReading')}
-        title={t('energy.removeReading')}
+        ariaLabel={t('energy.removeReading')}
         className="text-foreground-muted transition-colors hover:text-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <Trash2 className="size-4" aria-hidden="true" />
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

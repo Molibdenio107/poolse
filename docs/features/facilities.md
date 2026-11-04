@@ -10,8 +10,10 @@ Schema in `docs/data-model.md`.
 | Open a site's page (its configuration) | owner, admin; maintenance sees only Espaços and Manutenção |
 | Open a tank's page | owner, admin, instructor, maintenance |
 | Create, edit or archive a site or a tank; add a photograph | owner, admin |
+| Add or archive a recinto of another sport | owner, admin (POOLSE-152) |
 | Read the inventory | everybody |
-| Change the inventory and lost-and-found | owner, admin, maintenance (since 15-10-2026) |
+| Change the inventory | owner, admin, maintenance (since 15-10-2026) |
+| Record a lost item and mark it returned | owner, admin, maintenance, instructor (POOLSE-154) |
 | Archive an inventory or lost-and-found item | owner, admin |
 
 Knowing whether there are enough pranchas for a class is not privileged. Changing anything
@@ -19,6 +21,26 @@ is.
 
 A subscription covers one site; `organization.max_facilities` defaults to 1 and a trigger
 enforces it. A club with two sites buys a plan with two.
+
+## The site page's order (POOLSE-151, 04-11-2026)
+
+Rui's order: the site, how it looks, what it offers.
+
+- **Instalações** (the list) reads top to bottom: each site's set-up card (*Configurar esta
+  instalação*), then the sport cards, then each site's photographs on a card of their own (Rui,
+  04-11-2026).
+- **The site page's Geral** is the site's own sections and nothing else (*Pessoas*, *Meteorologia*,
+  *Localização*, *Horário*, *Água*, one at a time). The sports live on Instalações and are not
+  repeated here. The logo and the site's photographs are the site page's *Multimédia* tab.
+- **Preços**: *Inscrição* and *Seguro* are separate sections. *Seguro* holds the seguro prices and
+  the apólice.
+- **Preços → Pagamentos**: the payment rule and the periodicities are each folded, closed on every
+  visit.
+- **Ocupação** asks for the sport first in a multi-sport club (`?sport=`, nothing shown until one is
+  chosen). A pool-only club goes straight to the figures. The link names the sport's calendar
+  (*Calendário de Natação*). Only swimming has figures, because occupancy is lane-hours of the
+  pools; another sport says so in words and links to its own calendar.
+- Maintenance's view is unchanged: Espaços and Manutenção.
 
 ## Opening hours
 
@@ -45,6 +67,13 @@ site cards, which no longer list tanks (Rui, 02-11-2026). The rules below are un
 - *Arquivar* asks first — `POST /facilities/playing-areas/:id/archive`. A court is not yet in the
   bin (`RESTORABLE`), and the question says so.
 - A pool is still added and archived as a pool (*Natação → Piscinas*); its recinto follows by trigger.
+- **Only the office creates one** (POOLSE-152, Rui 04-11-2026). `POST /facilities/:id/pools` and
+  `POST /facilities/:id/playing-areas` answer owner and admin, and anybody else gets 403, because a
+  maintenance login could otherwise make a tank it cannot archive. *Adicionar piscina*, *Adicionar
+  recinto* and a recinto's *Arquivar* render only with `canManage`. Maintenance still reads the
+  list. No confirmation on a create: the archive and the bin are the undo.
+- The tank's *Geral* form and the add-recinto form use the student record's grid: *Nome* first and
+  full width, then two columns from `sm`, one on a phone.
 - The menu groups per sport are built (`navigation.md`). Not built yet: calendars and turmas on a court.
 
 ## Espaços
@@ -257,7 +286,26 @@ The suggestion list is every place name this site already uses, drawn from the s
 and the lost-property box together, sorted with accents folded so "armário" and
 "Arrecadação" sit where a person expects them.
 
+**Localização is one of the site's own places** (POOLSE-154, Rui 04-11-2026). It is a select, not
+free text, grouped as *Espaços* (the site's spaces, saved as `space_id`), *Piscinas* ("all pools" or
+one tank, saved as the pool scope) and *Recintos* (courts and pitches, saved as `playing_area_id`).
+Nothing chosen means the site itself. An item is in a space or on a recinto, never both (a CHECK).
+An item already in several pools keeps them, offered as one entry, because the schema stays
+many-to-many. The old free-text place is no longer offered, but what was written still shows and an
+edit keeps it. A place from another site or another club is refused by the composite key, answered
+as a 400. The list's *Localização* column names the space, the court or the pools.
+
+**The item's name opens it for editing**, where the *Editar* button was, for the roles that edit.
+The form is the shared two-column grid with *Artigo* full width.
+
 ## Lost and found
+
+**Since 04-11-2026 (Rui):** *Onde foi encontrado* is a select of the site's spaces, pools and
+recintos (or *Não indicado*), stored as the place's name, a record of where it was that day.
+*Marcar como entregue* and archiving each ask first in a dialog. A returned item stays on the
+list for **7 days after its last change** and then leaves it. That is derived when the list is
+read (`RETURNED_STAYS_DAYS`), never by a job. The row is kept, never deleted, and the card says the
+day it leaves.
 
 The same screen, in a card that is **collapsed by default** — the store room is what
 somebody opens this page for. The header carries the count of items still waiting, so the

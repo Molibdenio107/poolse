@@ -4,6 +4,7 @@ import { FromLink } from '@/components/from-link';
 import { useTranslations } from 'next-intl';
 import { Headset, LogOut } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
+import { ConfirmButton } from '@/components/confirm-action';
 import { formatDate, formatTime } from '@/lib/date-format';
 import type { FormState } from './actions';
 import { endSupportAction, forgetActiveClubAction, stepOutOfSupportAction } from './support.actions';
@@ -56,13 +57,17 @@ export function SupportSessionBanner({
         </button>
       </form>
       <form action={end}>
-        <button
-          type="submit"
+        {/* Asks first (Rui, 04-11-2026). */}
+        <ConfirmButton
+          title={t('confirm.equipa.supportEndTitle', { club: organizationName })}
+          message={t('confirm.equipa.supportEndMessage')}
+          confirmLabel={t('support.endNow')}
+          tone="danger"
           disabled={ending}
           className={`${BUTTON} border-primary bg-primary text-primary-foreground hover:bg-primary/90 font-semibold`}
         >
           {ending ? t('common.working') : t('support.endNow')}
-        </button>
+        </ConfirmButton>
       </form>
     </div>
   );

@@ -40,6 +40,7 @@ import {
   hourMarks,
   levelOrder,
   levelTint,
+  type Tint,
   minutesToPx,
   MIN_BLOCK_HEIGHT,
   NO_LANE_ID,
@@ -1217,7 +1218,7 @@ function Toolbar({
   const anything = !choosing && [...counts.values()].some((count) => count > 0);
 
   /** One row: a checkbox, its colour, its name and how much it accounts for. */
-  const row = (key: string, label: string, tint: number | null, icon?: React.ReactNode) => {
+  const row = (key: string, label: string, tint: Tint | null, icon?: React.ReactNode) => {
     const count = counts.get(key) ?? 0;
     return (
       <li key={key}>
@@ -1712,31 +1713,50 @@ function NowLine({
  * so two levels side by side still differ at full strength. The legend's
  * swatch keeps the solid `tintClass`.
  */
-function chipClass(tint: number | null): string {
-  return `lesson-chip lesson-tint-${tint !== null && tint >= 1 && tint <= 8 ? tint : 'none'}`;
+// Whole class names, because Tailwind reads them at build time (POOLSE-168: two sets).
+const CHIP_CLASS: Record<string, string> = {
+  'level-1': 'lesson-chip lesson-tint-level-1',
+  'class-1': 'lesson-chip lesson-tint-class-1',
+  'level-2': 'lesson-chip lesson-tint-level-2',
+  'class-2': 'lesson-chip lesson-tint-class-2',
+  'level-3': 'lesson-chip lesson-tint-level-3',
+  'class-3': 'lesson-chip lesson-tint-class-3',
+  'level-4': 'lesson-chip lesson-tint-level-4',
+  'class-4': 'lesson-chip lesson-tint-class-4',
+  'level-5': 'lesson-chip lesson-tint-level-5',
+  'class-5': 'lesson-chip lesson-tint-class-5',
+  'level-6': 'lesson-chip lesson-tint-level-6',
+  'class-6': 'lesson-chip lesson-tint-class-6',
+  'level-7': 'lesson-chip lesson-tint-level-7',
+  'class-7': 'lesson-chip lesson-tint-class-7',
+  'level-8': 'lesson-chip lesson-tint-level-8',
+  'class-8': 'lesson-chip lesson-tint-class-8',
+};
+const SOLID_CLASS: Record<string, string> = {
+  'level-1': 'bg-level-1',
+  'class-1': 'bg-class-1',
+  'level-2': 'bg-level-2',
+  'class-2': 'bg-class-2',
+  'level-3': 'bg-level-3',
+  'class-3': 'bg-class-3',
+  'level-4': 'bg-level-4',
+  'class-4': 'bg-class-4',
+  'level-5': 'bg-level-5',
+  'class-5': 'bg-class-5',
+  'level-6': 'bg-level-6',
+  'class-6': 'bg-class-6',
+  'level-7': 'bg-level-7',
+  'class-7': 'bg-class-7',
+  'level-8': 'bg-level-8',
+  'class-8': 'bg-class-8',
+};
+
+function chipClass(tint: Tint | null): string {
+  return tint === null ? 'lesson-chip lesson-tint-none' : (CHIP_CLASS[`${tint.set}-${tint.index}`] ?? 'lesson-chip lesson-tint-none');
 }
 
-function tintClass(tint: number | null): string {
-  switch (tint) {
-    case 1:
-      return 'bg-level-1';
-    case 2:
-      return 'bg-level-2';
-    case 3:
-      return 'bg-level-3';
-    case 4:
-      return 'bg-level-4';
-    case 5:
-      return 'bg-level-5';
-    case 6:
-      return 'bg-level-6';
-    case 7:
-      return 'bg-level-7';
-    case 8:
-      return 'bg-level-8';
-    default:
-      return 'bg-level-none';
-  }
+function tintClass(tint: Tint | null): string {
+  return tint === null ? 'bg-level-none' : (SOLID_CLASS[`${tint.set}-${tint.index}`] ?? 'bg-level-none');
 }
 
 interface LayerProps {

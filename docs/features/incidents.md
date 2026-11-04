@@ -73,6 +73,14 @@ sees none of it.
 
 ### Vigilance periods — 12 October 2026
 
+**Per sport since POOLSE-156 (Rui, 04-11-2026).** In a multi-sport club the page asks for the
+sport first (`?sport=`, the reader's own sports only; a pill opens that sport's own page, in its section, where the other sports' pills are gone — the top bar's sport tabs cross between them; an instructor outside one gets 403
+`sport_not_yours`), and each sport's menu group carries its own copy of the entry, under that sport's places (*Piscinas → Nadadores-salvadores*, *Campos → Nadadores-salvadores*). Swimming is the
+week as it always was. Another sport lists its recintos and their duties, says *sem cobertura
+obrigatória*, and shows no gaps and no periods, because cover is a pool's question. *Acrescentar
+turno* on a court writes the duty on the recinto. A lifeguard qualification counts whatever the
+sport.
+
 The page has two views: **Escala da semana** and **Períodos de vigilância**. A period rosters one
 person on many days at once: **one or more tanks**, a **from and until date** (at most 400 days),
 the **weekdays**, and either **the site's opening hours** of each day or **fixed hours** (an end

@@ -107,6 +107,17 @@ export default {
           8: rgb('--level-8'),
           none: rgb('--level-none'),
         },
+        // A turma's own colour — POOLSE-168: the set levels used to share.
+        class: {
+          1: rgb('--class-1'),
+          2: rgb('--class-2'),
+          3: rgb('--class-3'),
+          4: rgb('--class-4'),
+          5: rgb('--class-5'),
+          6: rgb('--class-6'),
+          7: rgb('--class-7'),
+          8: rgb('--class-8'),
+        },
         // Who is away, on the vacation team map. Six fills carrying white text,
         // indexed by the order people were selected. See the note in globals.css
         // for why they are tokens and not the six hex literals they used to be.

@@ -149,11 +149,13 @@ export default async function ClassesPage({
         looks the same on both screens without anybody having coloured anything.
         A token rather than a hex, so it follows the theme.
       */
-      accentColour: classColourVar(
-        group.colour ??
-          (data?.options.levels ?? []).find((level) => level.id === group.levelId)?.colour ??
-          null,
-      ),
+      // POOLSE-168: a turma's colour and a level's are two sets.
+      accentColour:
+        classColourVar(group.colour, 'class') ??
+        classColourVar(
+          (data?.options.levels ?? []).find((level) => level.id === group.levelId)?.colour ?? null,
+          'level',
+        ),
       subtitle: [group.poolName, group.lane === null ? null : t('classes.laneN', { lane: group.lane })]
         .filter(Boolean)
         .join(' · '),

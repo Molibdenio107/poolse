@@ -31,6 +31,7 @@ import {
   listLeads,
   placeLead,
   readLead,
+  turmaName,
   readRegistrationSettings,
   studentBodyFor,
   trialOptions,
@@ -123,7 +124,7 @@ export class LeadsController {
   async waitlist(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ studentId: string; attached: boolean }> {
+  ): Promise<{ studentId: string; attached: boolean; classGroupName: string | null }> {
     requireRole(...CAN_WORK_LEADS);
     return this.place(id, requiredId(body, 'classGroupId'), true);
   }
@@ -132,7 +133,7 @@ export class LeadsController {
   async convert(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ studentId: string; attached: boolean }> {
+  ): Promise<{ studentId: string; attached: boolean; classGroupName: string | null }> {
     requireRole(...CAN_WORK_LEADS);
     return this.place(id, requiredId(body, 'classGroupId'), false);
   }
@@ -199,7 +200,7 @@ export class LeadsController {
     id: string,
     classGroupId: string,
     waiting: boolean,
-  ): Promise<{ studentId: string; attached: boolean }> {
+  ): Promise<{ studentId: string; attached: boolean; classGroupName: string | null }> {
     const { organizationId, membershipId } = currentTenant();
     const lead = await readLead(organizationId, id);
     if (lead === null) throw new NotFoundException();
@@ -221,7 +222,12 @@ export class LeadsController {
         }
         throw new NotFoundException();
       }
-      return { studentId: outcome.studentId, attached: outcome.attached };
+      // The turma's name, so the screen can say where the student went (POOLSE-165).
+      return {
+        studentId: outcome.studentId,
+        attached: outcome.attached,
+        classGroupName: await turmaName(organizationId, classGroupId),
+      };
     } catch (error) {
       if (error instanceof LeadNotOpenError) throw notOpen(error);
       if (error instanceof StudentArchivedError) {

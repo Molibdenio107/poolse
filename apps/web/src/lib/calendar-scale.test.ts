@@ -120,9 +120,9 @@ const LEVELS = [
 
 test('a turma takes its level’s own colour', () => {
   const order = levelOrder(LEVELS);
-  assert.equal(levelTint({ subjectType: 'turma', levelId: 'a' } as never, order), 1);
-  assert.equal(levelTint({ subjectType: 'turma', levelId: 'b' } as never, order), 2);
-  assert.equal(levelTint({ subjectType: 'turma', levelId: 'v' } as never, order), 8);
+  assert.deepEqual(levelTint({ subjectType: 'turma', levelId: 'a' } as never, order), { set: 'level', index: 1 });
+  assert.deepEqual(levelTint({ subjectType: 'turma', levelId: 'b' } as never, order), { set: 'level', index: 2 });
+  assert.deepEqual(levelTint({ subjectType: 'turma', levelId: 'v' } as never, order), { set: 'level', index: 8 });
 });
 
 /**
@@ -160,13 +160,13 @@ test('a chosen colour wins over the level, and an unset one falls back', () => {
   const turma = (levelId: string | null, classColour: string | null) =>
     ({ subjectType: 'turma', levelId, classColour }) as never;
 
-  assert.equal(levelTint(turma('a', 'violet'), order), 8);
+  assert.deepEqual(levelTint(turma('a', 'violet'), order), { set: 'class', index: 8 });
   // Falls back to the level, which is what every uncoloured club goes on seeing.
-  assert.equal(levelTint(turma('b', null), order), 2);
+  assert.deepEqual(levelTint(turma('b', null), order), { set: 'level', index: 2 });
   // A colour on a turma with no level still paints: the choice is the answer.
-  assert.equal(levelTint(turma(null, 'rose'), order), 6);
+  assert.deepEqual(levelTint(turma(null, 'rose'), order), { set: 'class', index: 6 });
   // A token this build has never heard of is neutral rather than a crash.
-  assert.equal(levelTint(turma('a', 'chartreuse'), order), 1);
+  assert.deepEqual(levelTint(turma('a', 'chartreuse'), order), { set: 'level', index: 1 });
 });
 
 /*

@@ -103,10 +103,6 @@ export default async function FacilitiesPage({
               </FromLink>
             ))}
 
-          {data.canOpenPools && data.facilities.length > 0 && (
-            <SportCards data={data} attention={attention.pools} />
-          )}
-
           {data.facilities.length === 0 ? (
             <PageEmpty
               icon={Building2}
@@ -201,31 +197,42 @@ export default async function FacilitiesPage({
                   </div>
                 </div>
 
-                {/*
-                  The site's photographs, back on the card — Rui, 12 October
-                  2026: the picture of the place is part of what the card is.
-                */}
-                {/*
-                  A clear break before the photographs — POOLSE-92 D. `mt-4` on top
-                  of the card's `gap-4` makes 32 px above the rule, enough to read
-                  the gallery as its own block rather than the end of the tank list.
-                */}
-                <div className="mt-4 border-t border-border pt-4">
-                  <h3 className="mb-3 text-sm text-foreground-muted">
-                    {t('facilities.sitePhotos')}
-                  </h3>
-                  <PhotoGallery
-                    photos={facility.photos}
-                    target={`facility-photo:${facility.id}`}
-                    canManage={data.canManage}
-                    emptyLabel={t('facilities.noSitePhotos')}
-                    uploadLabel={t('facilities.uploadSitePhoto')}
-                  />
-                </div>
-
               </section>
             ))
           )}
+
+          {/*
+            Rui's order (04-11-2026): setting the site up first, then its
+            sports as they are, and only then its photographs.
+          */}
+          {data.canOpenPools && data.facilities.length > 0 && (
+            <SportCards data={data} attention={attention.pools} />
+          )}
+
+          {/*
+            The site's photographs — Rui, 12 October 2026: the picture of the
+            place belongs on this page. Their own card since 04-11-2026, after
+            the sports, named by site when the club has more than one.
+          */}
+          {data.facilities.map((facility) => (
+            <section
+              key={`photos-${facility.id}`}
+              className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card"
+            >
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {data.facilities.length > 1
+                  ? `${t('facilities.sitePhotos')} · ${facility.name}`
+                  : t('facilities.sitePhotos')}
+              </h2>
+              <PhotoGallery
+                photos={facility.photos}
+                target={`facility-photo:${facility.id}`}
+                canManage={data.canManage}
+                emptyLabel={t('facilities.noSitePhotos')}
+                uploadLabel={t('facilities.uploadSitePhoto')}
+              />
+            </section>
+          ))}
         </>
       )}
     </PageShell>

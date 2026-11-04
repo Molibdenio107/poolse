@@ -405,3 +405,74 @@ test('a payment against a document at another site answers 404', async () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// POOLSE-162 — a payment by an invoice the club issued outside Poolse
+// ---------------------------------------------------------------------------
+
+test('paid by an external invoice: the document reads paid and the payment names the number', async () => {
+  await withScratchTenant(async (tenant) => {
+    const document = await issued(tenant);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const invoices = new InvoicesController();
+      await invoices.pay(tenant.facilityId, document.invoiceId, {
+        amountCents: document.totalCents,
+        source: 'external_invoice',
+        reference: 'FT 2026/12',
+      });
+      const read = await invoices.read(tenant.facilityId, document.invoiceId);
+      assert.equal(read.status, 'paid');
+      assert.equal(read.payments?.[0]?.source, 'external_invoice');
+      assert.equal(read.payments?.[0]?.reference, 'FT 2026/12');
+    });
+  });
+});
+
+test('an external invoice with no number, or too long a one, is refused under the field; nothing written', async () => {
+  await withScratchTenant(async (tenant) => {
+    const document = await issued(tenant);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const invoices = new InvoicesController();
+      await expectStatus(
+        () => invoices.pay(tenant.facilityId, document.invoiceId, { amountCents: 1000, source: 'external_invoice' }),
+        400,
+      );
+      await expectStatus(
+        () =>
+          invoices.pay(tenant.facilityId, document.invoiceId, {
+            amountCents: 1000,
+            source: 'external_invoice',
+            reference: 'X'.repeat(61),
+          }),
+        400,
+      );
+      const read = await invoices.read(tenant.facilityId, document.invoiceId);
+      assert.equal(read.paidCents, 0);
+    });
+    // And the database holds the same rule for any other way in.
+    await assert.rejects(
+      tenant.sql(
+        `INSERT INTO invoice_payment (organization_id, invoice_id, amount_cents, source)
+         VALUES ($1, $2, 1000, 'external_invoice')`,
+        [tenant.organizationId, document.invoiceId],
+      ),
+      /invoice_payment_external_has_number/,
+    );
+  });
+});
+
+test("an instructor may not record one, and another club's document is not found", async () => {
+  await withScratchTenant(async (other) => {
+    const theirs = await issued(other);
+    await withScratchTenant(async (tenant) => {
+      const teacher = await addMember(tenant, 'Ana', 'Professora', ['instructor']);
+      const body = { amountCents: 1000, source: 'external_invoice', reference: 'FT 1' };
+      await actingAs(tenant, { membershipId: teacher, roles: ['instructor'] }, async () => {
+        await expectStatus(() => new InvoicesController().pay(tenant.facilityId, theirs.invoiceId, body), 403);
+      });
+      await actingAs(tenant, { roles: ['owner'] }, async () => {
+        await expectStatus(() => new InvoicesController().pay(tenant.facilityId, theirs.invoiceId, body), 404);
+      });
+    });
+  });
+});

@@ -6,6 +6,7 @@ import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, Pencil, X } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
+import { ConfirmButton } from '@/components/confirm-action';
 import { useToast } from '@/components/ui/toast';
 import type { Closure, Closures, MessagePreview, PartOfDay } from '@/lib/api';
 import { YearGrid, type DayState } from '@/components/year-grid';
@@ -1174,14 +1175,18 @@ function RemoveClosure({
     <form action={action} className="inline">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="closureId" value={closureId} />
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.equipa.closureTitle', { reason })}
+        message={t('confirm.equipa.closureMessage')}
+        confirmLabel={t('confirm.equipa.remove')}
+        tone="danger"
         disabled={pending}
-        aria-label={t('calendar.removeClosure', { reason })}
+        ariaLabel={t('calendar.removeClosure', { reason })}
         className="rounded p-1 text-foreground-muted hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
       >
         <X className="size-4" aria-hidden />
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

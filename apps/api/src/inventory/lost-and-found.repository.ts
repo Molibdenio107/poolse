@@ -33,7 +33,19 @@ export interface LostAndFoundItem {
   studentNotifiedAt: string | null;
   status: LostAndFoundStatus;
   returnedAt: string | null;
+  /**
+   * When a returned item leaves the list — seven days after its last change
+   * (Rui, 04-11-2026). Null while it is still waiting to be claimed.
+   */
+  leavesListAt: string | null;
 }
+
+/**
+ * How long a returned item stays on the list, untouched — Rui, 04-11-2026.
+ * Derived when the list is read, never a job: after it the row is still kept
+ * (history is soft, never destroyed), it is just no longer on the screen.
+ */
+export const RETURNED_STAYS_DAYS = 7;
 
 export interface LostAndFoundInput {
   description: string;
@@ -58,6 +70,7 @@ interface Row {
   student_notified_at: Date | null;
   status: LostAndFoundStatus;
   returned_at: Date | null;
+  leaves_list_at?: Date | null;
 }
 
 /**
@@ -85,6 +98,7 @@ function toItem(row: Row): LostAndFoundItem {
     studentNotifiedAt: row.student_notified_at?.toISOString() ?? null,
     status: row.status,
     returnedAt: row.returned_at?.toISOString() ?? null,
+    leavesListAt: row.leaves_list_at?.toISOString() ?? null,
   };
 }
 
@@ -106,13 +120,17 @@ export async function listLostAndFound(
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<Row>(
       `SELECT ${COLUMNS},
-              ${displayName('s')} AS student_name
+              ${displayName('s')} AS student_name,
+              CASE WHEN l.status = 'returned'
+                   THEN l.updated_at + make_interval(days => $2) END AS leaves_list_at
          FROM lost_and_found_item l
          LEFT JOIN student s
                 ON s.id = l.student_id AND s.organization_id = l.organization_id
         WHERE l.facility_id = $1 AND l.archived_at IS NULL
+          -- A returned item leaves the list after a week untouched (Rui, 04-11-2026).
+          AND NOT (l.status = 'returned' AND l.updated_at < now() - make_interval(days => $2))
         ORDER BY (l.status = 'returned'), l.found_on DESC, ${nameOrder('s')}`,
-      [facilityId],
+      [facilityId, RETURNED_STAYS_DAYS],
     );
     return rows.map(toItem);
   });

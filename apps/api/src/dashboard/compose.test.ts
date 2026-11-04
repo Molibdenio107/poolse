@@ -109,8 +109,8 @@ test('a band is absent when the reader holds no role in it', async () => {
     ['management'],
     'not present-and-empty — the client should not have to tell those apart',
   );
-  // Its place in BANDS, which opens with the summary since multi-sport Slice 2.
-  assert.equal(page.bands[0]!.order, 1);
+  // Its place in BANDS, which opens with the staff's notes (POOLSE-169), then the summary.
+  assert.equal(page.bands[0]!.order, 2);
 });
 
 test('bands render in their fixed order whatever order the registry is written in', async () => {
@@ -136,7 +136,7 @@ test('bands render in their fixed order whatever order the registry is written i
   );
   assert.deepEqual(
     page.bands.map((band) => band.order),
-    [1, 2, 3],
+    [2, 3, 4],
   );
 
   // A person holding three roles sees each widget once.
@@ -303,6 +303,22 @@ test('POOLSE-87: a switched-off module is filtered before its resolver runs', as
   assert.equal(called, false, 'never resolved');
   assert.equal(JSON.stringify(page).includes('mgmt.pay'), false, 'and absent from the payload');
   assert.equal(card(page, 'mgmt.core')?.state, 'ok');
+});
+
+test('170 QA 5 — the weather sits beside the staff board, laid out, never competing for a place', async () => {
+  const notes = widget({ id: 'staff.notes', band: 'notes', priority: 100 });
+  const weather = widget({ id: 'ops.weather', band: 'notes', priority: 0, absentWhenEmpty: true });
+  const busy = [1, 2, 3, 4].map((n) => widget({ id: `op.w${n}`, band: 'operational', priority: 50 }));
+  const page = await compose([weather, notes, ...busy]);
+  assert.deepEqual(page.bands[0]!.widgets.map((one) => one.id), ['staff.notes', 'ops.weather']);
+  assert.equal(page.bands[1]!.widgets.length, 4, 'the operational band keeps its four');
+});
+
+test('170 — a card with nothing to carry is absent, not empty; a failure still shows', async () => {
+  const gone = widget({ id: 'ops.weather', absentWhenEmpty: true, resolver: () => Promise.resolve(null) });
+  assert.equal(JSON.stringify(await compose([gone])).includes('ops.weather'), false);
+  const broken = widget({ id: 'ops.weather', absentWhenEmpty: true, resolver: () => Promise.reject(new Error('x')) });
+  assert.equal(card(await compose([broken]), 'ops.weather')?.state, 'error');
 });
 
 test('a trailing line comes after the cards and outside the cap', async () => {

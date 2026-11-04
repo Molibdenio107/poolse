@@ -152,6 +152,25 @@ deleted** — money is history, and so is the record of the mistake.
 A **credit note is never paid**. Money against one is money against the wrong document, and
 the refusal is the database's rather than a screen's.
 
+**Paid by an invoice issued outside Poolse** (POOLSE-162, Rui 04-11-2026). When the reception bills a
+family in the club's own invoicing program, the payment is recorded on the Poolse document with the
+source *Fatura externa*, and the reference box becomes *N.º da fatura externa*, which is required (at most
+60 characters, by CHECK `invoice_payment_external_has_number`, and by the API with the refusal under
+the field). The document then reads *Pago* as with any payment, and the history line reads *Pago por
+fatura externa n.º FT 2026/12*, as plain text and never a link. Owner and admin, as every payment.
+The family's fee read needs nothing new: it shows the line paid, from the same payments. Marking an
+occurrence as invoiced elsewhere, so that no Poolse document is made, is POOLSE-163.
+
+**An occurrence invoiced outside Poolse** (POOLSE-163, Rui 04-11-2026). When the desk's own program
+issued the fatura and no Poolse document should exist, the office marks that occurrence on the
+student's fee line (*Faturado fora do Poolse*, owner and admin; asks first, the number inside). The
+mark is a `student_fee_external_charge`, and `invoice_charged_on()` counts it as charged, so the monthly
+run leaves the occurrence out and says how many it left out this way. The fee read, the late
+penalty, the dashboard's overdue counts and the Alunos list count it settled, and the line reads
+*Faturado externamente n.º …* (to the family too). An occurrence already on a live Poolse document
+refuses the mark (409 `already_charged`, naming the document). *Anular* archives the mark, and the
+next run offers the occurrence again.
+
 ## Chasing
 
 A chase records that a person telephoned, wrote or spoke to a family on a day — which is what

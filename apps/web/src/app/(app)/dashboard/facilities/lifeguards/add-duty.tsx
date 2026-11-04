@@ -29,14 +29,17 @@ const PRIMARY =
  */
 export function AddDutyForm({
   facilityId,
-  poolId,
+  placeKind,
+  placeId,
   day,
   initialFrom,
   initialTo,
   onClose,
 }: {
   facilityId: string;
-  poolId: string;
+  /** A pool, or another sport's recinto — POOLSE-156. */
+  placeKind: 'pool' | 'area';
+  placeId: string;
   day: string;
   /** `HH:mm`, the hour clicked or the gap's start. */
   initialFrom: string;
@@ -46,8 +49,8 @@ export function AddDutyForm({
   const t = useTranslations();
   const form = useRef<HTMLFormElement>(null);
   const action = useMemo(
-    () => addDutyAction.bind(null, facilityId, poolId, day),
-    [facilityId, poolId, day],
+    () => addDutyAction.bind(null, facilityId, placeKind, placeId, day),
+    [facilityId, placeKind, placeId, day],
   );
   const [state, submit, pending] = useSavedAction<FormState, FormData>(action, { ok: false });
 

@@ -6,7 +6,7 @@ import { SearchInput, SearchStatus } from '@/components/search-input';
 import { useTranslations } from 'next-intl';
 import { ChevronRight, FileSpreadsheet, Trash2, Upload, X } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
-import type { InventoryItem, InventoryScope } from '@/lib/api';
+import type { InventoryItem, InventoryPlaces, InventoryScope } from '@/lib/api';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
@@ -74,7 +74,7 @@ export function InventoryPanel({
   search,
   canManage,
   canArchive,
-  locations,
+  places,
 }: {
   organizationId: string;
   facilities: { id: string; name: string; pools: Pool[] }[];
@@ -87,8 +87,8 @@ export function InventoryPanel({
   canManage: boolean;
   /** Owner and admin; maintenance edits but does not archive. */
   canArchive: boolean;
-  /** What this site already calls its places — the location suggestions. */
-  locations: string[];
+  /** The site's spaces and other recintos, for *Localização* — POOLSE-154. */
+  places: InventoryPlaces;
 }): React.ReactElement {
   const t = useTranslations();
   const router = useRouter();
@@ -293,7 +293,7 @@ export function InventoryPanel({
                 organizationId={organizationId}
                 facilityId={facilityId}
                 pools={pools}
-                locations={locations}
+                places={places}
               />
             </div>
           </Reveal>
@@ -528,7 +528,7 @@ export function InventoryPanel({
                     {t('inventory.field.name')}
                   </th>
                   <th scope="col" className="py-2 pr-4 font-medium">
-                    {t('inventory.scopeLabel')}
+                    {t('inventory.field.location')}
                   </th>
                   <th scope="col" className="py-2 pr-4 text-right font-medium">
                     {t('inventory.field.quantity')}
@@ -549,7 +549,7 @@ export function InventoryPanel({
                     pools={pools}
                     canManage={canManage}
                     canArchive={canArchive}
-                    locations={locations}
+                    places={places}
                   />
                 ))}
               </tbody>
@@ -580,6 +580,9 @@ function Failure({ state }: { state: FormState }): React.ReactElement | null {
 function ScopeText({ item }: { item: InventoryItem }): React.ReactElement {
   const t = useTranslations();
 
+  // A space or a court is the answer when there is one (POOLSE-154).
+  const named = item.spaceName ?? item.playingAreaName;
+  if (named !== null) return <span className="text-sm">{named}</span>;
   if (item.scope === 'facility') {
     return <span className="text-sm text-foreground-muted">{t('inventory.scope.facility')}</span>;
   }
@@ -606,19 +609,25 @@ function ItemRow({
   pools,
   canManage,
   canArchive,
-  locations,
+  places,
 }: {
   organizationId: string;
   item: InventoryItem;
   pools: Pool[];
   canManage: boolean;
   canArchive: boolean;
-  locations: string[];
+  places: InventoryPlaces;
 }): React.ReactElement {
   const t = useTranslations();
   const [editing, setEditing] = useState(false);
   const [state, action, pending] = useSavedAction(updateItemAction, INITIAL);
   const [archiveState, archive, archiving] = useSavedAction(archiveItemAction, INITIAL);
+  // Archiving asks first (Rui, 04-11-2026): the bin brings it back, but a trash
+  // icon one row away from the next item's name is easy to hit by mistake.
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => {
+    if (archiveState.ok || archiveState.errorKey !== undefined) setConfirming(false);
+  }, [archiveState]);
   // Closed by a successful save, not on submit: a refused one has to stay open
   // with its message and what was typed (13-10-2026 sweep).
   useEffect(() => {
@@ -639,7 +648,7 @@ function ItemRow({
             <input type="hidden" name="organizationId" value={organizationId} />
             <input type="hidden" name="itemId" value={item.id} />
 
-            <Fields item={item} pools={pools} locations={locations} />
+            <Fields item={item} pools={pools} places={places} />
 
             <div className="flex flex-wrap gap-3">
               <button
@@ -668,14 +677,30 @@ function ItemRow({
   return (
     <tr className="border-b border-border align-top last:border-0">
       <td data-label={t('inventory.field.name')} className="py-3 pr-4">
-        <span className="font-medium">{item.name}</span>
+        {/*
+          The name opens the item for editing (POOLSE-154, Rui 04-11-2026), where
+          an *Editar* button used to sit. A button, not a link: editing happens
+          here, in the row, and a keyboard reaches it like any control.
+        */}
+        {canManage ? (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            aria-label={t('inventory.editLabel', { name: item.name })}
+            className="rounded text-left font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {item.name}
+          </button>
+        ) : (
+          <span className="font-medium">{item.name}</span>
+        )}
         {item.notes !== null && item.notes !== '' && (
           <span className="block text-foreground-muted">{item.notes}</span>
         )}
         <Failure state={archiveState} />
       </td>
 
-      <td data-label={t('inventory.scopeLabel')} className="py-3 pr-4">
+      <td data-label={t('inventory.field.location')} className="py-3 pr-4">
         <ScopeText item={item} />
         {/*
           Where it lives, under which tanks it serves — round 5, 6.0. Muted and
@@ -706,27 +731,47 @@ function ItemRow({
       {canManage && (
         <td className="py-3">
           <div className="flex items-center justify-end gap-4">
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              {t('inventory.edit')}
-            </button>
-
             {canArchive && (
-              <form action={archive}>
-                <input type="hidden" name="organizationId" value={organizationId} />
-                <input type="hidden" name="itemId" value={item.id} />
+              <>
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={() => setConfirming(true)}
                   disabled={archiving}
                   aria-label={t('inventory.removeLabel', { name: item.name })}
                   className="rounded text-foreground-muted hover:text-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   <Trash2 className="size-4" />
                 </button>
-              </form>
+                <Dialog
+                  open={confirming}
+                  onClose={() => setConfirming(false)}
+                  title={t('inventory.archiveTitle', { name: item.name })}
+                  closeLabel={t('common.close')}
+                  className="max-w-md"
+                >
+                  <form action={archive} className="flex flex-col gap-4">
+                    <input type="hidden" name="organizationId" value={organizationId} />
+                    <input type="hidden" name="itemId" value={item.id} />
+                    <p className="text-sm">{t('inventory.archiveConfirm')}</p>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setConfirming(false)}
+                        className="inline-flex h-control items-center justify-center rounded-sm bg-surface px-4 text-control shadow-card hover:bg-surface-muted"
+                      >
+                        {t('common.cancel')}
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={archiving}
+                        className="inline-flex h-control items-center justify-center gap-2 rounded-sm border border-danger/50 px-4 text-control text-danger hover:bg-danger/10 disabled:opacity-60"
+                      >
+                        {archiving ? t('common.working') : t('inventory.archiveAction')}
+                      </button>
+                    </div>
+                  </form>
+                </Dialog>
+              </>
             )}
           </div>
         </td>
@@ -752,12 +797,12 @@ function AddItemForm({
   organizationId,
   facilityId,
   pools,
-  locations,
+  places,
 }: {
   organizationId: string;
   facilityId: string;
   pools: Pool[];
-  locations: string[];
+  places: InventoryPlaces;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(addItemAction, INITIAL);
@@ -768,7 +813,7 @@ function AddItemForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="facilityId" value={facilityId} />
 
-      <Fields pools={pools} locations={locations} resetKey={added} />
+      <Fields pools={pools} places={places} resetKey={added} />
 
       <button
         type="submit"
@@ -787,13 +832,13 @@ function AddItemForm({
 function Fields({
   item,
   pools,
-  locations,
+  places,
   resetKey,
 }: {
   item?: InventoryItem;
   pools: Pool[];
-  /** What this site already calls its places, for the location suggestions. */
-  locations: string[];
+  /** The site's spaces and other recintos — *Localização*'s other two groups (POOLSE-154). */
+  places: InventoryPlaces;
   /** The add form's `useSuccessKey`: the fields clear after each item added. */
   resetKey?: number;
 }): React.ReactElement {
@@ -801,184 +846,171 @@ function Fields({
   const [nameField, setNameField] = useSeeded<string>(String(item?.name ?? ''), resetKey);
   const [quantityField, setQuantityField] = useSeeded<string>(String(item?.quantity ?? 0), resetKey);
   const [unitField, setUnitField] = useSeeded<string>(String(item?.unit ?? ''), resetKey);
-  const [locationField, setLocationField] = useSeeded<string>(String(item?.location ?? ''), resetKey);
+  const [placeField, setPlaceField] = useSeeded<string>(placeOf(item), resetKey);
   const t = useTranslations();
   const suffix = item?.id ?? 'new';
-  const [scope, setScope] = useState<InventoryScope>(item?.scope ?? 'facility');
-  // The tanks ticked, kept across a refused save and a scope switched away and back.
-  const [chosenPools, setChosenPools] = useState<string[]>(item?.poolIds ?? []);
-  const poolsResetAt = useRef(resetKey);
-  useEffect(() => {
-    if (poolsResetAt.current === resetKey) return;
-    poolsResetAt.current = resetKey;
-    setChosenPools(item?.poolIds ?? []);
-  }, [resetKey, item?.poolIds]);
+  const place = readPlace(placeField, item);
 
   return (
-    <>
-      {/*
-        Fixed widths only once there is room for them. Below `sm` each field
-        takes the row — four side-by-side boxes on a 320px screen is four boxes
-        too narrow to type a word into, and `flex-wrap` alone would still let the
-        widest of them push the page sideways.
-      */}
-      <div className="flex flex-wrap items-end gap-3">
-        <div className={cn(FIELD_COLUMN, 'sm:w-56')}>
-          <label htmlFor={`item-name-${suffix}`} className={FIELD_LABEL}>
-            {t('inventory.field.name')}
-          </label>
-          <input
-            id={`item-name-${suffix}`}
-            name="name"
-            required
-            maxLength={120}
-            value={nameField}
-            onChange={(event) => setNameField(event.target.value)}
-            placeholder={t('inventory.namePlaceholder')}
-            className={CONTROL_LINE}
-          />
-        </div>
+    /*
+      The student record's grid (POOLSE-152, POOLSE-154 rule 2): Nome first and
+      the row's width, then two columns from `sm`, one on a phone.
+    */
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className={cn(FIELD_COLUMN, 'max-w-none sm:col-span-2')}>
+        <label htmlFor={`item-name-${suffix}`} className={FIELD_LABEL}>
+          {t('inventory.field.name')}
+        </label>
+        <input
+          id={`item-name-${suffix}`}
+          name="name"
+          required
+          maxLength={120}
+          value={nameField}
+          onChange={(event) => setNameField(event.target.value)}
+          placeholder={t('inventory.namePlaceholder')}
+          className={CONTROL_LINE}
+        />
+      </div>
 
-        <div className={cn(FIELD_COLUMN, 'sm:w-24')}>
-          <label htmlFor={`item-quantity-${suffix}`} className={FIELD_LABEL}>
-            {t('inventory.field.quantity')}
-          </label>
-          <input
-            id={`item-quantity-${suffix}`}
-            name="quantity"
-            type="number"
-            min={0}
-            step={1}
-            value={quantityField}
-            onChange={(event) => setQuantityField(event.target.value)}
-            className={CONTROL_LINE}
-          />
-        </div>
+      <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+        <label htmlFor={`item-quantity-${suffix}`} className={FIELD_LABEL}>
+          {t('inventory.field.quantity')}
+        </label>
+        <input
+          id={`item-quantity-${suffix}`}
+          name="quantity"
+          type="number"
+          min={0}
+          step={1}
+          value={quantityField}
+          onChange={(event) => setQuantityField(event.target.value)}
+          className={CONTROL_LINE}
+        />
+      </div>
 
-        <div className={cn(FIELD_COLUMN, 'sm:w-28')}>
-          <label htmlFor={`item-unit-${suffix}`} className={FIELD_LABEL}>
-            {t('inventory.field.unit')}
-          </label>
-          <input
-            id={`item-unit-${suffix}`}
-            name="unit"
-            maxLength={40}
-            value={unitField}
-            onChange={(event) => setUnitField(event.target.value)}
-            placeholder={t('inventory.unitPlaceholder')}
-            className={CONTROL_LINE}
-          />
-        </div>
-
-        {/*
-          Where it belongs — round 5, ticket 6.0.
-
-          An ordinary text box with a `datalist`, not a `<select>`: the club's
-          own words are suggestions, never a closed list, so the first operator
-          who needs "Arrecadação do fundo" can type it. The suggestions are what
-          this site already uses, which is what keeps three spellings of
-          "Balneário masculino" from appearing without anybody maintaining a
-          rooms table. Deliberately not a rooms entity — the ticket says so.
-        */}
-        <div className={cn(FIELD_COLUMN, 'sm:w-48')}>
-          <label htmlFor={`item-location-${suffix}`} className={FIELD_LABEL}>
-            {t('inventory.field.location')}
-          </label>
-          <input
-            id={`item-location-${suffix}`}
-            name="location"
-            maxLength={120}
-            value={locationField}
-            onChange={(event) => setLocationField(event.target.value)}
-            list={`locations-${suffix}`}
-            aria-describedby={`item-location-hint-${suffix}`}
-            className={CONTROL_LINE}
-          />
-          <datalist id={`locations-${suffix}`}>
-            {locations.map((place) => (
-              <option key={place} value={place} />
-            ))}
-          </datalist>
-          <p
-            id={`item-location-hint-${suffix}`}
-            className="text-sm text-foreground-muted"
-          >
-            {t('inventory.locationHint')}
-          </p>
-        </div>
-
-        <div className={cn(FIELD_COLUMN, 'sm:w-64')}>
-          <label htmlFor={`item-notes-${suffix}`} className={FIELD_LABEL}>
-            {t('inventory.field.notes')}
-          </label>
-          <input
-            id={`item-notes-${suffix}`}
-            name="notes"
-            maxLength={500}
-            value={notesField}
-            onChange={(event) => setNotesField(event.target.value)}
-            className={CONTROL_LINE}
-          />
-        </div>
+      <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+        <label htmlFor={`item-unit-${suffix}`} className={FIELD_LABEL}>
+          {t('inventory.field.unit')}
+        </label>
+        <input
+          id={`item-unit-${suffix}`}
+          name="unit"
+          maxLength={40}
+          value={unitField}
+          onChange={(event) => setUnitField(event.target.value)}
+          placeholder={t('inventory.unitPlaceholder')}
+          className={CONTROL_LINE}
+        />
       </div>
 
       {/*
-        Where it lives, asked once and answered in three ways.
-
-        A site with no tanks at all is offered nothing to choose: "the building"
-        is then the only true answer, and a picker with one option is a question
-        that wastes somebody's attention. The hidden field still posts it, so the
-        form's shape does not change.
+        Where it lives — one choice from the site's own places (POOLSE-154, Rui
+        04-11-2026): its spaces, its pools, its other recintos. A pool is the
+        pool junction (kept many-to-many: an item already in several pools keeps
+        them, offered as one entry), a space `space_id`, a court
+        `playing_area_id`. Nothing chosen is the site itself.
       */}
-      {pools.length === 0 ? (
-        <input type="hidden" name="scope" value="facility" />
-      ) : (
-        <div className="flex flex-col gap-2">
-          <div className={cn(FIELD_COLUMN, 'sm:w-64')}>
-            <label htmlFor={`item-scope-${suffix}`} className={FIELD_LABEL}>
-              {t('inventory.scopeLabel')}
-            </label>
-            <select
-              id={`item-scope-${suffix}`}
-              name="scope"
-              value={scope}
-              onChange={(event) => setScope(event.target.value as InventoryScope)}
-              className={CONTROL_LINE}
-            >
-              <option value="facility">{t('inventory.scope.facility')}</option>
-              <option value="all_pools">{t('inventory.scope.all_pools')}</option>
-              <option value="pools">{t('inventory.scope.pools')}</option>
-            </select>
-          </div>
-
-          {scope === 'pools' && (
-            <fieldset className="flex flex-col gap-2 rounded border border-border p-3">
-              <legend className={cn(FIELD_LABEL, 'px-1')}>{t('inventory.choosePools')}</legend>
-              <div className="flex flex-wrap gap-x-5 gap-y-2">
-                {pools.map((pool) => (
-                  <label key={pool.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      name="poolIds"
-                      value={pool.id}
-                      checked={chosenPools.includes(pool.id)}
-                      onChange={(event) =>
-                        setChosenPools((all) =>
-                          event.target.checked
-                            ? [...all, pool.id]
-                            : all.filter((id) => id !== pool.id),
-                        )
-                      }
-                      className="size-4 accent-[rgb(var(--primary))]"
-                    />
-                    {pool.name}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+      <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+        <label htmlFor={`item-place-${suffix}`} className={FIELD_LABEL}>
+          {t('inventory.field.location')}
+        </label>
+        <select
+          id={`item-place-${suffix}`}
+          value={placeField}
+          onChange={(event) => setPlaceField(event.target.value)}
+          aria-describedby={`item-place-hint-${suffix}`}
+          className={CONTROL_LINE}
+        >
+          <option value="">{t('inventory.place.site')}</option>
+          {places.spaces.length > 0 && (
+            <optgroup label={t('inventory.place.spaces')}>
+              {places.spaces.map((space) => (
+                <option key={space.id} value={`space:${space.id}`}>
+                  {space.name}
+                </option>
+              ))}
+            </optgroup>
           )}
-        </div>
-      )}
-    </>
+          {pools.length > 0 && (
+            <optgroup label={t('inventory.place.pools')}>
+              <option value="all_pools">{t('inventory.scope.all_pools')}</option>
+              {pools.map((pool) => (
+                <option key={pool.id} value={`pool:${pool.id}`}>
+                  {pool.name}
+                </option>
+              ))}
+              {(item?.poolIds.length ?? 0) > 1 && (
+                <option value="several">{item!.poolNames.join(' · ')}</option>
+              )}
+            </optgroup>
+          )}
+          {places.recintos.length > 0 && (
+            <optgroup label={t('inventory.place.recintos')}>
+              {places.recintos.map((area) => (
+                <option key={area.id} value={`area:${area.id}`}>
+                  {area.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
+        </select>
+        <p id={`item-place-hint-${suffix}`} className="text-sm text-foreground-muted">
+          {t('inventory.place.hint')}
+        </p>
+      </div>
+
+      {/* What the choice means to the API, as the fields it already reads. */}
+      <input type="hidden" name="scope" value={place.scope} />
+      {place.poolIds.map((id) => (
+        <input key={id} type="hidden" name="poolIds" value={id} />
+      ))}
+      <input type="hidden" name="spaceId" value={place.spaceId} />
+      <input type="hidden" name="playingAreaId" value={place.playingAreaId} />
+      {/*
+        The old free-text place travels unchanged: the form no longer offers it,
+        and an edit must not erase what somebody wrote (data-model note).
+      */}
+      <input type="hidden" name="location" value={item?.location ?? ''} />
+
+      <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+        <label htmlFor={`item-notes-${suffix}`} className={FIELD_LABEL}>
+          {t('inventory.field.notes')}
+        </label>
+        <input
+          id={`item-notes-${suffix}`}
+          name="notes"
+          maxLength={500}
+          value={notesField}
+          onChange={(event) => setNotesField(event.target.value)}
+          className={CONTROL_LINE}
+        />
+      </div>
+    </div>
   );
+}
+
+/** The select's value for an item's place: `space:…`, `area:…`, `pool:…`, `all_pools`, `several` or `''`. */
+function placeOf(item: InventoryItem | undefined): string {
+  if (item === undefined) return '';
+  if (item.spaceId !== null) return `space:${item.spaceId}`;
+  if (item.playingAreaId !== null) return `area:${item.playingAreaId}`;
+  if (item.scope === 'all_pools') return 'all_pools';
+  if (item.scope === 'pools' && item.poolIds.length === 1) return `pool:${item.poolIds[0]}`;
+  if (item.scope === 'pools' && item.poolIds.length > 1) return 'several';
+  return '';
+}
+
+/** The select's value as the API's fields. */
+function readPlace(
+  value: string,
+  item: InventoryItem | undefined,
+): { scope: InventoryScope; poolIds: string[]; spaceId: string; playingAreaId: string } {
+  const none = { scope: 'facility' as InventoryScope, poolIds: [], spaceId: '', playingAreaId: '' };
+  if (value.startsWith('space:')) return { ...none, spaceId: value.slice('space:'.length) };
+  if (value.startsWith('area:')) return { ...none, playingAreaId: value.slice('area:'.length) };
+  if (value.startsWith('pool:')) return { ...none, scope: 'pools', poolIds: [value.slice('pool:'.length)] };
+  if (value === 'all_pools') return { ...none, scope: 'all_pools' };
+  if (value === 'several') return { ...none, scope: 'pools', poolIds: item?.poolIds ?? [] };
+  return none;
 }

@@ -20,10 +20,12 @@ const PAGE = '/dashboard/facilities/lifeguards';
 export async function readRoster(
   facilityId: string,
   from: string,
+  /** The sport the week is for — POOLSE-156; swimming when absent. */
+  sport = 'pool',
 ): Promise<Outcome<LifeguardRoster>> {
   return outcome(
     apiFetch<LifeguardRoster>(
-      `/facilities/${encodeURIComponent(facilityId)}/lifeguard-roster?from=${from}&days=7`,
+      `/facilities/${encodeURIComponent(facilityId)}/lifeguard-roster?from=${from}&days=7&sport=${encodeURIComponent(sport)}`,
     ),
   );
 }
@@ -35,14 +37,16 @@ export async function readRoster(
  */
 export async function addDutyAction(
   facilityId: string,
-  poolId: string,
+  placeKind: 'pool' | 'area',
+  placeId: string,
   day: string,
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
   try {
     await apiPost(`/facilities/${encodeURIComponent(facilityId)}/lifeguard-roster`, {
-      poolId,
+      // A pool, or another sport's recinto — POOLSE-156.
+      ...(placeKind === 'pool' ? { poolId: placeId } : { playingAreaId: placeId }),
       day,
       membershipId: String(formData.get('membershipId') ?? ''),
       from: String(formData.get('from') ?? ''),

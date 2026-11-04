@@ -52,6 +52,53 @@ Sweep of 15 October 2026:
   (`POST /people/merge` answers 409). History stays with the absorbed record, which points at the
   survivor (`merged_into`).
 
+## The staff list is a table (POOLSE-158, 04-11-2026)
+
+*Pessoas → Membros* (owner, admin) is a table: **Nome** (a link to the record), **E-mail**, one
+**Desportos** column listing the person's sports by name and icon (only in a multi-sport club; Rui,
+04-11-2026), one column per staff role under **Funções**, and **Acesso**. It is paginated at 10, and the search and the role chips work as before.
+
+- A role cell is a **read-only mark**: a check glyph and *sim*, or a dash and *não*, for a
+  screen reader. The record is where a role or a sport is changed.
+- **The Desportos header is the sport filter** (`?sport=`), with no label above it: its prompt,
+  *Desportos: todos*, is the select's first option, and the label is kept for a screen reader. `GET /people` reads it through
+  `readSportFilter` and filters inside the paged statement, so the total counts the filtered set. A
+  sport the club does not have is a 400. The role chips keep the chosen sport.
+- **Acesso** says *Por aceitar* for an open invitation, *Sem conta na app* with no login, *Ainda sem
+  acessos* for a login that has not been back, and *Último acesso há …* from `app_user.last_seen_at`
+  (POOLSE-130) otherwise.
+- Below `md` the table is `.table-stack`. A card shows only the marks that are set, and the filter
+  stays above the cards (its header cell un-clips, as Em dívida's select-all does).
+- Support memberships never appear (`support_grant_id IS NULL`, POOLSE-79).
+
+## Who sees which staff screen (POOLSE-157, 04-11-2026)
+
+Rui's sweep. *Workers* means owner, admin, instructor and maintenance; a guardian or a student is
+refused every row below (403), their own id included. Each row is a role-probe test in
+`security/role-probe.integration.test.ts` (*POOLSE-157 rule N*).
+
+| Screen | Owner | Admin | Instructor, maintenance | Endpoints |
+|---|---|---|---|---|
+| Staff record → *Funções* | ✓ | ✓ | — | `POST /people/:id/roles`, `…/roles/:role/revoke` (a staff member's) |
+| Staff record → *Acesso* | ✓ | — | — | `POST /staff/:id/reinvite`, `…/cancel` |
+| *Férias* → *As minhas férias*, filing a request | ✓ | ✓ | ✓ | `GET /vacations/mine`, `POST /vacations/requests` |
+| *Férias* → *Pedidos por aprovar*, reading | ✓ | ✓ | names and dates only | `GET /vacations/pending` |
+| *Aprovar* / *Recusar* | ✓ | ✓ (not their own) | — | `POST /vacations/requests/:id/approve`, `…/reject` |
+| *Férias* → *Mapa da equipa* | ✓ | ✓ | ✓ | `GET /vacations/team` |
+| *Salários* | ✓ | ✓, not the Owner's | — | `GET /staff/salaries`, `…/summary`, `GET /staff/:id/compensation` |
+| *Qualificações* (club list) | ✓ | ✓ | — | `GET /qualifications/expiring` |
+| A person's *Qualificações* tab | ✓ | ✓ | their own | `GET /staff/:id/qualifications` |
+| Faturação → *Abrir os dados do clube* | ✓ | ✓ | — | the page itself refuses anybody else |
+
+- **The queue is read by every worker since POOLSE-157** (reversing story 8's office-only queue and
+  map). The API sends a non-office reader `kind: null` and `reason: null` (*baixa médica* beside a
+  colleague's name is health data) and `canDecide: false`. The page then shows the requests with no
+  buttons, and a sentence saying who decides. The team map was always names and approved days.
+- *Acesso* stays the Owner's alone. Re-inviting moves a login, which the ticket's "owner/admin" did
+  not widen.
+- `GET /staff/:id/qualifications` now checks for a working role before the self check. A guardian
+  asking for their own id was answered before.
+
 ## Personal details (POOLSE-149, 02-11-2026)
 
 A *Dados pessoais* card on the staff record's General tab: morada, código postal, localidade,

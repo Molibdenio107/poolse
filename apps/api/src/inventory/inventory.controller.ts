@@ -15,6 +15,12 @@ import { canArchive, hasRole, requireCanArchive, requireRole } from '../tenant/r
 
 /** Who changes the store room and lost property — everything but archiving. */
 const INVENTORY_EDITORS = ['owner', 'admin', 'maintenance'] as const;
+/**
+ * Lost and found is every working role's (POOLSE-154, Rui 04-11-2026): an
+ * instructor finds the goggles on the deck and hands them back at the door.
+ * Archiving stays the office's; a family never reaches it.
+ */
+const LOST_AND_FOUND_WORKERS = ['owner', 'admin', 'maintenance', 'instructor'] as const;
 import { listFacilities, type Facility } from '../facilities/facilities.repository.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import { readSearch } from '../common/search.js';
@@ -30,6 +36,8 @@ import {
   type InventoryItem,
   type InventoryItemInput,
   locationsAt,
+  placesAt,
+  type InventoryPlaces,
 } from './inventory.repository.js';
 import {
   archiveLostAndFound,
@@ -98,6 +106,8 @@ export class InventoryController {
      * vocabulary.
      */
     locations: string[];
+    /** What *Localização* offers besides the pools: spaces and other recintos — POOLSE-154. */
+    places: InventoryPlaces;
   }> {
     // Security review, 12 October 2026: this answered any member, a guardian included.
     requireRole('owner', 'admin', 'instructor', 'maintenance');
@@ -122,6 +132,8 @@ export class InventoryController {
           ? { items: [], total: 0, page: window.page, limit: window.limit }
           : await listInventory(organizationId, facilityId, readSearch(search), window),
       locations: facilityId === null ? [] : await locationsAt(organizationId, facilityId),
+      places:
+        facilityId === null ? { spaces: [], recintos: [] } : await placesAt(organizationId, facilityId),
     };
   }
 
@@ -190,14 +202,15 @@ export class InventoryController {
       items: facilityId === null ? [] : await listLostAndFound(organizationId, facilityId),
       // Only worth fetching for somebody who can use the form it fills.
       students: hasRole(...INVENTORY_EDITORS) ? await studentsForPicker(organizationId) : [],
-      canManage: hasRole(...INVENTORY_EDITORS),
+      // Every working role records and gives back (POOLSE-154); the student picker stays the store's.
+      canManage: hasRole(...LOST_AND_FOUND_WORKERS),
       canArchive: canArchive(),
     };
   }
 
   @Post('lost-and-found')
   async recordFound(@Body() body: Record<string, unknown>): Promise<{ id: string }> {
-    requireRole(...INVENTORY_EDITORS);
+    requireRole(...LOST_AND_FOUND_WORKERS);
     const { organizationId } = currentTenant();
 
     const facilityId = readId(body['facilityId'], 'facilityId');
@@ -218,7 +231,7 @@ export class InventoryController {
 
   @Post('lost-and-found/:itemId/return')
   async giveBack(@Param('itemId') itemId: string): Promise<{ returned: true }> {
-    requireRole(...INVENTORY_EDITORS);
+    requireRole(...LOST_AND_FOUND_WORKERS);
     const { organizationId } = currentTenant();
 
     if (!(await returnLostAndFound(organizationId, itemId))) {
@@ -343,6 +356,14 @@ function asHttp(error: unknown): unknown {
   if (error instanceof DuplicateNameError) {
     return new ConflictException('An item with that name is already recorded at this site');
   }
+  // A space or recinto of another site, or another club's: the composite key refuses it
+  // (POOLSE-154). Said as the field, never as a 500.
+  if ((error as { code?: string } | null)?.code === '23503') {
+    return new BadRequestException({
+      message: 'That place is not at this site',
+      fields: { place: 'inventory.placeNotHere' },
+    });
+  }
   return error;
 }
 
@@ -442,6 +463,13 @@ function readItem(body: Record<string, unknown>): InventoryItemInput {
     }
   }
 
+  // *Localização* is one place (POOLSE-154): a space or a recinto, never both.
+  const spaceId = optionalId(body['spaceId'], 'spaceId');
+  const playingAreaId = optionalId(body['playingAreaId'], 'playingAreaId');
+  if (spaceId !== null && playingAreaId !== null) {
+    throw new BadRequestException('an item lives in a space or on a recinto, not both');
+  }
+
   return {
     name,
     quantity,
@@ -452,7 +480,17 @@ function readItem(body: Record<string, unknown>): InventoryItemInput {
     notes: text(body['notes'], 'notes', 500),
     scope,
     poolIds,
+    spaceId,
+    playingAreaId,
   };
+}
+
+/** An id that may be absent: empty or missing is null, anything else must be a uuid. */
+function optionalId(raw: unknown, field: string): string | null {
+  if (raw === undefined || raw === null || raw === '') return null;
+  const id = readId(raw, field);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new BadRequestException(`${field} is not an id`);
+  return id;
 }
 
 const FIELDS = new Set<string>(INVENTORY_IMPORT_FIELDS);

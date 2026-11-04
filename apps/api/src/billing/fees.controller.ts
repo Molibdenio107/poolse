@@ -26,6 +26,9 @@ import {
   repriceStudentFee,
   setBillingSettings,
   markFeePaid,
+  AlreadyChargedError,
+  archiveExternalCharge,
+  recordExternalCharge,
   setSocio,
   setStudentPaid,
   studentFees,
@@ -386,6 +389,58 @@ export class StudentFeesController {
     );
     if (!marked) throw new BadRequestException('No such fee line');
     return { updated: true };
+  }
+
+  /**
+   * Invoiced outside Poolse — POOLSE-163. Marks an occurrence (the current one
+   * unless `occurrenceOn` says) with the external document's number, so the
+   * monthly run leaves it out and the balance counts it settled.
+   */
+  @Post(':id/external-charges')
+  async externalCharge(
+    @Param('studentId') studentId: string,
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ id: string }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    const reference = typeof body['reference'] === 'string' ? body['reference'].trim() : '';
+    if (reference === '' || reference.length > 60) {
+      throw new BadRequestException({
+        code: 'external_number_required',
+        message: 'An occurrence invoiced elsewhere names that invoice',
+        fields: { reference: 'fees.external.numberRequired' },
+      });
+    }
+    try {
+      const created = await recordExternalCharge(organizationId, studentId, id, {
+        occurrenceOn: optionalDate(body['occurrenceOn'], 'occurrenceOn'),
+        reference,
+      });
+      if (created === null) throw new NotFoundException('No such fee line');
+      return { id: created };
+    } catch (error) {
+      if (error instanceof AlreadyChargedError) {
+        throw new ConflictException({
+          code: 'already_charged',
+          message: 'This occurrence is already charged',
+          document: error.document.startsWith('ext:') ? error.document.slice(4) : error.document,
+          external: error.document.startsWith('ext:'),
+        });
+      }
+      throw error;
+    }
+  }
+
+  @Post(':id/external-charges/:chargeId/archive')
+  async archiveExternal(
+    @Param('studentId') studentId: string,
+    @Param('chargeId') chargeId: string,
+  ): Promise<{ archived: true }> {
+    requireRole('owner', 'admin');
+    const done = await archiveExternalCharge(currentTenant().organizationId, studentId, chargeId);
+    if (!done) throw new NotFoundException('No such mark');
+    return { archived: true };
   }
 
   @Post(':id/archive')

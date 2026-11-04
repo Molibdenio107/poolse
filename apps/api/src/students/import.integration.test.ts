@@ -637,3 +637,56 @@ test('sócio desde fills a blank and never overwrites a date on file', async () 
     ]);
   });
 });
+
+test('the Turma column enrols, reports a full turma by line, and a re-import adds nothing', async () => {
+  // POOLSE-164.
+  await withScratchTenant(async (tenant) => {
+    const org = tenant.organizationId;
+    const [pool] = await tenant.sql<{ id: string }>(
+      `INSERT INTO pool (organization_id, facility_id, name, kind) VALUES ($1, $2, 'Tanque', 'indoor') RETURNING id`,
+      [org, tenant.facilityId],
+    );
+    const group = async (name: string, capacity: number | null): Promise<string> => {
+      const [row] = await tenant.sql<{ id: string }>(
+        `INSERT INTO class_group (organization_id, season_id, facility_id, name, pool_id, capacity)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+        [org, tenant.seasonId, tenant.facilityId, name, pool!.id, capacity],
+      );
+      return row!.id;
+    };
+    const golfinhos = await group('Golfinhos', null);
+    await group('Tubarões', 1);
+    const controller = new StudentImportController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const result = await controller.run({
+        rows: [
+          { fullName: 'Rita Nunes', birthDate: '12/04/1988', turmas: 'golfinhos; Tubaroes' },
+          { fullName: 'Tiago Sousa', birthDate: '01/09/1990', turmas: 'Tubarões' },
+          { fullName: 'Vera Lopes', birthDate: '01/09/1991', turmas: 'Baleias' },
+        ],
+        commit: true,
+      });
+      assert.equal(result.created, 3, 'every student is imported');
+      assert.equal(result.enrolled, 2, 'Rita in both; Tiago finds Tubarões full');
+      assert.deepEqual(result.enrolmentsRefused, [{ line: 3, turma: 'Tubarões', reason: 'full' }]);
+      assert.deepEqual(
+        result.rows[2]!.warnings.map((warning) => warning.code),
+        ['turmaNotFound'],
+      );
+
+      // The same file again: everyone is already there, nothing is enrolled twice.
+      const again = await controller.run({
+        rows: [{ fullName: 'Rita Nunes', birthDate: '12/04/1988', turmas: 'Golfinhos; Tubarões' }],
+        commit: false,
+      });
+      assert.deepEqual(again.rows[0]!.updates, []);
+    });
+
+    const [count] = await tenant.sql<{ n: number }>(
+      `SELECT count(*)::int AS n FROM enrollment WHERE class_group_id = $1 AND status = 'active'`,
+      [golfinhos],
+    );
+    assert.equal(count!.n, 1);
+  });
+});

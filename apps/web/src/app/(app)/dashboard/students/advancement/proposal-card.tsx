@@ -11,6 +11,7 @@ import { CONTROL_LINE } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { today } from '@/lib/dates';
 import { formatDate } from '@/lib/date-format';
+import { ConfirmButton } from '@/components/confirm-action';
 
 /**
  * One student who has finished their level — POOLSE-19, criteria 3, 5 and 6.
@@ -156,13 +157,23 @@ export function ProposalCard({
                 className={cn(CONTROL_LINE, 'w-auto')}
               />
             </label>
-            <button
-              type="submit"
+            {/* Asks first (Rui, 04-11-2026); the form's own submit still checks the turma. */}
+            <ConfirmButton
+              title={t('confirm.alunos.advanceTitle', {
+                name: proposal.studentName,
+                to: proposal.toLevelName,
+              })}
+              message={t('confirm.alunos.advanceMessage', {
+                name: proposal.studentName,
+                to: proposal.toLevelName,
+                date: effectiveOn === '' ? '' : formatDate(effectiveOn),
+              })}
+              confirmLabel={t('advancement.confirm')}
               disabled={pending}
               className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold"
             >
               {pending ? t('common.working') : t('advancement.confirm')}
-            </button>
+            </ConfirmButton>
           </div>
         </form>
       )}
@@ -174,12 +185,15 @@ export function ProposalCard({
             if (!result.ok) toast.show('danger', t('common.notSaved'));
           }}
         >
-          <button
-            type="submit"
+          <ConfirmButton
+            title={t('confirm.alunos.dismissTitle', { name: proposal.studentName })}
+            message={t('confirm.alunos.dismissMessage', { name: proposal.studentName })}
+            confirmLabel={t('advancement.dismiss')}
+            tone="danger"
             className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
           >
             {t('advancement.dismiss')}
-          </button>
+          </ConfirmButton>
         </form>
 
         {failure !== null && <span className="text-sm text-danger">{t(failure, failureValues)}</span>}

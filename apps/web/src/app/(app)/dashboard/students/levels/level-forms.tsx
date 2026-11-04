@@ -213,7 +213,8 @@ export function CreateLevelForm({
         initial={null}
         hint={t('students.levelColourHint')}
         clearLabel={t('classes.colourNone')}
-        nameOf={(colour) => t(`classes.colours.${colour}`)}
+        nameOf={(colour) => t(`levelColours.${colour}`)}
+        set="level"
       />
 
       <OverlapWarning levels={levels} proposed={{ ...range, ...admits }} exceptId={null} />
@@ -525,7 +526,8 @@ export function EditLevelForm({
           initial={level.colour}
           hint={t('students.levelColourHint')}
           clearLabel={t('classes.colourNone')}
-          nameOf={(colour) => t(`classes.colours.${colour}`)}
+          nameOf={(colour) => t(`levelColours.${colour}`)}
+          set="level"
         />
 
         <OverlapWarning levels={levels} proposed={{ ...range, ...admits }} exceptId={level.id} />

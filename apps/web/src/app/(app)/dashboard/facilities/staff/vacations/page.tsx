@@ -57,17 +57,17 @@ export default async function VacationsPage({
   let notPermitted = false;
 
   try {
-    // `mine` is always fetched: it is the only call everybody is allowed to
-    // make, and it carries `canApprove`, which is what decides whether the other
-    // two tabs exist at all.
+    // `mine` is always fetched, and answers every working role — which since
+    // POOLSE-157 is also who reads the queue and the team map. Deciding is the
+    // queue's own `canDecide`.
     mine = await apiFetch<MyVacationsData>(`/vacations/mine?year=${chosenYear}`);
 
-    if (tab === 'queue' && mine.canApprove) {
+    if (tab === 'queue') {
       queue = await apiFetch<PendingVacations>(
         `/vacations/pending${queuePage > 1 ? `?page=${queuePage}` : ''}`,
       );
     }
-    if (tab === 'team' && mine.canApprove) {
+    if (tab === 'team') {
       team = await apiFetch<TeamVacations>(`/vacations/team?year=${chosenYear}`);
     }
   } catch (error) {
@@ -75,9 +75,8 @@ export default async function VacationsPage({
     else failure = describeLoad(error);
   }
 
-  // Someone who is not an owner or admin typing ?tab=team gets the refusal in
-  // words, not a blank panel — the same rule as People.
-  const refused = notPermitted || (tab !== 'mine' && mine?.canApprove === false);
+  // Somebody who is not staff gets the refusal in words, not a blank panel.
+  const refused = notPermitted;
 
   // Three years back is enough for "what did I take last year" without turning
   // the control into a scrolling list.
@@ -110,22 +109,8 @@ export default async function VacationsPage({
                 year={chosenYear}
                 label={t('vacations.mine')}
               />
-              {mine.canApprove && (
-                <>
-                  <TabLink
-                    tab="queue"
-                    current={tab}
-                    year={chosenYear}
-                    label={t('vacations.queue')}
-                  />
-                  <TabLink
-                    tab="team"
-                    current={tab}
-                    year={chosenYear}
-                    label={t('vacations.teamMap')}
-                  />
-                </>
-              )}
+              <TabLink tab="queue" current={tab} year={chosenYear} label={t('vacations.queue')} />
+              <TabLink tab="team" current={tab} year={chosenYear} label={t('vacations.teamMap')} />
             </nav>
 
             {/*

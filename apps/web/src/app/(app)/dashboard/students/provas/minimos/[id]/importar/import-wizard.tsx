@@ -12,6 +12,7 @@ import { canImport, exportHeader, groupField, type QualifyingMapping } from '@/l
 import type { Sheet } from '@/lib/sheet';
 import { useImportWizard, type ImportStage } from '@/lib/use-import-wizard';
 import { cn } from '@/lib/utils';
+import { ConfirmButton } from '@/components/confirm-action';
 import {
   matchSheetAction,
   readSheetAction,
@@ -198,8 +199,16 @@ export function QualifyingImportWizard({
           <Preview cells={wizard.rows} summary={runState.summary} course={course} ageGroups={ageGroups} />
           <Problem errorKey={runState.errorKey} detail={runState.detail} />
           <div className="flex flex-wrap gap-3">
-            <button
-              type="submit"
+            {/* Asks first (Rui, 04-11-2026). */}
+            <ConfirmButton
+              title={t('confirm.alunos.importTimesTitle', {
+                count: (runState.summary?.new ?? 0) + (runState.summary?.changed ?? 0),
+              })}
+              message={t('confirm.alunos.importTimesMessage', {
+                added: runState.summary?.new ?? 0,
+                changed: runState.summary?.changed ?? 0,
+              })}
+              confirmLabel={t('confirm.alunos.importConfirm')}
               disabled={running || (runState.summary?.new ?? 0) + (runState.summary?.changed ?? 0) === 0}
               className={BUTTON}
             >
@@ -210,7 +219,7 @@ export function QualifyingImportWizard({
                   : t('qualifying.import.commit', {
                       count: (runState.summary?.new ?? 0) + (runState.summary?.changed ?? 0),
                     })}
-            </button>
+            </ConfirmButton>
             <button type="button" onClick={() => wizard.setStage('map')} className={BUTTON_QUIET}>
               {t('qualifying.import.back')}
             </button>

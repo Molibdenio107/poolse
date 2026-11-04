@@ -122,6 +122,9 @@ export class QualificationsController {
   async person(
     @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
   ): Promise<PersonQualifications & { canManage: boolean }> {
+    // A staff record's, so staff first: a guardian asking for their own id was
+    // answered — POOLSE-157. Then the office, or the person themselves.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId, membershipId: me } = currentTenant();
     const canManage = hasRole(...MANAGERS);
     if (!canManage && me !== membershipId) {

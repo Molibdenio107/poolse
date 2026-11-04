@@ -21,6 +21,7 @@ import {
 } from './invitations.repository.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import { readSearch } from '../common/search.js';
+import { readSportFilter } from '../students/sport-filter.js';
 import { CoreRoute } from '../tenant/modules.js';
 
 interface PeopleResponse {
@@ -75,9 +76,12 @@ export class PeopleController {
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('sport') sport?: string,
   ): Promise<PeopleResponse> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
+    // The staff table's header filter (POOLSE-158): a sport the club has on, or a 400.
+    const sportFilter = await readSportFilter(organizationId, sport);
 
     /*
      * Three tenant-scoped reads on the same organization, run together.
@@ -100,6 +104,7 @@ export class PeopleController {
           scope: scope === 'staff' || scope === 'learners' ? scope : null,
           role: isMemberRole(role ?? '') ? (role as string) : null,
           search: readSearch(search),
+          sport: sportFilter,
         },
         readPageQuery(page, limit),
       ),

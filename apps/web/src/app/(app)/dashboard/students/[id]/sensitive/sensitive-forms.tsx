@@ -15,6 +15,7 @@ import {
   withdrawConsentAction,
 } from './sensitive.actions';
 import { Dialog } from '@/components/ui/dialog';
+import { ConfirmButton } from '@/components/confirm-action';
 import { PersonPicker } from '../../../facilities/incidents/person-picker';
 import type { PickOption } from '../../../facilities/incidents/incidents.actions';
 
@@ -171,24 +172,34 @@ export function RecordConsentForm({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button
-          type="submit"
+        {/* Both decisions ask first (Rui, 04-11-2026). */}
+        <ConfirmButton
           name="granted"
           value="true"
+          title={t('confirm.alunos.consentGrantedTitle', {
+            kind: kindField === '' ? '' : t(`sensitive.kinds.${kindField}`),
+          })}
+          message={t('confirm.alunos.consentGrantedMessage')}
+          confirmLabel={t('sensitive.recordGranted')}
           disabled={pending}
           className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
         >
           {pending ? t('common.working') : t('sensitive.recordGranted')}
-        </button>
-        <button
-          type="submit"
+        </ConfirmButton>
+        <ConfirmButton
           name="granted"
           value="false"
+          title={t('confirm.alunos.consentRefusedTitle', {
+            kind: kindField === '' ? '' : t(`sensitive.kinds.${kindField}`),
+          })}
+          message={t('confirm.alunos.consentRefusedMessage')}
+          confirmLabel={t('sensitive.recordRefused')}
+          tone="danger"
           disabled={pending}
           className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted disabled:opacity-60 bg-surface shadow-card"
         >
           {t('sensitive.recordRefused')}
-        </button>
+        </ConfirmButton>
       </div>
 
       <Problem state={state} />

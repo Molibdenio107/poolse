@@ -340,22 +340,30 @@ test.describe('the lesson, as the owner', () => {
     await expect(page.getByRole('button', { name: /guardar presenças|save the register/i })).toBeVisible();
   });
 
-  test('flow 9 — a mensalidade is marked paid and unmarked with one tap each', async ({ page }) => {
+  test('flow 9 — a mensalidade is marked paid and unmarked, each a tap and a yes', async ({ page }) => {
+    test.setTimeout(90_000);
     const lesson = await poolsideLesson();
     await visit(page, `/dashboard/students/${lesson.studentIds[0]}?tab=fees`, 'domcontentloaded');
 
-    const paid = page.getByRole('checkbox').first();
-    await expectTouchSized(paid);
-    const before = (await paid.getAttribute('aria-checked')) ?? 'false';
-    const after = before === 'true' ? 'false' : 'true';
+    // The paid control is a button that asks first, both ways (Rui, 04-11-2026);
+    // its form's `isPaid` says what pressing it would do.
+    const form = page.locator('form', { has: page.locator('input[name="isPaid"]') }).first();
+    const next = () => form.locator('input[name="isPaid"]').inputValue();
+    await expectTouchSized(form.getByRole('button').first());
+    const first = await next();
 
-    await tapUntil(
-      page,
-      () => page.getByRole('checkbox').first().tap(),
-      () => expect(page.getByRole('checkbox').first()).toHaveAttribute('aria-checked', after, { timeout: 3_000 }),
-    );
-    await page.getByRole('checkbox').first().tap();
-    await expect(page.getByRole('checkbox').first()).toHaveAttribute('aria-checked', before);
+    const flip = async (expected: string) => {
+      // Retried until the question opens: a tap before hydration does nothing.
+      await tapUntil(
+        page,
+        () => form.getByRole('button').first().tap(),
+        () => expect(page.getByRole('dialog')).toBeVisible({ timeout: 3_000 }),
+      );
+      await page.getByRole('dialog').getByRole('button', { name: /marcar como paga|desmarcar|mark as paid|unmark/i }).tap();
+      await expect(form.locator('input[name="isPaid"]')).toHaveValue(expected, { timeout: 20_000 });
+    };
+    await flip(first === 'true' ? 'false' : 'true');
+    await flip(first);
   });
 
   test('QA 8 — a NIF opens digits, a phone the dialer pad, a reading the decimal pad', async ({ page }) => {

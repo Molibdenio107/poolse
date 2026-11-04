@@ -124,7 +124,8 @@ export function RosterGrid({
   days,
   today,
   facilityId,
-  poolId,
+  placeKind,
+  placeId,
   duties,
   gaps,
   canManage,
@@ -133,8 +134,10 @@ export function RosterGrid({
   days: string[];
   today: string;
   facilityId: string;
-  poolId: string;
-  /** This tank's duties and gaps, this week. */
+  /** A pool, or another sport's recinto — POOLSE-156. */
+  placeKind: 'pool' | 'area';
+  placeId: string;
+  /** This place's duties and (a pool only) gaps, this week. */
   duties: LifeguardDuty[];
   gaps: RosterGap[];
   canManage: boolean;
@@ -436,7 +439,8 @@ export function RosterGrid({
                 // A new day is a new bound action: remount rather than post to the old one.
                 key={adding.day}
                 facilityId={facilityId}
-                poolId={poolId}
+                placeKind={placeKind}
+                placeId={placeId}
                 day={adding.day}
                 initialFrom={adding.from}
                 initialTo={adding.to}

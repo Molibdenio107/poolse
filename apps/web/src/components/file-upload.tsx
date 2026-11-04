@@ -13,6 +13,7 @@ import { EntityIcon } from '@/components/entity-icon';
 import { acceptFor, isImagePurpose, MAX_FILE_BYTES, purposeOf, WORD_TYPE, type FilePurpose, type FileTarget } from '@/lib/files';
 import { useSavedAction } from '@/lib/saved';
 import { cn } from '@/lib/utils';
+import { ConfirmButton } from '@/components/confirm-action';
 
 const INITIAL: FormState = { ok: false };
 
@@ -203,14 +204,18 @@ export function RemovePhotoButton({
   photoId: string;
   label: string;
 }): React.ReactElement {
+  const t = useTranslations();
   const [, dispatch, isPending] = useSavedAction(removePhotoAction, INITIAL);
+  // Asks first, for every gallery (Rui, 04-11-2026).
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
+    <ConfirmButton
+      title={t('confirm.alunos.removePhotoTitle')}
+      message={t('confirm.alunos.removePhotoMessage')}
+      confirmLabel={t('confirm.alunos.removeConfirm')}
+      tone="danger"
+      ariaLabel={label}
       disabled={isPending}
-      onClick={() => {
+      onConfirm={() => {
         const data = new FormData();
         data.set('target', target);
         data.set('photoId', photoId);
@@ -219,32 +224,44 @@ export function RemovePhotoButton({
       className="absolute right-1 top-1 inline-flex size-7 items-center justify-center rounded bg-surface/90 text-foreground shadow hover:bg-surface disabled:opacity-60"
     >
       <span aria-hidden="true">×</span>
-    </button>
+    </ConfirmButton>
   );
 }
 
-/** Takes a document off its record. */
+/**
+ * Takes a document off its record — after asking (Rui, 04-11-2026). The
+ * question defaults to the button's own words; a caller with a better one
+ * (a photograph, a person's name) passes `confirmTitle` / `confirmMessage`.
+ */
 export function DetachFileButton({
   target,
   label,
   className,
   onSaved,
+  confirmTitle,
+  confirmMessage,
 }: {
   target: FileTarget;
   label: string;
   className?: string;
   onSaved?: () => void;
+  confirmTitle?: string;
+  confirmMessage?: string;
 }): React.ReactElement {
+  const t = useTranslations();
   const [state, dispatch, isPending] = useSavedAction(detachFileAction, INITIAL);
   useEffect(() => {
     if (state.ok) onSaved?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
   return (
-    <button
-      type="button"
+    <ConfirmButton
+      title={confirmTitle ?? t('confirm.alunos.detachTitle', { label })}
+      message={confirmMessage ?? t('confirm.alunos.detachMessage')}
+      confirmLabel={t('confirm.alunos.removeConfirm')}
+      tone="danger"
       disabled={isPending}
-      onClick={() => {
+      onConfirm={() => {
         const data = new FormData();
         data.set('target', target);
         startTransition(() => dispatch(data));
@@ -255,7 +272,7 @@ export function DetachFileButton({
       )}
     >
       {label}
-    </button>
+    </ConfirmButton>
   );
 }
 

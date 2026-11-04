@@ -27,6 +27,11 @@ test('POOLSE-150 QA 1: swimming alone gets its one Natação group, Piscinas fir
       ['/dashboard/students?sport=pool', 'students.title'],
     ],
   );
+  // POOLSE-156: the sport's lifeguard week sits under its places (Rui, 04-11-2026).
+  assert.deepEqual(
+    groups[0]!.children?.[0]?.children?.map((item) => item.href),
+    ['/dashboard/facilities/lifeguards?sport=pool'],
+  );
   // Listed first, but the tab still opens the calendar (Rui, 02-11-2026).
   assert.equal(groups[0]!.href, '/dashboard/calendar?sport=pool');
   // Turmas and Calendário left the top level, as with two sports.
@@ -59,8 +64,20 @@ test('QA 2: with two sports each gets a group, in order, where Turmas stood, and
   const [poolGroup, tennisGroup] = [sections[pool], sections[tennis]] as [Item, Item];
   assert.deepEqual(
     tennisGroup.children?.map((item) => item.href),
-    ['/dashboard/recintos?sport=tennis', '/dashboard/calendar?sport=tennis', '/dashboard/classes?sport=tennis', '/dashboard/students?sport=tennis'],
+    [
+      '/dashboard/recintos?sport=tennis',
+      '/dashboard/calendar?sport=tennis',
+      '/dashboard/classes?sport=tennis',
+      '/dashboard/students?sport=tennis',
+    ],
   );
+  // Campos holds the court's lifeguard week (POOLSE-156).
+  assert.deepEqual(
+    tennisGroup.children?.[0]?.children?.map((item) => item.href),
+    ['/dashboard/facilities/lifeguards?sport=tennis'],
+  );
+  // The shared week stays where it was (POOLSE-156).
+  assert.ok(flat(sections).some((item) => item.href === '/dashboard/facilities/lifeguards'));
   // A sport's tab opens its Calendário (POOLSE-141 rule 3, the handoff's sidebar).
   assert.equal(tennisGroup.href, '/dashboard/calendar?sport=tennis');
   // The pool keeps Épocas, Reposições, Encerramentos and its circle; a court's group has neither yet.
@@ -81,8 +98,8 @@ test('POOLSE-143: Alunos is shared and copied; Níveis, Avanços and Competiçã
   const shared = sections.find((item) => item.key === 'students.title' && item.sport === undefined);
   assert.deepEqual(
     shared?.children?.map((item) => item.key),
-    ['students.guardiansTitle', 'leads.title', 'messages.title'],
-    'the shared register keeps what has no sport dimension, and Pedidos',
+    ['students.guardiansTitle', 'messages.title', 'avisos.title'],
+    'the shared register keeps what has no sport dimension; Pedidos sits under Receção (POOLSE-165)',
   );
   const studentsOf = (sport: string): Item | undefined =>
     sections.find((item) => item.sport === sport)?.children?.find((item) => item.key === 'students.title');
@@ -124,4 +141,46 @@ test('QA 5: the palette lists each sport’s calendar as its own entry, and no g
     ['sport.name.pool', 'sport.name.tennis'],
   );
   assert.equal(commands.some((command) => command.labelKey.startsWith('sport.name.')), false);
+});
+
+test('POOLSE-165: Pedidos is under Receção, each sport keeps its copy under Alunos, and without Receção it stays under Alunos', () => {
+  const sections = visibleSections({ ...owner, sports: ['pool', 'tennis'] });
+  const reception = sections.find((item) => item.key === 'reception.title');
+  assert.deepEqual(reception?.children?.map((item) => item.href), ['/dashboard/students/pedidos']);
+  assert.equal(reception?.children?.[0]?.badge, 'leads', 'its circle moves with it');
+  const sharedPedidos = flat(sections).filter((item) => item.href === '/dashboard/students/pedidos');
+  assert.equal(sharedPedidos.length, 1, 'one shared Pedidos, never two');
+  assert.ok(
+    flat(sections).some((item) => item.href === '/dashboard/students/pedidos?sport=tennis'),
+    'the sport copy remains',
+  );
+
+  const noReception = visibleSections({
+    ...owner,
+    modules: POOLSE_MODULES.filter((module) => module !== 'reception'),
+  });
+  assert.equal(noReception.find((item) => item.key === 'reception.title'), undefined);
+  const students = noReception.find((item) => item.key === 'students.title' && item.sport === undefined);
+  assert.ok(students?.children?.some((item) => item.href === '/dashboard/students/pedidos'), 'falls back under Alunos');
+  assert.ok(flat(noReception).some((item) => item.href === '/dashboard/students/pedidos?sport=pool'));
+});
+
+test('POOLSE-167: a sport group keeps Competição with its three children; a sport without a model has none', () => {
+  const sections = visibleSections({ ...owner, sports: ['pool', 'tennis'] });
+  const competitionOf = (sport: string): Item | undefined =>
+    flat(sections.filter((item) => item.sport === sport)).find((item) => item.key === 'competition.title');
+  assert.deepEqual(
+    competitionOf('pool')?.children?.map((item) => item.href),
+    [
+      '/dashboard/students/provas?sport=pool',
+      '/dashboard/students/provas/minimos?sport=pool',
+      '/dashboard/students/provas/escaloes?sport=pool',
+    ],
+  );
+  assert.ok(
+    competitionOf('pool')?.children?.every((item) => item.sport === 'pool'),
+    'each child answers to its sport, which is what lights it in the sidebar',
+  );
+  assert.equal(competitionOf('pool')?.badge, 'meetInbox', 'the circle stays on the parent');
+  assert.equal(competitionOf('tennis'), undefined);
 });

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Undo2 } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
+import { ConfirmButton } from '@/components/confirm-action';
 import { useSavedAction } from '@/lib/saved';
 import { revertAction, type RevertState } from '@/app/(app)/dashboard/activity.actions';
 
@@ -17,8 +18,8 @@ const PRIMARY =
 /**
  * *Reverter* on one entry of a record's *Atividade* — POOLSE-80.
  *
- * The first press asks for nothing. When the field moved again since, the API
- * answers with the three values and this opens a dialog asking, per field,
+ * The first press asks whether to revert (Rui, 04-11-2026). When the field
+ * moved again since, the API answers with the three values and this opens a dialog asking, per field,
  * whether to put the old value back anyway or keep what is there now. The
  * outcome is a toast either way, raised by `useSavedAction`.
  */
@@ -46,10 +47,16 @@ export function RevertButton({ entryId }: { entryId: string }): React.ReactEleme
   return (
     <>
       <form action={dispatch}>
-        <button type="submit" disabled={pending} className={SECONDARY}>
+        <ConfirmButton
+          title={t('confirm.equipa.revertTitle')}
+          message={t('confirm.equipa.revertMessage')}
+          confirmLabel={t('activity.revert')}
+          disabled={pending}
+          className={SECONDARY}
+        >
           <Undo2 className="size-4" aria-hidden />
           {pending && !open ? t('common.working') : t('activity.revert')}
-        </button>
+        </ConfirmButton>
       </form>
 
       <Dialog

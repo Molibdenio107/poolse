@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { FileUp } from 'lucide-react';
 import { AttachedDocument, DocumentLink } from '@/components/file-upload';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
+import { ConfirmButton } from '@/components/confirm-action';
 import { acceptFor } from '@/lib/files';
 import type { CertificateDraft } from '@/lib/qualification-certificate-agent';
 import { QualificationStatus } from '@/components/qualification-status';
@@ -320,14 +321,18 @@ export function QualificationsPanel({
                   </span>
                 </span>
                 {data.canManage && !record.archived && (
-                  <button
-                    type="button"
+                  // Asks first (Rui, 04-11-2026).
+                  <ConfirmButton
+                    title={t('confirm.equipa.qualificationArchiveTitle', { name: record.typeName })}
+                    message={t('confirm.equipa.qualificationArchiveMessage')}
+                    confirmLabel={t('qualifications.archive')}
+                    tone="danger"
                     disabled={pending}
-                    onClick={() => archive(record.id)}
+                    onConfirm={() => archive(record.id)}
                     className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted disabled:opacity-60 bg-surface shadow-card"
                   >
                     {t('qualifications.archive')}
-                  </button>
+                  </ConfirmButton>
                 )}
               </li>
             ))}

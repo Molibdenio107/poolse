@@ -104,7 +104,12 @@ test('a family link is made and shared from the student record, on a phone', asy
   const row = page.locator('li').filter({ hasText: 'Rita Poolside' });
   const cancel = row.getByRole('button', { name: 'Cancelar convite' });
   if (await cancel.isVisible()) {
-    await cancel.click();
+    // Retried until the question opens: a click before hydration does nothing.
+    await expect(async () => {
+      await cancel.click();
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancelar convite' }).click();
     await expect(row.getByText('Sem convite')).toBeVisible({ timeout: 15_000 });
   }
   // Retried until the page answers: a tap before hydration does nothing, and
@@ -122,8 +127,9 @@ test('a family link is made and shared from the student record, on a phone', asy
   });
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
-  // Leave nothing live behind for the next run.
+  // Leave nothing live behind for the next run. Revoking asks first (Rui, 04-11-2026).
   await row.getByRole('button', { name: 'Cancelar convite' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancelar convite' }).click();
   await expect(row.getByText('Sem convite')).toBeVisible({ timeout: 15_000 });
 });
 

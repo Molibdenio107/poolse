@@ -26,7 +26,10 @@ const SYNONYMS: Record<string, Synonyms> = {
   '/dashboard/facilities': { 'pt-PT': ['piscinas', 'tanques', 'site', 'instalacao'], en: ['pools', 'site', 'facility'] },
   '/dashboard/facilities/inventory': { 'pt-PT': ['armazem', 'material', 'stock'], en: ['stock', 'equipment', 'store room'] },
   '/dashboard/facilities/incidents': { 'pt-PT': ['acidentes', 'incidentes', 'ocorrencia'], en: ['accidents', 'incidents'] },
-  '/dashboard/facilities/lifeguards': { 'pt-PT': ['vigilancia', 'nadadores salvadores', 'escala'], en: ['lifeguards', 'roster'] },
+  '/dashboard/facilities/lifeguards': {
+    'pt-PT': ['vigilancia', 'vigilância', 'nadadores salvadores', 'nadador salvador', 'escala'],
+    en: ['lifeguards', 'lifeguard', 'roster'],
+  },
   '/dashboard/facilities/staff': { 'pt-PT': ['funcionarios', 'equipa', 'professores', 'pessoal'], en: ['team', 'employees', 'people'] },
   '/dashboard/facilities/staff/vacations': { 'pt-PT': ['ferias', 'ausencias', 'folgas'], en: ['holidays', 'leave', 'absences'] },
   '/dashboard/facilities/staff/salaries': { 'pt-PT': ['ordenados', 'vencimentos', 'pagamentos'], en: ['pay', 'wages', 'payroll'] },
@@ -42,7 +45,9 @@ const SYNONYMS: Record<string, Synonyms> = {
   '/dashboard/students': { 'pt-PT': ['inscritos', 'nadadores', 'criancas'], en: ['pupils', 'swimmers', 'register'] },
   '/dashboard/students/guardians': { 'pt-PT': ['pais', 'encarregados', 'familias'], en: ['parents', 'families'] },
   '/dashboard/students/pedidos': { 'pt-PT': ['pre-inscricoes', 'interessados', 'lista de espera'], en: ['leads', 'enquiries', 'waiting list'] },
-  '/dashboard/students/messages': { 'pt-PT': ['emails', 'avisos', 'comunicados'], en: ['emails', 'notices'] },
+  '/dashboard/students/messages': { 'pt-PT': ['emails', 'comunicados'], en: ['emails'] },
+  // POOLSE-166: an aviso is shown in the app, never sent.
+  '/dashboard/students/avisos': { 'pt-PT': ['aviso', 'avisos na app'], en: ['notice', 'notices', 'aviso'] },
   '/dashboard/students/provas': { 'pt-PT': ['competicao', 'resultados', 'tempos', 'torneios'], en: ['meets', 'results', 'times', 'competition'] },
   '/dashboard/students/provas/minimos': { 'pt-PT': ['tempos de entrada', 'qualificacao'], en: ['entry times', 'qualifying'] },
   '/dashboard/students/provas/escaloes': { 'pt-PT': ['fpn', 'idades'], en: ['age groups', 'fpn'] },

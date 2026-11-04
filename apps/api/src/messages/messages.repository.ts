@@ -146,7 +146,7 @@ export function quotaRefusal(error: unknown): QuotaRefusal | null {
 /** The columns `message_recipients()` takes after the organization; the sport is POOLSE-146's. */
 type RecipientParams = [string, string | null, string | null, string | null, string | null, string | null];
 
-function targetParams(target: MessageTarget): RecipientParams {
+export function targetParams(target: MessageTarget): RecipientParams {
   return [
     target.audience,
     target.audience === 'class_group' ? target.targetId : null,
@@ -460,6 +460,8 @@ export async function listMessages(
              FROM message m
              ${SUMMARY_JOINS}
             WHERE m.archived_at IS NULL
+              -- Avisos have their own list (POOLSE-166).
+              AND m.channel = 'email'
               AND ($1::uuid[] IS NULL OR m.class_group_id = ANY($1::uuid[]))
             ORDER BY m.sent_at DESC, m.id
             LIMIT $2 OFFSET $3`,
@@ -483,6 +485,7 @@ export async function getMessage(
          ${SUMMARY_JOINS}
         WHERE m.id = $1
           AND m.archived_at IS NULL
+          AND m.channel = 'email'
           AND ($2::uuid[] IS NULL OR m.class_group_id = ANY($2::uuid[]))`,
       [messageId, turmaIds],
     );
@@ -527,7 +530,7 @@ export async function archiveMessage(organizationId: string, messageId: string):
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string }>(
       `UPDATE message SET archived_at = now()
-        WHERE id = $1 AND archived_at IS NULL
+        WHERE id = $1 AND archived_at IS NULL AND channel = 'email'
       RETURNING id`,
       [messageId],
     );
@@ -643,7 +646,10 @@ export async function findDelivery(
                           AND mr.email IS NOT NULL AND mr.delivered_at IS NULL) d) AS pending
          FROM message m
          JOIN organization o ON o.id = m.organization_id
-        WHERE m.id = $1`,
+        WHERE m.id = $1
+          -- An aviso is never mail (POOLSE-166). Here, inside the sender, so the
+          -- request and the hourly retry both pass it by.
+          AND m.channel = 'email'`,
       [messageId],
     );
     const row = rows[0];

@@ -6,6 +6,8 @@ import { describeLoad } from '@/lib/load-failure';
 import { LinkBusy } from '@/components/link-busy';
 import { PageError } from '@/components/page-shell';
 import { cn } from '@/lib/utils';
+import { StaffBoardHome } from '@/components/staff-notes';
+import { NewNoteButton } from '@/components/staff-board-forms';
 import { dayHeading, endTime } from '../familia/agenda-parts';
 
 /**
@@ -42,7 +44,13 @@ export default async function TeachingHome({
 
   return (
     <>
-      <h1>{t(week ? 'app.tabs.aulas.semana' : 'app.tabs.aulas.hoje')}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1>{t(week ? 'app.tabs.aulas.semana' : 'app.tabs.aulas.hoje')}</h1>
+        <NewNoteButton />
+      </div>
+
+      {/* The staff board comes first — POOLSE-169. */}
+      {!week && <StaffBoardHome />}
 
       {!week && owed.length > 0 && (
         <section className="flex flex-col">

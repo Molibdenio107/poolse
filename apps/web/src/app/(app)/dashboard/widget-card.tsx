@@ -45,8 +45,12 @@ export async function WidgetCard({
 }: {
   widget: DashboardWidget;
   title: string;
-  /** Where this card's subject actually lives. Always offered. */
-  href: string;
+  /**
+   * Where this card's subject actually lives. Always offered — except null for
+   * a card that is its own subject (POOLSE-170: the weather, Rui 04-11-2026),
+   * which draws no link.
+   */
+  href: string | null;
   linkLabel: string;
   /**
    * Several destinations in place of the one — a card whose subject lives on
@@ -88,9 +92,11 @@ export async function WidgetCard({
             {children}
           </Body>
         </div>
-        <FromLink href={href} className={cn('coarse:-my-3', LINK)}>
-          {linkLabel}
-        </FromLink>
+        {href !== null && (
+          <FromLink href={href} className={cn('coarse:-my-3', LINK)}>
+            {linkLabel}
+          </FromLink>
+        )}
       </section>
     );
   }
@@ -121,9 +127,11 @@ export async function WidgetCard({
           ))}
         </ul>
       ) : (
-        <FromLink href={links?.[0]?.href ?? href} className={cn('mt-auto self-start coarse:-mb-3', LINK)}>
-          {links?.[0]?.label ?? linkLabel}
-        </FromLink>
+        (links?.[0]?.href ?? href) !== null && (
+          <FromLink href={(links?.[0]?.href ?? href)!} className={cn('mt-auto self-start coarse:-mb-3', LINK)}>
+            {links?.[0]?.label ?? linkLabel}
+          </FromLink>
+        )
       )}
     </section>
   );

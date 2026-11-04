@@ -12,8 +12,9 @@ test('the registry as shipped is sound', () => {
 });
 
 // The nine Rui chose on 12-10-2026, and a meet with its results (POOLSE-81).
-test('the eleven restorable kinds, and no staff or season', () => {
+test('the thirteen restorable kinds, and no staff or season', () => {
   assert.deepEqual(RESTORABLE.map((one) => one.kind).sort(), [
+    'aviso',
     'class_group',
     'facility',
     'inventory_item',
@@ -22,6 +23,7 @@ test('the eleven restorable kinds, and no staff or season', () => {
     'partner',
     'pool',
     'space',
+    'staff_note',
     'student',
     'student_fee',
     'swim_meet',

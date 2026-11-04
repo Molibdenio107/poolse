@@ -59,6 +59,43 @@ export interface InventoryItem {
   poolIds: string[];
   /** Their names, so a list can be read without a second lookup. */
   poolNames: string[];
+  /** The space it lives in — POOLSE-154's *Localização*; null when it is not in one. */
+  spaceId: string | null;
+  spaceName: string | null;
+  /** The recinto of another sport it lives on (a court, a pitch) — POOLSE-154. */
+  playingAreaId: string | null;
+  playingAreaName: string | null;
+}
+
+/** What *Localização* offers besides the pools — POOLSE-154. */
+export interface InventoryPlaces {
+  spaces: { id: string; name: string }[];
+  /** Recintos of sports other than swimming; a pool is chosen as a pool. */
+  recintos: { id: string; name: string; sportId: string }[];
+}
+
+/** The site's live spaces and non-pool recintos, by name — one choice each in *Localização*. */
+export async function placesAt(organizationId: string, facilityId: string): Promise<InventoryPlaces> {
+  return withOrg(organizationId, async (tx) => {
+    const [spaces, recintos] = await Promise.all([
+      tx.query<{ id: string; name: string }>(
+        `SELECT id, name FROM space
+          WHERE facility_id = $1 AND archived_at IS NULL
+          ORDER BY lower(strip_accents(name))`,
+        [facilityId],
+      ),
+      tx.query<{ id: string; name: string; sport_id: string }>(
+        `SELECT id, name, sport_id FROM playing_area
+          WHERE facility_id = $1 AND archived_at IS NULL AND sport_id <> 'pool'
+          ORDER BY sport_id, lower(strip_accents(name))`,
+        [facilityId],
+      ),
+    ]);
+    return {
+      spaces: spaces.rows,
+      recintos: recintos.rows.map((row) => ({ id: row.id, name: row.name, sportId: row.sport_id })),
+    };
+  });
 }
 
 export interface InventoryItemInput {
@@ -70,6 +107,9 @@ export interface InventoryItemInput {
   scope: InventoryScope;
   /** Ignored unless `scope` is `pools`. */
   poolIds: string[];
+  /** A space, or a recinto of another sport, or neither — never both (a CHECK). */
+  spaceId: string | null;
+  playingAreaId: string | null;
 }
 
 interface ItemRow {
@@ -84,6 +124,10 @@ interface ItemRow {
   scope: InventoryScope;
   pool_ids: string[] | null;
   pool_names: string[] | null;
+  space_id: string | null;
+  space_name: string | null;
+  playing_area_id: string | null;
+  playing_area_name: string | null;
 }
 
 function toItem(row: ItemRow): InventoryItem {
@@ -98,6 +142,10 @@ function toItem(row: ItemRow): InventoryItem {
     scope: row.scope,
     poolIds: row.pool_ids ?? [],
     poolNames: row.pool_names ?? [],
+    spaceId: row.space_id,
+    spaceName: row.space_name,
+    playingAreaId: row.playing_area_id,
+    playingAreaName: row.playing_area_name,
   };
 }
 
@@ -117,8 +165,13 @@ function toItem(row: ItemRow): InventoryItem {
 const SELECT_ITEMS = `
   SELECT ${TOTAL_COUNT},
          i.id, i.facility_id, i.name, i.quantity, i.unit, i.location, i.notes, i.scope,
-         scoped.pool_ids, scoped.pool_names
+         scoped.pool_ids, scoped.pool_names,
+         i.space_id, sp.name AS space_name, i.playing_area_id, pa.name AS playing_area_name
     FROM inventory_item i
+    LEFT JOIN space sp
+           ON sp.id = i.space_id AND sp.organization_id = i.organization_id AND sp.archived_at IS NULL
+    LEFT JOIN playing_area pa
+           ON pa.id = i.playing_area_id AND pa.organization_id = i.organization_id AND pa.archived_at IS NULL
     LEFT JOIN LATERAL (
            SELECT array_agg(p.id ORDER BY lower(strip_accents(p.name))) AS pool_ids,
                   array_agg(p.name ORDER BY lower(strip_accents(p.name))) AS pool_names
@@ -247,8 +300,9 @@ export async function addInventoryItem(
     try {
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO inventory_item
-           (organization_id, facility_id, name, quantity, unit, location, notes, scope)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           (organization_id, facility_id, name, quantity, unit, location, notes, scope,
+            space_id, playing_area_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING id`,
         [
           organizationId,
@@ -259,6 +313,8 @@ export async function addInventoryItem(
           input.location,
           input.notes,
           input.scope,
+          input.spaceId,
+          input.playingAreaId,
         ],
       );
       id = rows[0]!.id;
@@ -302,9 +358,20 @@ export async function updateInventoryItem(
     try {
       await tx.query(
         `UPDATE inventory_item
-            SET name = $2, quantity = $3, unit = $4, location = $5, notes = $6, scope = $7
+            SET name = $2, quantity = $3, unit = $4, location = $5, notes = $6, scope = $7,
+                space_id = $8, playing_area_id = $9
           WHERE id = $1 AND archived_at IS NULL`,
-        [itemId, input.name, input.quantity, input.unit, input.location, input.notes, input.scope],
+        [
+          itemId,
+          input.name,
+          input.quantity,
+          input.unit,
+          input.location,
+          input.notes,
+          input.scope,
+          input.spaceId,
+          input.playingAreaId,
+        ],
       );
     } catch (error) {
       return asDuplicate<boolean>(error, input.name);

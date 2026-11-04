@@ -3,14 +3,16 @@
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useSavedAction } from '@/lib/saved';
+import { ConfirmButton } from '@/components/confirm-action';
 import type { FormState } from '@/app/(app)/dashboard/actions';
 import { archiveFeedbackAction } from '@/app/(app)/dashboard/feedback.actions';
 
 const INITIAL: FormState = { ok: false };
 
 /**
- * Arquivar, on one feedback — owner and admin (POOLSE-116). No dialog: it is
- * one click back through the toast's *Anular* and from Arquivados.
+ * Arquivar, on one feedback — owner and admin (POOLSE-116). It asks first
+ * (Rui, 04-11-2026), even though the toast's *Anular* and Arquivados can
+ * bring it back: no decision runs on a stray click.
  */
 export function ArchiveFeedbackButton({
   feedbackId,
@@ -27,14 +29,17 @@ export function ArchiveFeedbackButton({
     <form action={action}>
       <input type="hidden" name="feedbackId" value={feedbackId} />
       <input type="hidden" name="path" value={path} />
-      <button
-        type="submit"
+      <ConfirmButton
+        title={t('confirm.instalacoes.feedbackArchiveTitle')}
+        message={t('confirm.instalacoes.feedbackArchiveMessage')}
+        confirmLabel={t('feedback.archive')}
+        tone="danger"
         disabled={pending}
-        aria-label={label}
+        ariaLabel={label}
         className="inline-flex h-control items-center justify-center rounded-sm px-4 text-control text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60 bg-surface shadow-card"
       >
         {t('feedback.archive')}
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

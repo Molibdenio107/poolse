@@ -16,10 +16,12 @@ import {
   LAB_PARAMETERS,
   archiveLabResult,
   createLabResult,
+  listChemistryReports,
   listLabResults,
   runLabImport,
   type LabImportResult,
   type LabParameter,
+  type ChemistryReport,
   type LabResult,
   type LabResultInput,
 } from './lab-results.repository.js';
@@ -112,9 +114,18 @@ export class LabResultsController {
   private readonly logger = new Logger(LabResultsController.name);
 
   @Get()
-  async list(@Param('poolId', new ParseUUIDPipe()) poolId: string): Promise<{ results: LabResult[] }> {
+  async list(
+    @Param('poolId', new ParseUUIDPipe()) poolId: string,
+  ): Promise<{ results: LabResult[]; chemistryReports: ChemistryReport[] }> {
     requireRole(...CAN_RECORD_LAB);
-    return { results: await listLabResults(currentTenant().organizationId, poolId) };
+    const { organizationId } = currentTenant();
+    // Every imported report in one place (POOLSE-153): the lab results, and the
+    // chemistry-only reports POOLSE-101 files as readings.
+    const [results, chemistryReports] = await Promise.all([
+      listLabResults(organizationId, poolId),
+      listChemistryReports(organizationId, poolId),
+    ]);
+    return { results, chemistryReports };
   }
 
   @Post()

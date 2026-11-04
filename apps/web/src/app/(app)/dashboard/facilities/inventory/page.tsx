@@ -187,7 +187,8 @@ export default async function InventoryPage({
                     facilityId={data.facilityId}
                     items={lost.data.items}
                     students={lost.data.students}
-                    locations={data.locations}
+                    places={data.places}
+                    pools={data.facilities.find((site) => site.id === data.facilityId)?.pools ?? []}
                     canManage={lost.data.canManage}
                     canArchive={lost.data.canArchive}
                   />
@@ -200,7 +201,7 @@ export default async function InventoryPage({
                       facilities={data.facilities}
                       facilityId={data.facilityId}
                       items={data.items.items}
-                      locations={data.locations}
+                      places={data.places}
                       total={data.items.total}
                       search={search.trim()}
                       canManage={data.canManage}

@@ -82,6 +82,9 @@ export async function addItemAction(
         location: String(formData.get('location') ?? '').trim(),
         notes: String(formData.get('notes') ?? '').trim(),
         ...scope,
+        // *Localização*'s space or recinto — POOLSE-154. Empty is neither.
+        spaceId: String(formData.get('spaceId') ?? ''),
+        playingAreaId: String(formData.get('playingAreaId') ?? ''),
       },
       { organizationId },
     );
@@ -120,6 +123,9 @@ export async function updateItemAction(
         location: String(formData.get('location') ?? '').trim(),
         notes: String(formData.get('notes') ?? '').trim(),
         ...scope,
+        // *Localização*'s space or recinto — POOLSE-154. Empty is neither.
+        spaceId: String(formData.get('spaceId') ?? ''),
+        playingAreaId: String(formData.get('playingAreaId') ?? ''),
       },
       { organizationId },
     );

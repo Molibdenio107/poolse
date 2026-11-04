@@ -6,6 +6,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import type { PartnerContact } from '@/lib/api';
 import { TextField } from '@/components/ui/field';
+import { ConfirmButton } from '@/components/confirm-action';
 import type { FormState } from '../../../actions';
 import { addContactAction, removeContactAction } from '../../[facilityId]/partners.actions';
 
@@ -178,16 +179,20 @@ function RemoveContact({
     <form action={remove}>
       <input type="hidden" name="partnerId" value={partnerId} />
       <input type="hidden" name="contactId" value={contactId} />
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.instalacoes.contactRemoveTitle', { name })}
+        message={t('confirm.instalacoes.contactRemoveMessage')}
+        confirmLabel={t('common.remove')}
+        tone="danger"
         disabled={pending}
         // Named, so the button is not "remove" nine times over to somebody
         // moving through the list with a screen reader.
-        aria-label={t('partners.removeContactNamed', { name })}
+        ariaLabel={t('partners.removeContactNamed', { name })}
         className="rounded p-1 text-foreground-muted hover:text-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <Trash2 className="size-4" aria-hidden />
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

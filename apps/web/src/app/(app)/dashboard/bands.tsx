@@ -50,9 +50,19 @@ export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<Re
 
   return (
     <>
-      {bands.map((band) => (
+      {bands
+        // The top row draws nothing with no note and no weather: no section over nothing.
+        .filter((band) => band.id !== 'notes' || band.cards.some((card) => card.element !== null))
+        .map((band) => (
         <section key={band.id} className="flex flex-col gap-3">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+          {/* The top row's two cards carry their own headings; the band's is for a screen reader. */}
+          <h2
+            className={
+              band.id === 'notes'
+                ? 'sr-only'
+                : 'text-sm font-medium uppercase tracking-wider text-foreground-muted'
+            }
+          >
             {t(`dashboard.band.${band.id}`)}
             {band.id === 'personal' && chosen !== undefined && <> · {chosen.name}</>}
           </h2>
@@ -84,6 +94,18 @@ export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<Re
           {/* The summary is laid out, not a grid of cards (multi-sport Slice 2). */}
           {band.id === 'summary' ? (
             <SummaryBand widgets={band.widgets} />
+          ) : band.id === 'notes' ? (
+            /*
+             * The top of the page (Rui, 04-11-2026): the staff board on the left,
+             * 65 %, and the weather on the right, 35 % — in its column whether or
+             * not a note is pinned, so it never moves. Stacked on a phone.
+             */
+            <div className="grid grid-cols-1 gap-page-gap lg:grid-cols-[minmax(0,65fr)_minmax(0,35fr)]">
+              {band.cards.find((card) => card.id === 'staff.notes')?.element ?? null}
+              <div className="flex min-w-0 flex-col lg:col-start-2">
+                {band.cards.find((card) => card.id === 'ops.weather')?.element ?? null}
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-page-gap lg:grid-cols-3">
               {band.cards.map((card) => (

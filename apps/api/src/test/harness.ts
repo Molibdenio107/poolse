@@ -80,6 +80,8 @@ const TENANT_TABLES = [
   'incident_detail',
   'incident',
   'message',
+  // POOLSE-169. A post-it names its author's membership.
+  'staff_note',
   // POOLSE-27. An alert points at a record, a record at its type and its
   // person's membership; every business tenant is seeded with types.
   'qualification_alert',
@@ -211,6 +213,7 @@ const TENANT_TABLES = [
   'invoice',
   'invoice_series',
   // A settlement points at a line, so it goes before it.
+  'student_fee_external_charge',
   'student_fee_payment',
   'student_fee',
   'fee_plan',

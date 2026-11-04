@@ -792,3 +792,11 @@ export async function archiveStaleLeads(organizationId: string): Promise<number>
     return rows[0]?.n ?? 0;
   });
 }
+
+/** A turma's name, for the sentence that says where a pedido went — POOLSE-165. */
+export async function turmaName(organizationId: string, classGroupId: string): Promise<string | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ name: string }>('SELECT name FROM class_group WHERE id = $1', [classGroupId]);
+    return rows[0]?.name ?? null;
+  });
+}

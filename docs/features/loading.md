@@ -24,6 +24,25 @@ progress bar (Rui: the corner only).
 - A polite live region, always mounted, says the label once to a screen reader. Under reduced
   motion the turning ring is a pulsing dot.
 
+## The wash — a save or a page on its way (POOLSE-159, 04-11-2026)
+
+While a **save** or a **navigation** has been pending for 400 ms, a translucent sheet of the surface
+colour (40 %) covers the page and takes every click, so a second click cannot start the same thing
+twice. Rui's call: never for a plain read, which would freeze every list fetch and hover card.
+
+- **Scope, beside the kind.** `lib/busy.ts` records `read | write | navigate` for each activity.
+  The kind is what the corner says; the scope decides the wash. `useSavedAction` is `write` (a
+  `save` is write by default), `LinkBusy` and `DetailTabs` are `navigate`, and everything else
+  (exports, the boletim reader) is `read`. The calendar's place, partner-day, free-swim and move
+  requests are wrapped in `trackBusy('save', …)`, after the drop and never during a drag.
+- **One subscriber.** `BusyIndicator` draws the corner and the wash (`.busy-wash`, `--z-overlay:
+  45`), above the shell and under dialogs (50), the corner (55) and toasts (60). A dialog whose action
+  is pending stays readable and on top.
+- **Clicks, not the keyboard.** The wash is `aria-hidden`, holds no focus and ignores Escape. It
+  fades in over `--reveal-ms` (not under reduced motion) and is gone the moment the work ends.
+- A new slow thing passes its scope to `beginBusy` / `useBusyWhile` / `trackBusy`; leaving it out
+  makes it a read, except a save.
+
 ## Exports
 
 `DownloadLink` keeps a real `href`, so a modified click or no JavaScript still gets the file the

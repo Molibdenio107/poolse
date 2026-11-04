@@ -6,7 +6,9 @@ import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSavedAction } from '@/lib/saved';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded, useSuccessKey } from '@/components/ui/field';
-import type { LostAndFoundItem } from '@/lib/api';
+import type { InventoryPlaces, LostAndFoundItem } from '@/lib/api';
+import { Dialog } from '@/components/ui/dialog';
+import { formatDate } from '@/lib/date-format';
 import type { FormState } from '../../actions';
 import {
   recordFoundAction,
@@ -46,7 +48,8 @@ export function LostAndFoundPanel({
   facilityId,
   items,
   students,
-  locations,
+  places,
+  pools,
   canManage,
   canArchive,
 }: {
@@ -54,8 +57,10 @@ export function LostAndFoundPanel({
   items: LostAndFoundItem[];
   /** This site's students, for the picker. A short list; a club, not a country. */
   students: { id: string; name: string }[];
-  /** The same place names the store room suggests — one vocabulary. */
-  locations: string[];
+  /** The site's spaces and other recintos — *Onde foi encontrado* (04-11-2026). */
+  places: InventoryPlaces;
+  /** The site's pools, the select's middle group. */
+  pools: { id: string; name: string }[];
   canManage: boolean;
   canArchive: boolean;
 }): React.ReactElement {
@@ -119,7 +124,8 @@ export function LostAndFoundPanel({
                 <AddFound
                   facilityId={facilityId}
                   students={students}
-                  locations={locations}
+                  places={places}
+                  pools={pools}
                   onDone={() => setAdding(false)}
                 />
               ) : (
@@ -150,6 +156,15 @@ function FoundRow({
   const [removeState, remove, removing] = useSavedAction(removeFoundAction, INITIAL);
 
   const returned = item.status === 'returned';
+  // Both actions ask first (Rui, 04-11-2026): a towel handed back by mistake
+  // leaves the list a week later, and the bin is a trip away.
+  const [asking, setAsking] = useState<'return' | 'archive' | null>(null);
+  useEffect(() => {
+    if (returnState.errorKey !== undefined || removeState.errorKey !== undefined) setAsking(null);
+  }, [returnState, removeState]);
+  useEffect(() => {
+    if (!returning && !removing) setAsking(null);
+  }, [returning, removing]);
 
   return (
     <li className="flex flex-wrap items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
@@ -160,7 +175,8 @@ function FoundRow({
 
         <span className="block text-sm text-foreground-muted">
           {[
-            item.foundOn,
+            // dd-MM-yyyy, like every date in Poolse (it showed 2026-11-04).
+            formatDate(item.foundOn),
             item.locationFound ?? '',
             item.studentName ?? '',
           ]
@@ -188,6 +204,12 @@ function FoundRow({
               {t('inventory.lostAndFound.notified')}
             </span>
           )}
+          {/* When it goes, in words — a week after its last change. */}
+          {item.leavesListAt !== null && (
+            <span className="text-foreground-muted">
+              {t('inventory.lostAndFound.leavesOn', { date: formatDate(item.leavesListAt) })}
+            </span>
+          )}
         </span>
 
         <Failure state={returnState} />
@@ -197,28 +219,64 @@ function FoundRow({
       {canManage && (
         <span className="flex shrink-0 items-center gap-4">
           {!returned && (
-            <form action={giveBack}>
-              <input type="hidden" name="itemId" value={item.id} />
-              <button type="submit" disabled={returning} className={LINK}>
-                {returning ? t('common.working') : t('inventory.lostAndFound.markReturned')}
-              </button>
-            </form>
+            <button type="button" disabled={returning} className={LINK} onClick={() => setAsking('return')}>
+              {returning ? t('common.working') : t('inventory.lostAndFound.markReturned')}
+            </button>
           )}
 
           {/* Owner/admin only, and refused by the API as well — G1. */}
           {canArchive && (
-            <form action={remove}>
-              <input type="hidden" name="itemId" value={item.id} />
-              <button
-                type="submit"
-                disabled={removing}
-                aria-label={t('common.remove')}
-                className="rounded text-danger hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                <Trash2 aria-hidden className="size-4" />
-              </button>
-            </form>
+            <button
+              type="button"
+              disabled={removing}
+              onClick={() => setAsking('archive')}
+              aria-label={t('inventory.lostAndFound.archiveLabel', { name: item.description })}
+              className="rounded text-danger hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <Trash2 aria-hidden className="size-4" />
+            </button>
           )}
+
+          <Dialog
+            open={asking !== null}
+            onClose={() => setAsking(null)}
+            title={
+              asking === 'return'
+                ? t('inventory.lostAndFound.returnTitle', { name: item.description })
+                : t('inventory.lostAndFound.archiveTitle', { name: item.description })
+            }
+            closeLabel={t('common.close')}
+            className="max-w-md"
+          >
+            <form action={asking === 'return' ? giveBack : remove} className="flex flex-col gap-4">
+              <input type="hidden" name="itemId" value={item.id} />
+              <p className="text-sm">
+                {asking === 'return'
+                  ? t('inventory.lostAndFound.returnConfirm')
+                  : t('inventory.lostAndFound.archiveConfirm')}
+              </p>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setAsking(null)} className={BUTTON}>
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={returning || removing}
+                  className={
+                    asking === 'return'
+                      ? 'inline-flex h-control items-center justify-center rounded-sm bg-primary px-4 text-control font-semibold text-primary-foreground disabled:opacity-60'
+                      : 'inline-flex h-control items-center justify-center rounded-sm border border-danger/50 px-4 text-control text-danger hover:bg-danger/10 disabled:opacity-60'
+                  }
+                >
+                  {returning || removing
+                    ? t('common.working')
+                    : asking === 'return'
+                      ? t('inventory.lostAndFound.markReturned')
+                      : t('inventory.archiveAction')}
+                </button>
+              </div>
+            </form>
+          </Dialog>
         </span>
       )}
     </li>
@@ -228,12 +286,14 @@ function FoundRow({
 function AddFound({
   facilityId,
   students,
-  locations,
+  places,
+  pools,
   onDone,
 }: {
   facilityId: string;
   students: { id: string; name: string }[];
-  locations: string[];
+  places: InventoryPlaces;
+  pools: { id: string; name: string }[];
   onDone: () => void;
 }): React.ReactElement {
   const [studentIdField, setStudentIdField] = useSeeded<string>('');
@@ -274,25 +334,51 @@ function AddFound({
           />
         </div>
 
-        {/* The store room's own suggestions: one vocabulary for both halves. */}
+        {/*
+          Where it turned up — one of the site's places (Rui, 04-11-2026), the
+          inventory's groups. Stored as the place's name: a lost towel records
+          where it was found that day, which a renamed space must not rewrite.
+        */}
         <div className={cn(FIELD_COLUMN, 'sm:w-48')}>
           <label htmlFor="lf-location" className={FIELD_LABEL}>
             {t('inventory.lostAndFound.locationFound')}
           </label>
-          <input
+          <select
             id="lf-location"
             name="locationFound"
             value={locationFound}
             onChange={(event) => setLocationFound(event.target.value)}
-            maxLength={120}
-            list="lf-locations"
             className={CONTROL_LINE}
-          />
-          <datalist id="lf-locations">
-            {locations.map((place) => (
-              <option key={place} value={place} />
-            ))}
-          </datalist>
+          >
+            <option value="">{t('inventory.lostAndFound.placeUnknown')}</option>
+            {places.spaces.length > 0 && (
+              <optgroup label={t('inventory.place.spaces')}>
+                {places.spaces.map((space) => (
+                  <option key={space.id} value={space.name}>
+                    {space.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {pools.length > 0 && (
+              <optgroup label={t('inventory.place.pools')}>
+                {pools.map((pool) => (
+                  <option key={pool.id} value={pool.name}>
+                    {pool.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {places.recintos.length > 0 && (
+              <optgroup label={t('inventory.place.recintos')}>
+                {places.recintos.map((area) => (
+                  <option key={area.id} value={area.name}>
+                    {area.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
         </div>
 
         <div className={cn(FIELD_COLUMN, 'sm:w-40')}>

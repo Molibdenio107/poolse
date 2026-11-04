@@ -7,6 +7,7 @@ import { DocumentLink } from '@/components/file-upload';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import { SelectField, TextAreaField, TextField, useSuccessKey } from '@/components/ui/field';
 import { formatDate } from '@/lib/date-format';
+import { ConfirmButton } from '@/components/confirm-action';
 import { acceptFor } from '@/lib/files';
 import { EXAM_RESULTS, type MedicalExam, type StudentMedicalExams } from '@/lib/medical-exams';
 import { useSavedAction } from '@/lib/saved';
@@ -88,7 +89,7 @@ export function ExamPanel({
             ) : (
               <CertificateUpload studentId={studentId} examId={current.id} storageReady={storageReady} />
             )}
-            <ArchiveExam studentId={studentId} examId={current.id} />
+            <ArchiveExam studentId={studentId} examId={current.id} examinedOn={current.examinedOn} />
           </div>
         </div>
       )}
@@ -111,7 +112,7 @@ export function ExamPanel({
                   ) : (
                     <CertificateUpload studentId={studentId} examId={exam.id} storageReady={storageReady} />
                   )}
-                  <ArchiveExam studentId={studentId} examId={exam.id} />
+                  <ArchiveExam studentId={studentId} examId={exam.id} examinedOn={exam.examinedOn} />
                 </div>
               </li>
             ))}
@@ -298,7 +299,15 @@ function RecordExamForm({
   );
 }
 
-function ArchiveExam({ studentId, examId }: { studentId: string; examId: string }): React.ReactElement {
+function ArchiveExam({
+  studentId,
+  examId,
+  examinedOn,
+}: {
+  studentId: string;
+  examId: string;
+  examinedOn: string;
+}): React.ReactElement {
   const t = useTranslations();
   const [, action, pending] = useSavedAction(archiveExamAction, INITIAL);
 
@@ -306,10 +315,18 @@ function ArchiveExam({ studentId, examId }: { studentId: string; examId: string 
     <form action={action} className="inline">
       <input type="hidden" name="studentId" value={studentId} />
       <input type="hidden" name="examId" value={examId} />
-      <button type="submit" disabled={pending} className={BUTTON_QUIET}>
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.alunos.examTitle', { date: formatDate(examinedOn) })}
+        message={t('confirm.alunos.examMessage')}
+        confirmLabel={t('exams.archive')}
+        tone="danger"
+        disabled={pending}
+        className={BUTTON_QUIET}
+      >
         <Trash2 aria-hidden className="size-4" />
         {t('exams.archive')}
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

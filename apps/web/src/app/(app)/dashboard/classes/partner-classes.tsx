@@ -16,6 +16,7 @@ import type { FormState } from '../actions';
 import { bookPartnerDaysAction, moveBookingAction, removePartnerDayAction } from './classes.actions';
 import { saveGroupAction } from '../facilities/[facilityId]/partners.actions';
 import { Reveal } from '@/components/ui/reveal';
+import { ConfirmButton } from '@/components/confirm-action';
 
 /**
  * A partnership's timetable, on the Classes screen.
@@ -645,10 +646,22 @@ function DayLine({
             <button type="button" onClick={() => void save()} disabled={busy || !changed} className={BUTTON}>
               {busy ? t('common.working') : t('common.save')}
             </button>
-            <button type="button" onClick={() => void remove()} disabled={busy} className={QUIET}>
+            {/* Asks first (Rui, 04-11-2026). */}
+            <ConfirmButton
+              title={t('confirm.equipa.partnerDayTitle', {
+                day: t(`week.${booking.weekday}`),
+                time: booking.startTime,
+              })}
+              message={t('confirm.equipa.partnerDayMessage')}
+              confirmLabel={t('confirm.equipa.remove')}
+              tone="danger"
+              onConfirm={() => void remove()}
+              disabled={busy}
+              className={QUIET}
+            >
               <Trash2 aria-hidden className="size-4" />
               {t('partnerDays.removeDay')}
-            </button>
+            </ConfirmButton>
           </div>
         </>
       )}

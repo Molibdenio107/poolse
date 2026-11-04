@@ -130,6 +130,8 @@ test('a guardian asks for a place for their child and a new one; the office enro
 
       const placed = await leads.convert(ids.alice, { classGroupId: s.open });
       assert.equal(placed.studentId, s.childId, 'the child the club has, never a twin');
+      // POOLSE-165: the answer names the turma, so the toast can say where.
+      assert.equal(placed.classGroupName, 'Golfinhos');
       const [count] = await tenant.sql<{ n: number }>(
         `SELECT count(*)::int AS n FROM student WHERE first_name = 'Alice'`,
       );

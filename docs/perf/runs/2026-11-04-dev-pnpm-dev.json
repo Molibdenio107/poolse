@@ -1,0 +1,161 @@
+{
+  "label": "dev (pnpm dev)",
+  "rows": [
+    {
+      "page": "Painel",
+      "path": "/dashboard",
+      "cold": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 7296,
+        "dcl": 7531,
+        "apiCalls": 7,
+        "apiLongest": 226,
+        "apiLongestPath": "/dashboard",
+        "apiDb": 534,
+        "apiQueries": 159
+      },
+      "warm": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 314,
+        "dcl": 411,
+        "apiCalls": 7,
+        "apiLongest": 44,
+        "apiLongestPath": "/dashboard",
+        "apiDb": 289,
+        "apiQueries": 159
+      }
+    },
+    {
+      "page": "Alunos, page 2",
+      "path": "/dashboard/students?page=2",
+      "cold": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 4403,
+        "dcl": 4504,
+        "apiCalls": 7,
+        "apiLongest": 90,
+        "apiLongestPath": "/students",
+        "apiDb": 159,
+        "apiQueries": 98
+      },
+      "warm": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 468,
+        "dcl": 582,
+        "apiCalls": 7,
+        "apiLongest": 96,
+        "apiLongestPath": "/students",
+        "apiDb": 161,
+        "apiQueries": 98
+      }
+    },
+    {
+      "page": "Student record",
+      "path": "/dashboard/students/01627ba3-8efb-4a04-aca6-0bea27dbbe8e",
+      "cold": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 4313,
+        "dcl": 4392,
+        "apiCalls": 17,
+        "apiLongest": 78,
+        "apiLongestPath": "/students/:id/credits",
+        "apiDb": 394,
+        "apiQueries": 192
+      },
+      "warm": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 437,
+        "dcl": 518,
+        "apiCalls": 17,
+        "apiLongest": 69,
+        "apiLongestPath": "/students",
+        "apiDb": 333,
+        "apiQueries": 192
+      }
+    },
+    {
+      "page": "Calendário (this week)",
+      "path": "/dashboard/calendar",
+      "cold": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 2797,
+        "dcl": 2901,
+        "apiCalls": 13,
+        "apiLongest": 74,
+        "apiLongestPath": "/facilities/:id/grid",
+        "apiDb": 331,
+        "apiQueries": 174
+      },
+      "warm": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 838,
+        "dcl": 949,
+        "apiCalls": 13,
+        "apiLongest": 75,
+        "apiLongestPath": "/facilities/:id/grid",
+        "apiDb": 337,
+        "apiQueries": 174
+      }
+    },
+    {
+      "page": "Pessoas",
+      "path": "/dashboard/facilities/staff",
+      "cold": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 2151,
+        "dcl": 2282,
+        "apiCalls": 7,
+        "apiLongest": 34,
+        "apiLongestPath": "/people",
+        "apiDb": 139,
+        "apiQueries": 99
+      },
+      "warm": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 364,
+        "dcl": 499,
+        "apiCalls": 7,
+        "apiLongest": 38,
+        "apiLongestPath": "/attention",
+        "apiDb": 104,
+        "apiQueries": 99
+      }
+    },
+    {
+      "page": "Site page",
+      "path": "/dashboard/facilities/6e342857-2bd7-4698-a802-b9937c5fb8f7",
+      "cold": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 5586,
+        "dcl": 5662,
+        "apiCalls": 18,
+        "apiLongest": 36,
+        "apiLongestPath": "/facilities/:id/pass-products",
+        "apiDb": 220,
+        "apiQueries": 182
+      },
+      "warm": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 418,
+        "dcl": 495,
+        "apiCalls": 18,
+        "apiLongest": 39,
+        "apiLongestPath": "/attention",
+        "apiDb": 275,
+        "apiQueries": 182
+      }
+    }
+  ]
+}

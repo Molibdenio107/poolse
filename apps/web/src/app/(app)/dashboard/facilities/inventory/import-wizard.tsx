@@ -23,6 +23,7 @@ import {
   type ReadState,
 } from './import.actions';
 import { Reveal } from '@/components/ui/reveal';
+import { ConfirmButton } from '@/components/confirm-action';
 
 /**
  * The kit list, in four steps — round 6.
@@ -753,11 +754,18 @@ function PreviewStep({
       />
 
       <div className="flex flex-wrap gap-3">
-        <button type="submit" disabled={pending || creating + updating === 0} className={BUTTON}>
+        {/* Asks first (Rui, 04-11-2026). */}
+        <ConfirmButton
+          title={t('confirm.alunos.importInventoryTitle', { count: creating + updating })}
+          message={t('confirm.alunos.importInventoryMessage', { creating, updating })}
+          confirmLabel={t('confirm.alunos.importConfirm')}
+          disabled={pending || creating + updating === 0}
+          className={BUTTON}
+        >
           {pending
             ? t('students.import.importing')
             : t('inventory.import.importCount', { count: creating + updating })}
-        </button>
+        </ConfirmButton>
         <button type="button" onClick={onBack} className={BUTTON_QUIET}>
           {t('students.import.backToMapping')}
         </button>

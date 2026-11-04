@@ -75,7 +75,7 @@ interface ListResponse extends Paginated<MessageSummary> {
 }
 
 /** Null for owner and admin (every turma); the instructor's own turmas otherwise. */
-async function turmaScope(): Promise<string[] | null> {
+export async function turmaScope(): Promise<string[] | null> {
   if (hasRole('owner', 'admin')) return null;
   const { organizationId, membershipId } = currentTenant();
   if (!membershipId) return [];
@@ -188,7 +188,7 @@ export class MessagesController {
   }
 }
 
-function readTarget(body: Record<string, unknown>): MessageTarget {
+export function readTarget(body: Record<string, unknown>): MessageTarget {
   const audience = body['audience'];
   if (typeof audience !== 'string' || !MESSAGE_AUDIENCES.includes(audience as MessageAudience)) {
     throw new BadRequestException({
@@ -221,7 +221,7 @@ function readTarget(body: Record<string, unknown>): MessageTarget {
   return { audience: audience as MessageAudience, targetId };
 }
 
-function readWords(body: Record<string, unknown>): { subject: string; text: string } {
+export function readWords(body: Record<string, unknown>): { subject: string; text: string } {
   const subject = typeof body['subject'] === 'string' ? body['subject'].trim() : '';
   const text = typeof body['body'] === 'string' ? body['body'].trim() : '';
   const fields: Record<string, string> = {};

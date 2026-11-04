@@ -3,6 +3,8 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import type {
   BandMap,
   BandOverride,
+  ChemistryReport,
+  LabEntry,
   LabResult,
   PoolAlert,
   PoolAnalysis,
@@ -68,6 +70,7 @@ export async function ReadingsBlock({
   bands,
   reference,
   labResults,
+  chemistryReports,
   labFailed,
   bandOverrides,
   emailConfigured,
@@ -101,6 +104,8 @@ export async function ReadingsBlock({
    * they could not be read for this person, and the section is then not offered.
    */
   labResults: LabResult[] | null;
+  /** Chemistry-only reports filed as readings, listed in Laboratório too — POOLSE-153. */
+  chemistryReports: ChemistryReport[];
   /** They were refused by nobody and still did not load: offered, with an error. */
   labFailed: boolean;
   /** The raw overrides, for the editor's three-state selects. */
@@ -191,11 +196,22 @@ export async function ReadingsBlock({
     from,
   });
   const history = windowOf([...analyses].reverse());
-  const lab = labResults === null ? null : windowOf(labResults);
+  /*
+   * Laboratório lists every imported report (POOLSE-153): the graded lab
+   * results and the chemistry-only reports, newest first, paged together.
+   */
+  const labEntries: LabEntry[] | null =
+    labResults === null
+      ? null
+      : [
+          ...labResults.map((result): LabEntry => ({ kind: 'lab', at: result.sampledAt, result })),
+          ...chemistryReports.map((report): LabEntry => ({ kind: 'chemistry', at: report.takenAt, report })),
+        ].sort((one, other) => other.at.localeCompare(one.at));
+  const lab = labEntries === null ? null : windowOf(labEntries);
   const counts: Partial<Record<WaterSection, number>> = {
     history: analyses.length,
     alerts: alerts.length,
-    ...(labResults !== null && labResults.length > 0 ? { lab: labResults.length } : {}),
+    ...(labEntries !== null && labEntries.length > 0 ? { lab: labEntries.length } : {}),
   };
 
   return (
@@ -294,6 +310,8 @@ export async function ReadingsBlock({
                 at: analysis.takenAt,
                 value:
                   analysis.values.find((value) => value.metric === metric)?.value ?? 0,
+                // A reading from a laboratory report is a hollow ring (POOLSE-153).
+                fromLab: analysis.fromLab || analysis.origin === 'report',
               }));
 
             return (
@@ -315,6 +333,7 @@ export async function ReadingsBlock({
                   draws none — the honest picture either way.
                 */
                 band={bandFor(metric)}
+                legend={{ typed: t('facilities.trendLegend.reading'), lab: t('facilities.trendLegend.lab') }}
               />
             );
           })}
@@ -370,6 +389,12 @@ export async function ReadingsBlock({
                     {analysis.fromLab && (
                       <span className="rounded border border-border px-1.5 text-sm font-normal text-foreground-muted">
                         {t('facilities.fromLab')}
+                      </span>
+                    )}
+                    {/* Imported, not typed — POOLSE-153. A lab reading says so above. */}
+                    {!analysis.fromLab && (analysis.origin === 'log' || analysis.origin === 'report') && (
+                      <span className="rounded border border-border px-1.5 text-sm font-normal text-foreground-muted">
+                        {t(`facilities.origin.${analysis.origin}`)}
                       </span>
                     )}
                   </span>
@@ -492,7 +517,7 @@ export async function ReadingsBlock({
       {current === 'lab' && lab !== null && (
         <LabResultsSection
           poolId={poolId}
-          results={lab.items}
+          entries={lab.items}
           total={lab.total}
           canRecord={canRecord || canManage}
           canArchive={canManage}
