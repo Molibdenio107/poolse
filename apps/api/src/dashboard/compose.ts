@@ -227,7 +227,11 @@ export async function composeDashboard(
   const bands: ComposedBand[] = [];
 
   for (const [order, band] of BANDS.entries()) {
-    const inBand = composed.filter(({ widget }) => widget.band === band);
+    // A card that only carries something is dropped when it has nothing (POOLSE-170).
+    const inBand = composed.filter(
+      ({ widget, card }) =>
+        widget.band === band && !(widget.absentWhenEmpty === true && card.state === 'empty'),
+    );
     const widgets = inBand
       .filter(({ widget }) => widget.trailing !== true)
       /*

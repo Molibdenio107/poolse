@@ -1,7 +1,10 @@
 import { energyCosts } from '../energy/invoices.repository.js';
 import { listMyTasks } from '../maintenance/maintenance.repository.js';
+import { listStaffNotes, type StaffNote } from '../staff-notes/staff-notes.repository.js';
 import { SITE_PAGE_ROLES } from '../facilities/site-access.js';
-import { readSetupProgress } from './dashboard.repository.js';
+import { readSetupProgress, readWeatherSite } from './dashboard.repository.js';
+import { weatherAt } from '../weather/forecast-cache.js';
+import type { Weather } from '../weather/open-meteo.js';
 import { excursions, resolveBands, type PoolMetric } from '@poolse/rules';
 import { salarySummary, type SalarySummary } from '../staff/compensation.repository.js';
 import {
@@ -93,6 +96,46 @@ export async function myTasks(ctx: ResolverContext): Promise<TasksWidget | null>
     total: tasks.length,
     tasks: tasks.slice(0, TASKS_SHOWN),
     canOpenSite: SITE_PAGE_ROLES.some((role) => ctx.roles.includes(role)),
+  };
+}
+
+export interface StaffNotesWidget {
+  /** The live notes, newest first; each says whether this reader may take it down. */
+  notes: StaffNote[];
+}
+
+/**
+ * The staff's post-it board — POOLSE-169. Never null: the card is also where a
+ * note is written, so an empty board is a board with room on it.
+ */
+export async function staffNotes(ctx: ResolverContext): Promise<StaffNotesWidget> {
+  const office = ctx.roles.includes('owner') || ctx.roles.includes('admin');
+  return { notes: await listStaffNotes(ctx.organizationId, ctx.membershipId, office) };
+}
+
+export interface WeatherWidget {
+  facilityId: string;
+  facilityName: string;
+  city: string | null;
+  /** Now, and the forecast days from today: `days[0]` is today's high and low. */
+  weather: Weather;
+}
+
+/**
+ * The weather at the site being looked at — POOLSE-170. Null for a site with no
+ * coordinates (the card is absent, not empty); a provider that did not answer
+ * is a throw, so the card is the quiet error card and nothing else moves.
+ */
+export async function siteWeather(ctx: ResolverContext): Promise<WeatherWidget | null> {
+  const site = await readWeatherSite(ctx.organizationId, ctx.scope.facilityId);
+  if (site === null || site.latitude === null || site.longitude === null) return null;
+  const weather = await weatherAt(site.latitude, site.longitude);
+  if (weather === null) throw new Error('The forecast provider did not answer');
+  return {
+    facilityId: site.id,
+    facilityName: site.name,
+    city: site.city,
+    weather,
   };
 }
 

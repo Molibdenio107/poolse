@@ -2263,6 +2263,19 @@ and POOLSE-47's decision that partnership billing is its own flow stands.
 `payment_source` is `manual`, `mbway` or `sepa`, defaulting to `manual`. Every row that
 existed before it was an office tick and is backfilled as one.
 
+**`external_invoice`** (POOLSE-162, 04-11-2026) is a fourth `payment_source`: paid by an invoice the club
+issued outside Poolse. On `invoice_payment` it requires `reference` (that invoice's number, at most 60
+characters) by `invoice_payment_external_has_number`, which compares `source::text` so the value and the
+CHECK can ship in one migration. Migration `1794652400000_payment-external-invoice.sql`.
+
+**`student_fee_external_charge`** (POOLSE-163, 04-11-2026): `student_fee_id` (composite fk), `occurrence_on`
+(the occurrence's first day, `starts_on` for a line charged once), `reference` (the external document,
+at most 60 characters), `recorded_by_membership_id`, `archived_at`. One live row per (fee, occurrence)
+by partial unique index. Insert-only bar archiving (`UPDATE (archived_at)` only). A BEFORE INSERT
+trigger refuses an occurrence already charged (DETAIL `external_charge_already_charged|<document>`).
+`invoice_charged_on()` answers a live row as `ext:<reference>` after any live Poolse document.
+Migration `1794652500000_fee-external-charge.sql`.
+
 An enum rather than a lookup table: the set is closed and only a developer opens it, because
 adding a provider is an integration rather than a value an operator types.
 
@@ -2367,7 +2380,8 @@ not a week of holiday, and `balanceFor` filters on the kind.
 
 **`reason` is a line, not a document and not a diagnosis.** It exists so the approval queue is
 intelligible — "consulta", "assunto familiar". Where a club files an atestado is a filing
-cabinet's problem.
+cabinet's problem. Only the owner and an admin read it, and the kind with it: every other worker
+reads the queue as names and dates (POOLSE-157).
 
 ### Who teaches one lesson
 
@@ -2438,7 +2452,14 @@ maintenance_severity       = low | normal | high   -- POOLSE-66 slice 2b
 
 inventory_item
   + space_id uuid                       -- nullable; fk (organization_id, facility_id, space_id)
+  + playing_area_id uuid                -- POOLSE-154; fk (organization_id, facility_id, playing_area_id)
+                                        -- CHECK inventory_item_one_place: not both space_id and playing_area_id
 ```
+
+**An item's place is one of the site's own** (POOLSE-154, 04-11-2026): a space (`space_id`), a pool
+(the `inventory_item_pool` junction, still many-to-many), or a recinto of another sport
+(`playing_area_id`). The free-text `location` stays and is no longer offered by the form.
+Migration `1794652200000_inventory-playing-area.sql`.
 
 **Overdue is derived, never stored.** `now() - max(performed_at) > interval`, computed in the
 list query. There is no `is_overdue` column and nothing keeps one current: a stored flag would
@@ -3657,6 +3678,21 @@ constraint trigger checks `address_count` against the recipient rows at commit.
 `UPDATE (archived_at)` on `message` and `UPDATE (delivered_at)` on `message_recipient`, by
 column grant. `tenant-isolation.sql` test 23 asserts the audience's composite key.
 
+**An aviso is a `message` with `channel = 'app'`** (POOLSE-166, 4 November 2026): `channel
+message_channel` (`email | app`, default `email`), `shown_from` / `shown_until` (club days,
+inclusive). CHECKs: the window exactly when `app`, never backwards; an `app` message takes only
+`class_group | level | facility | organization | sport`; and its `address_count` is 0 — its
+recipient rows are a snapshot of who it reached **with no email**, so nothing is kept and the
+delivery retry (rows with an email) never reads one. `message_quota_respected()` and
+`email_addresses_today()` count `channel = 'email'` only. Who sees one is live:
+`message_recipients_all()` for the reader's own students, today inside the window.
+
+**`staff_note` is the staff board's post-it** (POOLSE-169, 4 November 2026): `author_membership_id`
+(composite FK to `membership`), `body` (1–500 characters), `colour` (`yellow | orange | green | blue`,
+a CHECK — a display choice, not an enum), `archived_at`. Not a `message`: no audience, window or
+recipients. `poolse_app` holds SELECT and INSERT and `UPDATE (archived_at)` only — written once,
+taken down and put back, never edited. `tenant-isolation.sql` test 28 asserts its key and its policy.
+
 ### The public water link — POOLSE-71, 11 October 2026
 
 ```
@@ -3823,6 +3859,14 @@ are allowed. `lifeguard_valid_on(org, membership, day)` is the one definition of
 lifeguard on a day, read by the roster and by the incident. `lifeguard_gaps(org, facility,
 from, days)` subtracts the duties' `range_agg` from each tank's opening window
 (`facility_hours`, in the site's time zone) as multiranges, and returns the uncovered times.
+
+**A duty sits on a recinto — POOLSE-156 (04-11-2026).** `lifeguard_duty.playing_area_id`
+(NOT NULL, fk `(organization_id, playing_area_id)`) is filled from `pool_id` by `area_from_pool()`
+for a pool duty, and named directly for a court or a pitch, whose `pool_id` is now null.
+`lifeguard_duty_no_double_on_area` refuses the same person overlapping on one recinto; the pool
+exclusion stays until its readers move. `lifeguard_gaps()`, the incident's "who was on duty" and
+vigilance periods still read `pool_id`, so cover stays a pool question.
+Migration `1794652300000_lifeguard-duty-recinto.sql`.
 
 
 ### Stored files — 12 October 2026
@@ -3992,6 +4036,14 @@ the tank. `poolse_app` holds no DELETE on any of the three tables, and no UPDATE
 `lab_result_value`. `public_water_page()` gains `poolKind`, `poolUse` and `lab` (the latest live
 report's date and values). The API grades the report and passes on the grade and date only.
 Migration `1790416800000_lab-results.sql`; `packages/db/test/lab-results.sql`.
+
+**Where an analysis came from — POOLSE-153 (04-11-2026).** `analysis_origin` (`typed | log |
+report`) on `lab_result.origin` and `pool_analysis.origin`. `typed` is the form, `log` a water-log
+spreadsheet, and `report` a laboratory document. A reading made from a lab result copies its
+origin. **NULL is a row from before the column existed: its origin was never recorded** and is not
+guessed (Rui). Only new rows take the `typed` default, because the column was added and then given
+its default. The readings import says which kind of rows it was sent (`source`, `log` when absent).
+Migration `1794652100000_analysis-origin.sql`.
 
 ### The complaints book and the operating regulation — POOLSE-73, 13 October 2026
 

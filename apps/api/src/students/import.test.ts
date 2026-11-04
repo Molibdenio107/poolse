@@ -753,3 +753,55 @@ test('a matched student who is not a sócio becomes one, with number and date', 
     { field: 'socioSince', value: '2026-01-10' },
   ]);
 });
+
+test('a turma cell enrols by name, accent- and case-blind, and warns about what it cannot place', () => {
+  // POOLSE-164.
+  const turmas = [
+    { id: 't-golfinhos', name: 'Golfinhos', published: true },
+    { id: 't-tubaroes', name: 'Tubarões', published: true },
+    { id: 't-old', name: 'Orcas', published: false },
+    { id: 't-new', name: 'Orcas', published: true },
+    { id: 't-a', name: 'Ténis A', published: false },
+    { id: 't-b', name: 'Ténis A', published: false },
+  ];
+  const { rows } = validate(
+    [
+      { fullName: 'Ana Silva', turmas: 'golfinhos; TUBAROES' },
+      { fullName: 'Rui Costa', turmas: 'Golfinhos, Tubarões' },
+      { fullName: 'Eva Lima', turmas: 'Orcas' },
+      { fullName: 'Ivo Reis', turmas: 'Baleias; Ténis A' },
+    ],
+    { turmas },
+  );
+  assert.deepEqual(rows[0]!.turmaIds, ['t-golfinhos', 't-tubaroes']);
+  assert.deepEqual(rows[0]!.turmaNames, ['Golfinhos', 'Tubarões']);
+  assert.deepEqual(rows[1]!.turmaIds, ['t-golfinhos', 't-tubaroes'], 'commas split when the whole cell is no turma');
+  assert.deepEqual(rows[2]!.turmaIds, ['t-new'], 'the published season wins a shared name');
+  assert.deepEqual(rows[3]!.turmaIds, []);
+  assert.deepEqual(
+    rows[3]!.warnings.map((warning) => warning.code),
+    ['turmaNotFound', 'turmaAmbiguous'],
+  );
+  assert.equal(rows[3]!.importable, true, 'a turma never refuses the row');
+});
+
+test('a student already in a turma is not offered it again; a new one is a blank to fill', () => {
+  const turmas = [
+    { id: 't-golfinhos', name: 'Golfinhos', published: true },
+    { id: 't-tubaroes', name: 'Tubarões', published: true },
+  ];
+  const ana = existing({ id: 's-ana', firstName: 'Ana', lastName: 'Silva', displayName: 'Ana Silva', birthDate: '2015-01-01', turmaIds: ['t-golfinhos'] });
+  const same = validate(
+    [{ firstName: 'Ana', lastName: 'Silva', birthDate: '2015-01-01', turmas: 'Golfinhos' }],
+    { turmas, existing: [ana] },
+  ).rows;
+  assert.deepEqual(same[0]!.updates, [], 'the round trip changes nothing');
+  const more = validate(
+    [{ firstName: 'Ana', lastName: 'Silva', birthDate: '2015-01-01', turmas: 'Golfinhos; Tubarões' }],
+    { turmas, existing: [ana] },
+  ).rows;
+  assert.deepEqual(
+    more[0]!.updates.filter((update) => update.field === 'turmas'),
+    [{ field: 'turmas', value: 'Tubarões' }],
+  );
+});

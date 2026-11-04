@@ -15,6 +15,7 @@ import { readTheme } from '../../../lib/preferences';
 import { PreferenceSync } from './preference-sync';
 import { CreateOrganizationForm } from './create-organization-form';
 import { PageError, PageShell } from '@/components/page-shell';
+import { NewNoteButton } from '@/components/staff-board-forms';
 import { MyPoolPanel } from './my-pool-panel';
 import { Bands } from './bands';
 import { ScopeSelector } from './scope-selector';
@@ -144,10 +145,14 @@ export default async function DashboardPage({
       ? null
       : [me.user.firstName, me.user.lastName].filter(Boolean).join(' ') || me.user.email;
 
+  // The staff board is sent to every working role (POOLSE-169): whoever has it may pin.
+  const canPin = dashboard?.bands.some((band) => band.widgets.some((one) => one.id === 'staff.notes')) ?? false;
+
   return (
     <PageShell
       title={name ?? t('nav.dashboard')}
       subtitle={t('dashboard.subtitle')}
+      actions={canPin ? <NewNoteButton /> : undefined}
       filters={
         // The selector, where there is a choice: the API sends the list only to
         // the management band's readers, and one site is no choice at all.

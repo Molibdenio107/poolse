@@ -29,12 +29,19 @@ export interface PublicRegulationView {
  *
  * Labels are passed in: the public pages translate on the server with
  * `createTranslator`, outside any next-intl provider.
+ *
+ * **`compact`** — POOLSE-165 (Rui, 04-11-2026): the pre-registration form keeps
+ * both links as one small muted line at its foot, so the form comes first. The
+ * link is still on the page, which the law requires; how prominent it is on a
+ * sign-up form was Rui's call, taken knowingly. The water page keeps the full
+ * version.
  */
 export function PublicNotices({
   complaints,
   regulations,
   labels,
   large = false,
+  compact = false,
 }: {
   complaints: PublicComplaints;
   regulations: PublicRegulationView[];
@@ -45,7 +52,37 @@ export function PublicNotices({
     effectiveFrom: (date: string) => string;
   };
   large?: boolean;
+  compact?: boolean;
 }): React.ReactElement {
+  if (compact) {
+    const link =
+      'underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+    return (
+      <footer className="flex flex-col gap-2 text-xs text-foreground-muted">
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <a href={complaints.url} target="_blank" rel="noopener noreferrer" className={cn('inline-flex items-center gap-1', link)}>
+            <BookOpen aria-hidden className="size-3.5 shrink-0" />
+            {complaints.regime === 'public_service' ? labels.complaintsPublic : labels.complaints}
+          </a>
+        </p>
+        {/* The rules in force, opened in place: they have no address of their own. */}
+        {regulations.map((regulation) => (
+          <details key={`${regulation.facilityName ?? ''}${regulation.effectiveFrom}`}>
+            <summary className={cn('cursor-pointer list-none', link)}>
+              {regulation.facilityName === undefined
+                ? labels.regulation
+                : `${labels.regulation} — ${regulation.facilityName}`}
+              {' · '}
+              {labels.effectiveFrom(formatDate(regulation.effectiveFrom))}
+            </summary>
+            <div className="mt-2 whitespace-pre-wrap rounded border border-border bg-surface p-3 text-sm leading-relaxed text-foreground">
+              {regulation.body}
+            </div>
+          </details>
+        ))}
+      </footer>
+    );
+  }
   return (
     <section className="flex flex-col gap-3">
       <a

@@ -122,6 +122,12 @@ export function InvoiceRunPanel({
               {t('invoices.someCharged', { count: run.alreadyChargedCount })}
             </p>
           )}
+          {/* Invoiced outside Poolse, so left out — POOLSE-163. */}
+          {run.externalCount > 0 && (
+            <p className="text-sm text-foreground-muted">
+              {t('invoices.externalCount', { count: run.externalCount })}
+            </p>
+          )}
 
           {/*
             The selection and its button, at the top — Rui, 02-11-2026: a run of

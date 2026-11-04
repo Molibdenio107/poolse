@@ -6,6 +6,7 @@ import { CONTROL_LINE, FIELD_LABEL, SelectField, useSeeded, useSuccessKey } from
 import { cn } from '@/lib/utils';
 import type { Course, MeetChoice, Stroke } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
+import { ConfirmButton } from '@/components/confirm-action';
 import type { FormState } from '../../../actions';
 import {
   addRecordAction,
@@ -362,13 +363,17 @@ export function ArchiveRecordButton({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="studentId" value={studentId} />
       <input type="hidden" name="recordId" value={recordId} />
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.alunos.recordTitle')}
+        message={t('confirm.alunos.recordMessage')}
+        confirmLabel={t('progress.remove')}
+        tone="danger"
         disabled={pending}
         className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60 bg-surface shadow-card"
       >
         {pending ? t('common.working') : t('progress.remove')}
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

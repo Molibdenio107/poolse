@@ -129,10 +129,11 @@ for (const locale of ['pt-PT', 'en'] as const) {
       // The save before this one may still be on its way back; the last word is this one.
       await expect.poll(() => themeCookie(page)).toBe('dark');
 
-      // A menu entry: the router cache must not hand the old class back.
+      // A menu entry: the router cache must not hand the old class back. Alunos,
+      // because Turmas lives under the sport's tab since POOLSE-150.
       // A cold route compiles on first visit in dev, hence the long waits.
-      await page.locator('nav a[href="/dashboard/classes"]').first().click();
-      await expect(page).toHaveURL(/\/dashboard\/classes/, { timeout: 30_000 });
+      await page.locator('nav a[href="/dashboard/students"]').first().click();
+      await expect(page).toHaveURL(/\/dashboard\/students/, { timeout: 30_000 });
       await expect(page.locator('html')).toHaveClass(/\bdark\b/);
       await page.locator('nav a[href="/dashboard"]').first().click();
       await expect(page).toHaveURL(/\/dashboard$/, { timeout: 30_000 });
@@ -175,8 +176,8 @@ for (const locale of ['pt-PT', 'en'] as const) {
       await speak(page, other);
       await speak(page, locale);
       await choose(page, locale, 'system');
-      await page.locator('nav a[href="/dashboard/classes"]').first().click();
-      await expect(page).toHaveURL(/\/dashboard\/classes/, { timeout: 30_000 });
+      await page.locator('nav a[href="/dashboard/students"]').first().click();
+      await expect(page).toHaveURL(/\/dashboard\/students/, { timeout: 30_000 });
 
       await expect(page.locator('html')).toHaveClass(/\bdark\b/);
       expect(await lightMoments(page)).toBe(0);

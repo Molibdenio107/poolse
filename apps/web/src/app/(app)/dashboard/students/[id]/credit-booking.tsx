@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import type { RedemptionOption, ReposicaoCredit } from '@/lib/api';
 import { bookCreditAction, cancelBookingAction, optionsForCreditAction } from './credits.actions';
 import { formatDate } from '@/lib/date-format';
+import { ConfirmButton } from '@/components/confirm-action';
 
 /**
  * Booking a reposição — POOLSE-21, criteria 3 and 6.
@@ -70,12 +71,16 @@ export function CreditBooking({
           if (!result.ok) setFailure(result.errorKey);
         }}
       >
-        <button
-          type="submit"
+        {/* Asks first (Rui, 04-11-2026). */}
+        <ConfirmButton
+          title={t('confirm.alunos.cancelBookingTitle')}
+          message={t('confirm.alunos.cancelBookingMessage')}
+          confirmLabel={t('reposicao.cancelBooking')}
+          tone="danger"
           className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
         >
           {t('reposicao.cancelBooking')}
-        </button>
+        </ConfirmButton>
         {failure !== null && <p className="text-sm text-danger">{t(failure)}</p>}
       </form>
     );

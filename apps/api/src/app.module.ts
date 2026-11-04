@@ -35,6 +35,8 @@ import { InventoryController } from './inventory/inventory.controller.js';
 import { SpacesController } from './spaces/spaces.controller.js';
 import { MaintenanceController } from './maintenance/maintenance.controller.js';
 import { MessagesController } from './messages/messages.controller.js';
+import { AppAvisosController, AvisosController } from './messages/avisos.controller.js';
+import { StaffNotesController } from './staff-notes/staff-notes.controller.js';
 import { QualificationsController } from './staff/qualifications.controller.js';
 import { QualificationAlertService } from './staff/qualification-alerts.js';
 import { DeliveryRetryService } from './notifications/delivery-retry.service.js';
@@ -189,6 +191,9 @@ export const IDENTITY_ONLY_ROUTES = [
     MeController,
     DashboardController,
     MessagesController,
+    AvisosController,
+    AppAvisosController,
+    StaffNotesController,
     QualificationsController,
     PoolPublicLinkController,
     PublicWaterController,

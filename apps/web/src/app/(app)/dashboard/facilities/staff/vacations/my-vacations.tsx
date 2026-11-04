@@ -7,6 +7,7 @@ import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
 import type { MyVacations, VacationRequest } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
+import { ConfirmButton } from '@/components/confirm-action';
 import { YearGrid, type DayState } from '@/components/year-grid';
 import { useSeeded, useSuccessKey } from '@/components/ui/field';
 import { requestVacationAction, withdrawVacationAction } from './vacations.actions';
@@ -312,13 +313,17 @@ function RequestList({ data }: { data: MyVacations }): React.ReactElement {
               <form action={withdraw} className="flex items-center gap-3">
                 <input type="hidden" name="organizationId" value={data.organizationId} />
                 <input type="hidden" name="requestId" value={request.id} />
-                <button
-                  type="submit"
+                {/* Asks first (Rui, 04-11-2026). */}
+                <ConfirmButton
+                  title={t('confirm.equipa.withdrawVacationTitle', { count: request.days.length })}
+                  message={t('confirm.equipa.withdrawVacationMessage')}
+                  confirmLabel={t('confirm.equipa.withdraw')}
+                  tone="danger"
                   disabled={pending}
                   className="rounded text-sm text-danger hover:underline disabled:opacity-60"
                 >
                   {t('vacations.withdraw')}
-                </button>
+                </ConfirmButton>
               </form>
             )}
           </li>

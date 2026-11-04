@@ -1,5 +1,6 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
+import pg from 'pg';
 import { InventoryController } from './inventory.controller.js';
 import { actingAs, closeHarness, expectStatus, withScratchTenant } from '../test/harness.js';
 
@@ -141,5 +142,155 @@ test('an instructor who is also maintenance edits the store; an instructor alone
         403,
       );
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POOLSE-154 — Localização from the site's own places, and lost and found
+// for every working role
+// ---------------------------------------------------------------------------
+
+/** The owner login, for the one switch the app may not write: the club's sports. */
+const owner = new pg.Pool({ connectionString: process.env['DATABASE_URL'], max: 1 });
+after(() => owner.end());
+
+test('lost and found is every working role\'s: an instructor records and gives back; a family is refused', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      const controller = new InventoryController();
+      const { id } = await controller.recordFound({ facilityId: tenant.facilityId, description: 'Óculos' });
+      assert.deepEqual(await controller.giveBack(id), { returned: true });
+      assert.equal((await controller.lostAndFound()).canManage, true, 'the form is offered');
+      // Still not the store room, and still not the bin.
+      await expectStatus(() => controller.removeFound(id), 403);
+    });
+    for (const role of ['guardian', 'student'] as const) {
+      await actingAs(tenant, { roles: [role] }, async () => {
+        const controller = new InventoryController();
+        await expectStatus(
+          () => controller.recordFound({ facilityId: tenant.facilityId, description: 'Toalha' }),
+          403,
+        );
+        await expectStatus(() => controller.giveBack('00000000-0000-0000-0000-000000000000'), 403);
+      });
+    }
+  });
+});
+
+test('Localização offers the spaces and the other recintos, and saves a space, a court or a pool', async () => {
+  await withScratchTenant(async (tenant) => {
+    await owner.query("UPDATE organization SET enabled_sports = '{pool,tennis}' WHERE id = $1", [
+      tenant.organizationId,
+    ]);
+    const [space] = await tenant.sql<{ id: string }>(
+      `INSERT INTO space (organization_id, facility_id, name) VALUES ($1, $2, 'Arrecadação') RETURNING id`,
+      [tenant.organizationId, tenant.facilityId],
+    );
+    const [court] = await tenant.sql<{ id: string }>(
+      `INSERT INTO playing_area (organization_id, facility_id, sport_id, name)
+       VALUES ($1, $2, 'tennis', 'Campo 1') RETURNING id`,
+      [tenant.organizationId, tenant.facilityId],
+    );
+    const [pool] = await tenant.sql<{ id: string }>(
+      `INSERT INTO pool (organization_id, facility_id, name, kind)
+       VALUES ($1, $2, 'Piscina principal', 'indoor'::pool_kind) RETURNING id`,
+      [tenant.organizationId, tenant.facilityId],
+    );
+
+    await actingAs(tenant, { roles: ['maintenance'] }, async () => {
+      const controller = new InventoryController();
+      const before = await controller.list(tenant.facilityId);
+      assert.deepEqual(before.places.spaces.map((s) => s.name), ['Arrecadação']);
+      assert.deepEqual(before.places.recintos.map((r) => r.name), ['Campo 1'], 'a pool is offered as a pool, not here');
+
+      await controller.add({ facilityId: tenant.facilityId, name: 'Esfregona', quantity: 2, spaceId: space!.id });
+      await controller.add({ facilityId: tenant.facilityId, name: 'Rede', quantity: 1, playingAreaId: court!.id });
+      await controller.add({
+        facilityId: tenant.facilityId,
+        name: 'Boia',
+        quantity: 4,
+        scope: 'pools',
+        poolIds: [pool!.id],
+      });
+
+      const { items } = await controller.list(tenant.facilityId);
+      const byName = new Map(items.items.map((item) => [item.name, item]));
+      assert.equal(byName.get('Esfregona')?.spaceName, 'Arrecadação');
+      assert.equal(byName.get('Rede')?.playingAreaName, 'Campo 1');
+      assert.deepEqual(byName.get('Boia')?.poolNames, ['Piscina principal'], 'a boia belongs to the pool');
+
+      // One place, never two.
+      await expectStatus(
+        () =>
+          controller.add({
+            facilityId: tenant.facilityId,
+            name: 'Cone',
+            quantity: 1,
+            spaceId: space!.id,
+            playingAreaId: court!.id,
+          }),
+        400,
+      );
+    });
+  });
+});
+
+test("another club's space or court is refused by the composite key, and said as a 400", async () => {
+  await withScratchTenant(async (other) => {
+    const [theirs] = await other.sql<{ id: string }>(
+      `INSERT INTO space (organization_id, facility_id, name) VALUES ($1, $2, 'Deles') RETURNING id`,
+      [other.organizationId, other.facilityId],
+    );
+    await withScratchTenant(async (tenant) => {
+      await actingAs(tenant, { roles: ['owner'] }, async () => {
+        await expectStatus(
+          () =>
+            new InventoryController().add({
+              facilityId: tenant.facilityId,
+              name: 'Intruso',
+              quantity: 1,
+              spaceId: theirs!.id,
+            }),
+          400,
+        );
+      });
+      const [row] = await tenant.sql<{ n: number }>(`SELECT count(*)::int AS n FROM inventory_item`);
+      assert.equal(row!.n, 0, 'nothing was written');
+    });
+  });
+});
+
+test('a returned item stays on the list for seven days after its last change, then leaves it — kept, never deleted', async () => {
+  await withScratchTenant(async (tenant) => {
+    const insert = (description: string, status: 'found' | 'returned', ageDays: number) =>
+      tenant.sql(
+        `INSERT INTO lost_and_found_item
+           (organization_id, facility_id, description, status, returned_at, created_at, updated_at)
+         VALUES ($1, $2, $3, $4::lost_and_found_status,
+                 CASE WHEN $4 = 'returned' THEN now() - make_interval(days => $5) END,
+                 now() - make_interval(days => $5), now() - make_interval(days => $5))`,
+        [tenant.organizationId, tenant.facilityId, description, status, ageDays],
+      );
+    await insert('Toalha esquecida', 'found', 30);
+    await insert('Óculos entregues ontem', 'returned', 2);
+    await insert('Fato entregue há muito', 'returned', 8);
+
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      const { items } = await new InventoryController().lostAndFound(tenant.facilityId);
+      const names = items.map((item) => item.description);
+      assert.ok(names.includes('Toalha esquecida'), 'an unclaimed item never leaves on its own');
+      assert.ok(names.includes('Óculos entregues ontem'), 'a recent return is still listed');
+      assert.equal(names.includes('Fato entregue há muito'), false, 'a week untouched and it leaves the list');
+
+      const recent = items.find((item) => item.description === 'Óculos entregues ontem')!;
+      const days = (new Date(recent.leavesListAt!).getTime() - Date.now()) / 86_400_000;
+      assert.ok(days > 4.9 && days < 5.1, 'it says when it leaves: five days from now');
+      assert.equal(items.find((item) => item.description === 'Toalha esquecida')?.leavesListAt, null);
+    });
+
+    const [kept] = await tenant.sql<{ n: number }>(
+      `SELECT count(*)::int AS n FROM lost_and_found_item WHERE description = 'Fato entregue há muito' AND archived_at IS NULL`,
+    );
+    assert.equal(kept!.n, 1, 'the row itself is kept');
   });
 });

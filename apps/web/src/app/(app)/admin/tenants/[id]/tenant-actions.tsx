@@ -12,6 +12,7 @@ import type { FormState } from '@/app/(app)/dashboard/actions';
 import { formatDate, formatStamp } from '@/lib/date-format';
 import { formatCents } from '@/lib/money';
 import { cn } from '@/lib/utils';
+import { ConfirmButton } from '@/components/confirm-action';
 import {
   recordPaymentAction,
   setAiAction,
@@ -123,26 +124,35 @@ function Submit({
   pending,
   tone = 'default',
   icon,
+  confirm,
 }: {
   label: string;
   pending: boolean;
   tone?: 'default' | 'danger';
   icon?: React.ReactNode;
+  /** Asks first, then submits the card's own form (Rui, 04-11-2026). */
+  confirm?: { title: string; message: string; confirmLabel: string; tone: 'primary' | 'danger' };
 }): React.ReactElement {
   const t = useTranslations();
+  const className = cn(
+    'inline-flex h-control items-center justify-center gap-2 self-start rounded px-4 text-control font-medium disabled:opacity-60',
+    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
+    tone === 'danger'
+      ? 'bg-destructive text-destructive-foreground outline-danger hover:bg-destructive/90'
+      : 'bg-primary text-primary-foreground outline-primary hover:bg-primary/90 font-semibold',
+  );
+
+  if (confirm !== undefined) {
+    return (
+      <ConfirmButton {...confirm} disabled={pending} className={className}>
+        {icon}
+        {pending ? t('common.working') : label}
+      </ConfirmButton>
+    );
+  }
 
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className={cn(
-        'inline-flex h-control items-center justify-center gap-2 self-start rounded px-4 text-control font-medium disabled:opacity-60',
-        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
-        tone === 'danger'
-          ? 'bg-destructive text-destructive-foreground outline-danger hover:bg-destructive/90'
-          : 'bg-primary text-primary-foreground outline-primary hover:bg-primary/90 font-semibold',
-      )}
-    >
+    <button type="submit" disabled={pending} className={className}>
       {icon}
       {pending ? t('common.working') : label}
     </button>
@@ -279,7 +289,8 @@ function PlanCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
  * under each saying what it covers so the switch is never a guess.
  *
  * Full width: eleven rows read as a list, and half a grid column would wrap
- * every description. Reversible, so no dialog and no typed name. A dependency
+ * every description. Reversible, so no typed name — but it asks first (Rui,
+ * 04-11-2026), saying what switching one off does to the club. A dependency
  * the operator would break (reception without invoicing) is refused by the API
  * and explained by the toast; nothing here switches a second module on the
  * operator's behalf.
@@ -305,7 +316,16 @@ function ModulesCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement
             />
           ))}
         </ul>
-        <Submit label={t('common.save')} pending={pending} />
+        <Submit
+          label={t('common.save')}
+          pending={pending}
+          confirm={{
+            title: t('confirm.instalacoes.modulesTitle', { club: tenant.name }),
+            message: t('confirm.instalacoes.modulesMessage'),
+            confirmLabel: t('common.save'),
+            tone: 'primary',
+          }}
+        />
       </Card>
     </div>
   );
@@ -355,7 +375,16 @@ function SportsCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement 
             <SportSwitch key={sport.sport} sport={sport} />
           ))}
         </ul>
-        <Submit label={t('common.save')} pending={pending} />
+        <Submit
+          label={t('common.save')}
+          pending={pending}
+          confirm={{
+            title: t('confirm.instalacoes.sportsTitle', { club: tenant.name }),
+            message: t('confirm.instalacoes.sportsMessage'),
+            confirmLabel: t('common.save'),
+            tone: 'primary',
+          }}
+        />
       </Card>
     </div>
   );
@@ -444,7 +473,16 @@ function AiCard({ tenant, ai }: { tenant: PlatformTenant; ai: PlatformTenantAi |
           error={fieldText(t, state.fields?.['monthlyCap'])}
           hint={t('admin.ai.capHint', { used: ai.usedThisMonth })}
         />
-        <Submit label={t('common.save')} pending={pending} />
+        <Submit
+          label={t('common.save')}
+          pending={pending}
+          confirm={{
+            title: t('confirm.instalacoes.aiTitle', { club: tenant.name }),
+            message: t('confirm.instalacoes.aiMessage'),
+            confirmLabel: t('common.save'),
+            tone: 'primary',
+          }}
+        />
       </Card>
     </div>
   );
@@ -506,12 +544,12 @@ function AiPeriod({ period }: { period: PlatformTenantAiPeriod }): React.ReactEl
 }
 
 /**
- * Suspend, behind a confirmation. Restore, not.
+ * Suspend, behind a confirmation with a reason. Restore asks too, but plainly.
  *
- * The asymmetry is the point: closing a club's door is the one act in this
- * product that feels irreversible to the person it happens to, and it is worth a
- * sentence and a second press. Opening it again is undoing harm and should be
- * one click — nothing is made safer by slowing down the safe direction.
+ * Closing a club's door is the one act in this product that feels irreversible
+ * to the person it happens to, and it is worth a reason and a second press.
+ * Opening it again is undoing harm and needs no reason — but since Rui's rule
+ * of 04-11-2026 nothing is done or undone without being asked first.
  *
  * `components/ui/dialog.tsx`, never `window.confirm`: two confirmations in two
  * visual languages make an operator wonder whether they are being asked the same
@@ -520,11 +558,10 @@ function AiPeriod({ period }: { period: PlatformTenantAiPeriod }): React.ReactEl
 /**
  * Read-only — POOLSE-61, and the operator's hand on the state the clock will set.
  *
- * **Not a confirmation dialog, unlike suspension.** Shutting a club is
- * destructive to their day and gets asked twice; putting one into read-only is
- * what happens on its own the day a trial ends, and an operator doing it by hand
- * is usually correcting something. Making it harder than the automatic path would
- * be ceremony.
+ * **A plain question, unlike suspension.** Shutting a club is destructive to
+ * their day and gets a reason; putting one into read-only is what happens on
+ * its own the day a trial ends, so it only asks once (Rui, 04-11-2026) — and
+ * with a deletion date, the typed club name is the question.
  *
  * **Lifting clears the deletion date**, said on the card rather than left to be
  * discovered: a club writing normally with a deletion still scheduled is the
@@ -554,6 +591,12 @@ function ReadOnlyCard({ tenant }: { tenant: PlatformTenant }): React.ReactElemen
           label={t('admin.action.writeRestore')}
           pending={pending}
           icon={<Pencil className="size-4" aria-hidden />}
+          confirm={{
+            title: t('confirm.instalacoes.writeRestoreTitle', { club: tenant.name }),
+            message: t('confirm.instalacoes.writeRestoreMessage'),
+            confirmLabel: t('admin.action.writeRestore'),
+            tone: 'primary',
+          }}
         />
       </Card>
     );
@@ -605,6 +648,18 @@ function ReadOnlyCard({ tenant }: { tenant: PlatformTenant }): React.ReactElemen
         label={t('admin.action.makeReadOnly')}
         pending={pending}
         icon={<Eye className="size-4" aria-hidden />}
+        // With a deletion date the typed name is the question; without one,
+        // the dialog is (Rui, 04-11-2026).
+        {...(keptUntil === ''
+          ? {
+              confirm: {
+                title: t('confirm.instalacoes.readOnlyTitle', { club: tenant.name }),
+                message: t('confirm.instalacoes.readOnlyMessage'),
+                confirmLabel: t('admin.action.makeReadOnly'),
+                tone: 'danger' as const,
+              },
+            }
+          : {})}
       />
     </Card>
   );
@@ -639,6 +694,12 @@ function SuspensionCard({ tenant }: { tenant: PlatformTenant }): React.ReactElem
           label={t('admin.action.restore')}
           pending={pending}
           icon={<LockOpen className="size-4" aria-hidden />}
+          confirm={{
+            title: t('confirm.instalacoes.reopenTitle', { club: tenant.name }),
+            message: t('confirm.instalacoes.reopenMessage'),
+            confirmLabel: t('admin.action.restore'),
+            tone: 'primary',
+          }}
         />
       </Card>
     );

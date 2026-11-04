@@ -1,6 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+// A drop, a placement or a new block is a save: the corner and the wash follow the
+// request, after the drop and never during the drag (POOLSE-159).
+import { trackBusy } from '@/lib/busy';
 import { FromLink } from '@/components/from-link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -404,13 +407,13 @@ export function CalendarWeek({
     setBusy(true);
 
     const startTime = startTimeOf(placing.startMinutes);
-    const result = await placeSlotAction(
+    const result = await trackBusy('save', () => placeSlotAction(
       organizationId,
       groupId,
       placing.weekday,
       startTime,
       durationAt(placing.weekday, placing.startMinutes),
-    );
+    ));
 
     setBusy(false);
     if (!result.ok) {
@@ -431,12 +434,12 @@ export function CalendarWeek({
     if (placing === null || partnerChoice === null || partnerDays.length === 0) return;
     setBusy(true);
     const startTime = startTimeOf(placing.startMinutes).slice(0, 5);
-    const result = await bookPartnerDaysAction(organizationId, partnerChoice, {
+    const result = await trackBusy('save', () => bookPartnerDaysAction(organizationId, partnerChoice, {
       weekdays: partnerDays,
       startTime,
       durationMinutes: durationAt(placing.weekday, placing.startMinutes),
       laneIds: [placing.laneId],
-    });
+    }));
     setBusy(false);
     if (!result.ok) {
       setPartnerClashes(
@@ -463,7 +466,7 @@ export function CalendarWeek({
   async function placeFreeSwim(): Promise<void> {
     if (placing === null || facilityId === null || seasonId === null) return;
     setBusy(true);
-    const result = await createFreeSwimAction(organizationId, {
+    const result = await trackBusy('save', () => createFreeSwimAction(organizationId, {
       facilityId,
       seasonId,
       title: freeSwimTitle,
@@ -471,7 +474,7 @@ export function CalendarWeek({
       startTime: startTimeOf(placing.startMinutes).slice(0, 5),
       durationMinutes: durationAt(placing.weekday, placing.startMinutes),
       laneIds: [placing.laneId],
-    });
+    }));
     setBusy(false);
     if (!result.ok) {
       // The calendar's refusals are toasts, said once, with the lane and holder.
@@ -519,9 +522,10 @@ export function CalendarWeek({
         const day = new Date(`${weekStart}T00:00:00Z`);
         day.setUTCDate(day.getUTCDate() + to.weekday - 1);
 
-        const moved = await moveOccurrenceAction(
+        const sessionId = session.sessionId;
+        const moved = await trackBusy('save', () => moveOccurrenceAction(
           organizationId,
-          session.sessionId,
+          sessionId,
           day.toISOString().slice(0, 10),
           startTime,
           // The pistas the block landed on. One week can now differ from the
@@ -531,7 +535,7 @@ export function CalendarWeek({
           // edge and answering "só esta semana" used to write the hour and drop
           // the length, so the block sprang back to its old height.
           to.durationMinutes,
-        );
+        ));
         if (!moved.ok) {
           return moved.detail === undefined || moved.detail === ''
             ? moved.errorKey
@@ -554,14 +558,14 @@ export function CalendarWeek({
       const draggedFrom = new Date(`${weekStart}T00:00:00Z`);
       draggedFrom.setUTCDate(draggedFrom.getUTCDate() + booking.weekday - 1);
 
-      const result = await moveBookingAction(organizationId, booking.id, {
+      const result = await trackBusy('save', () => moveBookingAction(organizationId, booking.id, {
         weekday: to.weekday,
         slotId: null,
         startTime,
         laneIds: to.laneIds,
         durationMinutes: to.durationMinutes,
         fromDate: draggedFrom.toISOString().slice(0, 10),
-      });
+      }));
       /*
        * The server's own sentence, where it sent one.
        *

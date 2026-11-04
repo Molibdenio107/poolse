@@ -54,17 +54,18 @@ test('66.1 — an owner gets both bands, in order, each widget once', async () =
 
     assert.deepEqual(
       page.bands.map((band) => band.id),
-      ['summary', 'management', 'operational'],
+      // The staff board first since POOLSE-169: an owner works here.
+      ['notes', 'summary', 'management', 'operational'],
       'the personal band is absent, not empty — the owner holds no role in it',
     );
     assert.deepEqual(
       page.bands.map((band) => band.order),
-      [0, 1, 2],
+      [0, 1, 2, 3],
     );
 
     // Multi-sport Slice 2: the summary, laid out — nothing scheduled is an empty
     // tile in its place, and nothing collected is a figure, never absent.
-    assert.deepEqual(page.bands[0]!.widgets.map((w) => w.id), ['sum.insights', 'sum.today', 'sum.collected', 'sum.recintos']);
+    assert.deepEqual(page.bands[1]!.widgets.map((w) => w.id), ['sum.insights', 'sum.today', 'sum.collected', 'sum.recintos']);
     assert.equal(card(page, 'sum.insights')?.state, 'empty', 'no AI yet: no insight, and no box claiming there is nothing');
     assert.equal(card(page, 'sum.today')?.state, 'empty');
     assert.deepEqual((card(page, 'sum.collected')?.data as { cents: number }).cents, 0);
@@ -97,8 +98,8 @@ test('66.2 — an instructor’s payload contains no mgmt key whatsoever', async
 
     assert.deepEqual(
       page.bands.map((band) => band.id),
-      ['operational'],
-      'and the operational band is at the top, because it is the only one',
+      ['notes', 'operational'],
+      'the staff board, then the operational band — no management band',
     );
     /*
      * Slice 3 gave the instructor a band of their own. A club with no classes
@@ -106,6 +107,7 @@ test('66.2 — an instructor’s payload contains no mgmt key whatsoever', async
      * first and the cap of four cuts the lowest-priority empty one (the turmas).
      */
     assert.deepEqual(ids(page), [
+      'staff.notes',
       'maint.mytasks',
       'inst.nextclass',
       'inst.trainingplan.next',
@@ -159,11 +161,11 @@ test('66.5 — nothing outstanding is empty, and empty is still a card', async (
 
     /*
      * A maintenance-only reader holds nothing in the management band, so it is
-     * absent — which also means their one band is the first thing on the page.
+     * absent — so under the staff board (POOLSE-169) their band comes next.
      */
     assert.deepEqual(
       page.bands.map((band) => band.id),
-      ['operational'],
+      ['notes', 'operational'],
     );
   });
 });

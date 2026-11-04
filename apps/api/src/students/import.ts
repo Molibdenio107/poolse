@@ -21,6 +21,13 @@ import type { MaritalStatus, StudentIdentity } from './identity.js';
 /** The Poolse fields a spreadsheet column can be pointed at. */
 export const IMPORT_FIELDS = [
   /**
+   * The turmas the student is in — POOLSE-164 (Rui, 04-11-2026). Optional; a
+   * name the club has enrols the student, one it lacks is a warning on the row
+   * and never a refusal. Several are separated by `;` (what the export writes)
+   * or by `,` when the whole cell is not itself one turma's name.
+   */
+  'turmas',
+  /**
    * One column holding the whole name, which is what most club spreadsheets
    * actually have. Split on the first space, exactly as the guardian picker
    * splits a typed name, so the two never disagree about "Maria Santos Silva".
@@ -181,7 +188,11 @@ export type ImportWarningCode =
   | 'guardianNotRecorded'
   | 'levelWillBeCreated'
   /** The row's NIF belongs to somebody else, so it is not copied onto this one. */
-  | 'taxNumberBelongsToAnother';
+  | 'taxNumberBelongsToAnother'
+  /** A turma name the club does not have: the student imports, unenrolled — POOLSE-164. */
+  | 'turmaNotFound'
+  /** Two live turmas carry this name, neither in the published season. */
+  | 'turmaAmbiguous';
 
 export interface ImportWarning {
   field: ImportField;
@@ -223,6 +234,8 @@ export interface ImportUpdate {
     | 'isSocio'
     | 'socioNumber'
     | 'socioSince'
+    /** Enrolments to add, by name — POOLSE-164. Never removes one. */
+    | 'turmas'
     | IdentityImportField;
   /** What would be written. `levelId` carries the level's name, for the screen. */
   value: string;
@@ -282,6 +295,10 @@ export interface ImportRow {
   federationLicence: string | null;
   /** Masculino or feminino. Null is "the sheet did not say", which is normal. */
   gender: 'male' | 'female' | null;
+  /** The turmas the file names that the club has — POOLSE-164. */
+  turmaIds: string[];
+  /** Their names, as the club spells them, for the preview. */
+  turmaNames: string[];
   /** True when the file says this student is paid up. */
   isPaid: boolean;
   /** Address and identity — POOLSE-131. Null when the row carries none of it. */
@@ -304,6 +321,14 @@ export interface ImportRow {
    * unticks duplicates by default; the server obeys the tick.
    */
   importable: boolean;
+}
+
+/** A live turma, to match a name against — POOLSE-164. */
+export interface ImportTurma {
+  id: string;
+  name: string;
+  /** In the published season: wins when two turmas share a name. */
+  published: boolean;
 }
 
 /** A level, as this module needs it: an id and a name to match against. */
@@ -337,10 +362,14 @@ export interface ExistingStudent {
   isSocio: boolean;
   socioNumber: string | null;
   socioSince: string | null;
+  /** The turmas they are actively enrolled in — POOLSE-164. */
+  turmaIds?: string[];
 }
 
 export interface ImportContext {
   levels: ImportLevel[];
+  /** The club's live turmas — POOLSE-164. Absent means the file's turmas are not read. */
+  turmas?: ImportTurma[];
   /** The club's maioridade in years — POOLSE-22, never a literal. */
   ageOfMajority: number;
   /** Students already in the register. Built by the repository. */
@@ -392,6 +421,57 @@ export function normaliseKey(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+}
+
+/**
+ * A cell of turma names, read against the club's live turmas — POOLSE-164.
+ *
+ * Accent- and case-insensitive, like a level. Split on `;` (or a line break);
+ * a part that matches nothing and holds commas is tried split on `,`, so a club's
+ * "Golfinhos, Tubarões" works while a turma called "Ténis, iniciação" still
+ * matches whole. Where two live turmas share a name, the published season's wins;
+ * otherwise the name is ambiguous and enrols nobody.
+ */
+export function matchTurmas(
+  cell: string,
+  turmas: ImportTurma[],
+  warnings: ImportWarning[],
+): { ids: string[]; names: string[] } {
+  const ids: string[] = [];
+  const names: string[] = [];
+  if (cell === '') return { ids, names };
+  const byKey = new Map<string, ImportTurma[]>();
+  for (const turma of turmas) {
+    const key = normaliseKey(turma.name);
+    byKey.set(key, [...(byKey.get(key) ?? []), turma]);
+  }
+  const resolve = (name: string): ImportTurma[] | undefined => byKey.get(normaliseKey(name));
+  const parts = cell
+    .split(/[;\n]/)
+    .map((part) => part.trim())
+    .filter((part) => part !== '')
+    .flatMap((part) =>
+      resolve(part) === undefined && part.includes(',')
+        ? part.split(',').map((piece) => piece.trim()).filter((piece) => piece !== '')
+        : [part],
+    );
+  for (const part of parts) {
+    const found = resolve(part);
+    if (found === undefined) {
+      warnings.push({ field: 'turmas', code: 'turmaNotFound', value: part });
+      continue;
+    }
+    const pick = found.length === 1 ? found : found.filter((turma) => turma.published);
+    if (pick.length !== 1) {
+      warnings.push({ field: 'turmas', code: 'turmaAmbiguous', value: part });
+      continue;
+    }
+    if (!ids.includes(pick[0]!.id)) {
+      ids.push(pick[0]!.id);
+      names.push(pick[0]!.name);
+    }
+  }
+  return { ids, names };
 }
 
 /** First space splits, same as the guardian picker. "Ana" alone becomes both parts. */
@@ -809,6 +889,9 @@ function validateRow(
     }
   }
 
+  // ---- turmas (POOLSE-164) -------------------------------------------------
+  const { ids: turmaIds, names: turmaNames } = matchTurmas(text(raw, 'turmas'), context.turmas ?? [], warnings);
+
   // ---- contact ----------------------------------------------------------
   const contactEmail = capped(text(raw, 'contactEmail'), 'contactEmail', MAX_EMAIL, problems);
   const contactPhone = capped(text(raw, 'contactPhone'), 'contactPhone', MAX_PHONE, problems);
@@ -1020,6 +1103,10 @@ function validateRow(
     // The level carries its *name*, because the screen shows this and an id
     // means nothing to a person. The repository resolves it back.
     fill('levelId', matched.levelId, levelName === '' ? null : levelName);
+    // Enrolments only ever added, like every other blank (POOLSE-164).
+    const already = new Set(matched.turmaIds ?? []);
+    const adding = turmaIds.map((id, at) => ({ id, name: turmaNames[at]! })).filter((one) => !already.has(one.id));
+    if (adding.length > 0) updates.push({ field: 'turmas', value: adding.map((one) => one.name).join('; ') });
 
     /*
      * A NIF is only filled in when it is genuinely free.
@@ -1062,6 +1149,8 @@ function validateRow(
     socioSince,
     federationLicence,
     gender,
+    turmaIds,
+    turmaNames,
     isPaid,
     identity,
     guardian,

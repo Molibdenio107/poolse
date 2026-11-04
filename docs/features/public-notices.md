@@ -49,3 +49,10 @@ both carry:
 - The on-site sign "Este estabelecimento dispõe de livro de reclamações".
 - A PDF of the regulation.
 - Sending the regulation to the câmara or registering it on the IPDJ's iAP.
+
+## The pre-registration form's footer — POOLSE-165 (4 November 2026)
+
+On `/inscricao/<slug>` the notices are `PublicNotices compact`: one small muted line at the foot — the
+complaints-book link, and each regulation in force as a disclosure — so the form comes first. The link is still
+on the page; how prominent it is on a sign-up form was Rui's call (4 November 2026), taken knowingly against the
+"de forma destacada" reading that made the water page's version a bordered link. The water page is unchanged.

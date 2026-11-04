@@ -16,6 +16,7 @@ import {
 import type { FormState } from '../../../actions';
 import { addMedicalLeaveAction, removeMedicalLeaveAction } from './sensitive.actions';
 import { formatDate, formatStamp } from '@/lib/date-format';
+import { ConfirmButton } from '@/components/confirm-action';
 
 const INITIAL: FormState = { ok: false };
 
@@ -117,6 +118,7 @@ export function MedicalLeavePanel({
                     organizationId={organizationId}
                     studentId={studentId}
                     leaveId={period.id}
+                    startsOn={period.startsOn}
                   />
                 )}
               </span>
@@ -280,10 +282,12 @@ function RemoveLeave({
   organizationId,
   studentId,
   leaveId,
+  startsOn,
 }: {
   organizationId: string;
   studentId: string;
   leaveId: string;
+  startsOn: string;
 }): React.ReactElement {
   const t = useTranslations();
   const [, action, pending] = useSavedAction(removeMedicalLeaveAction, INITIAL);
@@ -293,15 +297,18 @@ function RemoveLeave({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="studentId" value={studentId} />
       <input type="hidden" name="leaveId" value={leaveId} />
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.alunos.leaveTitle', { date: formatDate(startsOn) })}
+        message={t('confirm.alunos.leaveMessage')}
+        confirmLabel={t('confirm.alunos.leaveConfirm')}
+        tone="danger"
         disabled={pending}
-        aria-label={t('sensitive.removeLeave')}
-        title={t('sensitive.removeLeave')}
+        ariaLabel={t('sensitive.removeLeave')}
         className="rounded p-1 text-foreground-muted transition-colors hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
       >
         <Trash2 aria-hidden className="size-4" />
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

@@ -16,6 +16,7 @@ import {
   skillsOfAction,
 } from '../students.actions';
 import { Reveal } from '@/components/ui/reveal';
+import { ConfirmButton } from '@/components/confirm-action';
 
 /**
  * What a level consists of — POOLSE-20.
@@ -292,14 +293,18 @@ function RemoveSkill({
     <form action={action} className="inline">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="skillId" value={skillId} />
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.alunos.skillTitle', { name })}
+        message={t('confirm.alunos.skillMessage')}
+        confirmLabel={t('confirm.alunos.removeConfirm')}
+        tone="danger"
         disabled={pending}
-        aria-label={t('skills.removeSkill', { name })}
+        ariaLabel={t('skills.removeSkill', { name })}
         className="rounded p-1 hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
       >
         <X className="size-4" aria-hidden />
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

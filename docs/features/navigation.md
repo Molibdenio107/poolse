@@ -35,10 +35,11 @@ entry takes the roles of the route its page loads, and the role probe tests that
 | Turmas (Épocas), Calendário (Encerramentos) | owner, admin, instructor, maintenance |
 | — Aulas de reposição, under Turmas after Épocas (POOLSE-103) | owner, admin |
 | Receção, Faturação | owner, admin |
+| — Pedidos de inscrição, under Receção (POOLSE-165); under Alunos when the reception module is off | owner, admin |
 | Alunos, Encarregados, Níveis, Avanço | owner, admin, instructor |
 | — Mensagens | owner, admin, instructor |
+| — Avisos (POOLSE-166) | owner, admin, instructor; messages module |
 | — Competição, and Provas, Mínimos, Escalões under it | owner, admin, instructor; competition module |
-| — Pedidos de inscrição | owner, admin |
 | Os meus educandos | guardian |
 | O meu registo | student who is not also a guardian |
 
@@ -322,7 +323,7 @@ A small circle says **something here needs doing**, and it clears when it is don
 
 | What | Who sees it | Where it shows |
 |---|---|---|
-| A pre-registration waiting for an answer | owner, admin | *Pedidos*; *Alunos* while closed |
+| A pre-registration waiting for an answer | owner, admin | *Pedidos*; *Receção* while closed (*Alunos* without the reception module) |
 | A pool's latest reading out of its band, or its latest lab report *não conforme* | owner, admin, maintenance | the pool's name, its site's name, *Instalações* |
 | A recurring task due, or an open high-severity fault | owner, admin, maintenance | the pool or space, its site, *Instalações* |
 | A *Não vou* on a lesson still to come, or feedback this week | the lesson's teacher; owner and admin see all | the lesson's block on the calendar (and a line on its card), *Calendário* |
@@ -378,7 +379,11 @@ The rule for every menu question from here on (Rui, 01-11-2026):
 - **An item whose data is sport-specific moves into each sport's group** (`perSport: true`):
   Turmas, Calendário, Níveis (one ladder per sport), Avanços and Competição.
 - **A facility-level item whose rows carry a sport gets a filtered copy in each sport's group and
-  stays shared** (`perSport: 'copy'`): Alunos and Pedidos. The shared list keeps the rows with no
+  stays shared** (`perSport: 'copy'`): Alunos and Pedidos. The shared Pedidos sits under Receção
+  (POOLSE-165) while each sport's copy stays under that sport's Alunos: the Alunos child carries
+  `unlessModule: 'reception'`, so it is the copies' source and the shared entry only for a club
+  without Receção. The sidebar lights the branch with the most specific match, descendants
+  included, so Alunos does not light up on `/students/pedidos`. The shared list keeps the rows with no
   sport, behind a *Sem modalidade* chip: a student in no live turma, or a request that names
   neither a turma nor a level.
   On a sport's own copy the sport is the page, not a filter (Rui, 01-11-2026): its chips are that
@@ -398,3 +403,11 @@ moved one belongs to the first sport even bare, as before. The *Pedidos* circle 
 (`leads:<sport>`, `badgePerSport`) and the shared entry counts only the requests with no sport.
 `?sport=` is checked against the club's sports (400 otherwise) and is a convenience filter, not a
 permission, until POOLSE-145. With swimming alone nothing changes: the menu is the one that shipped.
+
+## Competição in a sport's group — POOLSE-167 (4 November 2026)
+
+In each sport's group *Competição* keeps its three children (Provas, Mínimos, Escalões), each addressed with
+`?sport=`, and the current one is highlighted; a sport outside `COMPETITION_SPORTS` has no Competição; the
+meet-inbox circle stays on the parent; the palette lists Mínimos under the sport. Like every section, the
+children show while the reader is inside Competição (Rui, 04-11-2026: kept as it is). Guarded by
+`nav-entries.test.ts` and `commands.test.ts`.

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { FileSignature, Lock, Upload } from 'lucide-react';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import { DocumentLink } from '@/components/file-upload';
+import { ConfirmButton } from '@/components/confirm-action';
 import { SelectField, TextField } from '@/components/ui/field';
 import { formatDate } from '@/lib/date-format';
 import { acceptFor } from '@/lib/files';
@@ -107,13 +108,17 @@ export function ContractTab({
               {contract.current !== null && (
                 <form action={remove}>
                   <input type="hidden" name="membershipId" value={membershipId} />
-                  <button
-                    type="submit"
+                  {/* Asks first (Rui, 04-11-2026). */}
+                  <ConfirmButton
+                    title={t('confirm.equipa.contractRemoveTitle')}
+                    message={t('confirm.equipa.contractRemoveMessage')}
+                    confirmLabel={t('staffContract.remove')}
+                    tone="danger"
                     disabled={removing}
                     className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-surface px-4 text-control text-foreground-muted shadow-card hover:text-danger disabled:opacity-60"
                   >
                     {t('staffContract.remove')}
-                  </button>
+                  </ConfirmButton>
                 </form>
               )}
             </div>

@@ -7,6 +7,7 @@ import { useSavedAction } from '@/lib/saved';
 import type { PartnerGroup, StudentLevel } from '@/lib/api';
 import { SelectField, TextField } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
+import { ConfirmButton } from '@/components/confirm-action';
 import type { FormState } from '../../../actions';
 import { archiveGroupAction, saveGroupAction } from '../../[facilityId]/partners.actions';
 
@@ -309,14 +310,18 @@ function RemoveGroup({
         next to the group it is about.
       */}
 
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.instalacoes.groupRemoveTitle', { name: group.name })}
+        message={t('confirm.instalacoes.groupRemoveMessage')}
+        confirmLabel={t('common.remove')}
+        tone="danger"
         disabled={pending}
-        aria-label={t('partners.removeGroupNamed', { name: group.name })}
+        ariaLabel={t('partners.removeGroupNamed', { name: group.name })}
         className="rounded p-1 text-foreground-muted hover:text-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <Trash2 className="size-4" aria-hidden />
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

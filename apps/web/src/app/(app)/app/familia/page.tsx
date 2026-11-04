@@ -3,7 +3,8 @@ import { LinkBusy } from '@/components/link-busy';
 import { withFrom } from '@/lib/back';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type AppAgenda, type AppAgendaEntry } from '@/lib/api';
+import { ApiError, apiFetch, type AppAgenda, type AppAgendaEntry, type AppAviso } from '@/lib/api';
+import { FamilyAvisos } from './avisos';
 import { describeLoad } from '@/lib/load-failure';
 import { PageError } from '@/components/page-shell';
 import { EntryCard, dayHeading } from './agenda-parts';
@@ -34,6 +35,11 @@ export default async function FamilyAgenda({
   const query = child === undefined ? '' : `?child=${encodeURIComponent(child)}`;
 
   let agenda: AppAgenda;
+  // POOLSE-166: the club's live avisos — best effort, never the reason Início fails
+  // (the messages module off answers 403, which is simply none).
+  const avisos = apiFetch<{ avisos: AppAviso[] }>('/app/avisos')
+    .then((answer) => answer.avisos)
+    .catch(() => [] as AppAviso[]);
   try {
     agenda = await apiFetch<AppAgenda>(`/app/agenda${query}`);
   } catch (error) {
@@ -53,6 +59,8 @@ export default async function FamilyAgenda({
   return (
     <>
       <h1>{t('app.tabs.familia.inicio')}</h1>
+
+      <FamilyAvisos avisos={await avisos} />
 
       {agenda.children.length === 0 ? (
         <p className="text-foreground-muted">{t('app.family.nobody')}</p>

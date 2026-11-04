@@ -167,6 +167,8 @@ export function WaterImport({
     const data = new FormData();
     data.set('poolId', poolId);
     data.set('rows', JSON.stringify(read.report));
+    // A laboratory document, recorded as such on every reading (POOLSE-153).
+    data.set('source', 'report');
     data.set('commit', 'false');
     startTransition(() => importAction(data));
   }, [read, poolId, importAction]);
@@ -338,6 +340,7 @@ export function WaterImport({
                 <form action={importAction}>
                   <input type="hidden" name="poolId" value={poolId} />
                   <input type="hidden" name="rows" value={JSON.stringify(rows)} />
+                  <input type="hidden" name="source" value={report !== undefined ? 'report' : 'log'} />
                   <input type="hidden" name="commit" value="false" />
                   <button
                     type="submit"
@@ -368,6 +371,7 @@ export function WaterImport({
                   <form action={importAction}>
                     <input type="hidden" name="poolId" value={poolId} />
                     <input type="hidden" name="rows" value={JSON.stringify(rows)} />
+                    <input type="hidden" name="source" value={report !== undefined ? 'report' : 'log'} />
                     <input type="hidden" name="include" value={JSON.stringify(ticked)} />
                     <input type="hidden" name="commit" value="true" />
                     <button

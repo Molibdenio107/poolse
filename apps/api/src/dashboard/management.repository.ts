@@ -92,8 +92,16 @@ export async function readMoneyPeriod(
              CROSS JOIN LATERAL (
                SELECT current_period_start(sf.starts_on, sf.ends_on, fp.months) AS period_start
              ) cur
-             LEFT JOIN student_fee_payment pay
-                    ON pay.student_fee_id = sf.id AND pay.period_start = cur.period_start
+             -- Settled: a payment, or invoiced outside Poolse (POOLSE-163).
+             LEFT JOIN LATERAL (
+               SELECT p0.id FROM student_fee_payment p0
+                WHERE p0.student_fee_id = sf.id AND p0.period_start = cur.period_start
+               UNION ALL
+               SELECT x.id FROM student_fee_external_charge x
+                WHERE x.student_fee_id = sf.id AND x.organization_id = sf.organization_id
+                  AND x.occurrence_on = cur.period_start AND x.archived_at IS NULL
+               LIMIT 1
+             ) pay ON true
             WHERE sf.archived_at IS NULL
               AND st.archived_at IS NULL
               AND p.kind = 'mensalidade'

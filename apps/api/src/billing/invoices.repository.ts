@@ -45,7 +45,8 @@ export type InvoiceStatus =
   | 'credit_note';
 
 /** How money reached the club. The same enum the fee register already uses. */
-export type PaymentSource = 'manual' | 'mbway' | 'sepa';
+/** `external_invoice`: paid by a document the club issued outside Poolse, its number the reference (POOLSE-162). */
+export type PaymentSource = 'manual' | 'mbway' | 'sepa' | 'external_invoice';
 
 /** How a family was asked to pay. A person's action until phase 3.0 exists. */
 /** `poolse_email` is a reminder Poolse sent (POOLSE-86); a person never records one by hand. */
@@ -247,6 +248,8 @@ export interface InvoiceRun {
    * is billable, and those are different things for an operator to do.
    */
   alreadyChargedCount: number;
+  /** Left out because invoiced outside Poolse — POOLSE-163. */
+  externalCount: number;
   committed: boolean;
 }
 
@@ -570,7 +573,9 @@ export async function runInvoices(
     );
 
     const billable = rows.filter((row) => row.charged_on === null);
-    const alreadyChargedCount = rows.length - billable.length;
+    // Invoiced outside Poolse (POOLSE-163) is told apart by its `ext:` mark.
+    const externalCount = rows.filter((row) => row.charged_on?.startsWith('ext:') === true).length;
+    const alreadyChargedCount = rows.length - billable.length - externalCount;
 
     const keys = notEmpty(input.payerKeys);
     const wanted = keys === null ? null : new Set(keys);
@@ -646,6 +651,7 @@ export async function runInvoices(
       seriesId,
       drafts,
       alreadyChargedCount,
+      externalCount,
       committed: commit,
     };
   });

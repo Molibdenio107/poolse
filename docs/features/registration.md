@@ -139,3 +139,18 @@ For a club with a second sport, `public_lead_form()` also returns `sports` and e
 `sportId`, and the form asks for the *Modalidade* before the *Nível*, listing only that sport's
 levels. The sport is not sent: the level carries it, and a lead's sport is derived from its level
 or turma. A pool-only club's form and its answer are exactly as before.
+
+## Pedidos under Receção, and what handling one says — POOLSE-165 (4 November 2026)
+
+- **The menu.** The shared *Pedidos* is under *Receção*; each sport's filtered copy stays under that sport's
+  *Alunos*; a club without the reception module keeps it under *Alunos*. Addresses are unchanged.
+- **What handling says.** *Colocar* answers *Aluno colocado em {turma}. O pedido passou para Tratados.*, *Lista de
+  espera* the same with the waiting list, *Dispensar* *Pedido dispensado. Passou para Tratados.*, and a trial its
+  own sentence — one toast each, from `useSavedAction`. The place endpoints return `classGroupName` for it. The
+  actions do **not** `revalidatePath`: the pedido leaves the list, and a revalidation in the action's response
+  unmounted the button before its toast — which is why handling one used to say nothing. A refusal (full turma, a
+  clash) names the turma under the picker, as before.
+- **No *Anular* on a dismissal**: a lead is not a `RESTORABLE` kind (a dismissal is a status, not an archive), so
+  the ticket's condition for offering it is not met.
+- **The public form's footer.** `PublicNotices compact`: the complaints-book link and each regulation in force as
+  one small muted line under the form; the water page keeps the full version.

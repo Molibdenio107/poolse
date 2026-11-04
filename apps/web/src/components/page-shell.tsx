@@ -22,8 +22,9 @@ import { cn } from '@/lib/utils';
  * pick its own width is how an app stops looking like one app. What it did not
  * anticipate is a screen whose content is a *grid* — seven days times the pool's
  * lanes — where the cap is not protecting the reader from anything and is simply
- * throwing away half the monitor. `width="wide"` is for that, and the calendar is
- * the only caller. Adding a second one is a decision, not a tidy-up: if a third
+ * throwing away half the monitor. `width="wide"` is for that, and the calendar was
+ * the only caller until Alunos became a table (POOLSE-164, Rui 04-11-2026, in
+ * decisions.md). Adding another is a decision, not a tidy-up: if a third
  * appears, the honest move is to ask what these pages have in common rather than
  * to keep widening them one at a time. What changed is the single width itself: full-bleed reads as designed
  * at 1440 and as an accident at 2560, where a table row puts the name and its

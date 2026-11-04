@@ -9,7 +9,13 @@ import { listSeries } from '../../faturacao/invoices.actions';
 import { readTaxSettings } from './club.actions';
 import { wallClockNow } from '@/lib/date-format';
 import { FromLink } from '@/components/from-link';
-import { SectionPills, pickSection, sectionHref as sectionUrl } from '@/components/section-pills';
+import {
+  SUB_MENU_ROW,
+  SectionPills,
+  pickSection,
+  sectionHref as sectionUrl,
+  subMenuPillClass,
+} from '@/components/section-pills';
 import { describeLoad, outcome, type LoadFailure } from '@/lib/load-failure';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -104,12 +110,18 @@ export default async function FacilityPage({
   searchParams,
 }: {
   params: Promise<{ facilityId: string }>;
-  searchParams: Promise<{ tab?: string | string[]; from?: string; section?: string; form?: string }>;
+  searchParams: Promise<{
+    tab?: string | string[];
+    from?: string;
+    section?: string;
+    form?: string;
+    sport?: string;
+  }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { facilityId } = await params;
   const storageReady = await storageConfigured();
-  const { tab, from, section, form } = await searchParams;
+  const { tab, from, section, form, sport } = await searchParams;
   // Back to where the link was followed from, when it says — the `withFrom`
   // links from the dashboard, Energia and Turmas. October 2026 sweep.
   const origin = readFrom(from);
@@ -194,9 +206,8 @@ export default async function FacilityPage({
 
   // POOLSE-120: what needs doing in this site's tanks and spaces.
   const attention = await readAttention();
-  // POOLSE-125's first piece: courts and pitches, once a sport besides swimming is on.
+  // The club's sports besides swimming, for Ocupação's chooser (POOLSE-151).
   const addonSports = await clubAddonSports();
-  const courts = (loaded.playingAreas ?? []).filter((area) => area.sportId !== 'pool');
 
   return (
     <DetailPage
@@ -210,36 +221,12 @@ export default async function FacilityPage({
           slug: 'general',
           visible: loaded.canManage,
           labelKey: 'detailTabs.general',
-          content: () => (
-            <>
-              {/*
-                Where the recintos went — POOLSE-150 (Rui, 02-11-2026): each
-                sport's section is their home now (list, add, open), so the
-                site says where, with each sport's count.
-              */}
-              <section className="flex flex-col gap-2 rounded bg-surface p-5 shadow-card">
-                <p className="text-sm text-foreground-muted">{t('recintos.page.siteLinks')}</p>
-                <ul className="flex flex-wrap gap-x-5 gap-y-2">
-                  {(['pool', ...addonSports] as PoolseSport[]).map((sport) => (
-                    <li key={sport}>
-                      <FromLink
-                        href={`/dashboard/recintos?sport=${sport}`}
-                        className="inline-flex items-center gap-2 text-primary underline-offset-4 hover:underline coarse:-my-3 coarse:py-3"
-                      >
-                        <SportIcon sport={sport} className="size-4" />
-                        {t(sportNameKey(sport))}
-                        {' · '}
-                        {sport === 'pool'
-                          ? `${t('recintos.nav.pool')} ${loaded.pools.length}`
-                          : `${t(sport === 'gym' ? 'recintos.nav.rooms' : 'recintos.nav.courts')} ${courts.filter((area) => area.sportId === sport).length}`}
-                      </FromLink>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-              <GeneralTab site={loaded} path={path} from={from} section={section} />
-            </>
-          ),
+          /*
+            The site's own set-up, and nothing else — Rui, 04-11-2026: the
+            sports are on the Instalações page, between the set-up card and the
+            photographs, and not repeated here.
+          */
+          content: () => <GeneralTab site={loaded} path={path} from={from} section={section} />,
         },
         {
           slug: 'prices',
@@ -263,7 +250,9 @@ export default async function FacilityPage({
               [
                 ['mensalidade', prices.state !== 'refused'],
                 ['quota', prices.state !== 'refused'],
-                ['joining', prices.state !== 'refused' || policies.state !== 'refused'],
+                ['joining', prices.state !== 'refused'],
+                // Its own pill since POOLSE-151: the seguro prices and the apólice.
+                ['insurance', prices.state !== 'refused' || policies.state !== 'refused'],
                 ['freeSwim', passes.state !== 'refused'],
                 ['categories', categories.state !== 'refused'],
                 ['payments', prices.state !== 'refused'],
@@ -325,7 +314,7 @@ export default async function FacilityPage({
                   the seguro are one conversation: what the club is covered by,
                   and what it charges a family for being on it.
                 */}
-                {current === 'joining' && (
+                {current === 'insurance' && (
                   <>
                     {policies.state === 'failed' && (
                       <PageError message={t(policies.failure.key)} />
@@ -410,16 +399,15 @@ export default async function FacilityPage({
           slug: 'occupancy',
           visible: loaded.canManage,
           labelKey: 'detailTabs.occupancy',
-          content: async () => {
-            const occupancy = await apiFetch<Occupancy>(
-              `/facilities/${facilityId}/occupancy`,
-            ).catch(() => null);
-            return occupancy === null ? (
-              <PageError message={t('occupancy.unavailable')} />
-            ) : (
-              <OccupancyPanel occupancy={occupancy} facilityId={facilityId} />
-            );
-          },
+          content: async () => (
+            <OccupancyTab
+              facilityId={facilityId}
+              path={path}
+              from={from}
+              sports={['pool', ...addonSports]}
+              asked={sport}
+            />
+          ),
         },
         {
           /*
@@ -571,33 +559,11 @@ export default async function FacilityPage({
         {
           slug: 'photos',
           visible: loaded.canManage,
-          labelKey: 'facilities.photos',
+          // *Multimédia*, not *Fotografias* (Rui, 04-11-2026): the logo and the photographs.
+          labelKey: 'facilities.mediaTab',
           content: () => (
             <div className="flex flex-col gap-4">
-              {/*
-                The club's logo first, then this site's photographs (POOLSE-104
-                C): both are how the club looks, and the logo's card says it is
-                the club's, not this site's.
-              */}
-              <LogoPanel />
-              <section className="rounded bg-surface p-5 shadow-card">
-                <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                  {t('facilities.sitePhotos')}
-                </h2>
-                {/*
-                  The upload control is present, styled and visibly inert, exactly
-                  as it is for pool and student photographs. One storage decision
-                  unblocks all three; until then a control that opened a picker and
-                  then lost the file would be worse than one that says so.
-                */}
-                <PhotoGallery
-                  photos={loaded.photos}
-                  target={`facility-photo:${loaded.id}`}
-                  canManage={loaded.canManage}
-                  emptyLabel={t('facilities.noSitePhotos')}
-                  uploadLabel={t('facilities.uploadSitePhoto')}
-                />
-              </section>
+              <SitePhotos site={loaded} />
             </div>
           ),
         },
@@ -775,6 +741,123 @@ async function GeneralTab({
             canManage={site.canManage}
           />
         </section>
+      )}
+    </>
+  );
+}
+
+/**
+ * How the site looks — the *Fotografias* tab: the club's logo and this site's
+ * photographs. The logo first (POOLSE-104 C): both are how the club looks, and
+ * its card says it is the club's, not this site's.
+ */
+async function SitePhotos({ site }: { site: FacilityDetail }): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  return (
+    <>
+      <LogoPanel />
+      <section className="rounded bg-surface p-5 shadow-card">
+        <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+          {t('facilities.sitePhotos')}
+        </h2>
+        <PhotoGallery
+          photos={site.photos}
+          target={`facility-photo:${site.id}`}
+          canManage={site.canManage}
+          emptyLabel={t('facilities.noSitePhotos')}
+          uploadLabel={t('facilities.uploadSitePhoto')}
+        />
+      </section>
+    </>
+  );
+}
+
+/**
+ * Ocupação asks for the sport first — POOLSE-151 (Rui, 04-11-2026). A club with
+ * one sport goes straight to it; a club with several picks one (`?sport=`) and
+ * sees no figures until it has. The link below names the sport's calendar.
+ *
+ * **Only swimming has figures.** Occupancy is lane-hours of the site's pools
+ * (POOLSE-52), so a court has none under that definition; it says so in words
+ * and still links to its sport's calendar, rather than showing a 0 % that looks
+ * measured. A court's own measure is POOLSE-128's to decide.
+ */
+async function OccupancyTab({
+  facilityId,
+  path,
+  from,
+  sports,
+  asked,
+}: {
+  facilityId: string;
+  path: string;
+  from: string | undefined;
+  sports: PoolseSport[];
+  asked: string | undefined;
+}): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const multi = sports.length > 1;
+  const chosen: PoolseSport | null = multi ? (sports.find((one) => one === asked) ?? null) : 'pool';
+
+  const chooser = multi && (
+    <nav aria-label={t('occupancy.sportNav')} className={SUB_MENU_ROW}>
+      {sports.map((one) => (
+        <FromLink
+          key={one}
+          href={`${path}?${new URLSearchParams({ tab: 'occupancy', ...(from === undefined ? {} : { from }), sport: one })}`}
+          aria-current={one === chosen ? 'page' : undefined}
+          className={subMenuPillClass(one === chosen)}
+        >
+          <SportIcon sport={one} className="size-4" />
+          {t(sportNameKey(one))}
+        </FromLink>
+      ))}
+    </nav>
+  );
+
+  if (chosen === null) {
+    return (
+      <>
+        {chooser}
+        <p className="text-sm text-foreground-muted">{t('occupancy.pickSport')}</p>
+      </>
+    );
+  }
+
+  const calendarLabel = t('occupancy.sportCalendar', { sport: t(sportNameKey(chosen)) });
+
+  if (chosen !== 'pool') {
+    return (
+      <>
+        {chooser}
+        <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
+          <p className="text-sm text-foreground-muted">
+            {t('occupancy.sportPending', { sport: t(sportNameKey(chosen)) })}
+          </p>
+          <FromLink
+            href={`/dashboard/calendar?sport=${chosen}`}
+            className="self-start rounded text-sm text-primary hover:underline coarse:-my-3 coarse:py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {calendarLabel}
+          </FromLink>
+        </section>
+      </>
+    );
+  }
+
+  const occupancy = await apiFetch<Occupancy>(`/facilities/${facilityId}/occupancy`).catch(() => null);
+  return (
+    <>
+      {chooser}
+      {occupancy === null ? (
+        <PageError message={t('occupancy.unavailable')} />
+      ) : (
+        <OccupancyPanel
+          occupancy={occupancy}
+          facilityId={facilityId}
+          calendarHref="/dashboard/calendar"
+          calendarLabel={calendarLabel}
+        />
       )}
     </>
   );

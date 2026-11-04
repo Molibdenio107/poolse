@@ -157,14 +157,34 @@
      * **Colour still never carries meaning alone**: every block prints its
      * turma's name and the legend names each level in words.
      */
-    --level-1: 42 124 146;
-    --level-2: 38 130 87;
-    --level-3: 75 130 38;
-    --level-4: 138 114 40;
-    --level-5: 174 96 50;
-    --level-6: 201 69 91;
-    --level-7: 198 57 163;
-    --level-8: 135 93 208;
+    --class-1: 42 124 146;
+    --class-2: 38 130 87;
+    --class-3: 75 130 38;
+    --class-4: 138 114 40;
+    --class-5: 174 96 50;
+    --class-6: 201 69 91;
+    --class-7: 198 57 163;
+    --class-8: 135 93 208;
+    /*
+     * A level's own colours — POOLSE-168 (Rui, 04-11-2026): drawn from Poolse's
+     * palette rather than shared with the turmas above. Eight hue families
+     * anchored on the brand teal, the app's blue, the brand green and the app's
+     * soft orange, with sand, coral, lilac and sea green between them; each the
+     * result of a search for the set whose closest two are furthest apart, with
+     * every bar at 3:1 or more on the card. Measured (CIEDE2000): closest solids
+     * 19.0 apart (the shared set was 12.2), closest 16 % washes 4.8 (was 3.9).
+     * The slot names stay the stored ones and each keeps its nearest family:
+     * teal, green, lime → sea green, amber → sand, orange, rose → coral,
+     * magenta → lilac, violet → ocean blue.
+     */
+    --level-1: 1 154 169;
+    --level-2: 110 147 69;
+    --level-3: 50 120 98;
+    --level-4: 132 104 30;
+    --level-5: 195 118 68;
+    --level-6: 177 83 82;
+    --level-7: 127 111 155;
+    --level-8: 54 115 162;
     /* A turma with no level, and every subject that is not a turma. */
     --level-none: 100 116 126;
 
@@ -241,6 +261,19 @@
     --chart-1: 61 141 161;
     --chart-2: 214 112 40;
     --chart-3: 104 150 76;
+
+    /*
+     * The staff board's post-its — POOLSE-169 (Rui, 04-11-2026). Four papers,
+     * the author's pick, each a light tint of Poolse's palette (the app's sand
+     * and soft orange, the brand green and teal), and one dark ink on all four
+     * in both themes, as paper is paper. Read only through `.post-it`.
+     */
+    --note-yellow: 252 236 150;
+    --note-orange: 253 214 178;
+    --note-green: 212 234 192;
+    --note-blue: 200 228 236;
+    --note-ink: 38 34 28;
+    --note-ink-muted: 70 64 54;
 
     /*
      * Role colours — POOLSE-18.
@@ -372,20 +405,36 @@
      * Worst white-on-block here is 4.61:1 and the weakest block against the card
      * is 3.62:1.
      */
-    --level-1: 48 124 145;
-    --level-2: 43 130 90;
-    --level-3: 78 130 43;
-    --level-4: 134 112 45;
-    --level-5: 168 97 56;
-    --level-6: 195 75 95;
-    --level-7: 191 64 159;
-    --level-8: 134 94 201;
+    --class-1: 48 124 145;
+    --class-2: 43 130 90;
+    --class-3: 78 130 43;
+    --class-4: 134 112 45;
+    --class-5: 168 97 56;
+    --class-6: 195 75 95;
+    --class-7: 191 64 159;
+    --class-8: 134 94 201;
+    /* POOLSE-168, solved again on the dark card: solids 18.4 apart, washes 4.7. */
+    --level-1: 31 186 206;
+    --level-2: 141 181 96;
+    --level-3: 58 160 133;
+    --level-4: 166 143 64;
+    --level-5: 227 153 96;
+    --level-6: 233 131 129;
+    --level-7: 168 138 207;
+    --level-8: 39 147 212;
     --level-none: 92 106 117;
 
     /* The brand's dark steps, measured against the dark card — see the light block. */
     --chart-1: 126 186 201;
     --chart-2: 245 150 80;
     --chart-3: 154 191 131;
+    /* The papers dimmed for a dark room, the ink unchanged — POOLSE-169. */
+    --note-yellow: 214 198 118;
+    --note-orange: 216 176 140;
+    --note-green: 170 198 150;
+    --note-blue: 158 194 206;
+    --note-ink: 38 34 28;
+    --note-ink-muted: 70 64 54;
 
     /* Lighter counterparts — same hues, readable on a dark surface. */
     --role-owner: 186 148 235;
@@ -694,6 +743,32 @@ body:has([data-surface='app']) {
 :root {
   --reveal-ms: 650ms;
   --reveal-ease: cubic-bezier(0.45, 0, 0.25, 1);
+  /* The busy wash (POOLSE-159): above the shell's highest layer (40), under dialogs (50). */
+  --z-overlay: 45;
+}
+
+/*
+ * The busy wash — POOLSE-159. A watermark of the surface colour over the page
+ * while a save or a navigation is pending: it takes the clicks, not the focus.
+ */
+.busy-wash {
+  z-index: var(--z-overlay);
+  background: rgb(var(--surface) / 0.4);
+  cursor: progress;
+  animation: busy-wash-in var(--reveal-ms) var(--reveal-ease) both;
+}
+@keyframes busy-wash-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .busy-wash {
+    animation: none;
+  }
 }
 /*
  * Specific enough to beat Tailwind's own: `.transition-transform` sets 150 ms, and
@@ -816,6 +891,39 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
  * drawn: in a lane column it left no room for the name, and the bar already
  * carries the colour (Rui asked for the calendar to change in looks only).
  */
+/*
+ * A post-it on the staff board (POOLSE-169): its paper, the ink, a paper's
+ * shadow and a slight tilt that differs note to note. It straightens on hover
+ * and focus; reduced motion keeps the tilt and drops the movement.
+ */
+.post-it {
+  --note-paper: var(--note-yellow);
+  background: rgb(var(--note-paper));
+  color: rgb(var(--note-ink));
+  box-shadow:
+    0 1px 1px rgb(0 0 0 / 0.08),
+    0 8px 14px -8px rgb(0 0 0 / 0.35);
+  transform: rotate(-1.2deg);
+  transition: transform 200ms ease;
+}
+.post-it:nth-child(3n + 2) { transform: rotate(0.9deg); }
+.post-it:nth-child(3n) { transform: rotate(-0.4deg); }
+.post-it:hover,
+.post-it:focus-within { transform: rotate(0deg); }
+@media (prefers-reduced-motion: reduce) {
+  .post-it { transition: none; }
+}
+.post-it-muted { color: rgb(var(--note-ink-muted)); }
+/* The colour picker's swatch: the paper itself, never tilted. */
+.post-it-swatch {
+  background: rgb(var(--note-paper));
+  color: rgb(var(--note-ink));
+}
+.post-it-yellow { --note-paper: var(--note-yellow); }
+.post-it-orange { --note-paper: var(--note-orange); }
+.post-it-green { --note-paper: var(--note-green); }
+.post-it-blue { --note-paper: var(--note-blue); }
+
 .lesson-chip {
   background: linear-gradient(rgb(var(--tint) / 0.16) 0 0), rgb(var(--surface));
   border-left: 3px solid rgb(var(--tint));
@@ -825,14 +933,23 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
   color: rgb(var(--foreground-muted));
   opacity: 1;
 }
-.lesson-tint-1 { --tint: var(--level-1); }
-.lesson-tint-2 { --tint: var(--level-2); }
-.lesson-tint-3 { --tint: var(--level-3); }
-.lesson-tint-4 { --tint: var(--level-4); }
-.lesson-tint-5 { --tint: var(--level-5); }
-.lesson-tint-6 { --tint: var(--level-6); }
-.lesson-tint-7 { --tint: var(--level-7); }
-.lesson-tint-8 { --tint: var(--level-8); }
+/* A level's tint (POOLSE-168's set), and a turma's own colour where one was chosen. */
+.lesson-tint-level-1 { --tint: var(--level-1); }
+.lesson-tint-level-2 { --tint: var(--level-2); }
+.lesson-tint-level-3 { --tint: var(--level-3); }
+.lesson-tint-level-4 { --tint: var(--level-4); }
+.lesson-tint-level-5 { --tint: var(--level-5); }
+.lesson-tint-level-6 { --tint: var(--level-6); }
+.lesson-tint-level-7 { --tint: var(--level-7); }
+.lesson-tint-level-8 { --tint: var(--level-8); }
+.lesson-tint-class-1 { --tint: var(--class-1); }
+.lesson-tint-class-2 { --tint: var(--class-2); }
+.lesson-tint-class-3 { --tint: var(--class-3); }
+.lesson-tint-class-4 { --tint: var(--class-4); }
+.lesson-tint-class-5 { --tint: var(--class-5); }
+.lesson-tint-class-6 { --tint: var(--class-6); }
+.lesson-tint-class-7 { --tint: var(--class-7); }
+.lesson-tint-class-8 { --tint: var(--class-8); }
 .lesson-tint-none { --tint: var(--level-none); }
 /*
  * The handoff's block states (multi-sport Slice 4). Sem professor is the amber

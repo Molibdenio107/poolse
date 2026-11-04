@@ -193,6 +193,8 @@ export async function runWaterImportAction(
   const attempt = previous.attempt + 1;
   const poolId = String(formData.get('poolId') ?? '');
   const commit = formData.get('commit') === 'true';
+  // A laboratory document or the club's water log — POOLSE-153.
+  const source = formData.get('source') === 'report' ? 'report' : 'log';
 
   let rows: Record<string, string>[];
   let include: number[] | null;
@@ -213,6 +215,7 @@ export async function runWaterImportAction(
       : apiPost<ImportAnswer<Row>>(`/facilities/pools/${poolId}/${path}`, {
           rows: part.rows,
           commit,
+          source,
           ...(part.include === null ? {} : { include: part.include }),
         });
 

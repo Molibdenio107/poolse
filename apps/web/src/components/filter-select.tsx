@@ -23,12 +23,18 @@ export function FilterSelect({
   options,
   /** The label for "no filter" — "Todos os níveis". */
   anyLabel,
+  hideLabel = false,
 }: {
   name: string;
   label: string;
   value: string;
   options: { value: string; label: string }[];
   anyLabel: string;
+  /**
+   * The label for a screen reader only, where the select stands as a column's
+   * header and its first option is the prompt (the staff table, 04-11-2026).
+   */
+  hideLabel?: boolean;
 }): React.ReactElement {
   const router = useRouter();
   const pathname = usePathname();
@@ -54,7 +60,7 @@ export function FilterSelect({
     // `text-sm` are the shared tokens, so the filter row lands on one baseline
     // instead of on two.
     <div className="flex min-w-40 max-w-field flex-col gap-1.5">
-      <label htmlFor={`filter-${name}`} className="text-sm text-foreground-muted">
+      <label htmlFor={`filter-${name}`} className={hideLabel ? 'sr-only' : 'text-sm text-foreground-muted'}>
         {label}
       </label>
       <select

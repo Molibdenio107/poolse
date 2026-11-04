@@ -6,6 +6,8 @@ import { exportStudents, MAX_EXPORT_ROWS, type Student } from './students.reposi
 import { CoreRoute } from '../tenant/modules.js';
 import { readSportFilter } from './sport-filter.js';
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Slice 1.11 — data leaving.
  *
@@ -40,6 +42,10 @@ export class ExportsController {
     @Query('sort') sort?: string,
     @Query('sport') sport?: string,
     @Query('multi') multi?: string,
+    /** POOLSE-164's filters: one turma, and the seguro's state today. */
+    @Query('classGroupId') classGroupId?: string,
+    @Query('insurance') insurance?: string,
+    @Query('overdue') overdue?: string,
   ): Promise<{ students: Student[]; total: number; capped: boolean; max: number }> {
     /*
      * The same roles as the import, and for a stronger reason. This hands over
@@ -62,10 +68,12 @@ export class ExportsController {
       // screen is too short to filter the file — POOLSE-30.
       search: readSearch(search),
       levelId: levelId?.trim() ? levelId.trim() : null,
-      overdueOnly: sort === 'overdue',
+      overdueOnly: sort === 'overdue' || overdue === '1',
       // The list's own filter, validated the same way (POOLSE-143).
       sport: sportFilter,
       multiSport: multi === '1',
+      classGroupId: UUID_PATTERN.test(classGroupId ?? '') ? classGroupId! : null,
+      insurance: insurance === 'insured' || insurance === 'lapsed' || insurance === 'never' ? insurance : null,
     }, socios === '1' || socios === 'true');
 
     return {

@@ -15,6 +15,10 @@ services:
     image: postgres:16-alpine
     container_name: poolse-postgres
     restart: unless-stopped
+    # POOLSE-171: query statistics for `packages/db/scripts/slow-queries.ts`.
+    # Loaded here, in the dev image only; the extension itself is created by
+    # that script, so no migration depends on a host that may not offer it.
+    command: ['postgres', '-c', 'shared_preload_libraries=pg_stat_statements', '-c', 'pg_stat_statements.track=top']
     environment:
       # The owner role. Migrations connect as this and bypass RLS by design.
       POSTGRES_USER: postgres

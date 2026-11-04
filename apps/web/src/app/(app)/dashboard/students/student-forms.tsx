@@ -18,6 +18,8 @@ import { fitsLevel } from '@/lib/ages';
 import type { FormState } from '../actions';
 import { archiveStudentAction, createStudentAction, updateStudentAction } from './students.actions';
 import { Dialog } from '@/components/ui/dialog';
+import { Hint } from '@/components/ui/tooltip';
+import { Archive } from 'lucide-react';
 
 const INITIAL: FormState = { ok: false };
 
@@ -330,13 +332,21 @@ export function ArchiveStudentButton({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setConfirming(true)}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger bg-surface shadow-card"
-      >
-        {t('students.archive')}
-      </button>
+      {/*
+        A square on a desk, where the Alunos table is tight (POOLSE-164); the
+        word on a phone's card. The word stays for screen readers, and the hint
+        repeats what the control does.
+      */}
+      <Hint text={t('students.archive')}>
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-surface px-4 text-control text-foreground-muted shadow-card hover:border-danger/50 hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary md:aspect-square md:px-0"
+        >
+          <Archive aria-hidden className="hidden size-4 md:block" />
+          <span className="md:sr-only">{t('students.archive')}</span>
+        </button>
+      </Hint>
 
       <Dialog
         open={confirming}

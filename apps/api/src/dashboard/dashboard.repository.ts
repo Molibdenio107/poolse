@@ -152,3 +152,48 @@ export async function rememberDashboardFacility(
     ]);
   });
 }
+
+/** The site a weather card is about — POOLSE-170. */
+export interface WeatherSite {
+  id: string;
+  name: string;
+  city: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+/**
+ * The selector's site, else the club's first live one (POOLSE-170 rule 2). A
+ * remembered site that has since been archived falls back to the first, rather
+ * than to nothing.
+ */
+export async function readWeatherSite(
+  organizationId: string,
+  facilityId: string | null,
+): Promise<WeatherSite | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      id: string;
+      name: string;
+      city: string | null;
+      latitude: string | null;
+      longitude: string | null;
+    }>(
+      `SELECT f.id, f.name, f.city, f.latitude::text AS latitude, f.longitude::text AS longitude
+         FROM facility f
+        WHERE f.archived_at IS NULL
+        ORDER BY (f.id = $1::uuid) DESC NULLS LAST, f.created_at, f.id
+        LIMIT 1`,
+      [facilityId],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      id: row.id,
+      name: row.name,
+      city: row.city,
+      latitude: row.latitude === null ? null : Number(row.latitude),
+      longitude: row.longitude === null ? null : Number(row.longitude),
+    };
+  });
+}

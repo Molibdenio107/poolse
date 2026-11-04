@@ -30,6 +30,8 @@ import {
   type LifeguardPeriod,
 } from './periods.repository.js';
 import { PoolseModule } from '../tenant/modules.js';
+import { readSportFilter } from '../students/sport-filter.js';
+import { requireSport } from '../tenant/sport-scope.js';
 
 /**
  * The lifeguard roster — POOLSE-70 slice 2.
@@ -50,12 +52,19 @@ export class LifeguardRosterController {
     @Param('facilityId', new ParseUUIDPipe()) facilityId: string,
     @Query('from') from?: string,
     @Query('days') days?: string,
+    @Query('sport') sportRaw?: string,
   ): Promise<Roster & { periods: LifeguardPeriod[]; canManage: boolean }> {
     requireRole(...STAFF);
     if (from === undefined || !DAY.test(from)) throw new BadRequestException('from is YYYY-MM-DD');
     const span = Math.min(Math.max(Number.parseInt(days ?? '7', 10) || 7, 1), 31);
     const { organizationId } = currentTenant();
-    const roster = await readRoster(organizationId, facilityId, from, span);
+    // The week is per sport (POOLSE-156): a sport the club has on, else a 400;
+    // an instructor outside it is a 403 `sport_not_yours`. Absent is swimming.
+    const asked = await readSportFilter(organizationId, sportRaw);
+    if (asked === 'none') throw new BadRequestException('sport must name a sport');
+    const sport = asked ?? 'pool';
+    requireSport(sport);
+    const roster = await readRoster(organizationId, facilityId, from, span, sport);
     if (roster === null) throw new NotFoundException('No such site');
     return {
       ...roster,
@@ -151,15 +160,22 @@ export class LifeguardRosterController {
     requireRole('owner', 'admin');
     const read = (key: string): string =>
       typeof body[key] === 'string' ? (body[key] as string).trim() : '';
+    // A pool, or another sport's recinto — one of the two (POOLSE-156).
+    const poolId = read('poolId');
+    const playingAreaId = read('playingAreaId');
     const input = {
-      poolId: read('poolId'),
+      poolId: poolId === '' ? null : poolId,
+      playingAreaId: poolId === '' && playingAreaId !== '' ? playingAreaId : null,
       membershipId: read('membershipId'),
       day: read('day'),
       from: read('from'),
       to: read('to'),
     };
     const fields: Record<string, string> = {};
-    if (input.poolId === '') fields['poolId'] = 'roster.error.poolRequired';
+    if (input.poolId === null && input.playingAreaId === null) fields['poolId'] = 'roster.error.poolRequired';
+    for (const id of [input.poolId, input.playingAreaId]) {
+      if (id !== null && !UUID.test(id)) fields['poolId'] = 'roster.error.poolRequired';
+    }
     if (input.membershipId === '') fields['membershipId'] = 'roster.error.personRequired';
     if (!DAY.test(input.day)) fields['day'] = 'roster.error.dayRequired';
     if (!TIME.test(input.from)) fields['from'] = 'roster.error.timeRequired';

@@ -360,6 +360,50 @@ one keeps its place, so the tiles stand where the reader learned to look.
 
 Each tile links to its page (Calendário, Faturação), and each tank to its water tab.
 
+## The staff board — POOLSE-169 (4 November 2026)
+
+**A post-it board at the top of the Painel, for the people who work here** (Rui: "a section on the dashboard
+for any employee to add a post-it note, for everyone that works there to see"). Not an aviso: no audience, no
+dates, no family ever sees it.
+
+- **The band.** `notes` is first in `BANDS`, above the summary, laid out (`FIXED_BANDS`). Its one widget,
+  `staff.notes` (core; owner, admin, instructor, maintenance), is sent to every working role; a guardian or a
+  student holds none of them, so it is absent from their payload (asserted on the raw JSON). **With no note
+  pinned nothing is drawn** — no card and no heading — so when there is one, it is the first thing on the page.
+- **Pinning is apart from the notes** (Rui, 04-11-2026): *Novo recado*, a small button at the top right of the
+  page's header, opens the form in a dialog (a bottom sheet on a phone) — the text (1–500 characters) and one
+  of four papers, yellow, orange, green, blue (`POST /staff-notes`). Shown to whoever the widget was sent to.
+  The board lists the live notes newest first, at most 24, each with its author and date.
+- **Taking down.** Its author, or the office for any (`DELETE /staff-notes/:id`; anybody else 403
+  `not_your_note`). It asks first. The office's toast offers *Anular*; an author who is not the office has no
+  undo, because the bin is the office's — and the office can put it back from *Arquivados* (`staff_note` in
+  `RESTORABLE`). A note is never edited: take it down and write another.
+- **The look.** `StaffBoard` (`components/staff-notes.tsx`) with `.post-it` in globals.css: the paper
+  (`--note-yellow|orange|green|blue`, light tints of the palette, dimmed in the dark theme), one dark ink in
+  both themes (`--note-ink`, `--note-ink-muted`, every pair in `contrast:check`), a paper's shadow and a slight
+  tilt that straightens on hover or focus. Two notes to a row on a phone, four on a desk.
+- **Elsewhere.** The same board opens the instructor's and maintenance's app homes (`docs/features/app.md`).
+
+
+## The weather card — POOLSE-170 (4 November 2026)
+
+`ops.weather`, every role, both tenant kinds (Rui). **At the top of the page, right of the staff board**
+(Rui, same evening): the `notes` band is a row, the board on the left at 65 % and the weather on the right at
+35 %, the weather in its column whether or not a note is pinned; stacked on a phone. Being in a laid-out band,
+it is never ranked against a card with work in it. **The site** is the selector's
+(`scope.facilityId`, remembered on `membership.dashboard_facility_id`), else the club's first live site
+(`readWeatherSite`). **The forecast** is the site panel's own cache, `weatherAt` in `weather/forecast-cache.ts`
+(per place to about 1 km, 45 minutes), so the card never costs a second call; the fetch fills the cache even
+when the 2 s ceiling gave up on it.
+
+- **Content.** The city as the title (else the site's name), the condition's icon and word (`weatherKind`), the
+  temperature now, today's high and low, a wind flag past `WINDY_KMH`, and the next three days in one row on
+  any screen (`formatDayMonthShort`, icon, word, high/low). **No link** (Rui, 04-11-2026): the card is the
+  weather, not a way into the site page — `WidgetCard`'s `href` may be null for exactly this.
+- **Absent or quiet.** A site with no coordinates: the resolver answers null and the card is absent from the
+  payload (`absentWhenEmpty`). A provider that does not answer: the muted error card, nothing else moves.
+- **Who.** A family-only reader never lands on the Painel (`/app` sends them to *Início*), so in practice it is
+  staff's card.
 ## *Hoje, hora a hora* says what it shows (02-11-2026, Rui)
 
 Each bar is how many people are expected in lessons in that hour (07–21h) — a turma's active

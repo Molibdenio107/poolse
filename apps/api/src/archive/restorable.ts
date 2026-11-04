@@ -30,7 +30,9 @@ export type RestorableKindName =
   | 'partner'
   | 'student_fee'
   | 'swim_meet'
-  | 'lesson_feedback';
+  | 'lesson_feedback'
+  | 'aviso'
+  | 'staff_note';
 
 /**
  * One child of an archive action, as recorded in `audit_log.data.cascade`.
@@ -209,6 +211,28 @@ export const RESTORABLE: readonly RestorableKind[] = [
       name: displayName('s'),
     },
     parents: [{ kind: 'student', column: 'student_id' }],
+    cascades: [],
+  },
+  {
+    // POOLSE-166: an aviso ended early comes back for the rest of its window.
+    // A message sent by email is history, not something to bring back.
+    kind: 'aviso',
+    module: 'messages',
+    action: 'aviso.archived',
+    table: 'message',
+    labelKey: 'archive.kind.aviso',
+    label: { from: 'message t', name: 't.subject' },
+    parents: [],
+    cascades: [],
+  },
+  {
+    // POOLSE-169: a post-it taken down from the staff board goes back up.
+    kind: 'staff_note',
+    action: 'staff_note.archived',
+    table: 'staff_note',
+    labelKey: 'archive.kind.staff_note',
+    label: { from: 'staff_note t', name: 'left(t.body, 60)' },
+    parents: [],
     cascades: [],
   },
 ];

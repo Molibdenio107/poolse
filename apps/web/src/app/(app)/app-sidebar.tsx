@@ -515,6 +515,9 @@ function SidebarNav({
           badges={badges}
           sport={sport}
           onNavigate={onNavigate}
+          // The top level competes too: Alunos must not light up on a page that
+          // is Receção's child (POOLSE-165).
+          siblings={sections}
         />
       ))}
     </nav>
@@ -648,11 +651,13 @@ function NavItem({
     [pathOf(entry.href), ...(entry.also ?? [])].some((path) => isInSection(pathname, path)) && ofSport(entry);
   const reaches = (entry: Item): boolean => here(entry) || (entry.children ?? []).some(reaches);
   const path = pathOf(item.href);
+  // How specific a branch's best match is: its own address or a descendant's.
+  // Pedidos under Receção lives at /students/pedidos, so Alunos' prefix must
+  // lose to Receção's child, not only to a longer sibling (POOLSE-165).
+  const depthOf = (entry: Item): number =>
+    Math.max(here(entry) ? pathOf(entry.href).length : -1, ...(entry.children ?? []).map(depthOf));
   const active =
-    reaches(item) &&
-    !(siblings ?? []).some(
-      (other) => pathOf(other.href).length > path.length && here(other),
-    );
+    reaches(item) && !(siblings ?? []).some((other) => other !== item && depthOf(other) > depthOf(item));
   // The page is named once: by the child that shares its parent's address.
   const current =
     pathname === path && ofSport(item) && !(item.children ?? []).some((child) => child.href === item.href);

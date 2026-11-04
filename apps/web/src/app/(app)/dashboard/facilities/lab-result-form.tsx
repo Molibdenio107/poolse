@@ -6,6 +6,7 @@ import { SelectField, TextAreaField, TextField, useFocusFirstError } from '@/com
 import { POOL_METRICS } from '@/lib/pool-metrics';
 import { ORGANISMS, ORGANISM_UNITS } from '@/lib/water';
 import { useSavedAction } from '@/lib/saved';
+import { ConfirmButton } from '@/components/confirm-action';
 import type { FormState } from '../actions';
 import { archiveLabResultAction, recordLabResultAction } from './lab.actions';
 
@@ -145,9 +146,17 @@ export function ArchiveLabResultButton({
     <form action={dispatch}>
       <input type="hidden" name="poolId" value={poolId} />
       <input type="hidden" name="labResultId" value={labResultId} />
-      <button type="submit" disabled={pending} className={BUTTON}>
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.instalacoes.labResultArchiveTitle')}
+        message={t('confirm.instalacoes.labResultArchiveMessage')}
+        confirmLabel={t('labResults.archive')}
+        tone="danger"
+        disabled={pending}
+        className={BUTTON}
+      >
         {t('labResults.archive')}
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

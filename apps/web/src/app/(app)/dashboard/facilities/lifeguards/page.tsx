@@ -1,13 +1,16 @@
 import { FromLink } from '@/components/from-link';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ChevronLeft, ChevronRight, Waves } from 'lucide-react';
-import { apiFetch, type Facilities } from '@/lib/api';
+import { ChevronLeft, ChevronRight, LifeBuoy, Waves } from 'lucide-react';
+import { apiFetch, type Facilities, type Me } from '@/lib/api';
+import type { PoolseSport } from '@poolse/rules';
+import { SportIcon, sportNameKey } from '@/components/sport-icon';
+import { readableSports } from '@/lib/sport-scope';
 import { outcome } from '@/lib/load-failure';
 import { backProp, originBack } from '@/lib/back';
 import { APP_TIME_ZONE, formatDateRange, wallClockNow } from '@/lib/date-format';
 import { addDays, isDate, mondayOf, weekOf } from '@/lib/dates';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
-import { SectionPills, pickSection } from '@/components/section-pills';
+import { SUB_MENU_ROW, SectionPills, pickSection, subMenuPillClass } from '@/components/section-pills';
 import { SiteLinks } from '../incidents/site-links';
 import { readRoster } from './roster.actions';
 import { RosterGrid } from './roster-grid';
@@ -40,11 +43,25 @@ const QUIET =
 export default async function LifeguardsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ site?: string; week?: string; pool?: string; view?: string; from?: string }>;
+  searchParams: Promise<{
+    site?: string;
+    week?: string;
+    pool?: string;
+    view?: string;
+    from?: string;
+    sport?: string;
+  }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
-  const { site: requested = '', week, pool: requestedPool, view: requestedView, from } = await searchParams;
+  const {
+    site: requested = '',
+    week,
+    pool: requestedPool,
+    view: requestedView,
+    from,
+    sport: requestedSport,
+  } = await searchParams;
   const back = originBack(from);
 
   // Today on the club's wall clock, not the server's — at 00:30 in Lisbon a
@@ -72,15 +89,31 @@ export default async function LifeguardsPage({
 
   const list = sites.data.facilities;
   const chosen = list.find((site) => site.id === requested.trim()) ?? list[0]!;
+
+  /*
+   * The sport first — POOLSE-156 (Rui, 04-11-2026). A club with one sport goes
+   * straight to it; with several, the week waits for one to be chosen. The
+   * reader's own sports only: an instructor of one sport plans that one.
+   */
+  const me = await apiFetch<Me>('/me').catch(() => null);
+  const membership = me?.memberships[0];
+  const sports: PoolseSport[] = membership === undefined ? ['pool'] : readableSports(membership);
+  const multi = sports.length > 1;
+  const sport: PoolseSport | null = multi
+    ? (sports.find((one) => one === requestedSport) ?? null)
+    : (sports[0] ?? 'pool');
   // Two views, one at a time (Rui, 12 October 2026): the week, and the
   // vigilance periods that fill it.
   const view = pickSection(['week', 'periods'], requestedView, 'week');
 
   // The periods view lists what is still running from today; the week, from its Monday.
-  const roster = await readRoster(chosen.id, view === 'periods' ? today : monday);
+  const roster =
+    sport === null ? null : await readRoster(chosen.id, view === 'periods' ? today : monday, sport);
 
-  const href = (query: { week?: string; pool?: string; view?: string }): string => {
+  const href = (query: { week?: string; pool?: string; view?: string; sport?: string }): string => {
     const params = new URLSearchParams({ site: chosen.id });
+    const forSport = query.sport ?? sport;
+    if (forSport !== null && multi) params.set('sport', forSport);
     params.set('week', query.week ?? monday);
     if (query.pool !== undefined) params.set('pool', query.pool);
     if ((query.view ?? view) !== 'week') params.set('view', query.view ?? view);
@@ -97,29 +130,60 @@ export default async function LifeguardsPage({
           label={t('roster.sites')}
         />
 
-        {roster.state === 'refused' && <PageError message={t('roster.notPermitted')} />}
-        {roster.state === 'failed' && (
+        {/*
+          Only before a sport is chosen (Rui, 04-11-2026): a pill opens that
+          sport's own page, inside its section, where the other sports do not
+          belong — the top bar's sport tabs are the way across.
+        */}
+        {multi && sport === null && (
+          <nav aria-label={t('roster.sportNav')} className={SUB_MENU_ROW}>
+            {sports.map((one) => (
+              <FromLink
+                key={one}
+                href={href({ sport: one })}
+                aria-current={one === sport ? 'page' : undefined}
+                className={subMenuPillClass(one === sport)}
+              >
+                <SportIcon sport={one} className="size-4" />
+                {t(sportNameKey(one))}
+              </FromLink>
+            ))}
+          </nav>
+        )}
+        {roster === null && <p className="text-sm text-foreground-muted">{t('roster.pickSport')}</p>}
+
+        {roster?.state === 'refused' && <PageError message={t('roster.notPermitted')} />}
+        {roster?.state === 'failed' && (
           <PageError
             message={t(roster.failure.key)}
             {...(roster.failure.detail === '' ? {} : { detail: roster.failure.detail })}
           />
         )}
 
-        {roster.state === 'ok' && roster.data.pools.length === 0 && (
-          <PageEmpty icon={Waves} message={t('roster.noPools', { site: chosen.name })} />
+        {roster?.state === 'ok' && roster.data.places.length === 0 && (
+          <PageEmpty
+            icon={roster.data.placeKind === 'pool' ? Waves : LifeBuoy}
+            message={
+              roster.data.placeKind === 'pool'
+                ? t('roster.noPools', { site: chosen.name })
+                : t('roster.noRecintos', { site: chosen.name, sport: t(sportNameKey(roster.data.sport)) })
+            }
+          />
         )}
 
-        {roster.state === 'ok' && roster.data.pools.length > 0 && (() => {
-          const { pools, duties, gaps, canManage } = roster.data;
+        {roster?.state === 'ok' && roster.data.places.length > 0 && (() => {
+          const { pools, places, placeKind, duties, gaps, canManage } = roster.data;
+          // The place shown: a pool for swimming, a recinto otherwise (POOLSE-156).
           const poolId = pickSection(
-            pools.map((pool) => pool.id),
+            places.map((place) => place.id),
             requestedPool,
-            pools[0]!.id,
+            places[0]!.id,
           );
           // The pool is kept in the week links, so moving a week stays on the tank.
           const weekHref = (to: string): string => href({ week: to, pool: poolId });
 
-          const views = (
+          // Vigilance periods fill a pool's cover; another sport has the week only.
+          const views = placeKind !== 'pool' ? null : (
             <SectionPills
               items={[
                 { key: 'week', label: t('roster.view.week'), href: href({ pool: poolId, view: 'week' }) },
@@ -130,7 +194,7 @@ export default async function LifeguardsPage({
             />
           );
 
-          if (view === 'periods') {
+          if (view === 'periods' && placeKind === 'pool') {
             return (
               <>
                 {views}
@@ -173,14 +237,18 @@ export default async function LifeguardsPage({
               </nav>
 
               <SectionPills
-                items={pools.map((pool) => ({
-                  key: pool.id,
-                  label: pool.name,
-                  href: href({ pool: pool.id }),
+                items={places.map((place) => ({
+                  key: place.id,
+                  label: place.name,
+                  href: href({ pool: place.id }),
                 }))}
                 current={poolId}
-                label={t('roster.pools')}
+                label={placeKind === 'pool' ? t('roster.pools') : t('roster.recintos')}
               />
+              {/* A court has no required cover: duties, and no gaps (POOLSE-156 rule 3). */}
+              {placeKind !== 'pool' && (
+                <p className="text-sm text-foreground-muted">{t('roster.noRequiredCover')}</p>
+              )}
 
               <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
                 <RosterGrid
@@ -189,9 +257,10 @@ export default async function LifeguardsPage({
                   days={days}
                   today={today}
                   facilityId={chosen.id}
-                  poolId={poolId}
-                  duties={duties.filter((duty) => duty.poolId === poolId)}
-                  gaps={gaps.filter((gap) => gap.poolId === poolId)}
+                  placeKind={placeKind}
+                  placeId={poolId}
+                  duties={duties.filter((duty) => duty.placeId === poolId)}
+                  gaps={gaps.filter((gap) => gap.placeId === poolId)}
                   canManage={canManage}
                 />
               </section>

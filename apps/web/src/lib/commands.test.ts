@@ -69,3 +69,10 @@ test('accents and case do not matter, and every page appears once', () => {
   const ids = owner.map((command) => command.id);
   assert.equal(new Set(ids).size, ids.length);
 });
+
+test('POOLSE-167: the palette lists Mínimos under Natação', () => {
+  const commands = commandsFor({ roles: ['owner'], kind: 'business', modules: [...POOLSE_MODULES], sports: ['pool'] });
+  const minimos = commands.find((command) => command.labelKey === 'qualifying.section.minimos');
+  assert.equal(minimos?.sportKey, 'sport.name.pool');
+  assert.deepEqual(minimos?.run, { href: '/dashboard/students/provas/minimos?sport=pool' });
+});

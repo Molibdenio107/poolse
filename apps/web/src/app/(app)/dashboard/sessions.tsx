@@ -3,6 +3,7 @@
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import type { ActiveSession } from '@/lib/api';
+import { ConfirmButton } from '@/components/confirm-action';
 import { revokeSessionAction, type FormState } from './actions';
 
 const INITIAL: FormState = { ok: false };
@@ -18,13 +19,17 @@ function EndSession({ sessionId }: { sessionId: string }): React.ReactElement {
   return (
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="sessionId" value={sessionId} />
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.equipa.endSessionTitle')}
+        message={t('confirm.equipa.endSessionMessage')}
+        confirmLabel={t('sessions.end')}
+        tone="danger"
         disabled={pending}
         className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60 bg-surface shadow-card"
       >
         {pending ? t('common.working') : t('sessions.end')}
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

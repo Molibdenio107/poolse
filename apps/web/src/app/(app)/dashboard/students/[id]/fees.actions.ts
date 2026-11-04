@@ -316,3 +316,54 @@ export async function saveSocioAction(
   if (result.quotaKept) return { ok: true, errorKey: 'fees.quotaKept' };
   return { ok: true };
 }
+
+/** Invoiced outside Poolse — POOLSE-163: the current occurrence, with that document's number. */
+export async function recordExternalChargeAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const studentId = String(formData.get('studentId') ?? '');
+  const feeId = String(formData.get('feeId') ?? '');
+  const reference = String(formData.get('reference') ?? '').trim();
+  if (reference === '') {
+    return {
+      ok: false,
+      errorKey: 'fees.external.numberRequired',
+      fields: { reference: 'fees.external.numberRequired' },
+    };
+  }
+
+  try {
+    await apiPost(`/students/${studentId}/fees/${feeId}/external-charges`, {
+      reference,
+      occurrenceOn: String(formData.get('occurrenceOn') ?? '').trim() || null,
+    });
+  } catch (error) {
+    // Already on a Poolse document (or marked before): said with its number.
+    if (error instanceof ApiError && error.status === 409 && error.code === 'already_charged') {
+      const document = (error.details as { document?: string } | null)?.document ?? '';
+      return { ok: false, errorKey: 'fees.external.alreadyCharged', values: { document } };
+    }
+    return failure(error, 'fees.saveFailed');
+  }
+
+  refresh(studentId);
+  return { ok: true, toastKey: 'fees.external.recorded' };
+}
+
+/** Undoes a mark: the next monthly run offers the occurrence again. */
+export async function archiveExternalChargeAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const studentId = String(formData.get('studentId') ?? '');
+  const feeId = String(formData.get('feeId') ?? '');
+  const chargeId = String(formData.get('chargeId') ?? '');
+  try {
+    await apiPost(`/students/${studentId}/fees/${feeId}/external-charges/${chargeId}/archive`, {});
+  } catch (error) {
+    return failure(error, 'fees.saveFailed');
+  }
+  refresh(studentId);
+  return { ok: true };
+}

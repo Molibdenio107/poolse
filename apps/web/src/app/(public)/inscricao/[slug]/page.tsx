@@ -153,8 +153,9 @@ export default async function RegistrationPage({
         labels={labels}
         errors={errors}
       />
-      {/* POOLSE-73: the complaints book and each site's rules in force. */}
+      {/* POOLSE-73: the complaints book and each site's rules in force — one footer line (POOLSE-165). */}
       <PublicNotices
+        compact
         complaints={loaded.form.complaints}
         regulations={loaded.form.regulations.map((r) =>
           loaded!.form.regulations.length > 1 ? r : { effectiveFrom: r.effectiveFrom, body: r.body },

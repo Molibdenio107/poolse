@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poolse · páginas do backoffice</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Montserrat:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Material+Symbols+Sharp:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet"><style>
+body{margin:0;background:#e4e8ea;font-family:Montserrat,sans-serif;color:rgb(17 24 28)}
+a{color:rgb(70 113 124)}a:hover{color:rgb(17 24 28)}
+:root{--bg:250 251 252;--card:255 255 255;--muted:240 243 245;--fg:17 24 28;--mfg:90 103 112;--primary:103 166 182;--pfg:17 24 28;--primary-ink:70 113 124;--ok:60 120 70;--ok-bg:179 212 157;--warn:194 65 12;--warn-bg:251 146 60;--wash-a:.14;
+--sport-pool:160 205 218;--sport-tennis:205 230 80;--sport-padel:120 190 190;--sport-basketball:224 150 96;--sport-football:140 200 120;--sport-handball:230 200 150;--sport-volleyball:240 225 140;--sport-gym:170 175 180}
+[data-theme="dark"]{color-scheme:dark;--bg:13 18 21;--card:20 27 31;--muted:28 36 42;--fg:230 236 239;--mfg:148 162 172;--primary:126 186 201;--pfg:13 18 21;--primary-ink:126 186 201;--ok:150 205 130;--ok-bg:120 170 100;--warn:245 162 92;--warn-bg:230 130 60;--wash-a:.12;
+--sport-pool:110 185 208;--sport-tennis:185 215 70;--sport-padel:90 170 165;--sport-basketball:210 130 80;--sport-football:115 180 100;--sport-handball:205 175 125;--sport-volleyball:220 200 105;--sport-gym:150 158 165}
+[data-sport="pool"]{--sport-wash:var(--sport-pool)}[data-sport="tennis"]{--sport-wash:var(--sport-tennis)}[data-sport="padel"]{--sport-wash:var(--sport-padel)}[data-sport="basketball"]{--sport-wash:var(--sport-basketball)}[data-sport="football"]{--sport-wash:var(--sport-football)}[data-sport="handball"]{--sport-wash:var(--sport-handball)}[data-sport="volleyball"]{--sport-wash:var(--sport-volleyball)}[data-sport="gym"]{--sport-wash:var(--sport-gym)}
+.ms{font-family:'Material Symbols Sharp';font-weight:normal;line-height:1;font-size:18px}
+.card{background:rgb(var(--card));border-radius:4px;box-shadow:0 1px 3px rgb(0 0 0 / .08)}
+.btn{font:600 13px Montserrat;padding:10px 16px;border-radius:2px;border:none;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.btn-p{background:rgb(var(--primary));color:rgb(var(--pfg))}
+.btn-s{background:rgb(var(--card));color:rgb(var(--fg));box-shadow:0 1px 3px rgb(0 0 0 / .08)}
+.btn-g{background:transparent;color:rgb(var(--primary-ink));padding:10px 6px}
+.btn-d{background:rgb(var(--warn-bg) / .16);color:rgb(var(--warn))}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:2px;white-space:nowrap}
+.b-ok{background:rgb(var(--ok-bg) / .45);color:rgb(var(--fg))}
+.b-pend{background:rgb(var(--primary) / .22);color:rgb(var(--fg))}
+.b-late{background:rgb(var(--warn-bg) / .28);color:rgb(var(--fg))}
+.b-mut{background:rgb(var(--muted));color:rgb(var(--mfg))}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 10px 5px 8px;border-radius:2px;background:rgb(var(--card));box-shadow:0 1px 3px rgb(0 0 0 / .08)}
+.chip .bar{width:4px;height:14px;border-radius:1px;background:rgb(var(--sport-wash))}
+.th{font-size:11px;font-weight:600;color:rgb(var(--mfg));padding:12px 14px;text-align:left;border-bottom:1px solid rgb(var(--fg) / .08)}
+.td{font-size:13px;padding:13px 14px;border-bottom:1px solid rgb(var(--fg) / .06);vertical-align:middle}
+.kpi{display:flex;flex-direction:column;gap:6px;padding:16px 18px}
+.kpi .l{font-size:12px;font-weight:600;color:rgb(var(--mfg))}
+.kpi .v{font:600 30px/1 Poppins,sans-serif;letter-spacing:-.02em}
+.kpi .s{font-size:12px;font-weight:600}
+.sec-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sec-n{font:500 12px 'Geist Mono',monospace;padding:3px 7px;background:rgb(17 24 28);color:#fff;border-radius:2px}
+.sec-t{font:600 22px Poppins,sans-serif}
+.sec-s{font-size:13px;color:rgb(90 103 112)}
+.frame{width:1280px;display:grid;grid-template-columns:240px minmax(0,1fr);grid-template-rows:56px minmax(0,1fr);border-radius:4px;overflow:hidden;background:rgb(var(--bg));color:rgb(var(--fg))}
+.page{min-width:0;padding:26px 32px 32px;display:flex;flex-direction:column;gap:20px}
+.crumb{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:rgb(var(--mfg))}
+.crumb b{color:rgb(var(--fg));font-weight:600}
+h1{margin:0;font:600 30px/1.1 Poppins,sans-serif;letter-spacing:-.02em}
+.sub{font-size:13px;color:rgb(var(--mfg))}
+.seg{display:flex;background:rgb(var(--muted));border-radius:2px;padding:3px;font-size:12px;font-weight:600}
+.seg span{padding:6px 12px;color:rgb(var(--mfg))}
+.seg .on{background:rgb(var(--card));border-radius:2px;box-shadow:0 1px 2px rgb(0 0 0 / .08);color:rgb(var(--fg))}
+.ev{margin:4px 5px;border-radius:6px;padding:8px 10px;box-shadow:0 1px 2px rgb(0 0 0 / .06);display:flex;flex-direction:column;gap:2px;overflow:hidden;font-size:11px;color:rgb(var(--mfg))}
+.ev b{display:flex;align-items:center;gap:6px;font-weight:600;font-size:12px;color:rgb(var(--fg))}
+.ev .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.tabs{display:flex;gap:4px;border-bottom:1px solid rgb(var(--fg) / .08)}
+.tabs span{padding:10px 12px;font-size:13px;font-weight:500;color:rgb(var(--mfg))}
+.tabs .on{color:rgb(var(--fg));font-weight:600;box-shadow:inset 0 -2px 0 rgb(var(--primary))}
+.av{width:36px;height:36px;border-radius:2px;display:flex;align-items:center;justify-content:center;font:600 12px Poppins,sans-serif;background:rgb(var(--primary) / .28);color:rgb(var(--fg));flex:none}
+.cb{width:16px;height:16px;border-radius:2px;border:1.5px solid rgb(var(--mfg) / .6);box-sizing:border-box;display:inline-block}
+.row{display:flex;align-items:center}
+</style></helmet>
+
+<div style="padding:48px 56px 8px;display:flex;flex-direction:column;gap:8px;max-width:1100px">
+  <div style="font:600 34px/1.1 Poppins,sans-serif;letter-spacing:-.02em">Poolse · páginas do backoffice</div>
+  <div style="font-size:15px;line-height:1.55;color:rgb(90 103 112);text-wrap:pretty">O conteúdo das páginas partilhadas e por modalidade, na direção <i>sharp</i>: cartões 4 px sem contorno, controlos 2 px, Poppins + Montserrat. Páginas partilhadas (Dashboard, Alunos) ficam neutras; páginas de modalidade (Calendário, Turmas) recebem a lavagem. Cor nunca sozinha — sempre nome + ícone.</div>
+</div>
+
+<!-- ============ 01 DASHBOARD ============ -->
+<section id="s1" style="padding:40px 56px;display:flex;flex-direction:column;gap:22px;border-bottom:1px solid rgb(0 0 0 / .08)">
+  <div class="sec-h"><span class="sec-n">01</span><span class="sec-t">Dashboard · Instalação</span><span class="sec-s">Página partilhada, sem lavagem · três coisas que merecem atenção, uma ação cada · etiquetas com modalidade quando se aplica</span></div>
+  <div style="display:flex;flex-direction:column;gap:40px">
+    <sc-for list="{{ themes }}" as="t" hint-placeholder-count="2">
+      <div style="display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:700">{{ t.name }}</div>
+        <div data-theme="{{ t.id }}" class="frame" style="height:980px">
+          <div style="grid-column:1 / 3;position:relative;z-index:1"><dc-import name="PoolseTopBar" variant="multi" section="facility" hint-size="100%,56px"></dc-import></div>
+          <dc-import name="PoolseSidebar" variant="multi" section="facility" active="dash" hint-size="240px,924px"></dc-import>
+          <div class="page">
+            <div class="crumb"><span class="ms" style="font-size:16px">domain</span>Instalação<span>/</span><b>Dashboard</b></div>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px">
+              <div style="display:flex;flex-direction:column;gap:4px"><span class="sub" style="font-weight:600">Resumo de terça · Clube Piscinas do Norte</span><h1>Três coisas que merecem atenção</h1></div>
+              <div style="display:flex;gap:8px"><button class="btn btn-s">Todos os alertas</button><button class="btn btn-p"><span class="ms" style="font-size:16px">auto_awesome</span>Perguntar ao Poolse</button></div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px">
+              <div class="card" style="padding:18px 20px;display:flex;flex-direction:column;gap:10px" data-sport="pool">
+                <div class="row" style="gap:8px"><span class="badge b-mut">ENERGIA</span><span class="chip" style="padding:3px 8px 3px 6px;font-size:11px;box-shadow:none;background:rgb(var(--muted))"><span class="bar" style="height:12px"></span><span class="ms" style="font-size:14px">pool</span>Piscina</span></div>
+                <div style="font:600 19px/1.25 Poppins,sans-serif;letter-spacing:-.01em">O aquecimento esteve 3 h ligado durante a noite com a cobertura posta.</div>
+                <div class="sub" style="line-height:1.5">Piscina 02 · 25–31 out. Mover a janela de aquecimento para as 05:00 poupa ≈ € 38/semana.</div>
+                <div style="margin-top:auto;padding-top:6px"><button class="btn btn-p">Ajustar horário</button></div>
+              </div>
+              <div class="card" style="padding:18px 20px;display:flex;flex-direction:column;gap:10px">
+                <div class="row" style="gap:8px"><span class="badge b-late">MENSALIDADES</span></div>
+                <div style="font:600 19px/1.25 Poppins,sans-serif;letter-spacing:-.01em">9 mensalidades em atraso — 6 são de Adultos B.</div>
+                <div class="sub" style="line-height:1.5">€ 378 por cobrar. A maioria foram débitos diretos falhados a 1 de outubro, não desistências.</div>
+                <div style="margin-top:auto;padding-top:6px"><button class="btn btn-s">Enviar 9 lembretes</button></div>
+              </div>
+              <div class="card" style="padding:18px 20px;display:flex;flex-direction:column;gap:10px" data-sport="padel">
+                <div class="row" style="gap:8px"><span class="badge b-mut">TURMAS</span><span class="chip" style="padding:3px 8px 3px 6px;font-size:11px;box-shadow:none;background:rgb(var(--muted))"><span class="bar" style="height:12px"></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.8;stroke-linecap:round"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path></svg>Padel</span></div>
+                <div style="font:600 19px/1.25 Poppins,sans-serif;letter-spacing:-.01em">Iniciação Sub-14 tem 5 alunos em lista de espera.</div>
+                <div class="sub" style="line-height:1.5">O Campo 2 está livre ter/qui às 18:00. Uma segunda turma encheria com a procura atual.</div>
+                <div style="margin-top:auto;padding-top:6px"><button class="btn btn-s">Abrir turma</button></div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px">
+              <div class="card kpi"><span class="l">Aulas hoje</span><span class="v">31</span><span class="s" style="color:rgb(var(--mfg))">Natação 18 · Ténis 7 · Padel 6</span></div>
+              <div class="card kpi"><span class="l">Presenças hoje</span><span class="v">212</span><span class="s" style="color:rgb(var(--ok))">91 % das inscrições</span></div>
+              <div class="card kpi"><span class="l">Cobrado em outubro</span><span class="v">€ 9 840</span><span class="s" style="color:rgb(var(--mfg))">86 % do previsto</span></div>
+              <div class="card kpi"><span class="l">Sem professor atribuído</span><span class="v" style="color:rgb(var(--warn))">2</span><span class="s" style="color:rgb(var(--mfg))">Adultos C · Competição Sub-14</span></div>
+            </div>
+            <div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:14px">
+              <div class="card" style="padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+                <div class="row" style="justify-content:space-between"><span style="font-size:13px;font-weight:700">Ocupação · hoje, todos os recintos</span><span class="sub" style="font-weight:600">pico 18:00 · 92 %</span></div>
+                <div style="display:grid;grid-template-columns:repeat(15,minmax(0,1fr));gap:5px;align-items:end;height:120px">
+                  <sc-for list="{{ occ }}" as="o" hint-placeholder-count="15"><div style="height:{{ o.h }};background:{{ o.c }};border-radius:2px"></div></sc-for>
+                </div>
+                <div style="display:flex;justify-content:space-between;font:500 11px 'Geist Mono',monospace;color:rgb(var(--mfg))"><span>07:00</span><span>12:00</span><span>agora</span><span>22:00</span></div>
+              </div>
+              <div class="card" style="padding:18px 20px;display:flex;flex-direction:column;gap:4px">
+                <span style="font-size:13px;font-weight:700;margin-bottom:8px">Recintos · estado agora</span>
+                <div class="row" style="justify-content:space-between;padding:9px 0;border-bottom:1px solid rgb(var(--fg) / .07);font-size:13px"><span class="row" style="gap:8px"><span class="ms" style="font-size:16px">pool</span>Piscina 01 · interior</span><span style="font:500 12px 'Geist Mono',monospace;color:rgb(var(--ok))">28,1° · pH 7,4</span></div>
+                <div class="row" style="justify-content:space-between;padding:9px 0;border-bottom:1px solid rgb(var(--fg) / .07);font-size:13px"><span class="row" style="gap:8px"><span class="ms" style="font-size:16px">pool</span>Piscina 02 · exterior</span><span style="font:500 12px 'Geist Mono',monospace;color:rgb(var(--warn))">27,8° · Cl baixo</span></div>
+                <div class="row" style="justify-content:space-between;padding:9px 0;border-bottom:1px solid rgb(var(--fg) / .07);font-size:13px"><span class="row" style="gap:8px"><span class="ms" style="font-size:16px">sports_tennis</span>Campos de ténis</span><span style="font:500 12px 'Geist Mono',monospace;color:rgb(var(--mfg))">2 / 3 ocupados</span></div>
+                <div class="row" style="justify-content:space-between;padding:9px 0;font-size:13px"><span class="row" style="gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.6;stroke-linecap:round"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path></svg>Campos de padel</span><span style="font:500 12px 'Geist Mono',monospace;color:rgb(var(--warn))">Campo 1 · iluminação</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<!-- ============ 02 ALUNOS LISTA ============ -->
+<section id="s2" style="padding:40px 56px;display:flex;flex-direction:column;gap:22px;border-bottom:1px solid rgb(0 0 0 / .08)">
+  <div class="sec-h"><span class="sec-n">02</span><span class="sec-t">Alunos · lista</span><span class="sec-s">Página partilhada · tabela densa com coluna Modalidades · filtros por modalidade e estado · ações em lote</span></div>
+  <div class="frame" style="height:900px">
+    <div style="grid-column:1 / 3;position:relative;z-index:1"><dc-import name="PoolseTopBar" variant="multi" section="facility" hint-size="100%,56px"></dc-import></div>
+    <dc-import name="PoolseSidebar" variant="multi" section="facility" active="alu" hint-size="240px,844px"></dc-import>
+    <div class="page">
+      <div class="crumb"><span class="ms" style="font-size:16px">domain</span>Instalação<span>/</span><b>Alunos</b></div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px">
+        <div style="display:flex;flex-direction:column;gap:4px"><h1>Alunos <span style="font:500 18px 'Geist Mono',monospace;color:rgb(var(--mfg));margin-left:4px">248</span></h1><span class="sub">22 inscritos em mais do que uma modalidade · 9 com mensalidade em atraso</span></div>
+        <div style="display:flex;gap:8px"><button class="btn btn-s"><span class="ms" style="font-size:16px">upload_file</span>Importar Excel</button><button class="btn btn-s">Exportar</button><button class="btn btn-p">+ Novo aluno</button></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px">
+        <div class="card kpi"><span class="l">Alunos ativos</span><span class="v">248</span><span class="s" style="color:rgb(var(--ok))">+12 este mês</span></div>
+        <div class="card kpi"><span class="l">Natação · Ténis · Padel</span><span class="v">180 · 52 · 38</span><span class="s" style="color:rgb(var(--mfg))">inscrições por modalidade</span></div>
+        <div class="card kpi"><span class="l">Mensalidades cobradas</span><span class="v">€ 9 840</span><span class="s" style="color:rgb(var(--mfg))">86 % de outubro</span></div>
+        <div class="card kpi"><span class="l">Em atraso</span><span class="v" style="color:rgb(var(--warn))">9</span><span class="s" style="color:rgb(var(--mfg))">€ 378 por cobrar</span></div>
+      </div>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <span class="chip" style="background:rgb(var(--primary) / .22)">Todos · 248</span>
+        <span class="chip" data-sport="pool"><span class="bar"></span><span class="ms" style="font-size:15px">pool</span>Natação · 180</span>
+        <span class="chip" data-sport="tennis"><span class="bar"></span><span class="ms" style="font-size:15px">sports_tennis</span>Ténis · 52</span>
+        <span class="chip" data-sport="padel"><span class="bar"></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.8;stroke-linecap:round"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path></svg>Padel · 38</span>
+        <span style="width:1px;height:20px;background:rgb(var(--fg) / .12);margin:0 4px"></span>
+        <span class="chip" style="color:rgb(var(--warn))">Em atraso · 9</span>
+        <span class="chip">Multi-modalidade · 22</span>
+        <span style="margin-left:auto" class="row"><span class="card row" style="gap:8px;padding:8px 12px;width:260px;font-size:12px;color:rgb(var(--mfg))"><span class="ms" style="font-size:16px">search</span>Pesquisar alunos… <span style="margin-left:auto;font:500 10px 'Geist Mono',monospace;padding:1px 5px;background:rgb(var(--muted));border-radius:2px">⌘K</span></span></span>
+      </div>
+      <div class="card" style="overflow:hidden">
+        <table style="width:100%;border-collapse:collapse">
+          <tr><th class="th" style="width:36px"><span class="cb"></span></th><th class="th">Aluno</th><th class="th">Modalidades</th><th class="th">Turmas</th><th class="th">Mensalidade</th><th class="th">Método</th><th class="th">Estado</th><th class="th">Última presença</th></tr>
+          <sc-for list="{{ students }}" as="s" hint-placeholder-count="7">
+            <tr style="background:{{ s.rowBg }}">
+              <td class="td"><span class="cb" style="background:{{ s.cbBg }};border-color:{{ s.cbBd }}"></span></td>
+              <td class="td"><span class="row" style="gap:10px"><span class="av">{{ s.ini }}</span><span style="display:flex;flex-direction:column;gap:2px"><b style="font-weight:600">{{ s.name }}</b><span style="font-size:11px;color:rgb(var(--mfg))">{{ s.sub }}</span></span></span></td>
+              <td class="td"><span class="row" style="gap:6px;flex-wrap:wrap">
+                <sc-for list="{{ s.sports }}" as="sp" hint-placeholder-count="1"><span class="chip" data-sport="{{ sp.id }}" style="padding:3px 8px 3px 6px;font-size:11px;box-shadow:none;background:rgb(var(--muted))"><span class="bar" style="height:12px"></span><sc-if value="{{ sp.isPadel }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.8;stroke-linecap:round"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path></svg></sc-if><sc-if value="{{ sp.notPadel }}"><span class="ms" style="font-size:14px">{{ sp.icon }}</span></sc-if>{{ sp.name }}</span></sc-for>
+              </span></td>
+              <td class="td" style="color:rgb(var(--mfg))">{{ s.turmas }}</td>
+              <td class="td" style="font:500 13px 'Geist Mono',monospace">{{ s.fee }}</td>
+              <td class="td" style="color:rgb(var(--mfg))">{{ s.method }}</td>
+              <td class="td"><span class="badge {{ s.badge }}">{{ s.state }}</span></td>
+              <td class="td" style="font:500 12px 'Geist Mono',monospace;color:rgb(var(--mfg))">{{ s.last }}</td>
+            </tr>
+          </sc-for>
+        </table>
+        <div class="row" style="justify-content:space-between;padding:12px 14px;font-size:12px;color:rgb(var(--mfg))">
+          <span><b style="color:rgb(var(--fg))">2 selecionados</b> · <a style="font-weight:600;text-decoration:none">Enviar lembrete</a> · <a style="font-weight:600;text-decoration:none">Mudar de turma</a> · <a style="font-weight:600;text-decoration:none">Exportar</a></span>
+          <span style="font:500 12px 'Geist Mono',monospace">1–25 de 248</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 FICHA DO ALUNO ============ -->
+<section id="s3" style="padding:40px 56px;display:flex;flex-direction:column;gap:22px;border-bottom:1px solid rgb(0 0 0 / .08)">
+  <div class="sec-h"><span class="sec-n">03</span><span class="sec-t">Alunos · ficha</span><span class="sec-s">Lista + detalhe lado a lado · um cartão de inscrição por modalidade · encarregado com vários filhos</span></div>
+  <div class="frame" style="height:900px">
+    <div style="grid-column:1 / 3;position:relative;z-index:1"><dc-import name="PoolseTopBar" variant="multi" section="facility" hint-size="100%,56px"></dc-import></div>
+    <dc-import name="PoolseSidebar" variant="multi" section="facility" active="alu" hint-size="240px,844px"></dc-import>
+    <div style="min-width:0;display:grid;grid-template-columns:300px minmax(0,1fr)">
+      <div style="background:rgb(var(--card));box-shadow:1px 0 0 rgb(var(--fg) / .06);display:flex;flex-direction:column">
+        <div class="row" style="justify-content:space-between;padding:20px 16px 12px"><span style="font:600 18px Poppins,sans-serif">Alunos</span><span class="row" style="width:28px;height:28px;justify-content:center;background:rgb(var(--primary));color:rgb(var(--pfg));border-radius:2px;font-weight:700">+</span></div>
+        <div style="margin:0 16px 10px;padding:8px 10px;background:rgb(var(--muted));border-radius:2px;font-size:12px;color:rgb(var(--mfg))" class="row"><span class="ms" style="font-size:15px;margin-right:6px">search</span>Pesquisar…</div>
+        <sc-for list="{{ list }}" as="l" hint-placeholder-count="6">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:{{ l.bg }};box-shadow:{{ l.bar }}"><span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><b style="font-size:13px;font-weight:600">{{ l.name }}</b><span style="font-size:11px;color:rgb(var(--mfg))">{{ l.sub }}</span></span><span style="width:8px;height:8px;border-radius:50%;background:{{ l.dot }}"></span></div>
+        </sc-for>
+      </div>
+      <div class="page" style="gap:18px">
+        <div class="crumb"><span class="ms" style="font-size:16px">domain</span>Instalação<span>/</span>Alunos<span>/</span><b>Mariana Costa</b></div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <span class="av" style="width:52px;height:52px;font-size:18px">MC</span>
+          <div style="display:flex;flex-direction:column;gap:4px;flex:1"><h1 style="font-size:26px">Mariana Costa</h1><span class="sub">13 anos · desde fev 2025 · encarregada Ana Costa · irmão Tomás Costa</span></div>
+          <div style="display:flex;gap:8px"><button class="btn btn-s"><span class="ms" style="font-size:16px">chat</span>Mensagem</button><button class="btn btn-p">Editar</button></div>
+        </div>
+        <div class="tabs"><span class="on">Resumo</span><span>Pagamentos</span><span>Assiduidade</span><span>Notas</span><span>Documentos</span></div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">
+          <div class="card" style="padding:0;overflow:hidden;display:flex" data-sport="pool">
+            <div style="width:4px;background:rgb(var(--sport-wash));flex:none"></div>
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;flex:1">
+              <div class="row" style="justify-content:space-between"><span class="row" style="gap:8px;font:600 15px Poppins,sans-serif"><span class="ms" style="font-size:20px">pool</span>Natação</span><span class="badge b-ok">Ativa</span></div>
+              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;font-size:13px">
+                <div><div style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Turma</div><div class="row" style="gap:6px;margin-top:3px"><span style="width:8px;height:8px;border-radius:50%;background:rgb(92 110 180)"></span>Nível 2 · seg/qua 18:00</div></div>
+                <div><div style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Professor</div><div style="margin-top:3px">Rui Faria · Piscina 25 m</div></div>
+                <div><div style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Nível</div><div style="margin-top:3px">Nível 2 · crol <a style="font-weight:600;text-decoration:none;margin-left:4px">Pronta para Nível 3 →</a></div></div>
+                <div><div style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Assiduidade · 30 dias</div><div class="row" style="gap:3px;margin-top:6px"><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--muted));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="font:500 12px 'Geist Mono',monospace;margin-left:6px">7 / 8</span></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden;display:flex" data-sport="padel">
+            <div style="width:4px;background:rgb(var(--sport-wash));flex:none"></div>
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;flex:1">
+              <div class="row" style="justify-content:space-between"><span class="row" style="gap:8px;font:600 15px Poppins,sans-serif"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.6;stroke-linecap:round"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path><circle cx="12.6" cy="8" r=".8" fill="currentColor" stroke="none"></circle><circle cx="16.3" cy="8.6" r=".8" fill="currentColor" stroke="none"></circle><circle cx="14.3" cy="11.7" r=".8" fill="currentColor" stroke="none"></circle></svg>Padel</span><span class="badge b-ok">Ativa</span></div>
+              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;font-size:13px">
+                <div><div style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Turma</div><div class="row" style="gap:6px;margin-top:3px"><span style="width:8px;height:8px;border-radius:50%;background:rgb(160 90 170)"></span>Iniciação Sub-14 · ter/qui 19:00</div></div>
+                <div><div style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Professora</div><div style="margin-top:3px">Joana Reis · Campo 2</div></div>
+                <div><div style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Nível</div><div style="margin-top:3px">Iniciação · desde set 2026</div></div>
+                <div><div style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Assiduidade · 30 dias</div><div class="row" style="gap:3px;margin-top:6px"><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="font:500 12px 'Geist Mono',monospace;margin-left:6px">6 / 6</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px">
+          <div class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:6px"><span style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Mensalidade</span><span class="row" style="gap:10px"><span style="font:600 26px/1 Poppins,sans-serif">€ 60</span><span class="badge b-ok">Out · paga</span></span><span class="sub">Natação € 35 + Padel € 25 · MB WAY · 2 out · ref 4471</span></div>
+          <div class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:6px"><span style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Encarregada de educação</span><span style="font-size:15px;font-weight:600">Ana Costa</span><span class="sub">+351 91 234 5678 · ana.costa@mail.pt</span><span class="sub">Também: Tomás Costa (9 anos · Natação)</span></div>
+          <div class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:6px"><span style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Próximas aulas</span><span class="row" style="gap:8px;font-size:13px"><span class="ms" style="font-size:16px">pool</span>Hoje 18:00 · Natação · pista 3</span><span class="row" style="gap:8px;font-size:13px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.8;stroke-linecap:round"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path></svg>Qui 19:00 · Padel · Campo 2</span></div>
+        </div>
+        <div class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+          <div class="row" style="justify-content:space-between"><span style="font-size:13px;font-weight:700">Atividade recente</span><a style="font-size:12px;font-weight:600;text-decoration:none">Ver tudo</a></div>
+          <div class="row" style="gap:10px;font-size:13px;padding:8px 0;border-top:1px solid rgb(var(--fg) / .07)"><span style="font:500 11px 'Geist Mono',monospace;color:rgb(var(--mfg));width:60px">29 out</span><span class="ms" style="font-size:16px;color:rgb(var(--mfg))">check_circle</span>Presença · Natação Nível 2</div>
+          <div class="row" style="gap:10px;font-size:13px;padding:8px 0;border-top:1px solid rgb(var(--fg) / .07)"><span style="font:500 11px 'Geist Mono',monospace;color:rgb(var(--mfg));width:60px">28 out</span><span class="ms" style="font-size:16px;color:rgb(var(--mfg))">edit_note</span>Nota da professora Joana Reis · "Boa evolução no serviço"</div>
+          <div class="row" style="gap:10px;font-size:13px;padding:8px 0;border-top:1px solid rgb(var(--fg) / .07)"><span style="font:500 11px 'Geist Mono',monospace;color:rgb(var(--mfg));width:60px">02 out</span><span class="ms" style="font-size:16px;color:rgb(var(--mfg))">payments</span>Pagamento € 60 · MB WAY</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 CALENDÁRIO SEMANA ============ -->
+<section id="s4" style="padding:40px 56px;display:flex;flex-direction:column;gap:22px;border-bottom:1px solid rgb(0 0 0 / .08)">
+  <div class="sec-h"><span class="sec-n">04</span><span class="sec-t">Calendário · vista Semana</span><span class="sec-s">Página de modalidade com lavagem · estados das aulas: normal, completa, sem professor, recinto livre</span></div>
+  <div style="display:flex;flex-direction:column;gap:40px">
+    <sc-for list="{{ themes }}" as="t" hint-placeholder-count="2">
+      <div style="display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:700">{{ t.name }}</div>
+        <div data-theme="{{ t.id }}" class="frame" style="height:860px">
+          <div style="grid-column:1 / 3;position:relative;z-index:1"><dc-import name="PoolseTopBar" variant="multi" section="tennis" hint-size="100%,56px"></dc-import></div>
+          <dc-import name="PoolseSidebar" variant="multi" section="tennis" active="cal" hint-size="240px,804px"></dc-import>
+          <div data-sport="tennis" class="page" style="background-color:rgb(var(--bg));background-image:linear-gradient(rgb(var(--sport-wash) / var(--wash-a)),rgb(var(--sport-wash) / var(--wash-a)))">
+            <div class="crumb"><span class="ms" style="font-size:16px">sports_tennis</span>Ténis<span>/</span><b>Calendário</b></div>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px">
+              <div style="display:flex;flex-direction:column;gap:4px"><h1>Semana 44</h1><span class="sub">27 out – 2 nov · 3 campos · 34 aulas · 1 sem professor</span></div>
+              <div style="display:flex;gap:8px"><button class="btn btn-s">Filtros</button><button class="btn btn-s">Exportar Excel</button><button class="btn btn-p">+ Nova aula</button></div>
+            </div>
+            <div class="row" style="gap:10px;flex-wrap:wrap">
+              <div class="card row" style="font-size:13px;font-weight:600;border-radius:2px"><span style="padding:8px 11px">‹</span><span style="padding:8px 12px">Hoje</span><span style="padding:8px 11px">›</span></div>
+              <div class="seg"><span>Dia</span><span class="on">Semana</span><span>Mês</span></div>
+              <span class="chip"><span class="ms" style="font-size:16px">sports_tennis</span>Modalidade: Ténis<span style="color:rgb(var(--mfg));margin-left:4px">✕</span></span>
+              <span class="chip">Todos os campos ▾</span>
+              <span class="chip">Todos os professores ▾</span>
+              <span class="row" style="margin-left:auto;gap:14px;font-size:11px;font-weight:600;color:rgb(var(--mfg))"><span class="row" style="gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:rgb(var(--warn-bg) / .35)"></span>Sem professor</span><span class="row" style="gap:5px"><span style="width:10px;height:10px;border-radius:2px;border:1px dashed rgb(var(--mfg))"></span>Campo livre</span></span>
+            </div>
+            <div style="display:grid;grid-template-columns:56px repeat(5,minmax(0,1fr));grid-template-rows:40px repeat(6,74px);font-size:12px">
+              <div class="card" style="grid-column:1 / 7;grid-row:1;border-radius:2px"></div>
+              <sc-for list="{{ days }}" as="d" hint-placeholder-count="5"><div style="grid-column:{{ d.col }};grid-row:1;display:flex;align-items:center;gap:7px;padding:0 10px;font-weight:600;font-size:12px;position:relative;color:rgb(var(--mfg))">{{ d.name }}<span style="font:500 12px 'Geist Mono',monospace;padding:2px 6px;border-radius:2px;background:{{ d.bg }};color:{{ d.c }}">{{ d.n }}</span></div></sc-for>
+              <div style="grid-column:1 / 7;grid-row:2 / 8;background-image:repeating-linear-gradient(to bottom,rgb(var(--fg) / .08) 0 1px,transparent 1px 74px)"></div>
+              <div style="grid-column:3;grid-row:2 / 8;box-shadow:inset 1px 0 0 rgb(var(--fg) / .08)"></div>
+              <div style="grid-column:4;grid-row:2 / 8;box-shadow:inset 1px 0 0 rgb(var(--fg) / .08);background:rgb(var(--card) / .35)"></div>
+              <div style="grid-column:5;grid-row:2 / 8;box-shadow:inset 1px 0 0 rgb(var(--fg) / .08)"></div>
+              <div style="grid-column:6;grid-row:2 / 8;box-shadow:inset 1px 0 0 rgb(var(--fg) / .08)"></div>
+              <div style="grid-column:2;grid-row:2 / 8;box-shadow:inset 1px 0 0 rgb(var(--fg) / .08)"></div>
+              <sc-for list="{{ hours }}" as="h" hint-placeholder-count="6"><div style="grid-column:1;grid-row:{{ h.row }};padding:6px 0 0;font:500 11px 'Geist Mono',monospace;color:rgb(var(--mfg))">{{ h.t }}</div></sc-for>
+              <sc-for list="{{ week }}" as="e" hint-placeholder-count="20">
+                <div class="ev" style="grid-column:{{ e.col }};grid-row:{{ e.row }};background:{{ e.bg }};border:{{ e.border }};box-shadow:{{ e.shadow }}"><b style="color:{{ e.tc }}"><span class="dot" style="background:{{ e.dot }}"></span>{{ e.title }}</b><span>{{ e.l1 }}</span><span style="color:{{ e.l2c }};font-weight:{{ e.l2w }}">{{ e.l2 }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<!-- ============ 05 TURMAS ============ -->
+<section id="s5" style="padding:40px 56px;display:flex;flex-direction:column;gap:22px;border-bottom:1px solid rgb(0 0 0 / .08)">
+  <div class="sec-h"><span class="sec-n">05</span><span class="sec-t">Turmas · Padel</span><span class="sec-s">Página de modalidade com lavagem · cartões por turma com lotação, lista de espera e professor · alerta de turma sem professor</span></div>
+  <div class="frame" style="height:820px">
+    <div style="grid-column:1 / 3;position:relative;z-index:1"><dc-import name="PoolseTopBar" variant="multi" section="padel" hint-size="100%,56px"></dc-import></div>
+    <dc-import name="PoolseSidebar" variant="multi" section="padel" active="tur" hint-size="240px,764px"></dc-import>
+    <div data-sport="padel" class="page" style="background-color:rgb(var(--bg));background-image:linear-gradient(rgb(var(--sport-wash) / var(--wash-a)),rgb(var(--sport-wash) / var(--wash-a)))">
+      <div class="crumb"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.8;stroke-linecap:round"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path></svg>Padel<span>/</span><b>Turmas</b></div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px">
+        <div style="display:flex;flex-direction:column;gap:4px"><h1>Turmas</h1><span class="sub">6 turmas · 38 alunos · 7 em lista de espera · 1 turma sem professor</span></div>
+        <div style="display:flex;gap:8px"><button class="btn btn-s">Lista de espera · 7</button><button class="btn btn-p">+ Nova turma</button></div>
+      </div>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <div class="seg"><span class="on">Cartões</span><span>Tabela</span></div>
+        <span class="chip">Todos os níveis ▾</span><span class="chip">Todos os professores ▾</span><span class="chip">Todos os campos ▾</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px">
+        <sc-for list="{{ turmas }}" as="u" hint-placeholder-count="6">
+          <div class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;outline:{{ u.outline }}">
+            <div class="row" style="justify-content:space-between;gap:8px"><span class="row" style="gap:8px;font:600 15px Poppins,sans-serif"><span style="width:10px;height:10px;border-radius:50%;background:{{ u.tc }};flex:none"></span>{{ u.name }}</span><span class="badge {{ u.badge }}">{{ u.state }}</span></div>
+            <div class="sub">{{ u.when }}</div>
+            <div class="row" style="gap:8px;font-size:13px"><span class="ms" style="font-size:16px;color:rgb(var(--mfg))">person</span><span style="color:{{ u.coachC }};font-weight:{{ u.coachW }}">{{ u.coach }}</span></div>
+            <div class="row" style="gap:8px;font-size:13px"><span class="ms" style="font-size:16px;color:rgb(var(--mfg))">stadium</span>{{ u.court }}</div>
+            <div style="display:flex;flex-direction:column;gap:5px;margin-top:4px">
+              <div class="row" style="justify-content:space-between;font-size:12px"><span style="font-weight:600">Lotação</span><span style="font:500 12px 'Geist Mono',monospace">{{ u.cap }}</span></div>
+              <div style="height:6px;background:rgb(var(--muted));border-radius:1px;overflow:hidden"><div style="width:{{ u.pct }};height:100%;background:{{ u.barC }}"></div></div>
+              <div class="sub" style="font-size:11px">{{ u.wait }}</div>
+            </div>
+            <div class="row" style="gap:6px;margin-top:4px"><button class="btn btn-s" style="padding:7px 10px;font-size:12px">Alunos</button><button class="btn btn-s" style="padding:7px 10px;font-size:12px">Presenças</button><button class="btn btn-g" style="padding:7px 6px;font-size:12px;margin-left:auto">{{ u.action }}</button></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 06 COMPONENTES ============ -->
+<section id="s6" style="padding:40px 56px;display:flex;flex-direction:column;gap:22px">
+  <div class="sec-h"><span class="sec-n">06</span><span class="sec-t">Componentes</span><span class="sec-s">Botões · estados de pagamento e turma · chips de modalidade · estado vazio · claro e escuro</span></div>
+  <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+    <sc-for list="{{ themes }}" as="t" hint-placeholder-count="2">
+      <div style="display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:700">{{ t.name }}</div>
+        <div data-theme="{{ t.id }}" style="width:560px;background:rgb(var(--bg));color:rgb(var(--fg));padding:24px;border-radius:4px;display:flex;flex-direction:column;gap:22px;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Botões</span><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn btn-p">Primário</button><button class="btn btn-s">Secundário</button><button class="btn btn-g">Ligação</button><button class="btn btn-d">Remover</button><button class="btn btn-p" style="opacity:.45">Desativado</button></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Estados de pagamento</span><div class="row" style="gap:8px;flex-wrap:wrap"><span class="badge b-ok">Paga</span><span class="badge b-pend">MB WAY pendente</span><span class="badge b-late">Em atraso · 6 d</span><span class="badge b-mut">Isento</span><span class="badge b-mut">Débito direto · 1 nov</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Estados de turma e aula</span><div class="row" style="gap:8px;flex-wrap:wrap"><span class="badge b-ok">Aberta</span><span class="badge b-pend">Completa</span><span class="badge b-late">Sem professor</span><span class="badge b-mut">Lista de espera · 5</span><span class="badge b-mut">Cancelada</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Chips de modalidade · barra 4 px na cor plena + ícone + nome, nunca só cor</span><div class="row" style="gap:8px;flex-wrap:wrap">
+            <span class="chip" data-sport="pool"><span class="bar"></span><span class="ms" style="font-size:15px">pool</span>Natação</span>
+            <span class="chip" data-sport="tennis"><span class="bar"></span><span class="ms" style="font-size:15px">sports_tennis</span>Ténis</span>
+            <span class="chip" data-sport="padel"><span class="bar"></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:1.8;stroke-linecap:round"><circle cx="14.5" cy="9.5" r="6"></circle><path d="M10.3 13.7 4.5 19.5"></path></svg>Padel</span>
+            <span class="chip" data-sport="basketball"><span class="bar"></span><span class="ms" style="font-size:15px">sports_basketball</span>Basquetebol</span>
+            <span class="chip" data-sport="gym"><span class="bar"></span><span class="ms" style="font-size:15px">fitness_center</span>Ginásio</span>
+          </div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Indicador de assiduidade · 30 dias</span><div class="row" style="gap:3px"><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--muted));border-radius:1px"></span><span style="width:14px;height:6px;background:rgb(var(--primary));border-radius:1px"></span><span style="width:14px;height:6px;border:1px dashed rgb(var(--mfg));box-sizing:border-box;border-radius:1px"></span><span style="font:500 12px 'Geist Mono',monospace;margin-left:8px">3 / 4</span><span class="sub" style="font-size:11px;margin-left:10px">cheio = presente · vazio = falta · tracejado = por marcar</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:600;color:rgb(var(--mfg))">Estado vazio</span>
+            <div class="card" style="padding:28px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span class="ms" style="font-size:32px;color:rgb(var(--mfg))">groups</span><span style="font:600 15px Poppins,sans-serif">Ainda não há turmas de Padel</span><span class="sub" style="max-width:300px;line-height:1.5">Crie a primeira turma ou importe alunos de um ficheiro Excel para começar.</span><div class="row" style="gap:8px;margin-top:6px"><button class="btn btn-s">Importar Excel</button><button class="btn btn-p">+ Nova turma</button></div></div>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="font-size:12px;color:rgb(90 103 112);max-width:900px;line-height:1.6">Por fazer nesta série: Mensalidades / Faturação, Staff (professor em várias modalidades), Recintos, Métricas, Configuração → Modalidades (o interruptor mono ↔ multi), assistente de importação Excel com coluna Modalidade, pesquisa ⌘K e notificações.</div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1400,"height":7200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const themes = [{ id: 'light', name: 'Claro' }, { id: 'dark', name: 'Escuro' }];
+    const P = 'rgb(var(--primary))', M = 'rgb(var(--muted))', PI = 'rgb(var(--primary-ink))';
+    const occH = [14, 22, 20, 28, 26, 44, 56, 66, 80, 100, 90, 72, 48, 30, 18];
+    const occ = occH.map((h, i) => ({ h: h + '%', c: i < 5 ? M : i === 9 ? PI : P }));
+
+    const SP = { pool: { id: 'pool', name: 'Natação', icon: 'pool' }, tennis: { id: 'tennis', name: 'Ténis', icon: 'sports_tennis' }, padel: { id: 'padel', name: 'Padel', icon: '' } };
+    const sp = ids => ids.map(k => ({ ...SP[k], isPadel: k === 'padel', notPadel: k !== 'padel' }));
+    const B = { ok: 'b-ok', pend: 'b-pend', late: 'b-late', mut: 'b-mut' };
+    const raw = [
+      ['MC', 'Mariana Costa', '13 anos · enc. Ana Costa', ['pool', 'padel'], 'Nível 2 · Iniciação Sub-14', '€ 60', 'MB WAY', 'Paga', 'ok', '29 out', true],
+      ['TF', 'Tiago Ferreira', '34 anos', ['pool'], 'Adultos B', '€ 42', 'Débito direto', 'Em atraso · 6 d', 'late', '22 out', true],
+      ['IA', 'Inês Almeida', '41 anos', ['pool', 'tennis'], 'Hidro · Adultos Nível 1', '€ 55', 'Cartão', 'MB WAY pendente', 'pend', '30 out', false],
+      ['PS', 'Pedro Santos', '52 anos', ['tennis'], 'Adultos Nível 2', '€ 40', 'MB WAY', 'Paga', 'ok', '30 out', false],
+      ['TC', 'Tomás Costa', '9 anos · enc. Ana Costa', ['pool'], 'Nível 2', '€ 35', 'MB WAY', 'Paga', 'ok', '31 out', false],
+      ['SR', 'Sofia Ribeiro', '11 anos · enc. Nuno Ribeiro', ['padel'], 'Iniciação Sub-14', '€ 25', 'Débito direto', 'Em atraso · 2 d', 'late', '28 out', false],
+      ['JM', 'João Martins', '27 anos', ['tennis', 'padel'], 'Competição · Adultos', '€ 65', 'Cartão', 'Isento', 'mut', '31 out', false]
+    ];
+    const students = raw.map(r => ({ ini: r[0], name: r[1], sub: r[2], sports: sp(r[3]), turmas: r[4], fee: r[5], method: r[6], state: r[7], badge: B[r[8]], last: r[9],
+      rowBg: r[10] ? 'rgb(var(--primary) / .08)' : 'transparent', cbBg: r[10] ? P : 'transparent', cbBd: r[10] ? P : 'rgb(var(--mfg) / .6)' }));
+
+    const list = [['Inês Almeida', 'Natação · Ténis', 'ok'], ['Mariana Costa', 'Natação · Padel', 'ok', true], ['Pedro Santos', 'Ténis · qua/sex', 'ok'], ['Tiago Ferreira', 'Natação · ter/qui', 'late'], ['Sofia Ribeiro', 'Padel · ter/qui', 'late'], ['Tomás Costa', 'Natação · seg/qua', 'ok']]
+      .map(l => ({ name: l[0], sub: l[1], dot: l[2] === 'ok' ? 'rgb(var(--ok-bg))' : 'rgb(var(--warn-bg))', bg: l[3] ? 'rgb(var(--muted))' : 'transparent', bar: l[3] ? 'inset 3px 0 0 ' + P : 'none' }));
+
+    const days = [['SEG', '27'], ['TER', '28'], ['QUA', '29'], ['QUI', '30'], ['SEX', '31']].map((d, i) => ({ name: d[0], n: d[1], col: i + 2, bg: i === 2 ? P : 'transparent', c: i === 2 ? 'rgb(var(--pfg))' : 'rgb(var(--mfg))' }));
+    const hours = ['16:00', '17:00', '18:00', '19:00', '20:00', '21:00'].map((t, i) => ({ t, row: i + 2 }));
+    const T = { ini: ['Iniciação Sub-10', 'rgb(124 108 196)'], comp: ['Competição Sub-14', 'rgb(214 102 140)'], a2: ['Adultos Nível 2', 'rgb(92 110 180)'], mini: ['Mini-ténis 5–7', 'rgb(160 90 170)'], a1: ['Adultos Nível 1', 'rgb(70 150 120)'], priv: ['Aula privada', 'rgb(200 140 60)'] };
+    const card = 'rgb(var(--card))';
+    const mk = (col, r1, r2, k, l1, l2, kind) => {
+      const [title, c] = T[k] || [k, 'rgb(var(--mfg))'];
+      const base = { col, row: r1 + ' / ' + r2, title, l1, l2, dot: c, tc: 'rgb(var(--fg))', bg: 'linear-gradient(' + c.replace(')', ' / .16)') + ',' + c.replace(')', ' / .16)') + '),' + card, border: 'none', shadow: '0 1px 2px rgb(0 0 0 / .06)', l2c: 'rgb(var(--mfg))', l2w: '500' };
+      if (kind === 'full') Object.assign(base, { l2c: 'rgb(var(--fg))', l2w: '700' });
+      if (kind === 'nocoach') Object.assign(base, { bg: 'linear-gradient(rgb(var(--warn-bg) / .28),rgb(var(--warn-bg) / .28)),' + card, l2c: 'rgb(var(--warn))', l2w: '700' });
+      if (kind === 'free') Object.assign(base, { bg: 'transparent', border: '1px dashed rgb(var(--mfg) / .6)', shadow: 'none', dot: 'transparent', tc: 'rgb(var(--mfg))' });
+      return base;
+    };
+    const week = [
+      mk(2, 3, 4, 'ini', '17:00–18:00 · Miguel Sá', '6/8 alunos · Campo 1'),
+      mk(2, 4, 6, 'comp', '18:00–19:30 · Inês Lobo', '8/8 · completa · Campo 1', 'full'),
+      mk(2, 6, 7, 'a2', '19:30–20:30 · Miguel Sá', '5/6 alunos · Campo 2'),
+      mk(3, 2, 3, 'mini', '16:30–17:30 · Inês Lobo', '7/8 alunos · Campo 2'),
+      mk(3, 4, 5, 'priv', '18:00–19:00 · Rui Faria', '1 aluno · Campo 3'),
+      mk(3, 5, 6, 'a1', '19:00–20:00 · Rui Faria', '4/6 alunos · Campo 1'),
+      mk(4, 3, 4, 'ini', '17:00–18:00 · Miguel Sá', '6/8 alunos · Campo 1'),
+      mk(4, 4, 6, 'comp', '18:00–19:30', 'Sem professor atribuído', 'nocoach'),
+      mk(4, 6, 7, 'a2', '19:30–20:30 · Miguel Sá', '5/6 alunos · Campo 2'),
+      mk(5, 2, 3, 'mini', '16:30–17:30 · Inês Lobo', '7/8 alunos · Campo 2'),
+      mk(5, 4, 5, 'Campo 3 livre', '18:00–19:00', 'Marcar aula', 'free'),
+      mk(5, 5, 6, 'a1', '19:00–20:00 · Rui Faria', '4/6 alunos · Campo 1'),
+      mk(6, 3, 4, 'ini', '17:00–18:00 · Miguel Sá', '6/8 alunos · Campo 1'),
+      mk(6, 4, 6, 'comp', '18:00–19:30 · Inês Lobo', '8/8 · completa · Campo 1', 'full'),
+      mk(6, 6, 8, 'Treino livre', '20:00–21:30', 'Campos 2 e 3 · abertos')
+    ];
+
+    const turmas = [
+      ['Iniciação Sub-10', 'rgb(124 108 196)', 'Seg e qua · 17:00–18:00', 'Joana Reis', 'Campo 1 · coberto', 6, 8, 'Sem lista de espera', 'Aberta', 'ok', 'Inscrever'],
+      ['Iniciação Sub-14', 'rgb(160 90 170)', 'Ter e qui · 19:00–20:00', 'Joana Reis', 'Campo 2 · coberto', 8, 8, '5 em lista de espera · Campo 2 livre ter/qui 18:00', 'Completa', 'pend', 'Abrir 2.ª turma'],
+      ['Adultos Nível 1', 'rgb(70 150 120)', 'Ter e qui · 20:00–21:00', 'Carlos Melo', 'Campo 1 · coberto', 5, 8, 'Sem lista de espera', 'Aberta', 'ok', 'Inscrever'],
+      ['Adultos Nível 2', 'rgb(92 110 180)', 'Seg e qua · 20:00–21:00', 'Sem professor atribuído', 'Campo 2 · coberto', 7, 8, '2 em lista de espera', 'Sem professor', 'late', 'Atribuir professor'],
+      ['Competição', 'rgb(214 102 140)', 'Sex · 18:00–20:00', 'Carlos Melo', 'Campos 1 e 2', 6, 8, 'Sem lista de espera', 'Aberta', 'ok', 'Inscrever'],
+      ['Padel sénior 60+', 'rgb(200 140 60)', 'Qua · 10:00–11:00', 'Joana Reis', 'Campo 3 · exterior', 6, 6, 'Sem lista de espera', 'Completa', 'pend', 'Ver alunos']
+    ].map(u => { const nc = u[9] === 'late'; return { name: u[0], tc: u[1], when: u[2], coach: u[3], court: u[4], cap: u[5] + ' / ' + u[6] + ' alunos', pct: Math.round(u[5] / u[6] * 100) + '%',
+      barC: u[5] >= u[6] ? PI : P, wait: u[7], state: u[8], badge: B[u[9]], action: u[10], coachC: nc ? 'rgb(var(--warn))' : 'rgb(var(--fg))', coachW: nc ? '700' : '500', outline: nc ? '2px solid rgb(var(--warn-bg) / .5)' : 'none' }; });
+
+    return { themes, occ, students, list, days, hours, week, turmas };
+  }
+}
+</script>
+</body>
+</html>

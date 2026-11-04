@@ -204,6 +204,17 @@ export async function recordPaymentAction(
   if (amountCents === null || amountCents <= 0) {
     return { ok: false, fields: { amount: 'invoices.amountRequired' } };
   }
+  // An external invoice is named by its number (POOLSE-162); the API refuses it too.
+  if (
+    String(formData.get('source') ?? '') === 'external_invoice' &&
+    String(formData.get('reference') ?? '').trim() === ''
+  ) {
+    return {
+      ok: false,
+      errorKey: 'invoices.externalNumberRequired',
+      fields: { reference: 'invoices.externalNumberRequired' },
+    };
+  }
 
   try {
     await apiPost(`/facilities/${facilityId}/invoices/${invoiceId}/payments`, {

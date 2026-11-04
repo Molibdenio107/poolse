@@ -63,6 +63,9 @@ export function IdPhoto({
             <DetachFileButton
               target={target}
               label={t('photo.remove')}
+              // Asks first, naming whose photograph (Rui, 04-11-2026).
+              confirmTitle={t('confirm.alunos.idPhotoTitle', { name })}
+              confirmMessage={t('confirm.alunos.idPhotoMessage')}
               className="w-full px-2"
               {...(own ? { onSaved: () => void user?.reload() } : {})}
             />

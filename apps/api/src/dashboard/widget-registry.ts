@@ -7,6 +7,8 @@ import {
   recintosNow,
   summaryInsights,
   summaryToday,
+  staffNotes,
+  siteWeather,
   childFees,
   childNextClass,
   childPlan,
@@ -64,9 +66,12 @@ import {
  * The bands, in the order they render. **One array constant**, so reordering
  * the page is this line and nothing else. `summary` is the handoff's dashboard
  * on top of the cards (multi-sport Slice 2, Rui 01-11-2026): a fixed layout
- * rather than a ranking — see `FIXED_BANDS`.
+ * rather than a ranking — see `FIXED_BANDS`. `notes` is the top of the page,
+ * above everything (Rui, 04-11-2026): the staff's post-it board (POOLSE-169)
+ * on the left and the weather (POOLSE-170) on the right — laid out, never
+ * ranked.
  */
-export const BANDS = ['summary', 'management', 'operational', 'personal'] as const;
+export const BANDS = ['notes', 'summary', 'management', 'operational', 'personal'] as const;
 
 export type Band = (typeof BANDS)[number];
 
@@ -169,6 +174,12 @@ export interface WidgetDefinition {
    */
   trailing?: true;
   /**
+   * Drop the card when its resolver answers "nothing here", rather than draw an
+   * empty one — POOLSE-170: a site with no coordinates has no weather to show,
+   * and "no weather" is not a fact worth a box.
+   */
+  absentWhenEmpty?: true;
+  /**
    * An environment variable that must read `true` for this widget to exist.
    *
    * Every flag in this product is an environment variable at the API —
@@ -194,7 +205,7 @@ export const BAND_CAP = 4;
  * priority), never cut, an empty one keeping its place — the summary's tiles
  * stand where the reader learned to look for them.
  */
-export const FIXED_BANDS: ReadonlySet<Band> = new Set<Band>(['summary']);
+export const FIXED_BANDS: ReadonlySet<Band> = new Set<Band>(['notes', 'summary']);
 
 /**
  * The roles whose `facilityIds` are genuinely derived today.
@@ -231,6 +242,40 @@ export const SELECTOR_ROLES: readonly MemberRole[] = ['owner', 'admin'];
  * with the band it belongs to.
  */
 export const WIDGETS: readonly WidgetDefinition[] = [
+  /*
+   * The staff's post-it board — POOLSE-169 (Rui, 04-11-2026): any employee
+   * pins a note every other one sees, and it stays until its author or the
+   * office takes it down. Core, not a module. Always drawn for staff, empty
+   * included, because the card is also where a note is written.
+   */
+  {
+    id: 'staff.notes',
+    band: 'notes',
+    roles: ['owner', 'admin', 'instructor', 'maintenance'],
+    scope: 'tenant',
+    size: 3,
+    priority: 100,
+    resolver: staffNotes,
+  },
+  /*
+   * The weather at the site being looked at — POOLSE-170 (Rui, 04-11-2026):
+   * every role, following the selector, at the top right beside the staff
+   * board (Rui, same evening: "on top of the page, right side of the notes"),
+   * in its place whether or not a note is pinned. Laid out, never ranked, so no
+   * card with work in it competes with it. Absent without coordinates. The
+   * forecast is the site panel's own cache.
+   */
+  {
+    id: 'ops.weather',
+    band: 'notes',
+    roles: ['owner', 'admin', 'instructor', 'maintenance', 'guardian', 'student'],
+    kinds: ['business', 'personal'],
+    scope: 'tenant',
+    size: 1,
+    priority: 0,
+    absentWhenEmpty: true,
+    resolver: siteWeather,
+  },
   /*
    * The summary — multi-sport Slice 2 (Rui, 01-11-2026). The handoff's KPI
    * row, occupancy by hour and recintos now, for the people who run the club.
@@ -450,6 +495,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     escalatedPriority: 55,
     resolver: qualifications,
   },
+
 
   /*
    * The instructor band — slice 3. **Self-scoped, all four**: they are about

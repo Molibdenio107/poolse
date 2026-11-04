@@ -1,0 +1,161 @@
+{
+  "label": "production (next build + next start, node dist/main.js)",
+  "rows": [
+    {
+      "page": "Painel",
+      "path": "/dashboard",
+      "cold": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 742,
+        "dcl": 841,
+        "apiCalls": 7,
+        "apiLongest": 62,
+        "apiLongestPath": "/attention",
+        "apiDb": 402,
+        "apiQueries": 159
+      },
+      "warm": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 111,
+        "dcl": 163,
+        "apiCalls": 7,
+        "apiLongest": 42,
+        "apiLongestPath": "/attention",
+        "apiDb": 281,
+        "apiQueries": 159
+      }
+    },
+    {
+      "page": "Alunos, page 2",
+      "path": "/dashboard/students?page=2",
+      "cold": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 131,
+        "dcl": 187,
+        "apiCalls": 7,
+        "apiLongest": 84,
+        "apiLongestPath": "/students",
+        "apiDb": 153,
+        "apiQueries": 98
+      },
+      "warm": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 115,
+        "dcl": 168,
+        "apiCalls": 7,
+        "apiLongest": 73,
+        "apiLongestPath": "/students",
+        "apiDb": 141,
+        "apiQueries": 98
+      }
+    },
+    {
+      "page": "Student record",
+      "path": "/dashboard/students/01627ba3-8efb-4a04-aca6-0bea27dbbe8e",
+      "cold": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 176,
+        "dcl": 231,
+        "apiCalls": 17,
+        "apiLongest": 70,
+        "apiLongestPath": "/students",
+        "apiDb": 306,
+        "apiQueries": 192
+      },
+      "warm": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 181,
+        "dcl": 229,
+        "apiCalls": 17,
+        "apiLongest": 70,
+        "apiLongestPath": "/students",
+        "apiDb": 298,
+        "apiQueries": 192
+      }
+    },
+    {
+      "page": "Calendário (this week)",
+      "path": "/dashboard/calendar",
+      "cold": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 292,
+        "dcl": 359,
+        "apiCalls": 13,
+        "apiLongest": 82,
+        "apiLongestPath": "/facilities/:id/grid",
+        "apiDb": 330,
+        "apiQueries": 174
+      },
+      "warm": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 276,
+        "dcl": 335,
+        "apiCalls": 13,
+        "apiLongest": 77,
+        "apiLongestPath": "/facilities/:id/grid",
+        "apiDb": 316,
+        "apiQueries": 174
+      }
+    },
+    {
+      "page": "Pessoas",
+      "path": "/dashboard/facilities/staff",
+      "cold": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 89,
+        "dcl": 141,
+        "apiCalls": 7,
+        "apiLongest": 27,
+        "apiLongestPath": "/attention",
+        "apiDb": 115,
+        "apiQueries": 99
+      },
+      "warm": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 67,
+        "dcl": 115,
+        "apiCalls": 7,
+        "apiLongest": 23,
+        "apiLongestPath": "/people",
+        "apiDb": 89,
+        "apiQueries": 99
+      }
+    },
+    {
+      "page": "Site page",
+      "path": "/dashboard/facilities/6e342857-2bd7-4698-a802-b9937c5fb8f7",
+      "cold": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 274,
+        "dcl": 325,
+        "apiCalls": 18,
+        "apiLongest": 25,
+        "apiLongestPath": "/maintenance/facilities/:id/tasks",
+        "apiDb": 215,
+        "apiQueries": 182
+      },
+      "warm": {
+        "layoutCalls": 6,
+        "layoutQueries": 79,
+        "ttfb": 79,
+        "dcl": 127,
+        "apiCalls": 18,
+        "apiLongest": 27,
+        "apiLongestPath": "/maintenance/facilities/:id/tasks",
+        "apiDb": 227,
+        "apiQueries": 182
+      }
+    }
+  ]
+}

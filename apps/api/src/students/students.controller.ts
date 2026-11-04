@@ -73,6 +73,7 @@ import {
   revokeRole,
   listLevels,
   listStudents,
+  listTurmaOptions,
   studentSportCounts,
   reorderLevels,
   renameLevel,
@@ -146,6 +147,8 @@ interface StudentsResponse {
    */
   students: Paginated<Student>;
   levels: StudentLevel[];
+  /** The live turmas, for the *Turma* filter — POOLSE-164. */
+  turmas: { id: string; name: string }[];
   canManage: boolean;
   /** POOLSE-129: whether *Convidar famílias* is offered. */
   canInviteFamilies: boolean;
@@ -195,6 +198,8 @@ interface StudentsResponse {
  * an instructor needs to know who to hand a child back to. Pessoas stays staff
  * and stays owner/admin.
  */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 @CoreRoute()
 @Controller('guardians')
 export class GuardiansController {
@@ -404,6 +409,10 @@ export class StudentsController {
     @Query('sport') sport?: string,
     @Query('multi') multi?: string,
     @Query('sportCounts') sportCounts?: string,
+    @Query('classGroupId') classGroupId?: string,
+    @Query('insurance') insurance?: string,
+    @Query('order') order?: string,
+    @Query('overdue') overdue?: string,
   ): Promise<StudentsResponse> {
     // Security review, 12 October 2026: this answered any member, a guardian included.
     requireRole('owner', 'admin', 'instructor');
@@ -418,7 +427,7 @@ export class StudentsController {
 
     // All three are tenant-scoped reads on the same organization; together they
     // cost one round trip instead of three.
-    const [students, levels, majority, counts] = await Promise.all([
+    const [students, levels, majority, counts, turmas] = await Promise.all([
       listStudents(
         organizationId,
         {
@@ -428,13 +437,18 @@ export class StudentsController {
           // One recognised value, not a free-text column name. It filters now
           // rather than sorting: "who do I telephone" is answered by a shorter
           // list, not by the same list in a different order — round 5.
-          overdueOnly: sort === 'overdue',
+          // `overdue=1` is the table's filter (POOLSE-164); `sort=overdue` stays for old links.
+          overdueOnly: sort === 'overdue' || overdue === '1',
           // *Por convidar* — POOLSE-129.
           toInvite: invite === 'pending',
           // *Modalidades* — multi-sport Slice 3, validated since POOLSE-143.
           sport: sportFilter,
           multiSport: multi === '1',
           withinSports: scope,
+          // POOLSE-164: one turma, the seguro's state today, and youngest first.
+          classGroupId: UUID_PATTERN.test(classGroupId ?? '') ? classGroupId! : null,
+          insurance: insurance === 'insured' || insurance === 'lapsed' || insurance === 'never' ? insurance : null,
+          order: order === 'age' ? 'age' : 'name',
         },
         readPageQuery(page, limit),
       ),
@@ -446,6 +460,8 @@ export class StudentsController {
       ),
       ageOfMajority(organizationId),
       sportCounts === '1' ? studentSportCounts(organizationId, sportScope()) : Promise.resolve(undefined),
+      // The *Turma* filter's options — POOLSE-164: the live turmas, by name.
+      listTurmaOptions(organizationId, sportFilter === 'none' ? null : sportFilter, scope),
     ]);
 
     // POOLSE-131: the SNS number for owner and admin only.
@@ -457,6 +473,7 @@ export class StudentsController {
         items: students.items.map((one) => ({ ...one, identity: forReader(one.identity, mayReadSns) })),
       },
       levels,
+      turmas,
       canManage: hasRole('owner', 'admin'),
       // *Convidar famílias* — POOLSE-129. An instructor's run is narrowed to
       // their own turmas by the endpoint; support invites nobody.

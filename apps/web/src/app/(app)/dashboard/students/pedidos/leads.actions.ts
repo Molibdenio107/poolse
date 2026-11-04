@@ -11,19 +11,29 @@ const PAGE = '/dashboard/students/pedidos';
  * The four answers to a pre-registration — POOLSE-69. Each is one API call;
  * the API writes the student, the guardian and the enrolment together, so a
  * refusal leaves nothing half-done for the next press to duplicate.
+ *
+ * **None of them revalidates** (POOLSE-165): the pedido leaves the list, and a
+ * `revalidatePath` re-renders it in the same response — unmounting the button
+ * before its toast is raised, which is why handling one said nothing.
+ * `useSavedAction` raises the toast, then refreshes the page.
  */
 
 async function place(kind: 'waitlist' | 'convert', formData: FormData): Promise<FormState> {
   const leadId = String(formData.get('leadId') ?? '');
   const classGroupId = String(formData.get('classGroupId') ?? '');
   if (classGroupId === '') return { ok: false, fields: { classGroupId: 'leads.pickRequired' } };
+  let turma = '';
   try {
-    await apiPost(`/leads/${leadId}/${kind}`, { classGroupId });
+    const placed = await apiPost<{ classGroupName: string | null }>(`/leads/${leadId}/${kind}`, { classGroupId });
+    turma = placed?.classGroupName ?? '';
   } catch (error) {
     return describeFailure(error, kind === 'waitlist' ? 'leads.waitlistFailed' : 'leads.convertFailed');
   }
-  revalidatePath(PAGE);
-  return { ok: true, toastKey: kind === 'waitlist' ? 'leads.waitlisted' : 'leads.converted' };
+  return {
+    ok: true,
+    toastKey: kind === 'waitlist' ? 'leads.waitlistedIn' : 'leads.convertedIn',
+    values: { turma },
+  };
 }
 
 export async function waitlistLeadAction(_p: FormState, formData: FormData): Promise<FormState> {
@@ -43,7 +53,6 @@ export async function bookTrialAction(_p: FormState, formData: FormData): Promis
   } catch (error) {
     return describeFailure(error, 'leads.trialFailed');
   }
-  revalidatePath(PAGE);
   return { ok: true, toastKey: 'leads.trialBooked' };
 }
 
@@ -56,7 +65,6 @@ export async function dismissLeadAction(_p: FormState, formData: FormData): Prom
   } catch (error) {
     return describeFailure(error, 'leads.dismissFailed');
   }
-  revalidatePath(PAGE);
   return { ok: true, toastKey: 'leads.dismissed' };
 }
 

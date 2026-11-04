@@ -12,6 +12,7 @@ import { Dialog } from '@/components/ui/dialog';
 import type { FormState } from '../../actions';
 import { addSlotsAction, removeSlotAction, updateSlotAction } from './slots.actions';
 import { Reveal } from '@/components/ui/reveal';
+import { ConfirmButton } from '@/components/confirm-action';
 
 /**
  * The rows a schedule is written on — POOLSE-44.
@@ -224,14 +225,17 @@ function SlotRow({
               <input type="hidden" name="organizationId" value={organizationId} />
               <input type="hidden" name="facilityId" value={facilityId} />
               <input type="hidden" name="slotId" value={slot.id} />
-              <button
-                type="submit"
+              <ConfirmButton
+                title={t('confirm.instalacoes.slotRemoveTitle', { from: slot.startTime, to: slot.endTime })}
+                message={t('confirm.instalacoes.slotRemoveMessage')}
+                confirmLabel={t('common.remove')}
+                tone="danger"
                 disabled={removing}
-                aria-label={t('slots.removeLabel', { from: slot.startTime, to: slot.endTime })}
+                ariaLabel={t('slots.removeLabel', { from: slot.startTime, to: slot.endTime })}
                 className="rounded text-foreground-muted hover:text-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 <Trash2 className="size-4" />
-              </button>
+              </ConfirmButton>
             </form>
           </div>
         )}

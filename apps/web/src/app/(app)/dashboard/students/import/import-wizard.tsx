@@ -29,6 +29,7 @@ import {
   type ReadState,
 } from './import.actions';
 import { Reveal } from '@/components/ui/reveal';
+import { ConfirmButton } from '@/components/confirm-action';
 
 /**
  * Slice 1.10 — the import, in four steps.
@@ -263,6 +264,22 @@ export function ImportWizard({
               <RefreshCw aria-hidden className="size-4 text-primary" />
               {t('students.import.doneUpdated', { count: updated })}
             </p>
+          )}
+          {/* The *Turma* column — POOLSE-164: who was enrolled, and each refusal by line. */}
+          {(runState.result?.enrolled ?? 0) > 0 && (
+            <p className="flex items-center gap-2 text-sm">
+              <Check aria-hidden className="size-4 text-primary" />
+              {t('students.import.doneEnrolled', { count: runState.result?.enrolled ?? 0 })}
+            </p>
+          )}
+          {(runState.result?.enrolmentsRefused ?? []).length > 0 && (
+            <ul className="flex flex-col gap-1 text-sm text-warning">
+              {(runState.result?.enrolmentsRefused ?? []).map((refusal) => (
+                <li key={`${refusal.line}-${refusal.turma}`}>
+                  {t(`students.import.enrolRefused.${refusal.reason}`, { line: refusal.line, turma: refusal.turma })}
+                </li>
+              ))}
+            </ul>
           )}
           <p className="text-sm text-foreground-muted">{t('students.import.doneHint')}</p>
           {/*
@@ -780,6 +797,7 @@ function PreviewStep({
               <th scope="col" className="px-3 py-2">{t('students.import.columnName')}</th>
               <th scope="col" className="px-3 py-2">{t('students.import.columnBirthDate')}</th>
               <th scope="col" className="px-3 py-2">{t('students.import.columnLevel')}</th>
+              <th scope="col" className="px-3 py-2">{t('students.import.field.turmas')}</th>
               <th scope="col" className="px-3 py-2">{t('students.import.columnGuardian')}</th>
               <th scope="col" className="px-3 py-2">{t('students.import.columnState')}</th>
             </tr>
@@ -803,15 +821,18 @@ function PreviewStep({
       />
 
       <div className="flex flex-wrap gap-3">
-        <button
-          type="submit"
+        {/* Asks first (Rui, 04-11-2026). */}
+        <ConfirmButton
+          title={t('confirm.alunos.importStudentsTitle', { count: creating + updating })}
+          message={t('confirm.alunos.importStudentsMessage', { creating, updating })}
+          confirmLabel={t('confirm.alunos.importConfirm')}
           disabled={pending || creating + updating === 0}
           className={BUTTON}
         >
           {pending
             ? t('students.import.importing')
             : t('students.import.importCount', { count: creating + updating })}
-        </button>
+        </ConfirmButton>
         <button type="button" onClick={onBack} className={BUTTON_QUIET}>
           {t('students.import.backToMapping')}
         </button>
@@ -869,6 +890,7 @@ function PreviewRow({
       </td>
       <td className="px-3 py-2 tabular-nums">{formatDate(row.birthDate) || row.birthDate || '—'}</td>
       <td className="px-3 py-2">{row.levelName ?? '—'}</td>
+      <td className="px-3 py-2">{(row.turmaNames ?? []).length === 0 ? '—' : (row.turmaNames ?? []).join(', ')}</td>
       <td className="px-3 py-2">
         {row.guardian === null ? '—' : `${row.guardian.name} (${row.guardian.relationship})`}
       </td>

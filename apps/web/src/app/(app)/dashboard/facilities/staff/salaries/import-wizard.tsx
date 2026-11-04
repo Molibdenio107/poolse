@@ -26,6 +26,7 @@ import {
   type SalaryPreviewRow,
 } from './import.actions';
 import { Reveal } from '@/components/ui/reveal';
+import { ConfirmButton } from '@/components/confirm-action';
 
 /**
  * The pay list, in four steps — POOLSE-59.
@@ -715,15 +716,18 @@ function PreviewStep({
       />
 
       <div className="flex flex-wrap gap-3">
-        <button
-          type="submit"
+        {/* Asks first (Rui, 04-11-2026). */}
+        <ConfirmButton
+          title={t('confirm.alunos.importSalariesTitle', { count: selected.size })}
+          message={t('confirm.alunos.importSalariesMessage')}
+          confirmLabel={t('confirm.alunos.importConfirm')}
           disabled={pending || refused || selected.size === 0}
           className={BUTTON}
         >
           {pending
             ? t('students.import.importing')
             : t('salaries.import.commit', { count: selected.size })}
-        </button>
+        </ConfirmButton>
         <button type="button" onClick={onBack} className={BUTTON_QUIET}>
           {t('students.import.backToMapping')}
         </button>

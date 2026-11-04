@@ -77,6 +77,13 @@ export interface Item {
    * rule 7, the Pedidos circle. The shared entry keeps the plain key.
    */
   badgePerSport?: true;
+  /**
+   * In the shared menu only while this module is **off** — POOLSE-165: Pedidos
+   * stays under Alunos for a club without Receção. A sport's copy ignores it.
+   */
+  unlessModule?: PoolseModule;
+  /** Set by `prune` for an `unlessModule` entry whose module is on: copies only. */
+  sportOnly?: true;
   /** The sport a generated entry belongs to, set by `visibleSections`, never by hand. */
   sport?: PoolseSport;
   /**
@@ -153,7 +160,18 @@ function prune(item: Item, viewer: Viewer): Item | null {
     .map((child) => prune(child, viewer))
     .filter((child): child is Item => child !== null);
 
-  return children.length > 0 ? { ...item, children } : { ...item, children: [] };
+  const kept = children.length > 0 ? { ...item, children } : { ...item, children: [] };
+  // Its module is on, so its shared home is elsewhere; a sport's copy still reads it.
+  return item.unlessModule !== undefined && viewer.modules.includes(item.unlessModule)
+    ? { ...kept, sportOnly: true }
+    : kept;
+}
+
+/** The menu without the entries that exist only to be copied into a sport's group. */
+function withoutSportOnly(items: Item[]): Item[] {
+  return items
+    .filter((item) => item.sportOnly !== true)
+    .map((item) => (item.children === undefined ? item : { ...item, children: withoutSportOnly(item.children) }));
 }
 
 /**
@@ -231,6 +249,8 @@ export const SECTIONS: Item[] = [
         roles: ['owner', 'admin', 'instructor', 'maintenance'],
         kinds: ['business'],
         module: 'incidents',
+        // POOLSE-156: the shared week stays; each sport's group gets its own, `?sport=`.
+        perSport: 'copy',
       },
       /*
        * The staff's own leave — 15 October 2026 (Rui). Instructors and
@@ -370,6 +390,12 @@ export const SECTIONS: Item[] = [
     roles: ['owner', 'admin'],
     kinds: ['business'],
     module: 'reception',
+    children: [
+      // Pedidos de inscrição — POOLSE-165 (Rui, 04-11-2026): the office handles
+      // them at the desk. The shared list; each sport's copy stays under that
+      // sport's Alunos, and a club without Receção keeps it under Alunos.
+      { href: '/dashboard/students/pedidos', key: 'leads.title', roles: OFFICE, badge: 'leads' },
+    ],
   },
   {
     href: '/dashboard/faturacao',
@@ -395,11 +421,10 @@ export const SECTIONS: Item[] = [
       // Encarregados de educação belong with the families, not with the staff —
       // POOLSE-35.
       { href: '/dashboard/students/guardians', key: 'students.guardiansTitle' },
-      // Pedidos de inscrição — POOLSE-69. Second, under Encarregados: a request
-      // is a family that is not a student yet, and in September it is the list
-      // reception works first. The roles are the endpoint's own.
-      // POOLSE-143: a filtered copy in each sport's group; the shared one keeps
-      // the leads with no sport, and its circle counts only those.
+      // Pedidos de inscrição — POOLSE-69. The shared list lives under Receção
+      // since POOLSE-165; this entry is each sport's filtered copy (POOLSE-143,
+      // under that sport's Alunos, Rui 04-11-2026), and the shared one only for
+      // a club without the reception module.
       {
         href: '/dashboard/students/pedidos',
         key: 'leads.title',
@@ -407,12 +432,21 @@ export const SECTIONS: Item[] = [
         badge: 'leads',
         badgePerSport: true,
         perSport: 'copy',
+        unlessModule: 'reception',
       },
       // Mensagens sit with the families they are written to — POOLSE-67. The
       // roles are the endpoint's own; an instructor writes to their own turmas.
       {
         href: '/dashboard/students/messages',
         key: 'messages.title',
+        roles: ['owner', 'admin', 'instructor'],
+        module: 'messages',
+      },
+      // Avisos — POOLSE-166: shown in the app between two dates, never emailed.
+      // The endpoint's own roles; an instructor posts to their own turmas.
+      {
+        href: '/dashboard/students/avisos',
+        key: 'avisos.title',
         roles: ['owner', 'admin', 'instructor'],
         module: 'messages',
       },
@@ -523,7 +557,15 @@ export function pathOf(href: string): string {
  */
 function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] {
   const scoped = sections.filter((section) => section.perSport !== undefined);
-  if (sports.length === 0 || scoped.length === 0) return sections;
+  if (sports.length === 0 || scoped.length === 0) return withoutSportOnly(sections);
+
+  // A `copy` entry inside a shared section (Nadadores-salvadores under
+  // Instalações — POOLSE-156) stays there and also gets a copy in each sport's
+  // group, addressed with `?sport=`, under the sport's places (Piscinas,
+  // Campos, Salas — Rui, 04-11-2026), or last when the sport lists none.
+  const nestedCopies = sections
+    .filter((section) => section.perSport === undefined)
+    .flatMap((section) => (section.children ?? []).filter((child) => child.perSport === 'copy'));
 
   // A sport's recintos are listed first, then its Calendário (Rui, 02-11-2026:
   // "pools should be the first menu"), and the rest in their menu order.
@@ -551,6 +593,18 @@ function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] 
           ...(badge !== undefined && (sport === BASE_SPORT || entry.badgePerSport === true) ? { badge } : {}),
         };
       });
+    const copies = nestedCopies
+      .filter((entry) => forSport(entry, sport))
+      .map((entry): Item => {
+        const { badge: _badge, children: _below, ...rest } = entry;
+        return { ...rest, href: withSport(entry.href, sport), sport, children: [] };
+      });
+    const places = children.findIndex((child) => pathOf(child.href) === '/dashboard/recintos');
+    if (places === -1) children.push(...copies);
+    else {
+      const holder = children[places] as Item;
+      children[places] = { ...holder, children: [...(holder.children ?? []), ...copies] };
+    }
     // The sport's tab still opens its Calendário (Rui, 02-11-2026), the page
     // used most days — not the first entry, which is the recintos list.
     const [first] = children as [Item, ...Item[]];
@@ -572,8 +626,8 @@ function groupBySport(sections: Item[], sports: readonly PoolseSport[]): Item[] 
       .map((item) => (item.children === undefined ? item : { ...item, children: shared(item.children) }));
 
   const at = sections.indexOf(scoped[0] as Item);
-  const rest = shared(sections);
-  const before = shared(sections.slice(0, at));
+  const rest = withoutSportOnly(shared(sections));
+  const before = withoutSportOnly(shared(sections.slice(0, at)));
   return [...before, ...groups, ...rest.slice(before.length)];
 }
 

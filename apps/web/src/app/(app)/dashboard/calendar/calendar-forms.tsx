@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { Feedback, type FeedbackMessage } from '@/components/feedback';
 import { Dialog } from '@/components/ui/dialog';
+import { ConfirmButton } from '@/components/confirm-action';
+import { formatDate } from '@/lib/date-format';
 import type { Closure } from '@/lib/api';
 import type { FormState } from '../actions';
 import {
@@ -60,13 +62,16 @@ export function GenerateSeason({
       <input type="hidden" name="from" value={from} />
       <input type="hidden" name="to" value={to} />
 
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.equipa.generateTitle', { from: formatDate(from), to: formatDate(to) })}
+        message={t('confirm.equipa.generateMessage')}
+        confirmLabel={t('calendar.generate')}
         disabled={pending}
         className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
       >
         {pending ? t('calendar.generating') : t('calendar.generate')}
-      </button>
+      </ConfirmButton>
 
       <Problem state={state} />
       {state.ok && state.result !== undefined && (

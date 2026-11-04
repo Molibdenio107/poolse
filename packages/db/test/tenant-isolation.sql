@@ -1541,4 +1541,42 @@ BEGIN
   RAISE NOTICE 'PASS test 27: an incident cannot cross the tenant boundary';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 28 — a post-it is the club's own: no other club's author, no other club's eyes
+-- ---------------------------------------------------------------------------
+--
+-- `staff_note` (POOLSE-169). The board every employee reads must not carry a
+-- name from another club, and a club reading its board sees only its notes.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_mem_a uuid; v_mem_b uuid; v_seen integer; ok boolean;
+BEGIN
+  RESET ROLE;
+  SELECT id INTO v_mem_a FROM membership WHERE organization_id = v_a LIMIT 1;
+  SELECT id INTO v_mem_b FROM membership WHERE organization_id = v_b LIMIT 1;
+  IF v_mem_a IS NULL OR v_mem_b IS NULL THEN
+    RAISE EXCEPTION 'FAIL test 28: fixture is missing a membership';
+  END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO staff_note (organization_id, author_membership_id, body) VALUES (v_a, v_mem_b, 'x');
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 28: org A pinned a note in org B''s name'; END IF;
+
+  INSERT INTO staff_note (organization_id, author_membership_id, body) VALUES (v_b, v_mem_b, 'Só de B');
+
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_a::text, true);
+  SELECT count(*) INTO v_seen FROM staff_note WHERE body = 'Só de B';
+  IF v_seen <> 0 THEN RAISE EXCEPTION 'FAIL test 28: org A read org B''s board'; END IF;
+  RESET ROLE;
+
+  RAISE NOTICE 'PASS test 28: a post-it cannot cross the tenant boundary';
+END $$;
+
 ROLLBACK;

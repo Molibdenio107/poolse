@@ -26,6 +26,7 @@ import {
   savePlanAction,
 } from './prices.actions';
 import { Reveal } from '@/components/ui/reveal';
+import { ConfirmButton } from '@/components/confirm-action';
 
 /**
  * What a price actually charges — round 5, ticket 3.0.
@@ -127,7 +128,7 @@ function Problem({ state }: { state: FormState }): React.ReactElement | null {
  * sub-sections in one card plus three more cards below it, and the one a club
  * opened the tab for was always somewhere down the page.
  */
-export type PriceSection = 'mensalidade' | 'quota' | 'joining' | 'payments';
+export type PriceSection = 'mensalidade' | 'quota' | 'joining' | 'insurance' | 'payments';
 
 export function PricesPanel({
   section,
@@ -408,7 +409,12 @@ export function PricesPanel({
         adding={addingSeasonal === 'inscricao'}
         setAdding={(on) => setAddingSeasonal(on ? 'inscricao' : null)}
       />
+      </>
+      )}
 
+      {/* Seguro is its own section since POOLSE-151, beside the apólice the page draws. */}
+      {section === 'insurance' && (
+      <>
       <SeasonalPrices
         kind="seguro"
         title={t('fees.seguroTitle')}
@@ -439,7 +445,8 @@ export function PricesPanel({
       */}
       {section === 'payments' && (
       <>
-      <details open>
+      {/* Closed on every visit — POOLSE-151; nothing remembers an opened one. */}
+      <details>
         <summary className="cursor-pointer text-base font-semibold">
           {t('fees.paymentsTitle')}
           <span className="ml-2 text-sm font-normal text-foreground-muted">
@@ -471,7 +478,7 @@ export function PricesPanel({
       </details>
 
       {/* ---- the setup nobody touches twice --------------------------------- */}
-      <details open className="border-t border-border pt-5">
+      <details className="border-t border-border pt-5">
         <summary className="cursor-pointer text-base font-semibold">
           {t('fees.periods')}
           <span className="ml-2 text-sm font-normal text-foreground-muted">
@@ -527,6 +534,7 @@ export function PricesPanel({
                           id={period.id}
                           action={archivePeriodAction}
                           label={t('fees.archivePeriod')}
+                          name={period.name}
                         />
                       </span>
                     )}
@@ -569,22 +577,44 @@ function ArchiveForm({
   id,
   action,
   label,
+  name,
 }: {
   facilityId: string;
   idName: string;
   id: string;
   action: (previous: FormState, formData: FormData) => Promise<FormState>;
   label: string;
+  /** A periodicity's own name, for the question; a plan has none of its own. */
+  name?: string;
 }): React.ReactElement {
+  const t = useTranslations();
   const [, submit, pending] = useSavedAction(action, INITIAL);
+  // Asks first (Rui, 04-11-2026) — a plan or a periodicity is not in the bin.
+  const isPeriod = idName === 'periodId';
 
   return (
     <form action={submit}>
       <input type="hidden" name="facilityId" value={facilityId} />
       <input type="hidden" name={idName} value={id} />
-      <button type="submit" disabled={pending} className={BUTTON_QUIET} aria-label={label}>
+      <ConfirmButton
+        title={
+          isPeriod
+            ? t('confirm.instalacoes.periodArchiveTitle', { name: name ?? '' })
+            : t('confirm.instalacoes.planArchiveTitle')
+        }
+        message={
+          isPeriod
+            ? t('confirm.instalacoes.periodArchiveMessage')
+            : t('confirm.instalacoes.planArchiveMessage')
+        }
+        confirmLabel={t('confirm.instalacoes.archive')}
+        tone="danger"
+        disabled={pending}
+        className={BUTTON_QUIET}
+        ariaLabel={label}
+      >
         <Trash2 aria-hidden className="size-3.5" />
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

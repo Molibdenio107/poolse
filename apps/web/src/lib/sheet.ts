@@ -30,6 +30,8 @@ import { readCsvCell } from './csv.ts';
  */
 export const IMPORT_FIELDS = [
   'fullName',
+  // The turmas — POOLSE-164: optional; a name the club has enrols the student.
+  'turmas',
   'firstName',
   'lastName',
   'birthDate',
@@ -91,6 +93,7 @@ export type Mapping = Record<ImportField, number | null>;
 
 export const EMPTY_MAPPING: Mapping = {
   fullName: null,
+  turmas: null,
   firstName: null,
   lastName: null,
   birthDate: null,
@@ -336,6 +339,14 @@ const SYNONYMS: [ImportField, string[]][] = [
     ],
   ],
   ['levelName', ['nivel', 'escalao', 'grupo de nivel', 'level', 'class level']],
+  /*
+   * The turmas — POOLSE-164 (Rui: "it can be a similar name — aula, grupo…").
+   * After the level, so "Grupo de nível" and "Class level" stay the level's.
+   */
+  [
+    'turmas',
+    ['turmas', 'turma', 'aulas', 'aula', 'grupos', 'grupo', 'classes', 'classe', 'class', 'groups', 'group', 'horario'],
+  ],
   ['contactEmail', ['email', 'e mail', 'correio electronico', 'mail']],
   [
     'contactPhone',
@@ -835,6 +846,7 @@ export const EXPORT_FIELDS: ImportField[] = [
   'lastName',
   'birthDate',
   'levelName',
+  'turmas',
   'contactEmail',
   'contactPhone',
   'taxNumber',
@@ -870,6 +882,18 @@ export const EXPORT_FIELDS: ImportField[] = [
  * ("Masculino"): the importer reads it back whichever language the file was
  * exported in, and `import.test.ts` on the API pins these exact words.
  */
+/**
+ * The seguro as the export writes it — POOLSE-164. An *export-only* column,
+ * after every import field: Poolse works it out from the seguro lines, so the
+ * importer reads nothing from it and no import field may claim its header
+ * (`sheet.test.ts`). The Portuguese words in both locales, as the gender column.
+ */
+export const INSURANCE_EXPORT_WORD: Record<'insured' | 'lapsed' | 'never', string> = {
+  insured: 'Com seguro',
+  lapsed: 'Seguro caducado',
+  never: 'Sem seguro',
+};
+
 export const MARITAL_EXPORT_WORD: Record<
   'single' | 'married' | 'civil_union' | 'divorced' | 'widowed',
   string

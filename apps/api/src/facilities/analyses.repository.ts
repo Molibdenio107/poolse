@@ -71,8 +71,16 @@ export interface PoolAnalysis {
   recordedByName: string | null;
   /** Taken from a laboratory report's chemistry (29-10-2026), not typed. */
   fromLab: boolean;
+  /**
+   * Where it came from — POOLSE-153: typed, a water-log sheet (`log`) or a
+   * laboratory document (`report`). Null for a reading from before the column
+   * existed: its origin was never recorded, and is not guessed.
+   */
+  origin: AnalysisOrigin | null;
   values: AnalysisValue[];
 }
+
+export type AnalysisOrigin = 'typed' | 'log' | 'report';
 
 /**
  * Every analysis of one pool, oldest first.
@@ -96,6 +104,7 @@ export async function listAnalyses(
       notes: string | null;
       recorded_by_name: string | null;
       from_lab: boolean;
+      origin: AnalysisOrigin | null;
       values: AnalysisValue[] | null;
     }>(
       `
@@ -103,6 +112,7 @@ export async function listAnalyses(
              a.taken_at,
              a.notes,
              a.lab_result_id IS NOT NULL AS from_lab,
+             a.origin::text AS origin,
              nullif(btrim(coalesce(u.cached_first_name, '') || ' ' ||
                           coalesce(u.cached_last_name, '')), '') AS recorded_by_name,
              (
@@ -139,6 +149,7 @@ export async function listAnalyses(
       notes: row.notes,
       recordedByName: row.recorded_by_name,
       fromLab: row.from_lab,
+      origin: row.origin,
       values: row.values ?? [],
     }));
   });
@@ -272,6 +283,11 @@ export interface AnalysisImportRequest {
    * out of date, not permission.
    */
   include: number[] | null;
+  /**
+   * What the rows are — POOLSE-153: the club's own water log (`log`) or a
+   * laboratory document read into rows (`report`). Recorded on each reading.
+   */
+  source: 'log' | 'report';
 }
 
 export interface AnalysisImportResult {
@@ -373,10 +389,10 @@ export async function runAnalysisImport(
 
       const inserted = await tx.query<{ id: string }>(
         // The sheet's clock is the facility's: read there, not in UTC.
-        `INSERT INTO pool_analysis (organization_id, pool_id, taken_at, notes, recorded_by)
-         VALUES ($1, $2, ($3::timestamp AT TIME ZONE $6), $4, $5)
+        `INSERT INTO pool_analysis (organization_id, pool_id, taken_at, notes, recorded_by, origin)
+         VALUES ($1, $2, ($3::timestamp AT TIME ZONE $6), $4, $5, $7::analysis_origin)
          RETURNING id`,
-        [organizationId, request.poolId, takenAt, row.notes, membershipId, timezone],
+        [organizationId, request.poolId, takenAt, row.notes, membershipId, timezone, request.source],
       );
 
       const id = inserted.rows[0]?.id;

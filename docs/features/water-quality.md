@@ -54,6 +54,19 @@ A tank's water tab says it in one line above its pills: *own readings every day;
 
 **A laboratory report's chemistry is also a reading** (Rui, 29-10-2026, reversing POOLSE-101's "never filed a second time"). `createLabResultIn` — the form's and the import's one path — writes a `pool_analysis` with `lab_result_id` beside any lab result that has chemistry, so Última análise, Tendências, Histórico (marked *Do laboratório*) and the out-of-range warning see it: a good report clears the warning. A reading the club already has at that moment stands and none is added. No water alert is raised for it — the lab result raises its own. The trigger `lab_result_archives_reading` archives and restores the reading with its report.
 
+**Where each analysis came from is recorded** (POOLSE-153, Rui 04-11-2026). Each analysis is typed,
+from a water-log sheet, or from a laboratory document (`origin`). Rows from before 04-11-2026 say
+*Origem não registada* rather than a guess.
+- **Laboratório lists every imported report:** the graded lab results and the chemistry-only
+  reports POOLSE-101 files as readings, newest first and paged together. Each row says *Registado*,
+  *Importado* or *Origem não registada*. A chemistry-only report says it has no NP 4542 grade and
+  is archived from Histórico, where its reading lives.
+- **Histórico** marks a reading *Importado da folha* or *Relatório importado*, besides *Do
+  laboratório*.
+- **Tendências** draws a laboratory point as a hollow ring beside the solid dot of a reading, with a
+  legend naming both, so colour never carries it.
+- **Última análise** is the newest live reading, whatever its origin.
+
 **A report dropped on any water section is read in Laboratório** (Rui, 29-10-2026): `WaterDropCatcher` holds the file (`lib/pending-file.ts`) and jumps there, and the importer takes it on arrival. Owner and admin, as the import is.
 
 **A colony count written as "<1" or as a word of absence (*Ausência*, *não detetado*) is read as 0**: counts are whole numbers, so both mean exactly none. Any other "<N" is a detection limit, not a count, and the row is refused with the parameter named. Importing is owner and admin, as the readings import is.

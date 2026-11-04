@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { LogIn } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
+import { ConfirmButton } from '@/components/confirm-action';
 import type { FormState } from '../dashboard/actions';
 import { enterSupportAction } from '../dashboard/support.actions';
 
@@ -14,15 +15,18 @@ export function EnterSupportButton({ grantId, club }: { grantId: string; club: s
   const [, dispatch, pending] = useSavedAction(enterSupportAction.bind(null, grantId), INITIAL);
   return (
     <form action={dispatch}>
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.instalacoes.enterSupportTitle', { club })}
+        message={t('confirm.instalacoes.enterSupportMessage')}
+        confirmLabel={t('admin.support.enter')}
         disabled={pending}
-        aria-label={t('admin.support.enterNamed', { club })}
+        ariaLabel={t('admin.support.enterNamed', { club })}
         className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <LogIn aria-hidden className="size-4" />
         {pending ? t('common.working') : t('admin.support.enter')}
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

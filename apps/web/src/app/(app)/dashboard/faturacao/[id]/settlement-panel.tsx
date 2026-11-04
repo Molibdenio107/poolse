@@ -39,7 +39,7 @@ const BUTTON =
 const BUTTON_QUIET =
    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';
 
-const SOURCES: PaymentSource[] = ['manual', 'mbway', 'sepa'];
+const SOURCES: PaymentSource[] = ['manual', 'mbway', 'sepa', 'external_invoice'];
 const CHANNELS: ChaseChannel[] = ['email', 'phone', 'message', 'in_person', 'letter'];
 
 
@@ -94,10 +94,13 @@ export function SettlementPanel({
                     {formatCents(locale, payment.amountCents)}
                   </span>{' '}
                   <span className="text-foreground-muted">
-                    {t(`invoices.source.${payment.source}`)} ·{' '}
-                    {formatDate(new Date(`${payment.paidOn}T12:00:00Z`))}
+                    {/* Plain text, never a link: the number is somebody else's document (POOLSE-162). */}
+                    {payment.source === 'external_invoice'
+                      ? t('invoices.paidByExternal', { number: payment.reference ?? '' })
+                      : t(`invoices.source.${payment.source}`)}{' '}
+                    · {formatDate(new Date(`${payment.paidOn}T12:00:00Z`))}
                   </span>
-                  {payment.reference !== null && (
+                  {payment.reference !== null && payment.source !== 'external_invoice' && (
                     <span className="block text-foreground-muted">{payment.reference}</span>
                   )}
                   {payment.recordedByName !== null && (
@@ -297,12 +300,19 @@ function PaymentDialog({
           </select>
         </div>
 
+        {/*
+          Paid by an invoice the club issued outside Poolse (POOLSE-162): the
+          same box asks for that invoice's number, and it is required.
+        */}
         <TextField
           name="reference"
-          label={t('invoices.reference')}
+          label={sourceField === 'external_invoice' ? t('invoices.externalNumber') : t('invoices.reference')}
           initial=""
-          hint={t('invoices.referenceHint')}
+          hint={sourceField === 'external_invoice' ? t('invoices.externalNumberHint') : t('invoices.referenceHint')}
+          required={sourceField === 'external_invoice'}
+          maxLength={sourceField === 'external_invoice' ? 60 : 200}
           className="max-w-none"
+          {...(fields['reference'] === undefined ? {} : { error: t(fields['reference']) })}
         />
 
         {state.errorKey !== undefined && (

@@ -1,4 +1,7 @@
 import pg from 'pg';
+import { timeQueriesOn } from './query-timing.js';
+
+export { measureQueries, currentQueryTiming, type QueryTiming } from './query-timing.js';
 
 const { Pool } = pg;
 
@@ -13,6 +16,8 @@ export const pool = new Pool({
   connectionString: process.env['DATABASE_APP_URL'],
   max: Number(process.env['DATABASE_POOL_MAX'] ?? 10),
 });
+// POOLSE-171: each request's database time, for its Server-Timing header.
+timeQueriesOn(pool);
 
 export type Tx = pg.PoolClient;
 
@@ -167,6 +172,7 @@ export async function withPlatform<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
     // budget for a page that is opened twice a week.
     max: Number(process.env['DATABASE_PLATFORM_POOL_MAX'] ?? 3),
   });
+  timeQueriesOn(platform);
 
   const client = await platform.connect();
   try {

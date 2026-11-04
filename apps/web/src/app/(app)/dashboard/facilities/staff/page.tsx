@@ -3,19 +3,15 @@ import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type Me, type OrganizationMember, type People } from '../../../../../lib/api';
-import { isMultiSport } from '@poolse/rules';
-import { SportChip } from '@/components/sport-chip';
+import { ApiError, apiFetch, type Me, type People } from '../../../../../lib/api';
+import { isMultiSport, type PoolseSport } from '@poolse/rules';
 import { DeliveryBadge } from '@/components/delivery-badge';
-import { PersonAvatar } from '@/components/person-avatar';
-import { BirthdayFlag } from '@/components/birthday-flag';
 import { RoleBadge, RoleBadges } from '@/components/role-badge';
 import { STAFF_ROLES } from '@/lib/roles';
 import { backProp, originBack } from '@/lib/back';
 import { Pagination } from '@/components/pagination';
 import { SearchInput, SearchStatus } from '@/components/search-input';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
-import { CalendarOff } from 'lucide-react';
 import { Hint } from '@/components/ui/tooltip';
 import { InvitePanel } from './invite-panel';
 import { ReissueButton } from './reissue-button';
@@ -23,6 +19,7 @@ import { RevokeButton } from './revoke-button';
 import { PageError, PageShell } from '@/components/page-shell';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 import { formatStamp } from '@/lib/date-format';
+import { StaffTable } from './staff-table';
 
 /**
  * Slice 0.5 made visible: who is in this organization, who has been asked, and
@@ -53,6 +50,7 @@ export default async function PeoplePage({
     search?: string;
     from?: string;
     section?: string;
+    sport?: string;
   }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
@@ -67,7 +65,8 @@ export default async function PeoplePage({
    * part of the same query as the window — and the API enforces the staff
    * boundary rather than trusting this page to (POOLSE-35 criterion 7).
    */
-  const { role: requestedRole, page: pageParam, search = '', from, section } = await searchParams;
+  const { role: requestedRole, page: pageParam, search = '', from, section, sport: requestedSport } =
+    await searchParams;
   const role = ROLES.includes(requestedRole ?? '') ? requestedRole! : null;
   const page = readPage(pageParam);
   const term = search.trim();
@@ -84,9 +83,13 @@ export default async function PeoplePage({
   const back = originBack(from);
 
   let people: People | null = null;
-  // POOLSE-145: a chip per person's sport, only where the club has more than one.
+  // POOLSE-158: a column per sport, and the filter on its header, only where
+  // the club has more than one. A sport the club does not have is dropped here
+  // rather than sent, where the API would answer 400.
   const me = await apiFetch<Me>('/me').catch(() => null);
-  const multiSport = isMultiSport(me?.memberships[0]?.sports);
+  const clubSports: PoolseSport[] = me?.memberships[0]?.sports ?? [];
+  const multiSport = isMultiSport(clubSports);
+  const sport = multiSport && clubSports.some((one) => one === requestedSport) ? requestedSport! : '';
   let failure: LoadFailure | null = null;
   let noOrganization = false;
   let notPermitted = false;
@@ -96,6 +99,7 @@ export default async function PeoplePage({
       scope: 'staff',
       ...(role === null ? {} : { role }),
       ...(term === '' ? {} : { search: term }),
+      ...(sport === '' ? {} : { sport }),
       ...(page > 1 ? { page: String(page) } : {}),
     })}`);
   } catch (error) {
@@ -129,7 +133,7 @@ export default async function PeoplePage({
     redirect(
       pageHref(
         '/dashboard/facilities/staff',
-        { role: role ?? undefined, search: term },
+        { role: role ?? undefined, search: term, sport: sport || undefined },
         lastPage(people.members.total, people.members.limit),
       ),
     );
@@ -254,7 +258,8 @@ export default async function PeoplePage({
                   return (
                     <FromLink
                       key={staffRole}
-                      href={active ? '/dashboard/facilities/staff' : `/dashboard/facilities/staff?role=${staffRole}`}
+                      // A role chip keeps the sport the table is filtered to — POOLSE-158.
+                      href={`/dashboard/facilities/staff${chipQuery(active ? null : staffRole, sport)}`}
                       aria-pressed={active}
                       className={subMenuPillClass(active)}
                     >
@@ -301,73 +306,10 @@ export default async function PeoplePage({
               </p>
             )}
 
-            <ul className="flex flex-col divide-y divide-border">
-              {members.map((member) => (
-                <li
-                  key={member.membershipId}
-                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 first:pt-0 last:pb-0"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <PersonAvatar
-                      id={member.membershipId}
-                      name={displayName(member) ?? member.email ?? '?'}
-                      photoUrl={member.avatarUrl}
-                    />
-                    <div className="flex min-w-0 flex-col">
-                      {/* The record is where a name is corrected — POOLSE-39. */}
-                      <span className="flex min-w-0 flex-wrap items-center gap-2">
-                        <FromLink
-                          href={`/dashboard/facilities/staff/${member.membershipId}`}
-                          className="truncate rounded text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                        >
-                          {displayName(member) ?? t('account.noName')}
-                        </FromLink>
-                        <BirthdayFlag birthDate={member.birthDate} />
-                      </span>
-                      {member.email !== null && (
-                        <span className="truncate text-sm text-foreground-muted">
-                          {member.email}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1">
-                    {member.status === 'invited' && (
-                      // The badge already says "not yet accepted"; the tooltip
-                      // only explains what that means for the person, which is
-                      // exactly the line CLAUDE.md draws.
-                      <Hint text={t('people.pendingHint')}>
-                        <span
-                          tabIndex={0}
-                          className="cursor-help rounded bg-warning/15 px-2 py-0.5 text-sm text-warning focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                        >
-                          {t('people.pending')}
-                        </span>
-                      </Hint>
-                    )}
-                    {/*
-                      Away today — round 6.
-
-                      Only today, and only approved leave: this list answers "who
-                      is here", and a pending request is not an absence. The
-                      reason is in the words, not only in the colour — an amber
-                      chip alone would say "something", and the difference
-                      between a holiday and sick leave is the whole point of
-                      showing it.
-                    */}
-                    {member.awayKind != null && (
-                      <span className="inline-flex items-center gap-1 rounded bg-warning/15 px-2 py-0.5 text-sm text-warning">
-                        <CalendarOff className="size-3.5" aria-hidden="true" />
-                        {t(`vacations.kinds.${member.awayKind}`)}
-                      </span>
-                    )}
-                    {multiSport &&
-                      (member.sports ?? []).map((sport) => <SportChip key={sport} sport={sport} />)}
-                    <RoleBadges roles={member.roles} />
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {/* Shown while a sport is chosen even with nobody in it: the filter lives on its header. */}
+            {(members.length > 0 || sport !== '') && (
+              <StaffTable members={members} sports={multiSport ? clubSports : []} sport={sport} />
+            )}
 
             {/*
               `query` carries the role chip, so paging keeps the filter. The
@@ -377,7 +319,7 @@ export default async function PeoplePage({
             <Pagination
               page={people.members}
               basePath="/dashboard/facilities/staff"
-              query={{ role: role ?? undefined, search: term, from }}
+              query={{ role: role ?? undefined, search: term, sport: sport || undefined, from }}
             />
           </section>
           )}
@@ -460,14 +402,11 @@ export default async function PeoplePage({
   );
 }
 
-/**
- * The name a staff row shows — POOLSE-32.
- *
- * Composed by the server and passed straight through, rather than assembled
- * here from the parts as it used to be. Null rather than an empty string, so
- * the caller picks the translated fallback for somebody invited who has not yet
- * accepted and has no name anywhere.
- */
-function displayName(member: OrganizationMember): string | null {
-  return member.shortName;
+/** A role chip's query: the role, and the sport filter if one is set (POOLSE-158). */
+function chipQuery(role: string | null, sport: string): string {
+  const query = new URLSearchParams({
+    ...(role === null ? {} : { role }),
+    ...(sport === '' ? {} : { sport }),
+  });
+  return query.size === 0 ? '' : `?${query}`;
 }

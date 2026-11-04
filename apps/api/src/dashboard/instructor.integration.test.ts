@@ -163,7 +163,8 @@ test('66.3 QA 6 — an instructor with no classes is empty, not an error', async
     const ana = await addMember(tenant, 'Ana', 'Lopes', ['instructor']);
 
     const page = await asInstructor(tenant, ana);
-    const cards = page.bands.flatMap((band) => band.widgets);
+    // The operational band's cards; the staff board above it (POOLSE-169) is its own band.
+    const cards = page.bands.filter((band) => band.id === 'operational').flatMap((band) => band.widgets);
     // Five candidates for four places, all empty: the cap cuts the turmas,
     // and every card that is shown says "nothing here" rather than failing.
     assert.equal(cards.length, 4);

@@ -5,6 +5,8 @@ export interface TrendPoint {
   /** ISO instant. Only used for the accessible table and the tooltip. */
   at: string;
   value: number;
+  /** From a laboratory report — drawn as a hollow ring, never by colour alone (POOLSE-153). */
+  fromLab?: boolean;
 }
 
 /**
@@ -35,6 +37,7 @@ export function TrendChart({
   band,
   className,
   locale = 'pt-PT',
+  legend,
 }: {
   /** Oldest first. A single point is drawn as a dot rather than hidden. */
   points: TrendPoint[];
@@ -45,6 +48,8 @@ export function TrendChart({
   className?: string;
   /** The reader's locale, so the caption writes 7,4 rather than 7.4. */
   locale?: string;
+  /** The two markers' words, shown once a series holds a laboratory point. */
+  legend?: { typed: string; lab: string } | undefined;
 }): React.ReactElement | null {
   // One reading draws a dot, not nothing — round 4 follow-up.
   //
@@ -116,16 +121,29 @@ export function TrendChart({
         />
         )}
 
-        {points.map((point, index) => (
-          <circle
-            key={point.at}
-            cx={x(index)}
-            cy={y(point.value)}
-            r={3}
-            className="fill-primary"
-            vectorEffect="non-scaling-stroke"
-          />
-        ))}
+        {points.map((point, index) =>
+          point.fromLab === true ? (
+            // A hollow ring: the shape says "laboratory", not a second colour.
+            <circle
+              key={point.at}
+              cx={x(index)}
+              cy={y(point.value)}
+              r={4.5}
+              className="fill-surface stroke-primary"
+              strokeWidth={2}
+              vectorEffect="non-scaling-stroke"
+            />
+          ) : (
+            <circle
+              key={point.at}
+              cx={x(index)}
+              cy={y(point.value)}
+              r={3}
+              className="fill-primary"
+              vectorEffect="non-scaling-stroke"
+            />
+          ),
+        )}
       </svg>
 
       <figcaption className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
@@ -143,6 +161,22 @@ export function TrendChart({
             : `${formatReading(values[0]!, locale)} → ${formatReading(values[values.length - 1]!, locale)}`}
         </span>
       </figcaption>
+      {legend !== undefined && points.some((point) => point.fromLab === true) && (
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground-muted">
+          <span className="inline-flex items-center gap-1.5">
+            <svg aria-hidden viewBox="0 0 10 10" className="size-2.5">
+              <circle cx={5} cy={5} r={3} className="fill-primary" />
+            </svg>
+            {legend.typed}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <svg aria-hidden viewBox="0 0 12 12" className="size-3">
+              <circle cx={6} cy={6} r={4} className="fill-surface stroke-primary" strokeWidth={2} />
+            </svg>
+            {legend.lab}
+          </span>
+        </p>
+      )}
     </figure>
   );
 }

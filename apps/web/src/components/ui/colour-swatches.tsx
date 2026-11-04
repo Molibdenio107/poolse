@@ -38,16 +38,32 @@ export const CLASS_COLOURS = [
 
 export type ClassColourName = (typeof CLASS_COLOURS)[number];
 
-/** The token each name paints with. Tailwind needs the whole class at build time. */
-const SWATCH: Record<ClassColourName, string> = {
-  teal: 'bg-level-1',
-  green: 'bg-level-2',
-  lime: 'bg-level-3',
-  amber: 'bg-level-4',
-  orange: 'bg-level-5',
-  rose: 'bg-level-6',
-  magenta: 'bg-level-7',
-  violet: 'bg-level-8',
+/**
+ * The token each name paints with, per set. Tailwind needs the whole class at
+ * build time. A turma picks from `class`, a level from `level` — POOLSE-168:
+ * the same eight stored names, two sets of colours.
+ */
+const SWATCH: Record<'class' | 'level', Record<ClassColourName, string>> = {
+  class: {
+    teal: 'bg-class-1',
+    green: 'bg-class-2',
+    lime: 'bg-class-3',
+    amber: 'bg-class-4',
+    orange: 'bg-class-5',
+    rose: 'bg-class-6',
+    magenta: 'bg-class-7',
+    violet: 'bg-class-8',
+  },
+  level: {
+    teal: 'bg-level-1',
+    green: 'bg-level-2',
+    lime: 'bg-level-3',
+    amber: 'bg-level-4',
+    orange: 'bg-level-5',
+    rose: 'bg-level-6',
+    magenta: 'bg-level-7',
+    violet: 'bg-level-8',
+  },
 };
 
 export function ColourSwatches({
@@ -57,6 +73,7 @@ export function ColourSwatches({
   hint,
   clearLabel,
   nameOf,
+  set,
 }: {
   name: string;
   label: string;
@@ -66,6 +83,8 @@ export function ColourSwatches({
   clearLabel: string;
   /** Each colour's name in words, so the choice is not colour alone. */
   nameOf: (colour: ClassColourName) => string;
+  /** A turma's colours or a level's — POOLSE-168. */
+  set: 'class' | 'level';
 }): React.ReactElement {
   const [value, setValue] = useState<string>(initial ?? '');
 
@@ -88,7 +107,7 @@ export function ColourSwatches({
               aria-label={nameOf(colour)}
               className={cn(
                 'flex size-7 coarse:size-11 items-center justify-center rounded-full transition-shadow duration-150',
-                SWATCH[colour],
+                SWATCH[set][colour],
                 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 chosen && 'ring-2 ring-foreground ring-offset-2 ring-offset-surface',
               )}

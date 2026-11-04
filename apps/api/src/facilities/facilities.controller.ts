@@ -399,6 +399,8 @@ export class FacilitiesController {
       rows: readAnalysisRows(body['rows']),
       commit: body['commit'] === true,
       include: readAnalysisInclude(body['include']),
+      // A laboratory document read into rows, or the club's water log — POOLSE-153.
+      source: body['source'] === 'report' ? 'report' : 'log',
     });
 
     if (result === null) throw new NotFoundException('No such pool');

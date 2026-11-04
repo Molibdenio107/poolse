@@ -1,7 +1,7 @@
 import 'server-only';
 import ExcelJS from 'exceljs';
 import type { Student } from '@/lib/api';
-import { EXPORT_FIELDS, MARITAL_EXPORT_WORD, type ImportField } from '@/lib/sheet';
+import { EXPORT_FIELDS, INSURANCE_EXPORT_WORD, MARITAL_EXPORT_WORD, type ImportField } from '@/lib/sheet';
 import { toCsv } from '@/lib/csv';
 
 /**
@@ -45,6 +45,8 @@ export function rowFor(student: Student): string[] {
     // Never written: the parts are exported instead, so nothing is guessed on
     // the way back in. Present because the record must cover every field.
     fullName: '',
+    // `;` between names: what `matchTurmas` splits on first (POOLSE-164).
+    turmas: (student.turmas ?? []).map((turma) => turma.name).join('; '),
     firstName: student.firstName,
     lastName: student.lastName,
     birthDate: student.birthDate ?? '',
@@ -99,7 +101,11 @@ export function rowFor(student: Student): string[] {
     snsNumber: identity?.snsNumber ?? '',
   };
 
-  return EXPORT_FIELDS.map((field) => values[field]);
+  // The seguro last: export-only, read back by nothing (POOLSE-164).
+  return [
+    ...EXPORT_FIELDS.map((field) => values[field]),
+    student.insuranceState === undefined ? '' : INSURANCE_EXPORT_WORD[student.insuranceState],
+  ];
 }
 
 /**

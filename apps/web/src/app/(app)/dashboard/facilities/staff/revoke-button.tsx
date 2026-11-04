@@ -2,6 +2,7 @@
 
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
+import { ConfirmButton } from '@/components/confirm-action';
 import { revokeAction, type FormState } from '../../actions';
 
 const INITIAL: FormState = { ok: false };
@@ -24,13 +25,17 @@ export function RevokeButton({
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="invitationId" value={invitationId} />
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.equipa.revokeInviteTitle')}
+        message={t('confirm.equipa.revokeInviteMessage')}
+        confirmLabel={t('invite.revoke')}
+        tone="danger"
         disabled={pending}
         className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60 bg-surface shadow-card"
       >
         {pending ? t('common.working') : t('invite.revoke')}
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

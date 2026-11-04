@@ -21,9 +21,13 @@ import { InviteStudent } from './invite-student';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isMultiSport, isPoolseSport, type PoolseSport } from '@poolse/rules';
-import { SUB_MENU_ROW, subMenuPillClass } from '@/components/section-pills';
-import { SportChip, withCurrent } from '@/components/sport-chip';
-import { SportIcon, sportNameKey } from '@/components/sport-icon';
+import { SportChip } from '@/components/sport-chip';
+import { sportNameKey } from '@/components/sport-icon';
+import { ScrollArrows } from '@/components/scroll-arrows';
+import { ShortText } from '@/components/short-text';
+import { shorten } from '@/lib/shorten';
+import { timeAgo } from '@/lib/relative-time';
+import { getLocale } from 'next-intl/server';
 
 /**
  * Slice 1.2 — the student register.
@@ -46,10 +50,38 @@ export default async function StudentsPage({
     invite?: string;
     sport?: string;
     multi?: string;
+    modalidade?: string;
+    overdue?: string;
+    classGroupId?: string;
+    insurance?: string;
+    order?: string;
   }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { search = '', levelId = '', page: pageParam, from, sort, invite, sport, multi } = await searchParams;
+  const locale = await getLocale();
+  const {
+    search = '',
+    levelId = '',
+    page: pageParam,
+    from,
+    sort,
+    invite,
+    sport,
+    multi,
+    modalidade,
+    overdue,
+    classGroupId: requestedTurma = '',
+    insurance: requestedInsurance,
+    order: requestedOrder,
+  } = await searchParams;
+  // POOLSE-164's filters: one turma (or *Sem turma*), the seguro today, youngest first.
+  const noTurma = requestedTurma === 'none' || sport === 'none';
+  const classGroupId = noTurma ? '' : requestedTurma.trim();
+  const insurance =
+    requestedInsurance === 'insured' || requestedInsurance === 'lapsed' || requestedInsurance === 'never'
+      ? requestedInsurance
+      : '';
+  const byAge = requestedOrder === 'age';
 
   /*
    * Only the students who owe money — round 5.
@@ -63,19 +95,30 @@ export default async function StudentsPage({
    * One recognised value, not a column name from the URL: a parameter that
    * reaches an ORDER BY or a WHERE is a parameter somebody can inject.
    */
-  const overdueOnly = sort === 'overdue';
+  const overdueOnly = sort === 'overdue' || overdue === '1';
   // *Por convidar* — POOLSE-129: somebody on the record could use the app and
   // has neither a login nor a live invitation.
   const pendingOnly = invite === 'pending';
-  // *Modalidades* — multi-sport Slice 3: one sport, or the students in two or more.
-  // `none` is *Sem modalidade* — in no live turma, so in no sport's group (POOLSE-143).
-  const sportFilter: PoolseSport | 'none' | null = sport === 'none' ? 'none' : isPoolseSport(sport) ? sport : null;
-  const multiOnly = multi === '1';
+  /*
+   * Two ways to name a sport, and they must not be one (Rui, 04-11-2026).
+   * `?sport=` is a sport's own *Alunos*, reached from its tab — the menu reads
+   * it and moves to that sport's section. `?modalidade=` is the shared
+   * register's *Desporto* filter, which narrows the list and leaves the reader
+   * where they are. Both reach the API as its `sport` filter.
+   */
+  const ownSport: PoolseSport | null = isPoolseSport(sport) ? sport : null;
+  const pickedSport: PoolseSport | null = ownSport === null && isPoolseSport(modalidade) ? modalidade : null;
+  // `none` is *Sem turma* — in no live turma, so in no sport (POOLSE-143, -164).
+  const sportFilter: PoolseSport | 'none' | null = noTurma ? 'none' : (ownSport ?? pickedSport);
+  const multiOnly = ownSport === null && (multi === '1' || sport === 'multi' || modalidade === 'multi');
   const flags = {
-    sort: overdueOnly ? 'overdue' : undefined,
+    overdue: overdueOnly ? '1' : undefined,
     invite: pendingOnly ? 'pending' : undefined,
-    sport: sportFilter ?? undefined,
-    multi: multiOnly ? '1' : undefined,
+    sport: ownSport ?? undefined,
+    modalidade: pickedSport ?? (multiOnly ? 'multi' : undefined),
+    classGroupId: noTurma ? 'none' : classGroupId || undefined,
+    insurance: insurance || undefined,
+    order: byAge ? 'age' : undefined,
   };
   // The club's own `/me`: its name for a shared link, and whether it has a
   // second sport — the only case the *Modalidades* chips and column appear in.
@@ -95,11 +138,13 @@ export default async function StudentsPage({
   const query = new URLSearchParams();
   if (search.trim()) query.set('search', search.trim());
   if (levelId.trim()) query.set('levelId', levelId.trim());
-  if (overdueOnly) query.set('sort', 'overdue');
+  if (overdueOnly) query.set('overdue', '1');
   if (pendingOnly) query.set('invite', 'pending');
   if (sportFilter !== null) query.set('sport', sportFilter);
   if (multiOnly) query.set('multi', '1');
-  if (multiSport) query.set('sportCounts', '1');
+  if (classGroupId !== '') query.set('classGroupId', classGroupId);
+  if (insurance !== '') query.set('insurance', insurance);
+  if (byAge) query.set('order', 'age');
   if (page > 1) query.set('page', String(page));
 
   /*
@@ -118,6 +163,8 @@ export default async function StudentsPage({
   if (overdueOnly) exportQuery.set('sort', 'overdue');
   if (sportFilter !== null) exportQuery.set('sport', sportFilter);
   if (multiOnly) exportQuery.set('multi', '1');
+  if (classGroupId !== '') exportQuery.set('classGroupId', classGroupId);
+  if (insurance !== '') exportQuery.set('insurance', insurance);
 
   let data: Students | null = null;
   let failure: LoadFailure | null = null;
@@ -141,10 +188,18 @@ export default async function StudentsPage({
    * tab, the sport is the page, not a filter — *Limpar* keeps it, and the chips
    * are that sport and *Todos*, which goes back to the shared register.
    */
-  const sportPage = sportFilter !== null && sportFilter !== 'none';
+  const sportPage = ownSport !== null;
   const filtering =
-    search.trim().length > 0 || levelId.trim().length > 0 || overdueOnly || pendingOnly || sportFilter === 'none' || multiOnly;
-  const clearHref = sportPage ? `/dashboard/students?sport=${sportFilter}` : '/dashboard/students';
+    search.trim().length > 0 ||
+    levelId.trim().length > 0 ||
+    overdueOnly ||
+    pendingOnly ||
+    sportFilter === 'none' ||
+    pickedSport !== null ||
+    multiOnly ||
+    classGroupId !== '' ||
+    insurance !== '';
+  const clearHref = ownSport !== null ? `/dashboard/students?sport=${ownSport}` : '/dashboard/students';
 
   /*
    * A page that has fallen off the end — QA 29.6 and 29.12.
@@ -172,6 +227,19 @@ export default async function StudentsPage({
       title={t('students.title')}
       back={origin === null ? undefined : { href: origin, label: t(backLabelKey(origin)) }}
       subtitle={t('students.subtitle')}
+      /*
+        Wide — POOLSE-164 (Rui, 04-11-2026: "we can make the page bigger"): the
+        second caller after the calendar, taken out loud and recorded in
+        decisions.md. A third is a decision about what these pages share, never
+        a tidy-up.
+      */
+      width="wide"
+      // *Convidar membros* on the right, out of the way (POOLSE-164 rule 3).
+      actions={
+        data?.canInviteFamilies === true ? (
+          <FamilyBulkInvite search={search.trim()} levelId={levelId.trim()} />
+        ) : undefined
+      }
     >
 
       {noOrganization && (
@@ -198,92 +266,122 @@ export default async function StudentsPage({
             somebody who has narrowed by level *and* by name wants one control
             that undoes both.
           */}
-          <section className="flex flex-wrap items-end gap-3 rounded bg-surface p-5 shadow-card">
-            <SearchInput
-              label={t('students.search')}
-              placeholder={t('students.searchPlaceholder')}
-            />
+          {/*
+            Every filter in one place — POOLSE-164 (Rui, 04-11-2026): search,
+            sport, level, turma (and *Sem turma*), seguro, overdue and *por
+            convidar*, each in the URL. A select carries its word inside as the
+            prompt ("Nível: todos"), never a label above it. On a phone the row
+            scrolls sideways rather than wrapping into a wall of controls.
+          */}
+          <section aria-label={t('students.filters.title')} className="rounded bg-surface p-4 shadow-card">
+            <ScrollArrows>
+              <div data-scroll-row className="flex items-end gap-3 md:flex-wrap max-md:overflow-x-auto max-md:pb-1">
+                <SearchInput label={t('students.search')} placeholder={t('students.searchPlaceholder')} />
 
-            <FilterSelect
-              name="levelId"
-              label={t('students.level')}
-              value={levelId}
-              anyLabel={t('students.allLevels')}
-              options={data.levels.map((level) => ({ value: level.id, label: level.name }))}
-            />
-
-            {/*
-              Only who owes — round 5.
-
-              A checkbox, because that is what it is: the register either shows
-              everybody or shows the shortlist. Still a link underneath, so it
-              lives in the URL, survives a refresh and can be sent to a
-              colleague — and it works before any JavaScript has loaded, which a
-              real checkbox with an onChange would not.
-            */}
-            <FromLink
-              href={pageHref(
-                '/dashboard/students',
-                { search, levelId, ...flags, sort: overdueOnly ? undefined : 'overdue' },
-                1,
-              )}
-              role="checkbox"
-              aria-checked={overdueOnly}
-              className={cn(
-                'flex min-h-control items-center gap-2 rounded-sm border px-4 py-1 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                overdueOnly
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border hover:bg-surface-muted',
-              )}
-            >
-              <span
-                aria-hidden
-                className={cn(
-                  'flex size-4 shrink-0 items-center justify-center rounded-sm border',
-                  overdueOnly ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
+                {/* A sport's own register is that sport: no other sport offered there. */}
+                {multiSport && !sportPage && (
+                  <FilterSelect
+                    name="modalidade"
+                    label={t('students.filters.sport')}
+                    hideLabel
+                    value={multiOnly ? 'multi' : (pickedSport ?? '')}
+                    anyLabel={t('students.filters.sport')}
+                    options={[
+                      ...clubSports.map((one) => ({ value: one, label: t(sportNameKey(one)) })),
+                      { value: 'multi', label: t('students.filters.multi') },
+                    ]}
+                  />
                 )}
-              >
-                {overdueOnly && <Check className="size-3" />}
-              </span>
-              {t('fees.showOverdueOnly')}
-            </FromLink>
 
-            {/* *Por convidar* — POOLSE-129, the same checkbox-as-a-link. */}
-            <FromLink
-              href={pageHref(
-                '/dashboard/students',
-                { search, levelId, ...flags, invite: pendingOnly ? undefined : 'pending' },
-                1,
-              )}
-              role="checkbox"
-              aria-checked={pendingOnly}
-              className={cn(
-                'flex min-h-control items-center gap-2 rounded-sm border px-4 py-1 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                pendingOnly
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border hover:bg-surface-muted',
-              )}
-            >
-              <span
-                aria-hidden
-                className={cn(
-                  'flex size-4 shrink-0 items-center justify-center rounded-sm border',
-                  pendingOnly ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
+                <FilterSelect
+                  name="levelId"
+                  label={t('students.level')}
+                  hideLabel
+                  value={levelId}
+                  anyLabel={t('students.level')}
+                  options={data.levels.map((level) => ({ value: level.id, label: level.name }))}
+                />
+
+                <FilterSelect
+                  name="classGroupId"
+                  label={t('students.filters.turma')}
+                  hideLabel
+                  value={noTurma ? 'none' : classGroupId}
+                  anyLabel={t('students.filters.turma')}
+                  options={[
+                    { value: 'none', label: t('students.filters.noTurma') },
+                    ...data.turmas.map((turma) => ({ value: turma.id, label: turma.name })),
+                  ]}
+                />
+
+                <FilterSelect
+                  name="insurance"
+                  label={t('students.filters.insurance')}
+                  hideLabel
+                  value={insurance}
+                  anyLabel={t('students.filters.insurance')}
+                  options={(['insured', 'lapsed', 'never'] as const).map((state) => ({
+                    value: state,
+                    label: t(`students.table.insurance.${state}`),
+                  }))}
+                />
+
+                {/* Only who owes — round 5; a checkbox that is a link, so it lives in the URL. */}
+                {data.canManage && (
+                  <FromLink
+                    href={pageHref('/dashboard/students', { search, levelId, ...flags, overdue: overdueOnly ? undefined : '1' }, 1)}
+                    role="checkbox"
+                    aria-checked={overdueOnly}
+                    className={cn(
+                      'flex min-h-control shrink-0 items-center gap-2 rounded-sm border px-4 py-1 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                      overdueOnly ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-surface-muted',
+                    )}
+                  >
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'flex size-4 shrink-0 items-center justify-center rounded-sm border',
+                        overdueOnly ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
+                      )}
+                    >
+                      {overdueOnly && <Check className="size-3" />}
+                    </span>
+                    {t('fees.showOverdueOnly')}
+                  </FromLink>
                 )}
-              >
-                {pendingOnly && <Check className="size-3" />}
-              </span>
-              {t('familyBulk.pendingOnly')}
-            </FromLink>
 
-            {filtering && (
-              <FromLink
-                href={clearHref}
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
-              >
-                {t('students.clear')}
-              </FromLink>
-            )}
+                {/* *Por convidar* — POOLSE-129, the same checkbox-as-a-link. */}
+                <FromLink
+                  href={pageHref('/dashboard/students', { search, levelId, ...flags, invite: pendingOnly ? undefined : 'pending' }, 1)}
+                  role="checkbox"
+                  aria-checked={pendingOnly}
+                  className={cn(
+                    'flex min-h-control shrink-0 items-center gap-2 rounded-sm border px-4 py-1 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                    pendingOnly ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-surface-muted',
+                  )}
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'flex size-4 shrink-0 items-center justify-center rounded-sm border',
+                      pendingOnly ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
+                    )}
+                  >
+                    {pendingOnly && <Check className="size-3" />}
+                  </span>
+                  {t('familyBulk.pendingOnly')}
+                </FromLink>
+
+                {filtering && (
+                  <FromLink
+                    href={clearHref}
+                    className="inline-flex h-control shrink-0 items-center justify-center gap-2 rounded-sm bg-surface px-4 text-control shadow-card hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    {t('students.clear')}
+                  </FromLink>
+                )}
+              </div>
+            </ScrollArrows>
           </section>
 
           {/*
@@ -312,77 +410,13 @@ export default async function StudentsPage({
             somebody not yet on the register, created and invited in one go;
             *Convidar membros* is everybody on this list who never joined.
           */}
-          {data.canInviteFamilies && (
-            <div className="flex flex-col gap-3">
-              {data.canManage && <InviteStudent organizationName={organizationName} />}
-              <div className="flex flex-wrap items-center gap-3">
-                <FamilyBulkInvite search={search.trim()} levelId={levelId.trim()} />
-                <span className="text-sm text-foreground-muted">{t('familyBulk.hint')}</span>
-              </div>
-            </div>
-          )}
-
-          {/* *Modalidades* — multi-sport Slice 3: a chip per sport and the students in two or more. */}
-          {multiSport && data.sportCounts !== undefined && sportPage && (
-            <nav aria-label={t('students.sportFilter')} className={cn(SUB_MENU_ROW, 'items-center')}>
-              <FromLink href="/dashboard/students" className={subMenuPillClass(false)}>
-                {t('students.sportAll', { count: data.sportCounts.total })}
-              </FromLink>
-              {withCurrent([], sportFilter).map((entry) => (
-                <span key={entry.sport} aria-current="page" className={subMenuPillClass(true)}>
-                  <SportIcon sport={entry.sport} className="size-4" />
-                  {t(sportNameKey(entry.sport))}
-                  <span className="tabular-nums opacity-80">
-                    {data.sportCounts?.bySport.find((one) => one.sport === entry.sport)?.count ?? 0}
-                  </span>
-                </span>
-              ))}
-            </nav>
-          )}
-          {multiSport && data.sportCounts !== undefined && !sportPage && (
-            <nav aria-label={t('students.sportFilter')} className={cn(SUB_MENU_ROW, 'items-center')}>
-              <FromLink
-                href={pageHref('/dashboard/students', { search, levelId, ...flags, sport: undefined, multi: undefined }, 1)}
-                aria-current={sportFilter === null && !multiOnly ? 'page' : undefined}
-                className={subMenuPillClass(sportFilter === null && !multiOnly)}
-              >
-                {t('students.sportAll', { count: data.sportCounts.total })}
-              </FromLink>
-              {withCurrent(data.sportCounts.bySport, sportFilter).map((entry) => (
-                <FromLink
-                  key={entry.sport}
-                  href={pageHref('/dashboard/students', { search, levelId, ...flags, sport: entry.sport, multi: undefined }, 1)}
-                  // Off a sport's own page (`!sportPage`), no sport pill is the current one.
-                  className={subMenuPillClass(false)}
-                >
-                  <SportIcon sport={entry.sport} className="size-4" />
-                  {t(sportNameKey(entry.sport))}
-                  <span className="tabular-nums opacity-80">{entry.count}</span>
-                </FromLink>
-              ))}
-              <span aria-hidden className="mx-1 h-5 w-px bg-foreground/15" />
-              <FromLink
-                href={pageHref('/dashboard/students', { search, levelId, ...flags, sport: undefined, multi: '1' }, 1)}
-                aria-current={multiOnly ? 'page' : undefined}
-                className={subMenuPillClass(multiOnly)}
-              >
-                {t('students.sportMulti', { count: data.sportCounts.multi })}
-              </FromLink>
-              {/* POOLSE-143: the students no sport's group lists — new, paused, between seasons. */}
-              <FromLink
-                href={pageHref('/dashboard/students', { search, levelId, ...flags, sport: 'none', multi: undefined }, 1)}
-                aria-current={sportFilter === 'none' ? 'page' : undefined}
-                className={subMenuPillClass(sportFilter === 'none')}
-              >
-                {t('students.sportNone', { count: data.sportCounts.none })}
-              </FromLink>
-            </nav>
-          )}
+          {data.canInviteFamilies && data.canManage && <InviteStudent organizationName={organizationName} />}
 
           <section className="rounded bg-surface p-5 shadow-card">
-            <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+            {/* How many records, filtered or not — the table's top-right corner (Rui, 04-11-2026). */}
+            <p aria-live="polite" className="mb-4 text-right text-sm font-medium text-foreground-muted">
               {t('students.count', { count: data.students.total })}
-            </h2>
+            </p>
 
             <SearchStatus total={data.students.total} term={search.trim()} />
 
@@ -419,107 +453,167 @@ export default async function StudentsPage({
                 )}
               </div>
             ) : (
-              <ul className="flex flex-col divide-y divide-border">
-                {data.students.items.map((student) => (
-                  <li
-                    key={student.id}
-                    className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <PersonAvatar
-                        id={student.id}
-                        name={student.displayName}
-                        // Already null unless consent is live: the API gates the
-                        // key, this only turns a key into a URL.
-                        photoUrl={photoUrlFor(student.photoFileId)}
-                      />
-                      <div className="flex min-w-0 flex-col">
-                      {/*
-                        "Maria Santos", never "Santos, Maria" — POOLSE-32.
-                        Composed by the server, so this row and the turma roster
-                        two clicks away cannot abbreviate differently.
-
-                        `title` carries the full legal name for the long
-                        compound that truncates here. It supplements the visible
-                        text rather than replacing it: every part is on the
-                        detail page this links to.
-                      */}
-                      <span className="flex min-w-0 flex-wrap items-center gap-2">
+              <div className="relative overflow-x-auto">
+                <table className="table-stack w-full border-collapse text-sm">
+                  <caption className="sr-only">{t('students.count', { count: data.students.total })}</caption>
+                  <thead>
+                    <tr className="border-b border-border text-left text-foreground-muted">
+                      <th scope="col" className="px-2 py-2 font-medium">
+                        {t('students.table.name')}
+                      </th>
+                      {/* Sortable: youngest first, and back to the name order (POOLSE-164). */}
+                      <th scope="col" aria-sort={byAge ? 'ascending' : 'none'} className="px-2 py-2 font-medium">
                         <FromLink
-                          href={`/dashboard/students/${student.id}`}
-                          className="truncate text-primary hover:underline coarse:-my-3 coarse:py-3"
-                          title={student.displayName}
+                          href={pageHref('/dashboard/students', { search, levelId, ...flags, order: byAge ? undefined : 'age' }, 1)}
+                          className="rounded underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                         >
-                          {student.shortName}
+                          {t('students.table.age')}
+                          {byAge ? ' ↑' : ''}
                         </FromLink>
-                        {/* Beside the name, on the day — round 4. */}
-                        <BirthdayFlag birthDate={student.birthDate} />
-                        {/*
-                          Both capacities, on one row — POOLSE-23 AC6.
-
-                          A grandmother who swims on Tuesdays and brings her
-                          granddaughter on Thursdays is one person and appears
-                          once; these say which of the two she is, and when she
-                          is both, that she is both. Words rather than colour,
-                          and beside the name because they are facts about the
-                          person rather than about their level or their fees.
-                        */}
-                        {student.isAdultStudent && (
-                          <span className="rounded bg-surface-muted px-2 py-0.5 text-sm font-normal text-foreground-muted">
-                            {t('students.badgeAdult')}
-                          </span>
-                        )}
-                        {student.isGuardian && (
-                          <span className="rounded border border-primary/40 px-2 py-0.5 text-sm font-normal text-primary">
-                            {t('students.badgeGuardian')}
-                          </span>
-                        )}
-                      </span>
-                      <span className="truncate text-sm text-foreground-muted">
-                        {[
-                          student.age === null ? null : t('students.years', { count: student.age }),
-                          student.contactEmail,
-                          student.contactPhone,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* *Modalidades*, a chip per sport — only in a multi-sport club. */}
-                      {multiSport && (student.sports ?? []).map((one) => <SportChip key={one} sport={one} />)}
-                      {/* Furthest right, after the level and the flags. */}
+                      </th>
+                      {multiSport && (
+                        <th scope="col" className="px-2 py-2 font-medium">
+                          {t('students.table.sports')}
+                        </th>
+                      )}
+                      <th scope="col" className="px-2 py-2 font-medium">
+                        {t('students.table.level')}
+                      </th>
+                      <th scope="col" className="px-2 py-2 font-medium">
+                        {t('students.table.turmas')}
+                      </th>
+                      <th scope="col" className="px-2 py-2 font-medium">
+                        {t('students.table.insurance.title')}
+                      </th>
                       {data.canManage && (
-                        <PaymentMark state={student.paymentState} />
+                        <th scope="col" className="px-2 py-2 font-medium">
+                          {t('students.table.fees')}
+                        </th>
                       )}
-                      {student.levelName === null ? (
-                        <span className="rounded bg-surface-muted px-2 py-0.5 text-sm text-foreground-muted">
-                          {t('students.noLevel')}
-                        </span>
-                      ) : (
-                        <span className="rounded bg-primary/15 px-2 py-0.5 text-sm text-primary">
-                          {student.levelName}
-                        </span>
-                      )}
-                      {/*
-                        A gentle flag, never a removal — backlog round 4,
-                        ticket 3. A child correctly enrolled in "3–5 anos" turns
-                        six mid-season, and when they move up is the club's
-                        decision, not the calendar's.
-                      */}
-                      <AgedOutFlag student={student} levels={data.levels} />
+                      <th scope="col" className="px-2 py-2 font-medium">
+                        {t('students.table.access')}
+                      </th>
                       {data.canManage && (
-                        <ArchiveStudentButton
-                          organizationId={data.organizationId}
-                          studentId={student.id}
-                          name={student.displayName}
-                        />
+                        <th scope="col" className="w-10 px-2 py-2">
+                          <span className="sr-only">{t('students.table.actions')}</span>
+                        </th>
                       )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.students.items.map((student) => (
+                      <tr key={student.id} className="border-b border-border/60 align-middle last:border-0">
+                        <th scope="row" className="px-2 py-2 text-left font-normal">
+                          <span className="flex min-w-0 items-center gap-3">
+                            <PersonAvatar
+                              id={student.id}
+                              name={student.displayName}
+                              // Null unless consent is live: the API gates the key.
+                              photoUrl={photoUrlFor(student.photoFileId)}
+                            />
+                            <span className="flex min-w-0 flex-wrap items-center gap-2">
+                              {/* "Maria Santos", never "Santos, Maria" — POOLSE-32; the full name on hover. */}
+                              <FromLink
+                                href={`/dashboard/students/${student.id}`}
+                                className="truncate font-medium text-primary hover:underline coarse:-my-3 coarse:py-3"
+                                title={student.displayName}
+                              >
+                                {shorten(student.shortName ?? '', 20)}
+                              </FromLink>
+                              <BirthdayFlag birthDate={student.birthDate} />
+                              {/* Both capacities, on one row — POOLSE-23 AC6. */}
+                              {student.isAdultStudent && (
+                                <span className="rounded bg-surface-muted px-2 py-0.5 text-xs text-foreground-muted">
+                                  {t('students.badgeAdult')}
+                                </span>
+                              )}
+                              {student.isGuardian && (
+                                <span className="rounded border border-primary/40 px-2 py-0.5 text-xs text-primary">
+                                  {t('students.badgeGuardian')}
+                                </span>
+                              )}
+                            </span>
+                          </span>
+                        </th>
+                        <td data-label={t('students.table.age')} className="px-2 py-2 md:whitespace-nowrap tabular-nums">
+                          {student.age === null ? '—' : t('students.years', { count: student.age })}
+                        </td>
+                        {multiSport && (
+                          <td data-label={t('students.table.sports')} className="px-2 py-2">
+                            <span className="flex flex-wrap gap-1 max-md:justify-end">
+                              {(student.sports ?? []).length === 0
+                                ? '—'
+                                : (student.sports ?? []).map((one) => <SportChip key={one} sport={one} />)}
+                            </span>
+                          </td>
+                        )}
+                        <td data-label={t('students.table.level')} className="px-2 py-2 md:whitespace-nowrap">
+                          <span className="flex flex-wrap items-center gap-2 max-md:justify-end">
+                            {student.levelName === null ? (
+                              <span className="text-foreground-muted">{t('students.noLevel')}</span>
+                            ) : (
+                              <ShortText text={student.levelName} max={16} />
+                            )}
+                            {/* A gentle flag, never a removal — backlog round 4, ticket 3. */}
+                            <AgedOutFlag student={student} levels={data.levels} />
+                          </span>
+                        </td>
+                        <td data-label={t('students.table.turmas')} className="px-2 py-2 md:whitespace-nowrap">
+                          {(student.turmas ?? []).length === 0 ? (
+                            <span className="text-foreground-muted">{t('students.filters.noTurma')}</span>
+                          ) : (
+                            <ShortText text={(student.turmas ?? []).map((turma) => turma.name).join(', ')} max={18} />
+                          )}
+                        </td>
+                        <td data-label={t('students.table.insurance.title')} className="px-2 py-2 md:whitespace-nowrap">
+                          {student.insuranceState === undefined ? (
+                            '—'
+                          ) : (
+                            <span
+                              className={
+                                student.insuranceState === 'insured'
+                                  ? 'text-foreground'
+                                  : student.insuranceState === 'lapsed'
+                                    ? 'text-warning'
+                                    : 'text-foreground-muted'
+                              }
+                            >
+                              {t(`students.table.insurance.${student.insuranceState}`)}
+                            </span>
+                          )}
+                        </td>
+                        {data.canManage && (
+                          <td data-label={t('students.table.fees')} className="px-2 py-2 md:whitespace-nowrap">
+                            {student.paymentState === 'overdue' ? (
+                              <PaymentMark state={student.paymentState} />
+                            ) : student.paymentState === 'none' ? (
+                              <span className="text-foreground-muted">—</span>
+                            ) : (
+                              <span className="text-foreground-muted">{t('students.table.feesUpToDate')}</span>
+                            )}
+                          </td>
+                        )}
+                        <td data-label={t('students.table.access')} className="px-2 py-2 md:whitespace-nowrap text-foreground-muted">
+                          {student.familyLastSeenAt != null
+                            ? t('staff.table.seen', { ago: timeAgo(student.familyLastSeenAt, locale) ?? '' })
+                            : student.familyHasLogin === true
+                              ? t('staff.table.neverSeen')
+                              : t('staff.table.noLogin')}
+                        </td>
+                        {data.canManage && (
+                          <td className="px-2 py-2 text-right">
+                            <ArchiveStudentButton
+                              organizationId={data.organizationId}
+                              studentId={student.id}
+                              name={student.displayName}
+                            />
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
 
             <Pagination

@@ -6,6 +6,7 @@ import type { PlatformSwitchName } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
 import { formatStamp } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
+import { ConfirmButton } from '@/components/confirm-action';
 import { setSwitchAction } from './actions';
 
 const INITIAL: FormState = { ok: false };
@@ -44,8 +45,15 @@ export function SwitchToggle({
           {t(keyConfigured ? 'admin.switches.keyPresent' : 'admin.switches.keyMissing')}
         </p>
       </div>
-      <button
-        type="submit"
+      {/* Asks first, both ways (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t(
+          enabled ? 'confirm.instalacoes.switchOffTitle' : 'confirm.instalacoes.switchOnTitle',
+          { name: t(`admin.switches.name.${name}`) },
+        )}
+        message={t(enabled ? 'confirm.instalacoes.switchOffMessage' : 'confirm.instalacoes.switchOnMessage')}
+        confirmLabel={t(enabled ? 'admin.switches.turnOff' : 'admin.switches.turnOn')}
+        tone={enabled ? 'danger' : 'primary'}
         disabled={pending}
         className={cn(
           'inline-flex h-control shrink-0 items-center justify-center self-start rounded px-4 text-control font-medium disabled:opacity-60',
@@ -56,7 +64,7 @@ export function SwitchToggle({
         )}
       >
         {t(enabled ? 'admin.switches.turnOff' : 'admin.switches.turnOn')}
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

@@ -75,6 +75,7 @@ const LABELS: readonly (readonly [string, string])[] = [
   ['/dashboard/students/guardians', 'students.backToGuardians'],
   ['/dashboard/students/pedidos', 'back.toRequests'],
   ['/dashboard/students/messages', 'back.toMessages'],
+  ['/dashboard/students/avisos', 'back.toAvisos'],
   ['/dashboard/students/provas/minimos', 'back.toStandards'],
   ['/dashboard/students/provas', 'back.toMeets'],
   ['/dashboard/students/levels', 'back.toLevels'],

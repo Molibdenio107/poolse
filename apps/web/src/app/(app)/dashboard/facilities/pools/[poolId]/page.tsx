@@ -1,6 +1,6 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
-import { ApiError, apiFetch, type LabResult, type PoolCostReport, type PoolDetail } from '@/lib/api';
+import { ApiError, apiFetch, type LabResult, type ChemistryReport, type PoolCostReport, type PoolDetail } from '@/lib/api';
 import { backTarget } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
@@ -223,7 +223,9 @@ export default async function PoolPage({
             // Laboratory reports — POOLSE-72. A refusal hides the section; a
             // failure keeps it and says so, never a silent absence.
             const lab = await outcome(
-              apiFetch<{ results: LabResult[] }>(`/facilities/pools/${poolId}/lab-results`),
+              apiFetch<{ results: LabResult[]; chemistryReports: ChemistryReport[] }>(
+                `/facilities/pools/${poolId}/lab-results`,
+              ),
             );
             return (
             <section className="rounded bg-surface p-5 shadow-card">
@@ -239,6 +241,7 @@ export default async function PoolPage({
                 bands={loaded.bands}
                 reference={loaded.reference}
                 labResults={lab.state === 'ok' ? lab.data.results : null}
+                chemistryReports={lab.state === 'ok' ? lab.data.chemistryReports : []}
                 labFailed={lab.state === 'failed'}
                 bandOverrides={loaded.bandOverrides}
                 emailConfigured={loaded.emailConfigured}

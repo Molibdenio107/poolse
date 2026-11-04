@@ -60,6 +60,41 @@ export interface LabResult {
   grading: LabGrading;
   /** Null when this report raised no alert. */
   alert: { raisedAt: string; recipients: string[]; deliveredAt: string | null } | null;
+  /** Typed on the form or imported from a file — POOLSE-153; null from before it was recorded. */
+  origin: 'typed' | 'report' | null;
+}
+
+/**
+ * A laboratory document with chemistry only, which POOLSE-101 files as a
+ * reading rather than a lab result. Laboratório lists it beside the lab results
+ * (POOLSE-153, Rui 04-11-2026) so every report the club imported is in one place.
+ */
+export interface ChemistryReport {
+  id: string;
+  takenAt: string;
+  values: { metric: string; value: number; unit: string }[];
+}
+
+/** Readings imported from a laboratory document and not linked to a lab result, newest first. */
+export async function listChemistryReports(organizationId: string, poolId: string): Promise<ChemistryReport[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string; taken_at: Date; values: ChemistryReport['values'] | null }>(
+      `SELECT a.id, a.taken_at,
+              (SELECT json_agg(json_build_object('metric', v.metric::text, 'value', v.value::float8,
+                                                 'unit', v.unit) ORDER BY v.metric)
+                 FROM pool_analysis_value v
+                WHERE v.analysis_id = a.id AND v.organization_id = a.organization_id) AS values
+         FROM pool_analysis a
+        WHERE a.pool_id = $1
+          AND a.archived_at IS NULL
+          AND a.origin = 'report'
+          AND a.lab_result_id IS NULL
+        ORDER BY a.taken_at DESC
+        LIMIT 50`,
+      [poolId],
+    );
+    return rows.map((row) => ({ id: row.id, takenAt: row.taken_at.toISOString(), values: row.values ?? [] }));
+  });
 }
 
 /** Split stored values into what `gradeLabResult` reads. */
@@ -91,9 +126,10 @@ export async function listLabResults(organizationId: string, poolId: string): Pr
       raised_at: Date | null;
       recipients: string[] | null;
       delivered_at: Date | null;
+      origin: 'typed' | 'report' | null;
     }>(
       `SELECT r.id, r.sampled_at, r.laboratory, r.report_reference, r.sample_point,
-              r.sample_depth::text AS sample_depth, r.notes,
+              r.sample_depth::text AS sample_depth, r.notes, r.origin::text AS origin,
               (SELECT json_agg(json_build_object(
                         'parameter', v.parameter::text,
                         -- ::float8, or numeric arrives as a string
@@ -124,6 +160,7 @@ export async function listLabResults(organizationId: string, poolId: string): Pr
         samplePoint: row.sample_point,
         sampleDepth: row.sample_depth,
         notes: row.notes,
+        origin: row.origin,
         values,
         grading: gradeLabResult(labValues(values), pool),
         alert:
@@ -168,6 +205,8 @@ export async function createLabResultIn(
   poolId: string,
   input: LabResultInput,
   recordedBy: string | null,
+  /** Typed on the form, or a report imported from a file — POOLSE-153. */
+  origin: 'typed' | 'report' = 'typed',
 ): Promise<{ id: string; alertId: string | null } | null> {
   const { rows: pools } = await tx.query('SELECT 1 FROM pool WHERE id = $1 AND archived_at IS NULL', [
     poolId,
@@ -179,8 +218,8 @@ export async function createLabResultIn(
   const { rows } = await tx.query<{ id: string }>(
     `INSERT INTO lab_result (
        organization_id, pool_id, sampled_at, laboratory, report_reference,
-       sample_point, sample_depth, notes, recorded_by_membership_id
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7::lab_sample_depth, $8, $9)
+       sample_point, sample_depth, notes, recorded_by_membership_id, origin
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7::lab_sample_depth, $8, $9, $10::analysis_origin)
      RETURNING id`,
     [
       organizationId,
@@ -192,6 +231,7 @@ export async function createLabResultIn(
       input.sampleDepth,
       input.notes,
       recordedBy,
+      origin,
     ],
   );
   const id = rows[0]!.id;
@@ -221,11 +261,12 @@ export async function createLabResultIn(
   let readingId: string | null = null;
   if (chemistry.length > 0) {
     const { rows: reading } = await tx.query<{ id: string }>(
-      `INSERT INTO pool_analysis (organization_id, pool_id, taken_at, recorded_by, lab_result_id)
-       VALUES ($1, $2, $3, $4, $5)
+      // The reading carries the lab result's origin (POOLSE-153).
+      `INSERT INTO pool_analysis (organization_id, pool_id, taken_at, recorded_by, lab_result_id, origin)
+       VALUES ($1, $2, $3, $4, $5, $6::analysis_origin)
        ON CONFLICT (organization_id, pool_id, taken_at) WHERE archived_at IS NULL DO NOTHING
        RETURNING id`,
-      [organizationId, poolId, sampledAt, recordedBy, id],
+      [organizationId, poolId, sampledAt, recordedBy, id, origin],
     );
     readingId = reading[0]?.id ?? null;
     if (readingId !== null) {
@@ -332,6 +373,8 @@ export async function runLabImport(
           values: row.values,
         },
         membershipId,
+        // Every row of this import came from a laboratory document.
+        'report',
       );
       if (result === null) return null;
       if (result.alertId !== null) alertIds.push(result.alertId);

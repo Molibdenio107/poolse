@@ -77,6 +77,46 @@ Scrim `rgb(0 0 0 / .42)`; sheet card bg, top radius 4, padding 10px 16px 30px, 4
 - Início: greeting, child cards (avatar 44px, name 17px 700, "13 anos · 2 modalidades", 6px segmented strip with one solid segment per sport, sport labels with icons, "Próxima: …"), "Esta semana" list. No wash.
 - Sport screen (e.g. Padel): whole screen `.sport-shell`. Header icon 28px + name 28px 700, child/turma subtitle. "Próxima aula" card (date 17px, time 34px 700, place, coach, "Confirmar presença" primary + "Não posso ir" muted, both ≥ 48px). Assiduidade card (7 blocks, filled = present, outlined = absent). Turma card with chip dot.
 
+## Backoffice page content (`designs/Poolse Backoffice Pages.dc.html`)
+Six sections, light + dark where shown. All reuse the shell above; shared pages carry no wash, sport pages carry `.sport-shell`.
+
+### 01 Dashboard (Instalação, shared, no wash)
+- Breadcrumb `domain` Instalação / Dashboard. Eyebrow "Resumo de terça · <club>", H1 "Três coisas que merecem atenção". Actions: "Todos os alertas" (secondary), "Perguntar ao Poolse" (primary, icon `auto_awesome`).
+- Three insight cards (grid 3 cols, gap 14): badge row (category badge, e.g. ENERGIA / MENSALIDADES / TURMAS; plus a **sport chip** — 4px bar in sport colour + icon + name — only when the insight belongs to one sport), headline Poppins 600 19px, body 13px muted, one action button pinned to the bottom (primary only on the recommended one).
+- KPI row (4 tiles): label 12px muted, value Poppins 600 30px, sub 12px (ok green / muted / warn orange). Values: aulas hoje by sport, presenças, cobrado no mês, sem professor atribuído.
+- Bottom: occupancy bar chart (15 bars, past = muted, now = primary-ink, future = primary) 2/3 width; "Recintos · estado agora" list 1/3 width with mono readings (ok green / warn orange).
+
+### 02 Alunos · lista (shared)
+- H1 "Alunos" + mono count; sub line with multi-sport + overdue counts. Actions: Importar Excel (secondary, `upload_file`), Exportar, + Novo aluno (primary).
+- KPI row: ativos, inscrições por modalidade, cobradas, em atraso.
+- Filter chip row: "Todos · n" (primary .22 fill), one chip per sport (sport chip), separator, "Em atraso · n" (warn text), "Multi-modalidade · n"; search box right-aligned with ⌘K kbd.
+- Table columns: checkbox, Aluno (avatar 36px + name + age/guardian sub), **Modalidades** (one sport chip per enrolment, muted fill), Turmas, Mensalidade (mono), Método, Estado (badge), Última presença (mono). Selected rows get `primary / .08` bg and filled checkbox. Footer: "n selecionados · Enviar lembrete · Mudar de turma · Exportar" + "1–25 de 248".
+
+### 03 Alunos · ficha (shared)
+- Split pane: 300px list (card bg, search, rows name + sports/schedule, status dot; active row = muted bg + 3px primary left bar) + detail.
+- Detail header: avatar 52px, H1 26px, sub (age · since · guardian · sibling), actions Mensagem (secondary) / Editar (primary). Tabs: Resumo · Pagamentos · Assiduidade · Notas · Documentos (active = 600 + 2px primary underline).
+- **One enrolment card per sport** (2-col grid): 4px left bar in sport colour, header icon + sport name + "Ativa" badge; grid of Turma (chip dot + schedule), Professor, Nível (+ "Pronta para … →" link), Assiduidade 30 days (8 blocks 14×6, filled = primary, absent = muted, mono "7 / 8").
+- Row of 3 cards: Mensalidade (sum of per-sport fees, badge, method/date/ref), Encarregado (name, contacts, other children), Próximas aulas (one line per sport with icon). Then "Atividade recente" feed (mono date, icon, text).
+
+### 04 Calendário · Semana (sport page, washed)
+- Same header/toolbar as section 03 of the spec board, segmented on "Semana", extra chips "Todos os professores", legend on the right (Sem professor / Campo livre).
+- Grid: 56px time col + 5 day cols (facility open days), header row on card, today = primary pill on the day number + `card / .35` column tint, 6 hour rows of 74px.
+- Event states: **normal** (turma colour .16 over card, 7px dot), **completa** (capacity line 700 fg), **sem professor** (`warn-bg / .28` fill, second line warn 700), **recinto livre** (transparent, 1px dashed muted border, "Marcar aula").
+
+### 05 Turmas (sport page, washed)
+- H1 "Turmas" + sub (n turmas · alunos · lista de espera · sem professor). Actions: "Lista de espera · n" (secondary), "+ Nova turma" (primary). Toolbar: Cartões/Tabela segmented + filter dropdown chips.
+- Card per turma (3-col grid): turma colour dot + name Poppins 600 15px, state badge (Aberta ok / Completa pend / Sem professor late), schedule, `person` coach (warn 700 when missing), `stadium` court, Lotação bar (primary, primary-ink when full) + mono "x / y alunos", waitlist line, footer buttons Alunos / Presenças + contextual ghost action (Inscrever / Abrir 2.ª turma / Atribuir professor). A turma without coach gets `2px solid warn-bg / .5` outline.
+
+### 06 Components
+- Buttons: primary, secondary, ghost link (primary-ink), destructive-soft (`warn-bg / .16` fill, warn text), disabled = opacity .45.
+- Badges (11px 700, radius 2, padding 3/8): ok `ok-bg / .45`, pending `primary / .22`, late `warn-bg / .28`, muted. Payment: Paga / MB WAY pendente / Em atraso · n d / Isento / Débito direto · date. Turma: Aberta / Completa / Sem professor / Lista de espera · n / Cancelada.
+- Sport chip: card bg + shadow (or muted fill inside tables), 4px × 14px bar in solid sport colour, icon 15px, name. Never colour alone.
+- Attendance strip: 14×6 blocks; filled = present, muted = absent, dashed = not yet marked.
+- Empty state: centred icon 32px, Poppins 600 15px title, muted body, secondary + primary actions.
+- Extra tokens used here: `--ok 60 120 70`, `--ok-bg 179 212 157`, `--warn 194 65 12`, `--warn-bg 251 146 60` (dark: `--ok 150 205 130`, `--ok-bg 120 170 100`, `--warn 245 162 92`, `--warn-bg 230 130 60`).
+
+Still undesigned: Mensalidades/Faturação, Staff, Recintos, Métricas, Configuração → Modalidades, Excel import wizard with Modalidade column, ⌘K search, notificações.
+
 ## State
 - Backoffice: `section` ('facility' | sportId), `page` key; `enabledSports[]` from club config. `isMultiSport = enabledSports.length > 1`.
 - App: `enrolledSports[]` (union across children), `activeTab`, `currentSport`, `sheetOpen`. Persist `currentSport` per user.
@@ -91,5 +131,6 @@ Scrim `rgb(0 0 0 / .42)`; sheet card bg, top radius 4, padding 10px 16px 30px, 4
 - `designs/Poolse Multi-sport Tints.dc.html` — full spec board (tokens, nav, calendar, app, tab bar, don'ts), light + dark.
 - `designs/PoolseBackoffice.dc.html` — clickable backoffice shell.
 - `designs/PoolseTopBar.dc.html`, `PoolseSidebar.dc.html`, `PoolseTabBar.dc.html` — components with their logic.
+- `designs/Poolse Backoffice Pages.dc.html` — page content: Dashboard, Alunos lista + ficha, Calendário semana, Turmas, components (light + dark).
 - `designs/Poolse Visual Directions v2 Sharp.dc.html` — base visual direction.
 - `tokens.css` — CSS variables ready to use.

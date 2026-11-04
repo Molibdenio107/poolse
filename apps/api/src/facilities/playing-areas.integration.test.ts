@@ -1,5 +1,6 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
+import pg from 'pg';
 import { FacilitiesController } from './facilities.controller.js';
 import { actingAs, closeHarness, expectStatus, withScratchTenant } from '../test/harness.js';
 
@@ -14,7 +15,13 @@ import { actingAs, closeHarness, expectStatus, withScratchTenant } from '../test
  * Run: pnpm api:test   (needs pnpm db:up)
  */
 
-after(closeHarness);
+/** The owner login, for the one switch the app may not write: `enabled_sports`. */
+const owner = new pg.Pool({ connectionString: process.env['DATABASE_URL'], max: 1 });
+
+after(async () => {
+  await owner.end();
+  await closeHarness();
+});
 
 test('a pool added through the API arrives with its recinto, and archives with it', async () => {
   await withScratchTenant(async (tenant) => {
@@ -69,6 +76,35 @@ test('another club\'s site answers 404, recintos and all', async () => {
       await actingAs(tenant, { roles: ['owner'] }, async () => {
         await expectStatus(() => new FacilitiesController().one(other.facilityId), 404);
       });
+    });
+  });
+});
+
+test("another club's site takes no pool and no recinto: 404, and nothing written there — POOLSE-152", async () => {
+  await withScratchTenant(async (other) => {
+    await withScratchTenant(async (tenant) => {
+      // Tennis on for the acting club, so the refusal is about the site and not the sport.
+      await owner.query("UPDATE organization SET enabled_sports = '{pool,tennis}' WHERE id = $1", [
+        tenant.organizationId,
+      ]);
+      const counts = async (): Promise<{ pools: number; areas: number }> => {
+        const [row] = await other.sql<{ pools: number; areas: number }>(
+          'SELECT (SELECT count(*)::int FROM pool) AS pools, (SELECT count(*)::int FROM playing_area) AS areas',
+        );
+        return row!;
+      };
+      const before = await counts();
+
+      await actingAs(tenant, { roles: ['owner'] }, async () => {
+        const controller = new FacilitiesController();
+        await expectStatus(() => controller.addPool(other.facilityId, { name: 'Intrusa', kind: 'indoor' }), 404);
+        await expectStatus(
+          () => controller.addPlayingArea(other.facilityId, { sportId: 'tennis', name: 'Intruso' }),
+          404,
+        );
+      });
+
+      assert.deepEqual(await counts(), before, "the other club's site is untouched");
     });
   });
 });

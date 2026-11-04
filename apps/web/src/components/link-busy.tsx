@@ -14,6 +14,7 @@ import { useBusyWhile } from '@/lib/busy';
  */
 export function LinkBusy(): null {
   const { pending } = useLinkStatus();
-  useBusyWhile(pending, 'load');
+  // A page on its way: the wash stops a second click meanwhile (POOLSE-159).
+  useBusyWhile(pending, 'load', 'navigate');
   return null;
 }

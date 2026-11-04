@@ -20,6 +20,7 @@ import {
   updateClassAction,
 } from './classes.actions';
 import { Dialog } from '@/components/ui/dialog';
+import { ConfirmButton } from '@/components/confirm-action';
 
 const INITIAL: FormState = { ok: false };
 
@@ -222,6 +223,7 @@ export function ClassForm({
           hint={t('classes.colourHint')}
           clearLabel={t('classes.colourNone')}
           nameOf={(colour) => t(`classes.colours.${colour}`)}
+          set="class"
         />
       </div>
 
@@ -364,13 +366,17 @@ export function RemoveSlotButton({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="groupId" value={groupId} />
       <input type="hidden" name="scheduleId" value={scheduleId} />
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.equipa.removeSlotTitle')}
+        message={t('confirm.equipa.removeSlotMessage')}
+        confirmLabel={t('classes.removeSlot')}
+        tone="danger"
         disabled={pending}
         className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60 bg-surface shadow-card"
       >
         {pending ? t('common.working') : t('classes.removeSlot')}
-      </button>
+      </ConfirmButton>
     </form>
   );
 }
@@ -596,13 +602,17 @@ export function EndEnrollmentButton({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="groupId" value={groupId} />
       <input type="hidden" name="enrollmentId" value={enrollmentId} />
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.equipa.endEnrollmentTitle')}
+        message={t('confirm.equipa.endEnrollmentMessage')}
+        confirmLabel={t('classes.remove')}
+        tone="danger"
         disabled={pending}
         className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60 bg-surface shadow-card"
       >
         {pending ? t('common.working') : t('classes.remove')}
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

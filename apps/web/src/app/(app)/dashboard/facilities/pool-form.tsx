@@ -5,10 +5,20 @@ import { useSavedAction } from '@/lib/saved';
 import { useFormatter, useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, SelectField, useSeeded } from '@/components/ui/field';
 import { POOL_USES, type PoolUse } from '@/lib/water';
+import { cn } from '@/lib/utils';
 import type { FormState } from '../actions';
 import { createPoolAction, updatePoolAction } from './facilities.actions';
 
 const INITIAL: FormState = { ok: false };
+
+/**
+ * The student record's field grid (POOLSE-152): one column on a phone, two from
+ * `sm`, every cell the column's full width so the boxes line up edge to edge.
+ * A group after the first is set off by a rule, as the student form's are.
+ */
+const GRID = 'grid grid-cols-1 gap-4 sm:grid-cols-2';
+const CELL = cn(FIELD_COLUMN, 'max-w-none');
+const GROUP = 'border-t border-border pt-5';
 
 export interface PoolFormValues {
   id?: string;
@@ -102,192 +112,196 @@ function PoolDimensions({ pool }: { pool?: PoolFormValues | undefined }): React.
 
   return (
     <>
-      <fieldset className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <legend className="mb-2 text-sm font-medium">{t('facilities.measurements')}</legend>
+      <div className={GROUP}>
+        <fieldset className={GRID}>
+          <legend className="mb-2 text-sm font-medium">{t('facilities.measurements')}</legend>
 
-        {(
-          [
-            ['pool-length', 'lengthM', t('facilities.lengthLabel'), lengthM, setLengthM, null],
-            ['pool-width', 'widthM', t('facilities.widthLabel'), widthM, setWidthM, null],
-            /*
-             * Round 5, 4.0: "Zona menos funda" became "Prof. mín." — the field
-             * asks for a number, and naming it after a place in the pool made it
-             * read as a description of the shallow end rather than as its depth.
-             * Both depths carry a hint saying which extreme they mean, because
-             * "min" and "max" on their own are only obvious once you know.
-             */
+          {(
             [
-              'pool-min-depth',
-              'minDepthM',
-              t('facilities.minDepthLabel'),
-              minDepthM,
-              setMinDepthM,
-              t('facilities.minDepthHint'),
-            ],
-            [
-              'pool-depth',
-              'maxDepthM',
-              t('facilities.depthLabel'),
-              maxDepthM,
-              setMaxDepthM,
-              t('facilities.depthHint'),
-            ],
-          ] as const
-        ).map(([id, name, label, value, set, hint]) => (
-          <div key={id} className={FIELD_COLUMN}>
-            <label htmlFor={id} className={FIELD_LABEL}>
-              {label}
+              ['pool-length', 'lengthM', t('facilities.lengthLabel'), lengthM, setLengthM, null],
+              ['pool-width', 'widthM', t('facilities.widthLabel'), widthM, setWidthM, null],
+              /*
+               * Round 5, 4.0: "Zona menos funda" became "Prof. mín." — the field
+               * asks for a number, and naming it after a place in the pool made it
+               * read as a description of the shallow end rather than as its depth.
+               * Both depths carry a hint saying which extreme they mean, because
+               * "min" and "max" on their own are only obvious once you know.
+               */
+              [
+                'pool-min-depth',
+                'minDepthM',
+                t('facilities.minDepthLabel'),
+                minDepthM,
+                setMinDepthM,
+                t('facilities.minDepthHint'),
+              ],
+              [
+                'pool-depth',
+                'maxDepthM',
+                t('facilities.depthLabel'),
+                maxDepthM,
+                setMaxDepthM,
+                t('facilities.depthHint'),
+              ],
+            ] as const
+          ).map(([id, name, label, value, set, hint]) => (
+            <div key={id} className={CELL}>
+              <label htmlFor={id} className={FIELD_LABEL}>
+                {label}
+              </label>
+              {/*
+                step 0.01, never 1: a 12.5 m pool is ordinary, and a control that
+                refuses the half metre produces wrong data confidently.
+              */}
+              <input
+                id={id}
+                name={name}
+                type="number"
+                min={0.01}
+                step={0.01}
+                value={value}
+                onChange={(event) => set(event.target.value)}
+                className={CONTROL_LINE}
+                {...(hint === null ? {} : { 'aria-describedby': `${id}-hint` })}
+              />
+              {/*
+                Visible text, not a tooltip. Anything the operator needs is on the
+                page; a tooltip may clarify a control but is never the only place
+                a piece of information appears.
+              */}
+              {hint !== null && (
+                <p id={`${id}-hint`} className="text-sm text-foreground-muted">
+                  {hint}
+                </p>
+              )}
+            </div>
+          ))}
+        </fieldset>
+      </div>
+
+      <div className={GROUP}>
+        <fieldset className={GRID}>
+          <legend className="mb-2 text-sm font-medium">{t('facilities.capacity')}</legend>
+
+          <div className={CELL}>
+            <label htmlFor="pool-lanes" className={FIELD_LABEL}>
+              {t('facilities.lanesLabel')}
             </label>
-            {/*
-              step 0.01, never 1: a 12.5 m pool is ordinary, and a control that
-              refuses the half metre produces wrong data confidently.
-            */}
             <input
-              id={id}
-              name={name}
+              id="pool-lanes"
+              name="laneCount"
+              type="number"
+              min={1}
+              value={laneCount}
+              onChange={(event) => setLaneCount(event.target.value)}
+              aria-describedby="pool-lanes-hint"
+              className={CONTROL_LINE}
+            />
+            {/*
+              The number is now the count of real lane rows — POOLSE-43. Saying
+              what raising and lowering it actually do, because "reduce it and see"
+              is an experiment on a live timetable.
+            */}
+            <p id="pool-lanes-hint" className="text-sm text-foreground-muted">
+              {t('facilities.lanesHint')}
+            </p>
+          </div>
+
+          {/*
+            How many swimmers the tank holds at once — round 5, ticket 4.2.
+          
+            Beside the lane count because they answer the same question from two
+            directions, and both belong to the water rather than to any one turma.
+          
+            Left empty is "not measured", and the ticket asks for that to mean no
+            enforcement at all — so there is no placeholder number and no default.
+            A club that has not counted its ceiling goes on timetabling exactly as
+            it did, and the tank card says the limit is unset rather than implying
+            one.
+          */}
+          <div className={CELL}>
+            <label htmlFor="pool-max-capacity" className={FIELD_LABEL}>
+              {t('facilities.maxCapacityLabel')}
+            </label>
+            <input
+              id="pool-max-capacity"
+              name="maxCapacity"
+              type="number"
+              min={1}
+              step={1}
+              inputMode="numeric"
+              value={maxCapacity}
+              onChange={(event) => setMaxCapacity(event.target.value)}
+              aria-describedby="pool-max-capacity-hint"
+              className={CONTROL_LINE}
+            />
+            <p id="pool-max-capacity-hint" className="text-sm text-foreground-muted">
+              {t('facilities.maxCapacityHint')}
+            </p>
+          </div>
+
+          <div className={CELL}>
+            <label htmlFor="pool-volume" className={FIELD_LABEL}>
+              {t('facilities.volumeLabel')}
+            </label>
+            <input
+              id="pool-volume"
+              name="volumeLitres"
               type="number"
               min={0.01}
               step={0.01}
-              value={value}
-              onChange={(event) => set(event.target.value)}
+              value={volume}
+              onChange={(event) => setVolume(event.target.value)}
               className={CONTROL_LINE}
-              {...(hint === null ? {} : { 'aria-describedby': `${id}-hint` })}
             />
+
             {/*
-              Visible text, not a tooltip. Anything the operator needs is on the
-              page; a tooltip may clarify a control but is never the only place
-              a piece of information appears.
+              Grouped digits and cubic metres, always — round 4.
+              `1 000 000 L` is readable and `1000000` is not, and a pool's size is
+              quoted in m3 as often as in litres, so both are shown rather than
+              leaving the operator to divide by a thousand. `format.number` groups
+              per locale, which in pt-PT is the space the ticket asks for; forcing a
+              space would have put one in the English build too, where it is wrong.
             */}
-            {hint !== null && (
-              <p id={`${id}-hint`} className="text-sm text-foreground-muted">
-                {hint}
+            {entered !== null && (
+              <p className="text-sm font-medium">
+                {format.number(entered, { maximumFractionDigits: 2 })} L
+                <span className="text-foreground-muted">
+                  {' '}
+                  &middot; {format.number(entered / 1000, { maximumFractionDigits: 2 })} m&sup3;
+                </span>
               </p>
             )}
+
+            {suggested === null ? (
+              <p className="text-sm text-foreground-muted">{t('facilities.volumeHint')}</p>
+            ) : (
+              <p className="text-sm text-foreground-muted">
+                {t('facilities.volumeComputed', {
+                  litres: format.number(suggested, { maximumFractionDigits: 2 }),
+                })}
+              </p>
+            )}
+
+            {/*
+              Only once the two disagree. A button offering to replace a number with
+              the number already in the box is noise.
+            */}
+            {mine && (
+              <button
+                type="button"
+                onClick={() => {
+                  setVolume(String(suggested));
+                  written.current = String(suggested);
+                }}
+                className="self-start rounded text-sm text-primary underline underline-offset-2"
+              >
+                {t('facilities.volumeUseComputed')}
+              </button>
+            )}
           </div>
-        ))}
-      </fieldset>
-
-      <fieldset className="flex flex-wrap items-start gap-4">
-        <legend className="mb-2 text-sm font-medium">{t('facilities.capacity')}</legend>
-
-        <div className={FIELD_COLUMN + ' sm:w-32'}>
-          <label htmlFor="pool-lanes" className={FIELD_LABEL}>
-            {t('facilities.lanesLabel')}
-          </label>
-          <input
-            id="pool-lanes"
-            name="laneCount"
-            type="number"
-            min={1}
-            value={laneCount}
-            onChange={(event) => setLaneCount(event.target.value)}
-            aria-describedby="pool-lanes-hint"
-            className={CONTROL_LINE}
-          />
-          {/*
-            The number is now the count of real lane rows — POOLSE-43. Saying
-            what raising and lowering it actually do, because "reduce it and see"
-            is an experiment on a live timetable.
-          */}
-          <p id="pool-lanes-hint" className="text-sm text-foreground-muted">
-            {t('facilities.lanesHint')}
-          </p>
-        </div>
-
-        {/*
-          How many swimmers the tank holds at once — round 5, ticket 4.2.
-          
-          Beside the lane count because they answer the same question from two
-          directions, and both belong to the water rather than to any one turma.
-          
-          Left empty is "not measured", and the ticket asks for that to mean no
-          enforcement at all — so there is no placeholder number and no default.
-          A club that has not counted its ceiling goes on timetabling exactly as
-          it did, and the tank card says the limit is unset rather than implying
-          one.
-        */}
-        <div className={FIELD_COLUMN + ' sm:w-40'}>
-          <label htmlFor="pool-max-capacity" className={FIELD_LABEL}>
-            {t('facilities.maxCapacityLabel')}
-          </label>
-          <input
-            id="pool-max-capacity"
-            name="maxCapacity"
-            type="number"
-            min={1}
-            step={1}
-            inputMode="numeric"
-            value={maxCapacity}
-            onChange={(event) => setMaxCapacity(event.target.value)}
-            aria-describedby="pool-max-capacity-hint"
-            className={CONTROL_LINE}
-          />
-          <p id="pool-max-capacity-hint" className="text-sm text-foreground-muted">
-            {t('facilities.maxCapacityHint')}
-          </p>
-        </div>
-
-      <div className={`${FIELD_COLUMN} sm:max-w-64`}>
-        <label htmlFor="pool-volume" className={FIELD_LABEL}>
-          {t('facilities.volumeLabel')}
-        </label>
-        <input
-          id="pool-volume"
-          name="volumeLitres"
-          type="number"
-          min={0.01}
-          step={0.01}
-          value={volume}
-          onChange={(event) => setVolume(event.target.value)}
-          className={CONTROL_LINE}
-        />
-
-        {/*
-          Grouped digits and cubic metres, always — round 4.
-          `1 000 000 L` is readable and `1000000` is not, and a pool's size is
-          quoted in m3 as often as in litres, so both are shown rather than
-          leaving the operator to divide by a thousand. `format.number` groups
-          per locale, which in pt-PT is the space the ticket asks for; forcing a
-          space would have put one in the English build too, where it is wrong.
-        */}
-        {entered !== null && (
-          <p className="text-sm font-medium">
-            {format.number(entered, { maximumFractionDigits: 2 })} L
-            <span className="text-foreground-muted">
-              {' '}
-              &middot; {format.number(entered / 1000, { maximumFractionDigits: 2 })} m&sup3;
-            </span>
-          </p>
-        )}
-
-        {suggested === null ? (
-          <p className="text-sm text-foreground-muted">{t('facilities.volumeHint')}</p>
-        ) : (
-          <p className="text-sm text-foreground-muted">
-            {t('facilities.volumeComputed', {
-              litres: format.number(suggested, { maximumFractionDigits: 2 }),
-            })}
-          </p>
-        )}
-
-        {/*
-          Only once the two disagree. A button offering to replace a number with
-          the number already in the box is noise.
-        */}
-        {mine && (
-          <button
-            type="button"
-            onClick={() => {
-              setVolume(String(suggested));
-              written.current = String(suggested);
-            }}
-            className="self-start rounded text-sm text-primary underline underline-offset-2"
-          >
-            {t('facilities.volumeUseComputed')}
-          </button>
-        )}
+        </fieldset>
       </div>
-      </fieldset>
     </>
   );
 }
@@ -334,8 +348,8 @@ export function PoolForm({
       <input type="hidden" name="facilityId" value={facilityId} />
       {pool?.id !== undefined && <input type="hidden" name="poolId" value={pool.id} />}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className={`${FIELD_COLUMN} sm:col-span-2`}>
+      <div className={GRID}>
+        <div className={cn(CELL, 'sm:col-span-2')}>
           <label htmlFor="pool-name" className={FIELD_LABEL}>
             {t('facilities.poolNameLabel')}
           </label>
@@ -351,7 +365,7 @@ export function PoolForm({
           />
         </div>
 
-        <div className={FIELD_COLUMN}>
+        <div className={CELL}>
           <label htmlFor="pool-kind" className={FIELD_LABEL}>
             {t('facilities.kindLabel')}
           </label>
@@ -376,6 +390,7 @@ export function PoolForm({
           label={t('facilities.useLabel')}
           hint={t('facilities.useHint')}
           initial={pool?.use ?? ''}
+          className="max-w-none"
           options={[
             { value: '', label: t('facilities.useNone') },
             ...POOL_USES.map((use) => ({ value: use, label: t(`facilities.use.${use}`) })),

@@ -266,6 +266,75 @@ interface Level {
   max: number | null;
 }
 
+/**
+ * `--size=club` — POOLSE-171: a club the size a real one is (400 students, the
+ * reference timetable's turmas, 25 staff, a whole season of sessions and a
+ * year of water readings), so a query that scales with rows shows it. It fills
+ * its own club, *Clube Medida*, owned by a seed login and opened to the e2e
+ * owner as an admin, so the perf spec can sign in and measure it. Without the
+ * flag the seed is exactly the demo it always was.
+ */
+const CLUB = process.argv.includes('--size=club');
+const CLUB_SLUG = 'clube-medida';
+const CLUB_OWNER = 'seed:perf.owner';
+
+/** Makes (once) and returns *Clube Medida*, with the e2e owner given an admin seat. */
+async function clubForMeasuring(client: pg.Client): Promise<string> {
+  const existing = await one<{ id: string }>(
+    client,
+    `SELECT id FROM organization WHERE slug = $1 AND archived_at IS NULL`,
+    [CLUB_SLUG],
+  );
+  let id = existing?.id ?? null;
+  if (id === null) {
+    await client.query(
+      `INSERT INTO app_user (clerk_user_id, cached_email, cached_first_name, cached_last_name, synced_at)
+       VALUES ($1, 'perf.owner@exemplo.pt', 'Medida', 'Dona', now())
+       ON CONFLICT DO NOTHING`,
+      [CLUB_OWNER],
+    );
+    const made = await one<{ o_organization_id: string }>(
+      client,
+      `SELECT o_organization_id FROM provision_organization($1, 'Clube Medida', 'pt-PT', 'Piscinas Medida')`,
+      [CLUB_OWNER],
+    );
+    id = made!.o_organization_id;
+    // A wide licence and a club that never runs out of trial while it is measured.
+    await client.query(
+      `UPDATE organization SET max_facilities = 5, trial_ends_at = now() + interval '10 years' WHERE id = $1`,
+      [id],
+    );
+  }
+
+  // The e2e owner — whoever owns the e2e club — reads it as an admin.
+  const guest = await one<{ app_user_id: string }>(
+    client,
+    `SELECT m.app_user_id FROM membership m
+       JOIN organization o ON o.id = m.organization_id AND o.slug = 'clube-e2e'
+       JOIN membership_role r ON r.membership_id = m.id AND r.role = 'owner' AND r.archived_at IS NULL
+      WHERE m.archived_at IS NULL LIMIT 1`,
+  );
+  if (guest) {
+    const seat = await one<{ id: string }>(
+      client,
+      `SELECT id FROM membership WHERE organization_id = $1 AND app_user_id = $2 AND archived_at IS NULL`,
+      [id, guest.app_user_id],
+    );
+    if (!seat) {
+      const made = await one<{ id: string }>(
+        client,
+        `INSERT INTO membership (organization_id, app_user_id, status) VALUES ($1, $2, 'active') RETURNING id`,
+        [id, guest.app_user_id],
+      );
+      await client.query(
+        `INSERT INTO membership_role (organization_id, membership_id, role) VALUES ($1, $2, 'admin')`,
+        [id, made!.id],
+      );
+    }
+  }
+  return id;
+}
+
 async function main(): Promise<void> {
   const url = process.env['DATABASE_URL'];
   if (!url) throw new Error('DATABASE_URL is not set');
@@ -291,6 +360,7 @@ async function main(): Promise<void> {
   try {
     await client.query('BEGIN');
 
+    const clubId = CLUB ? await clubForMeasuring(client) : null;
     const org = await one<{ id: string; name: string }>(
       client,
       // SEED_ORGANIZATION_ID fills one named club (the e2e user's, say) instead
@@ -298,7 +368,7 @@ async function main(): Promise<void> {
       `SELECT id, name FROM organization
         WHERE archived_at IS NULL AND ($1::uuid IS NULL OR id = $1::uuid)
         ORDER BY created_at LIMIT 1`,
-      [process.env['SEED_ORGANIZATION_ID'] || null],
+      [clubId ?? (process.env['SEED_ORGANIZATION_ID'] || null)],
     );
     if (!org) {
       throw new Error(
@@ -345,7 +415,18 @@ async function main(): Promise<void> {
     // The memberships already there are invitations nobody accepted, so every
     // instructor picker reads "Sem nome". These are people.
     // ---------------------------------------------------------------------
-    for (const person of STAFF) {
+    // Club size: the six, then instructors named from the student lists, to 25.
+    const staffList = CLUB
+      ? [
+          ...STAFF,
+          ...Array.from({ length: 19 }, (_, index) => ({
+            first: FIRST_NAMES[(index * 7) % FIRST_NAMES.length]!,
+            last: `${LAST_NAMES[(index * 5) % LAST_NAMES.length]!} ${index + 1}`,
+            roles: index % 6 === 5 ? ['maintenance'] : ['instructor'],
+          })),
+        ]
+      : STAFF;
+    for (const person of staffList) {
       const clerkId = `seed:${person.first}.${person.last}`.toLowerCase();
 
       // The login is global and the membership is per club: a login another
@@ -473,7 +554,31 @@ async function main(): Promise<void> {
     //   - two are genuinely aged out of their level, so the register's flag has
     //     something to flag.
     // ---------------------------------------------------------------------
-    const wanted = 42;
+    // Club size: the reference timetable now, before anybody is enrolled, and
+    // every week of the season rather than the next four (POOLSE-171).
+    if (CLUB) {
+      const built = await seedReferenceSchedule(client, org.id);
+      const season = await one<{ starts_on: string; ends_on: string }>(
+        client,
+        `SELECT starts_on::text, ends_on::text FROM season
+          WHERE organization_id = $1 AND status = 'published' AND archived_at IS NULL
+          ORDER BY starts_on DESC LIMIT 1`,
+        [org.id],
+      );
+      const whole = season
+        ? await one<{ o_created: number }>(client, `SELECT * FROM generate_sessions($1, $2::date, $3::date)`, [
+            org.id,
+            season.starts_on,
+            season.ends_on,
+          ])
+        : null;
+      console.log(
+        `  clube medida: ${built.turmas} turmas, ${built.bookings} marcações, ` +
+          `${(built.sessions ?? 0) + (whole?.o_created ?? 0)} sessões na época`,
+      );
+    }
+
+    const wanted = CLUB ? 400 : 42;
     const already = await one<{ n: string }>(
       client,
       `SELECT count(*) AS n FROM student WHERE organization_id = $1 AND archived_at IS NULL`,
@@ -817,10 +922,11 @@ async function main(): Promise<void> {
           WHERE cs.organization_id = $1
             AND cs.status = 'scheduled'
             AND cs.starts_at < now()
-            AND cs.starts_at > now() - interval '6 weeks'
+            AND cs.starts_at > now() - $2::interval
             AND NOT EXISTS (SELECT 1 FROM attendance a WHERE a.class_session_id = cs.id)
           ORDER BY cs.starts_at`,
-        [org.id],
+        // Club size: every register of the season so far.
+        [org.id, CLUB ? '12 months' : '6 weeks'],
       );
 
       for (const session of past) {
@@ -1599,12 +1705,12 @@ async function main(): Promise<void> {
      *
      *   SEED_REFERENCE=yes pnpm db:seed
      */
-    const wantsReference = process.env['SEED_REFERENCE'] === 'yes';
+    const wantsReference = process.env['SEED_REFERENCE'] === 'yes' && !CLUB;
     const reference = wantsReference
       ? await seedReferenceSchedule(client, org.id)
       : { turmas: 0, groups: 0, bookings: 0, sessions: 0, skipped: [] as string[] };
 
-    if (!wantsReference) {
+    if (!wantsReference && !CLUB) {
       console.log('  referência: saltada — SEED_REFERENCE=yes para a construir');
     }
     if (reference.bookings > 0) {
@@ -1634,6 +1740,44 @@ async function main(): Promise<void> {
     if (activity.familyLink !== null) {
       console.log('  família: convite para a Paula (familia+clerk_test@example.com, código 424242):');
       console.log(`    ${activity.familyLink}`);
+    }
+
+    // Club size: a year of daily water analyses on every tank (POOLSE-171), in
+    // one statement each — pH, free chlorine and temperature, inside the bands.
+    if (CLUB) {
+      const marker = await one<{ id: string }>(
+        client,
+        `SELECT id FROM membership WHERE organization_id = $1 AND status = 'active' ORDER BY created_at LIMIT 1`,
+        [org.id],
+      );
+      const made = await one<{ n: string }>(
+        client,
+        `WITH days AS (
+           SELECT p.id AS pool_id, d::date AS day
+             FROM pool p
+            CROSS JOIN generate_series(current_date - 364, current_date - 1, interval '1 day') d
+            WHERE p.organization_id = $1 AND p.archived_at IS NULL
+              AND NOT EXISTS (SELECT 1 FROM pool_analysis a
+                               WHERE a.pool_id = p.id AND a.taken_at::date = d::date)
+         ), a AS (
+           INSERT INTO pool_analysis (organization_id, pool_id, taken_at, recorded_by)
+           SELECT $1, pool_id, day + time '08:30', $2 FROM days
+           RETURNING id
+         ), v AS (
+           INSERT INTO pool_analysis_value (organization_id, analysis_id, metric, value, unit)
+           SELECT $1, a.id, m.metric::pool_metric, m.value, m.unit
+             FROM a
+            CROSS JOIN LATERAL (VALUES
+              ('ph', 7.2 + (abs(hashtext(a.id::text)) % 5) / 10.0, 'pH'),
+              ('free_chlorine', 1.0 + (abs(hashtext(a.id::text || 'c')) % 8) / 10.0, 'ppm'),
+              ('temperature', 27 + (abs(hashtext(a.id::text || 't')) % 3), '°C')
+            ) AS m(metric, value, unit)
+           RETURNING 1
+         )
+         SELECT (SELECT count(*) FROM a)::text AS n, (SELECT count(*) FROM v) AS values_written`,
+        [org.id, marker?.id ?? null],
+      );
+      console.log(`  clube medida: ${made?.n ?? 0} análises de água num ano`);
     }
 
     await client.query('COMMIT');

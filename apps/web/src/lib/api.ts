@@ -407,6 +407,8 @@ export interface OrganizationMember {
   avatarUrl: string | null;
   /** The sports this person belongs to — POOLSE-145. */
   sports?: PoolseSport[];
+  /** When their login last used Poolse — POOLSE-130, the staff table's *Acesso* (POOLSE-158). */
+  lastSeenAt?: string | null;
   /** ISO date, or null — Poolse's own column, used to flag a birthday. */
   birthDate: string | null;
   /**
@@ -626,6 +628,11 @@ export interface PoolAnalysis {
   recordedByName: string | null;
   /** Filed from a laboratory report's chemistry (29-10-2026), not typed. */
   fromLab: boolean;
+  /**
+   * Where it came from — POOLSE-153: typed, a water-log sheet (`log`) or a
+   * laboratory document (`report`); null from before it was recorded.
+   */
+  origin: 'typed' | 'log' | 'report' | null;
   values: AnalysisValue[];
 }
 
@@ -660,6 +667,18 @@ export interface InventoryItem {
   /** Empty unless `scope` is `pools`. */
   poolIds: string[];
   poolNames: string[];
+  /** The space it lives in — POOLSE-154; null when it is not in one. */
+  spaceId: string | null;
+  spaceName: string | null;
+  /** The recinto of another sport it lives on — POOLSE-154. */
+  playingAreaId: string | null;
+  playingAreaName: string | null;
+}
+
+/** What *Localização* offers besides the pools — POOLSE-154. */
+export interface InventoryPlaces {
+  spaces: { id: string; name: string }[];
+  recintos: { id: string; name: string; sportId: string }[];
 }
 
 /**
@@ -701,6 +720,8 @@ export interface Inventory {
   items: Paginated<InventoryItem>;
   /** What this site already calls its places, for the location suggestions. */
   locations: string[];
+  /** Spaces and other recintos for *Localização* — POOLSE-154. */
+  places: InventoryPlaces;
 }
 
 /** One item somebody left behind — round 5, ticket 6.1. */
@@ -718,6 +739,8 @@ export interface LostAndFoundItem {
   studentNotifiedAt: string | null;
   status: 'found' | 'returned';
   returnedAt: string | null;
+  /** When a returned item leaves the list — a week after its last change (04-11-2026). */
+  leavesListAt: string | null;
 }
 
 export interface LostAndFound {
@@ -1393,8 +1416,19 @@ export interface MyVacations {
 
 export interface PendingVacations {
   organizationId: string;
-  /** One page of the approval queue — POOLSE-29. */
-  requests: Paginated<VacationRequest & { othersOff: { name: string | null; day: string }[] }>;
+  /**
+   * One page of the approval queue — POOLSE-29. For a reader who is not the
+   * office, `kind` and `reason` are null (POOLSE-157): dates and names only.
+   */
+  requests: Paginated<
+    Omit<VacationRequest, 'kind' | 'reason'> & {
+      kind: LeaveKind | null;
+      reason: string | null;
+      othersOff: { name: string | null; day: string }[];
+    }
+  >;
+  /** Approve and refuse are the owner's and the admins'. */
+  canDecide: boolean;
 }
 
 export interface TeamMember {
@@ -1433,6 +1467,15 @@ export interface Weather {
 export interface WeatherResponse {
   available: boolean;
   weather: Weather | null;
+}
+
+/** `ops.weather` — POOLSE-170: the site being looked at, now and the days from today. */
+export interface WeatherWidgetData {
+  facilityId: string;
+  facilityName: string;
+  city: string | null;
+  /** `days[0]` is today. */
+  weather: Weather;
 }
 
 /**
@@ -1661,6 +1704,13 @@ export interface Student {
   isGuardian: boolean;
   /** The sports of the active turmas — on lists only (multi-sport Slice 3). */
   sports?: PoolseSport[];
+  /** The turmas the student is in now — the Alunos table (POOLSE-164). */
+  turmas?: { id: string; name: string }[];
+  /** Seguro today: covered, lapsed, or never — POOLSE-164. */
+  insuranceState?: 'insured' | 'lapsed' | 'never';
+  /** The family's last visit to the app, and whether any of them has a login. */
+  familyLastSeenAt?: string | null;
+  familyHasLogin?: boolean;
   socioNumber: string | null;
   /** Sócio desde, `YYYY-MM-DD` — POOLSE-134. Carried by the export only. */
   socioSince?: string | null;
@@ -1702,6 +1752,8 @@ export interface Students {
    * exists, because that is the number the range label reports.
    */
   students: Paginated<Student>;
+  /** The live turmas, for the *Turma* filter — POOLSE-164. */
+  turmas: { id: string; name: string }[];
   /** Not paginated: the programme ladder is fixed, and it fills the filter. */
   levels: StudentLevel[];
   canManage: boolean;
@@ -1794,6 +1846,8 @@ export interface ImportRowResult {
   birthDate: string | null;
   levelId: string | null;
   levelName: string | null;
+  /** The turmas the row will join, as the club spells them — POOLSE-164. */
+  turmaNames?: string[];
   contactEmail: string | null;
   contactPhone: string | null;
   taxNumber: string | null;
@@ -1833,6 +1887,9 @@ export interface ImportResult {
   updated?: number;
   skipped?: number;
   levelsCreated?: string[];
+  /** The *Turma* column's enrolments, and those refused (full, clash) — POOLSE-164. */
+  enrolled?: number;
+  enrolmentsRefused?: { line: number; turma: string; reason: 'full' | 'clash' }[];
 }
 
 /**
@@ -2067,6 +2124,8 @@ export interface StudentFeeLine {
   paidOn: string | null;
   /** Every period this line has been settled for, newest first — 10.0. */
   paidPeriods: string[];
+  /** Occurrences invoiced outside Poolse, newest first — POOLSE-163. */
+  externalCharges: { id: string; occurrenceOn: string; reference: string }[];
   isOverdue: boolean;
   /** Set only when the plan has moved on — that is the marker, and the whole rule. */
   planAmountCentsNow: number | null;
@@ -3834,7 +3893,7 @@ export type InvoiceStatus =
   | 'credit_note';
 
 /** How money reached the club. The same enum the fee register already uses. */
-export type PaymentSource = 'manual' | 'mbway' | 'sepa';
+export type PaymentSource = 'manual' | 'mbway' | 'sepa' | 'external_invoice';
 
 /** How a family was asked. A person's action until the notifications phase. */
 /** `poolse_email` is a reminder Poolse sent — POOLSE-86; never recorded by hand. */
@@ -4079,6 +4138,8 @@ export interface InvoiceRun {
    * billed" look identical on an empty table and are different things to do.
    */
   alreadyChargedCount: number;
+  /** Left out because invoiced outside Poolse — POOLSE-163. */
+  externalCount: number;
   committed: boolean;
 }
 
@@ -4597,7 +4658,7 @@ export interface DashboardWidget {
 
 export interface DashboardBand {
   /** `summary` is the handoff's dashboard on top (multi-sport Slice 2), laid out rather than ranked. */
-  id: 'summary' | 'management' | 'operational' | 'personal';
+  id: 'notes' | 'summary' | 'management' | 'operational' | 'personal';
   order: number;
   widgets: DashboardWidget[];
 }
@@ -5018,6 +5079,51 @@ export interface AudienceOption {
   detail: string | null;
 }
 
+/** An aviso in the backoffice — POOLSE-166. */
+export interface AvisoSummary {
+  id: string;
+  audience: MessageAudience;
+  targetId: string | null;
+  targetName: string | null;
+  subject: string;
+  body: string;
+  shownFrom: string;
+  shownUntil: string;
+  state: 'live' | 'upcoming' | 'past';
+  sentAt: string;
+  sentByName: string | null;
+  studentCount: number;
+  canArchive: boolean;
+}
+
+/** A post-it's colour — POOLSE-169, the author's pick. */
+export type NoteColour = 'yellow' | 'orange' | 'green' | 'blue';
+
+/** A post-it on the staff board (POOLSE-169). Plain text, never edited. */
+export interface StaffNote {
+  id: string;
+  body: string;
+  colour: NoteColour;
+  createdAt: string;
+  authorName: string | null;
+  /** Its author, or the office: the reader may take it down. */
+  canRemove: boolean;
+}
+
+/** `staff.notes` — POOLSE-169: the board, empty included. */
+export interface StaffNotesWidgetData {
+  notes: StaffNote[];
+}
+
+/** A live aviso, as the app shows a family or a student — POOLSE-166. */
+export interface AppAviso {
+  id: string;
+  subject: string;
+  body: string;
+  shownUntil: string;
+  studentNames: string[];
+}
+
 export interface AudienceOptions {
   classGroups: AudienceOption[];
   levels: AudienceOption[];
@@ -5143,7 +5249,10 @@ export interface IncidentFacts extends IncidentSummary {
  */
 export interface LifeguardDuty {
   id: string;
-  poolId: string;
+  /** The pool for swimming, the recinto for another sport — what the week draws it under (POOLSE-156). */
+  placeId: string;
+  /** Null for a duty on a court or a pitch. */
+  poolId: string | null;
   membershipId: string;
   name: string | null;
   startsAt: string;
@@ -5171,6 +5280,7 @@ export interface LifeguardPeriod {
 
 /** An open window on a tank with nobody rostered. `day` is `YYYY-MM-DD`; the ends are instants. */
 export interface RosterGap {
+  placeId: string;
   poolId: string;
   day: string;
   from: string;
@@ -5178,6 +5288,12 @@ export interface RosterGap {
 }
 
 export interface LifeguardRoster {
+  /** The sport this week is about — POOLSE-156. */
+  sport: PoolseSport;
+  /** Pools for swimming (pool ids); another sport's recintos otherwise (recinto ids). */
+  placeKind: 'pool' | 'area';
+  places: { id: string; name: string }[];
+  /** The site's pools — what a vigilance period covers; empty for another sport. */
   pools: { id: string; name: string }[];
   duties: LifeguardDuty[];
   gaps: RosterGap[];
@@ -5454,6 +5570,21 @@ export interface LeadsWidgetData {
 /** A lab parameter: one of the seven organisms, or a chemistry metric — POOLSE-72. */
 export type LabParameter = string;
 
+/**
+ * A laboratory document with chemistry only, filed as a reading (POOLSE-101) and
+ * listed in Laboratório beside the lab results (POOLSE-153).
+ */
+export interface ChemistryReport {
+  id: string;
+  takenAt: string;
+  values: { metric: string; value: number; unit: string }[];
+}
+
+/** One row of Laboratório: a graded lab result, or a chemistry-only report. */
+export type LabEntry =
+  | { kind: 'lab'; at: string; result: LabResult }
+  | { kind: 'chemistry'; at: string; report: ChemistryReport };
+
 /** One laboratory report on a tank, graded by the API with `gradeLabResult()`. */
 export interface LabResult {
   id: string;
@@ -5467,6 +5598,8 @@ export interface LabResult {
   grading: LabGrading;
   /** Null when the report raised no alert. */
   alert: { raisedAt: string; recipients: string[]; deliveredAt: string | null } | null;
+  /** Typed on the form or imported from a file — POOLSE-153; null from before it was recorded. */
+  origin: 'typed' | 'report' | null;
 }
 
 /* -------------------------------------------------------------------------- */

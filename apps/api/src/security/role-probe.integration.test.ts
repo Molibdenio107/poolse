@@ -82,10 +82,13 @@ import {
 import type { MemberRole } from '../tenant/roles.js';
 import { AppController } from '../app/app.controller.js';
 import { StaffController } from '../staff/staff.controller.js';
+import { CompensationController, SalariesController } from '../staff/compensation.controller.js';
 import { FeedbackController } from '../feedback/feedback.controller.js';
 import { NoticesController } from '../notices/notices.controller.js';
 import { PushController } from '../push/push.controller.js';
 import { AttentionController } from '../attention/attention.controller.js';
+import { AppAvisosController, AvisosController } from '../messages/avisos.controller.js';
+import { StaffNotesController } from '../staff-notes/staff-notes.controller.js';
 
 /**
  * Role probe — security review, 12-10-2026, inverted into a regression test.
@@ -524,7 +527,9 @@ test('partners: staff only; contract money only for owner and admin', async () =
 // Writes — refused, and nothing written
 // --------------------------------------------------------------------------
 
-async function count(table: 'skill_progress' | 'vacation_request'): Promise<number> {
+async function count(
+  table: 'skill_progress' | 'vacation_request' | 'pool' | 'playing_area',
+): Promise<number> {
   const [row] = await tenantRef.sql<{ n: number }>(`SELECT count(*)::int AS n FROM ${table}`);
   return row!.n;
 }
@@ -600,6 +605,9 @@ test('operational reads refuse non-staff (403)', async () => {
       new FacilitiesController().pool(fixture.poolId),
     );
     await refused('GET facilities/:id', 403, () => new FacilitiesController().one(fac));
+    await refused('POST facilities/:id/pools', 403, () =>
+      new FacilitiesController().addPool(fac, { name: 'Tanque', kind: 'indoor' }),
+    );
     // POOLSE-124: the role check comes before the sport is even read.
     await refused('POST facilities/:id/playing-areas', 403, () =>
       new FacilitiesController().addPlayingArea(fac, { sportId: 'tennis', name: 'Campo' }),
@@ -621,6 +629,13 @@ test('operational reads refuse non-staff (403)', async () => {
     await refused('GET inventory/lost-and-found', 403, () =>
       new InventoryController().lostAndFound(fac),
     );
+    // POOLSE-154: every working role records and gives back; a family never.
+    await refused('POST inventory/lost-and-found', 403, () =>
+      new InventoryController().recordFound({ facilityId: fac, description: 'Toalha' }),
+    );
+    await refused('POST inventory/lost-and-found/:id/return', 403, () =>
+      new InventoryController().giveBack(NO_SUCH_ID),
+    );
     await refused('GET places', 403, () => new PlacesController().search('Lisboa'));
     // 13-10-2026 sweep: the one handler that had no role check.
     await refused('GET weather', 403, () => new WeatherController().current('38.7', '-9.1'));
@@ -634,6 +649,27 @@ test('the overlapping-lessons list is owner/admin: an instructor is refused too 
   await as(fixture.instructorId, ['instructor'], async () => {
     await refused('GET class-groups/clashes as instructor', 403, () => new ClassesController().clashes());
   });
+});
+
+test('a pool or a recinto is created by the office only: maintenance and an instructor are refused, nothing written — POOLSE-152', async () => {
+  const pools = await count('pool');
+  const areas = await count('playing_area');
+  const fac = tenantRef.facilityId;
+  for (const [membershipId, roles] of [
+    [fixture.maintenanceId, ['maintenance']],
+    [fixture.instructorId, ['instructor']],
+  ] as const) {
+    await as(membershipId, [...roles], async () => {
+      await refused(`POST facilities/:id/pools as ${roles[0]}`, 403, () =>
+        new FacilitiesController().addPool(fac, { name: 'Tanque', kind: 'indoor' }),
+      );
+      await refused(`POST facilities/:id/playing-areas as ${roles[0]}`, 403, () =>
+        new FacilitiesController().addPlayingArea(fac, { sportId: 'tennis', name: 'Campo' }),
+      );
+    });
+  }
+  assert.equal(await count('pool'), pools, 'no pool was written');
+  assert.equal(await count('playing_area'), areas, 'no recinto was written');
 });
 
 test('places is owner/admin: an instructor is refused too', async () => {
@@ -1428,4 +1464,181 @@ test('a tennis-only instructor is refused every swimming route (403) — POOLSE-
     await owner.query("UPDATE organization SET enabled_sports = '{pool}' WHERE id = $1", [org]);
     await owner.end();
   }
+});
+
+// --------------------------------------------------------------------------
+// POOLSE-157 — the staff screens by role, one rule per test
+// --------------------------------------------------------------------------
+
+/** The working roles that are not the office. */
+function workers(): { label: string; membershipId: string; roles: MemberRole[] }[] {
+  return [
+    { label: 'instructor', membershipId: fixture.instructorId, roles: ['instructor'] },
+    { label: 'maintenance', membershipId: fixture.maintenanceId, roles: ['maintenance'] },
+  ];
+}
+
+test("POOLSE-157 rule 1: Funções and Acesso are the office's — a worker cannot change a staff member's roles or re-invite them", async () => {
+  for (const who of workers()) {
+    await as(who.membershipId, who.roles, async () => {
+      const people = new PeopleDedupController();
+      await refused(`POST people/:id/roles as ${who.label}`, 403, () =>
+        people.grant(fixture.awayInstructorId, { role: 'maintenance' }),
+      );
+      await refused(`POST people/:id/roles/:role/revoke as ${who.label}`, 403, () =>
+        people.revoke(fixture.awayInstructorId, 'instructor'),
+      );
+      await refused(`POST staff/:id/reinvite as ${who.label}`, 403, () =>
+        new StaffController().move(fixture.awayInstructorId, { email: 'x@example.com' }),
+      );
+      await refused(`POST staff/:id/reinvite/cancel as ${who.label}`, 403, () =>
+        new StaffController().cancel(fixture.awayInstructorId),
+      );
+    });
+  }
+});
+
+test('POOLSE-157 rule 2: every worker files leave and reads Em aprovação as dates and names; only the office decides', async () => {
+  // Maintenance files a request of its own — a Wednesday, far from the fixture's days.
+  const { id } = await as(fixture.maintenanceId, ['maintenance'], () =>
+    new VacationsController().request({ days: ['2027-03-10'], kind: 'medical', reason: 'Consulta de rotina' }),
+  );
+  assert.ok(id, 'maintenance filed its own request');
+
+  try {
+    for (const who of workers()) {
+      await as(who.membershipId, who.roles, async () => {
+        const queue = await new VacationsController().pending();
+        const mine = queue.requests.items.find((request) => request.id === id);
+        assert.ok(mine, `${who.label} reads the queue`);
+        assert.deepEqual(mine.days, ['2027-03-10']);
+        assert.equal(mine.membershipId, fixture.maintenanceId, `${who.label} sees whose request it is`);
+        // Dates and names only: the kind and the words stay with the office.
+        assert.equal(mine.reason ?? null, null, `${who.label} reads no reason`);
+        assert.equal(mine.kind ?? null, null, `${who.label} reads no kind`);
+        assert.equal(JSON.stringify(queue).includes('Consulta de rotina'), false, 'the reason is nowhere in the payload');
+
+        await refused(`POST vacations/requests/:id/approve as ${who.label}`, 403, () =>
+          new VacationsController().approve(id, {}),
+        );
+        await refused(`POST vacations/requests/:id/reject as ${who.label}`, 403, () =>
+          new VacationsController().reject(id, { note: 'Não' }),
+        );
+      });
+    }
+
+    // The office still reads the whole request.
+    await as(fixture.adminId, ['admin'], async () => {
+      const queue = await new VacationsController().pending();
+      const mine = queue.requests.items.find((request) => request.id === id);
+      assert.equal(mine?.reason, 'Consulta de rotina', 'the office reads the reason');
+      assert.equal(mine?.kind, 'medical');
+      // Another club's request, or none: 404, never a decision.
+      await refused('POST vacations/requests/:other/approve as admin', 404, () =>
+        new VacationsController().approve(NO_SUCH_ID, {}),
+      );
+    });
+  } finally {
+    // Withdrawn again so later tests see the fixture as it was.
+    await as(fixture.maintenanceId, ['maintenance'], () => new VacationsController().withdraw(id));
+  }
+});
+
+test('POOLSE-157 rule 3: every worker reads the team map, names and approved days only', async () => {
+  for (const who of workers()) {
+    await as(who.membershipId, who.roles, async () => {
+      const team = await new VacationsController().team('2026');
+      assert.ok(Array.isArray(team.members), `${who.label} reads the team map`);
+      assert.equal(JSON.stringify(team).includes('Cirurgia'), false, 'no reason on the map');
+      for (const member of team.members) {
+        assert.deepEqual(Object.keys(member).sort(), ['days', 'membershipId', 'name']);
+      }
+    });
+  }
+});
+
+test("POOLSE-157 rule 4: Salários are the office's — a worker is refused every read, their own included", async () => {
+  for (const who of workers()) {
+    await as(who.membershipId, who.roles, async () => {
+      await refused(`GET staff/salaries as ${who.label}`, 403, () => new SalariesController().list());
+      await refused(`GET staff/salaries/summary as ${who.label}`, 403, () => new SalariesController().summary());
+      await refused(`GET staff/:id/compensation (own) as ${who.label}`, 403, () =>
+        new CompensationController().history(who.membershipId),
+      );
+    });
+  }
+});
+
+test("POOLSE-157 rule 5: Qualificações — a worker reads their own and nobody else's, and not the club list", async () => {
+  for (const who of workers()) {
+    await as(who.membershipId, who.roles, async () => {
+      const own = await new QualificationsController().person(who.membershipId);
+      assert.equal(own.canManage, false, `${who.label} reads their own, read-only`);
+      await refused(`GET staff/:other/qualifications as ${who.label}`, 403, () =>
+        new QualificationsController().person(fixture.adminId),
+      );
+      await refused(`GET qualifications/expiring as ${who.label}`, 403, () =>
+        new QualificationsController().expiring(),
+      );
+    });
+  }
+  await as(fixture.adminId, ['admin'], async () => {
+    await refused('GET staff/:unknown/qualifications as admin', 404, () =>
+      new QualificationsController().person(NO_SUCH_ID),
+    );
+  });
+});
+
+test('POOLSE-157 rule 7: a guardian and a student are refused every staff screen above, their own id included', async () => {
+  await asEach(async ({ label }) => {
+    const self = label === 'student' ? fixture.studentMemberId : fixture.unlinkedGuardianId;
+    const vacations = new VacationsController();
+    await refused(`GET vacations/pending as ${label}`, 403, () => vacations.pending());
+    await refused(`GET vacations/team as ${label}`, 403, () => vacations.team('2026'));
+    await refused(`POST vacations/requests/:id/approve as ${label}`, 403, () => vacations.approve(NO_SUCH_ID, {}));
+    await refused(`POST vacations/requests/:id/reject as ${label}`, 403, () =>
+      vacations.reject(NO_SUCH_ID, { note: 'Não' }),
+    );
+    await refused(`GET staff/salaries as ${label}`, 403, () => new SalariesController().list());
+    await refused(`GET staff/:id/compensation as ${label}`, 403, () => new CompensationController().history(self));
+    await refused(`GET staff/:id/qualifications (a colleague) as ${label}`, 403, () =>
+      new QualificationsController().person(fixture.instructorId),
+    );
+    await refused(`GET staff/:id/qualifications (own) as ${label}`, 403, () =>
+      new QualificationsController().person(self),
+    );
+    await refused(`POST people/:staff/roles as ${label}`, 403, () =>
+      new PeopleDedupController().grant(fixture.instructorId, { role: 'maintenance' }),
+    );
+    await refused(`POST staff/:id/reinvite as ${label}`, 403, () =>
+      new StaffController().move(fixture.instructorId, { email: 'x@example.com' }),
+    );
+  });
+});
+
+test('POOLSE-166: avisos — a guardian and a student cannot list, post or end one; the app read answers them, empty when unlinked', async () => {
+  await asEach(async ({ label }) => {
+    await refused(`GET avisos as ${label}`, 403, () => new AvisosController().list());
+    await refused(`POST avisos as ${label}`, 403, () =>
+      new AvisosController().post({
+        audience: 'class_group',
+        targetId: fixture.groupId,
+        subject: 'x',
+        body: 'x',
+        shownFrom: '2026-11-04',
+        shownUntil: '2026-11-05',
+      }),
+    );
+    await refused(`DELETE avisos/:id as ${label}`, 403, () => new AvisosController().archive(NO_SUCH_ID));
+    const { avisos } = await new AppAvisosController().mine();
+    assert.ok(Array.isArray(avisos), `GET app/avisos answers ${label}`);
+  });
+});
+
+test('POOLSE-169: the staff board — a guardian and a student cannot read, pin or take down a note', async () => {
+  await asEach(async ({ label }) => {
+    await refused(`GET staff-notes as ${label}`, 403, () => new StaffNotesController().list());
+    await refused(`POST staff-notes as ${label}`, 403, () => new StaffNotesController().pin({ body: 'x' }));
+    await refused(`DELETE staff-notes/:id as ${label}`, 403, () => new StaffNotesController().remove(NO_SUCH_ID));
+  });
 });

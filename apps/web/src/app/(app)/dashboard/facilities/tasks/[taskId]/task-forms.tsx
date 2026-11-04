@@ -6,6 +6,7 @@ import { Check, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import type { MaintenanceTask, TaskOption } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
+import { ConfirmButton } from '@/components/confirm-action';
 import { SelectField, TextAreaField, TextField, useSeeded } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import {
@@ -106,15 +107,18 @@ export function RemoveCompletion({
       <input type="hidden" name="facilityId" value={facilityId} />
       <input type="hidden" name="taskId" value={taskId} />
       <input type="hidden" name="completionId" value={completionId} />
-      <button
-        type="submit"
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.instalacoes.completionRemoveTitle')}
+        message={t('confirm.instalacoes.completionRemoveMessage')}
+        confirmLabel={t('common.remove')}
+        tone="danger"
         disabled={pending}
-        aria-label={t('maintenance.removeEntry')}
-        title={t('maintenance.removeEntry')}
+        ariaLabel={t('maintenance.removeEntry')}
         className="text-foreground-muted transition-colors hover:text-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <Trash2 className="size-4" aria-hidden="true" />
-      </button>
+      </ConfirmButton>
     </form>
   );
 }

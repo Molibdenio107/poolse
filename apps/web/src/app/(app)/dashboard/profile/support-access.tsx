@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Headset } from 'lucide-react';
 import { SelectField } from '@/components/ui/field';
+import { ConfirmButton } from '@/components/confirm-action';
 import { useSavedAction } from '@/lib/saved';
 import { formatDate, formatStamp, formatTime } from '@/lib/date-format';
 import type { SupportActivity, SupportGrant, SupportRequest } from '@/lib/api';
@@ -150,9 +151,17 @@ function LiveWindow({ grant }: { grant: SupportGrant }) {
       <p className="min-w-0 flex-1 text-sm">
         {t('support.liveUntil', { time: formatTime(grant.expiresAt), date: formatDate(grant.expiresAt) })}
       </p>
-      <button type="submit" disabled={pending} className={SECONDARY}>
+      {/* Asks first (Rui, 04-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.equipa.supportRevokeTitle')}
+        message={t('confirm.equipa.supportRevokeMessage')}
+        confirmLabel={t('support.revoke')}
+        tone="danger"
+        disabled={pending}
+        className={SECONDARY}
+      >
         {pending ? t('common.working') : t('support.revoke')}
-      </button>
+      </ConfirmButton>
     </form>
   );
 }
@@ -186,12 +195,30 @@ function RequestAnswer({
           options={durations}
           error={state.fields?.['hours']}
         />
-        <button type="submit" name="answer" value="approve" disabled={pending} className={PRIMARY}>
+        {/* Both answers ask first (Rui, 04-11-2026); the hidden submitter carries `answer`. */}
+        <ConfirmButton
+          title={t('confirm.equipa.supportApproveTitle')}
+          message={t('confirm.equipa.supportApproveMessage')}
+          confirmLabel={t('support.approve')}
+          name="answer"
+          value="approve"
+          disabled={pending}
+          className={PRIMARY}
+        >
           {t('support.approve')}
-        </button>
-        <button type="submit" name="answer" value="decline" disabled={pending} className={SECONDARY}>
+        </ConfirmButton>
+        <ConfirmButton
+          title={t('confirm.equipa.supportDeclineTitle')}
+          message={t('confirm.equipa.supportDeclineMessage')}
+          confirmLabel={t('support.decline')}
+          tone="danger"
+          name="answer"
+          value="decline"
+          disabled={pending}
+          className={SECONDARY}
+        >
           {t('support.decline')}
-        </button>
+        </ConfirmButton>
       </div>
     </form>
   );

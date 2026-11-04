@@ -10,10 +10,13 @@ import {
   type ExistingStudent,
   type ImportLevel,
   type ImportRow,
+  type ImportTurma,
   type ImportSummary,
   type RawImportRow,
 } from './import.js';
 import { clubToday } from '../common/club-day.js';
+import { insertEnrollment } from '../classes/classes.repository.js';
+import { clashFrom } from '../classes/enrollment-clash.js';
 
 /**
  * Slice 1.10 — the import, against the database.
@@ -57,6 +60,10 @@ export interface ImportResult {
   levelsCreated?: string[];
   /** Students this commit filled in blanks on, rather than created. */
   updated?: number;
+  /** Enrolments the file's *Turma* column made — POOLSE-164. */
+  enrolled?: number;
+  /** Enrolments refused at the last moment: a full turma or a time clash. */
+  enrolmentsRefused?: { line: number; turma: string; reason: 'full' | 'clash' }[];
 }
 
 /**
@@ -74,6 +81,18 @@ async function nextSortOrder(tx: Tx): Promise<number> {
     [],
   );
   return rows[0]?.next ?? 1;
+}
+
+/** The live turmas a name can match — POOLSE-164. */
+async function turmasFor(tx: Tx): Promise<ImportTurma[]> {
+  const { rows } = await tx.query<{ id: string; name: string; published: boolean }>(
+    `SELECT cg.id, cg.name, coalesce(se.status = 'published', false) AS published
+       FROM class_group cg
+       LEFT JOIN season se ON se.id = cg.season_id AND se.organization_id = cg.organization_id
+      WHERE cg.archived_at IS NULL`,
+    [],
+  );
+  return rows;
 }
 
 /** The levels a name can match, cheapest form: no counts, no ordering to keep. */
@@ -110,6 +129,7 @@ async function existingStudents(tx: Tx): Promise<ExistingStudent[]> {
     is_socio: boolean;
     socio_number: string | null;
     socio_since: string | null;
+    turma_ids: string[];
   }>(
     `SELECT s.id, s.first_name, s.last_name,
             to_char(s.birth_date, 'YYYY-MM-DD') AS birth_date,
@@ -119,7 +139,10 @@ async function existingStudents(tx: Tx): Promise<ExistingStudent[]> {
             ${IDENTITY_SELECT('s')} AS identity,
             s.is_socio, s.socio_number,
             to_char(s.socio_since, 'YYYY-MM-DD') AS socio_since,
-            ${displayName('s')} AS display_name
+            ${displayName('s')} AS display_name,
+            (SELECT coalesce(array_agg(e.class_group_id), '{}')::text[]
+               FROM enrollment e
+              WHERE e.student_id = s.id AND e.status = 'active') AS turma_ids
        FROM student s
       WHERE s.archived_at IS NULL`,
     [],
@@ -141,6 +164,7 @@ async function existingStudents(tx: Tx): Promise<ExistingStudent[]> {
     isSocio: row.is_socio,
     socioNumber: row.socio_number,
     socioSince: row.socio_since,
+    turmaIds: row.turma_ids,
   }));
 }
 
@@ -169,14 +193,16 @@ export async function runImport(
   request: ImportRequest,
 ): Promise<ImportResult> {
   return withOrg(organizationId, async (tx) => {
-    const [levels, existing, ageOfMajority] = await Promise.all([
+    const [levels, existing, ageOfMajority, turmas] = await Promise.all([
       levelsFor(tx),
       existingStudents(tx),
       ageOfMajorityIn(tx, organizationId),
+      turmasFor(tx),
     ]);
 
     const { rows, summary } = validateImportRows(request.rows, {
       levels,
+      turmas,
       existing,
       ageOfMajority,
       today: todayIso(),
@@ -219,6 +245,8 @@ export async function runImport(
     const toUpdate = chosen.filter(
       (row) => row.duplicate?.kind === 'register' && row.updates.length > 0,
     );
+    // Who to enrol where, filled as students are created or matched (POOLSE-164).
+    const toEnrol: { row: ImportRow; studentId: string; turmaIds: string[] }[] = [];
 
     /*
      * Levels the file names and the club does not have yet.
@@ -355,6 +383,7 @@ export async function runImport(
       if (created === null) {
         throw new Error(`Level ${row.levelId ?? ''} disappeared during the import`);
       }
+      if (row.turmaIds.length > 0) toEnrol.push({ row, studentId: created, turmaIds: row.turmaIds });
     }
 
     /*
@@ -441,6 +470,42 @@ export async function runImport(
         ),
       });
       if (filled) updated += 1;
+      // Only the turmas the preview found missing, never one already held.
+      const already = new Set(existing.find((student) => student.id === studentId)?.turmaIds ?? []);
+      const adding = row.turmaIds.filter((id) => !already.has(id));
+      if (adding.length > 0) {
+        toEnrol.push({ row, studentId, turmaIds: adding });
+        if (!filled) updated += 1;
+      }
+    }
+
+    /*
+     * The enrolments — POOLSE-164. Through `insertEnrollment`, the one path,
+     * each in its own savepoint: a full turma or a clash with another of the
+     * student's hours refuses that one enrolment and is reported by line, while
+     * the student and every other row stay imported. Failing a whole register
+     * over one full turma would make the column unusable.
+     */
+    let enrolled = 0;
+    const enrolmentsRefused: { line: number; turma: string; reason: 'full' | 'clash' }[] = [];
+    for (const { row, studentId, turmaIds } of toEnrol) {
+      for (const groupId of turmaIds) {
+        await tx.query('SAVEPOINT import_enrol');
+        try {
+          await insertEnrollment(tx, organizationId, groupId, studentId, false);
+          await tx.query('RELEASE SAVEPOINT import_enrol');
+          enrolled += 1;
+        } catch (error) {
+          await tx.query('ROLLBACK TO SAVEPOINT import_enrol');
+          const code = (error as { code?: string }).code;
+          if (code !== '23514' && code !== '23505' && code !== '23P01') throw error;
+          enrolmentsRefused.push({
+            line: row.line,
+            turma: turmas.find((turma) => turma.id === groupId)?.name ?? '',
+            reason: clashFrom(error) === null ? 'full' : 'clash',
+          });
+        }
+      }
     }
 
     /*
@@ -466,6 +531,8 @@ export async function runImport(
         // exactly the kind of thing somebody asks about in six months.
         levelsCreated: [...createdLevels.keys()].length,
         levelNames: [...wanted.values()],
+        enrolled,
+        enrolmentsRefused: enrolmentsRefused.length,
       },
     });
 
@@ -476,6 +543,8 @@ export async function runImport(
       updated,
       skipped: summary.importable - chosen.length,
       levelsCreated: [...wanted.values()],
+      enrolled,
+      enrolmentsRefused,
     };
   });
 }

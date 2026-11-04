@@ -46,7 +46,18 @@ export default defineConfig({
 
   projects: [
     // The desk. Specs that are about the phone skip themselves here.
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /phone-.*\.spec\.ts/ },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /(phone-.*|perf)\.spec\.ts/ },
+
+    /*
+     * The baseline — POOLSE-171. Its own project, run by hand against a server
+     * started with PERF_LOG_FILE, on the saved owner session; never part of
+     * the suite, because it measures and asserts nothing.
+     */
+    {
+      name: 'perf',
+      use: { ...devices['Desktop Chrome'], storageState: PHONE_SESSION },
+      testMatch: /perf\.spec\.ts/,
+    },
 
     /*
      * The phone — POOLSE-88. Both are the contract: a tier-1 flow is not done

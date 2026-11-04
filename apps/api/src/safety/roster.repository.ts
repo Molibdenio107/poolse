@@ -1,4 +1,4 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { personName } from '../people/names.js';
@@ -18,7 +18,10 @@ import { personName } from '../people/names.js';
 
 export interface LifeguardDuty {
   id: string;
-  poolId: string;
+  /** The place the week draws it under: the pool for swimming, the recinto otherwise (POOLSE-156). */
+  placeId: string;
+  /** Null for a duty on a court or a pitch. */
+  poolId: string | null;
   membershipId: string;
   name: string | null;
   startsAt: string;
@@ -30,6 +33,7 @@ export interface LifeguardDuty {
 }
 
 export interface RosterGap {
+  placeId: string;
   poolId: string;
   day: string;
   from: string;
@@ -37,13 +41,27 @@ export interface RosterGap {
 }
 
 export interface Roster {
+  /** The sport the week is about — POOLSE-156. */
+  sport: string;
+  /**
+   * What the week is drawn over: the site's pools for swimming (ids are pool
+   * ids, as every pool reader expects), that sport's recintos otherwise (ids
+   * are recinto ids).
+   */
+  placeKind: 'pool' | 'area';
+  places: { id: string; name: string }[];
+  /** The pools, as before — what a vigilance period covers. Empty for another sport. */
   pools: { id: string; name: string }[];
   duties: LifeguardDuty[];
+  /** Uncovered open hours. A pool question only: a court has no required cover. */
   gaps: RosterGap[];
 }
 
 export interface DutyInput {
-  poolId: string;
+  /** A pool, for swimming; null when the duty is on another sport's recinto. */
+  poolId: string | null;
+  /** A recinto of another sport; null for a pool duty (the trigger fills it). */
+  playingAreaId: string | null;
   membershipId: string;
   /** The site's own day and wall times. */
   day: string;
@@ -67,6 +85,8 @@ export async function readRoster(
   facilityId: string,
   from: string,
   days: number,
+  /** The sport the week is for — `pool` unless the club asked for another (POOLSE-156). */
+  sport = 'pool',
 ): Promise<Roster | null> {
   return withOrg(organizationId, async (tx) => {
     const { rows: site } = await tx.query<{ timezone: string }>(
@@ -81,6 +101,8 @@ export async function readRoster(
         ORDER BY lower(name), id`,
       [facilityId],
     );
+
+    if (sport !== 'pool') return readAreaRoster(tx, facilityId, from, days, sport);
 
     const { rows: duties } = await tx.query<{
       id: string;
@@ -122,9 +144,13 @@ export async function readRoster(
     );
 
     return {
+      sport: 'pool',
+      placeKind: 'pool',
+      places: pools,
       pools,
       duties: duties.map((row) => ({
         id: row.id,
+        placeId: row.pool_id,
         poolId: row.pool_id,
         membershipId: row.membership_id,
         name: row.name,
@@ -134,6 +160,7 @@ export async function readRoster(
         periodId: row.period_id,
       })),
       gaps: gaps.map((row) => ({
+        placeId: row.pool_id,
         poolId: row.pool_id,
         day: row.day,
         from: row.gap_from.toISOString(),
@@ -149,11 +176,16 @@ export async function addDuty(
   input: DutyInput,
 ): Promise<string | null> {
   return withOrg(organizationId, async (tx) => {
+    // A pool of this site, or a live recinto of another sport on it (POOLSE-156).
     const { rows: pool } = await tx.query<{ timezone: string }>(
-      `SELECT f.timezone
-         FROM pool p JOIN facility f ON f.id = p.facility_id AND f.organization_id = p.organization_id
-        WHERE p.id = $1 AND p.facility_id = $2 AND p.archived_at IS NULL`,
-      [input.poolId, facilityId],
+      input.poolId !== null
+        ? `SELECT f.timezone
+             FROM pool p JOIN facility f ON f.id = p.facility_id AND f.organization_id = p.organization_id
+            WHERE p.id = $1 AND p.facility_id = $2 AND p.archived_at IS NULL`
+        : `SELECT f.timezone
+             FROM playing_area a JOIN facility f ON f.id = a.facility_id AND f.organization_id = a.organization_id
+            WHERE a.id = $1 AND a.facility_id = $2 AND a.archived_at IS NULL AND a.sport_id <> 'pool'`,
+      [input.poolId ?? input.playingAreaId, facilityId],
     );
     if (pool[0] === undefined) throw new PoolOffSiteError();
 
@@ -172,12 +204,12 @@ export async function addDuty(
       // A duty past midnight ends the next day: `to` before `from` rolls over.
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO lifeguard_duty (organization_id, pool_id, membership_id, starts_at, ends_at,
-                                     created_by)
+                                     created_by, playing_area_id)
          VALUES ($1, $2, $3,
                  ($4::date + $5::time) AT TIME ZONE $7,
                  (CASE WHEN $6::time > $5::time THEN $4::date ELSE $4::date + 1 END + $6::time)
                    AT TIME ZONE $7,
-                 $8)
+                 $8, $9)
          RETURNING id`,
         [
           organizationId,
@@ -188,6 +220,7 @@ export async function addDuty(
           input.to,
           pool[0].timezone,
           currentTenant().membershipId,
+          input.playingAreaId,
         ],
       );
       id = rows[0]!.id;
@@ -200,7 +233,12 @@ export async function addDuty(
       action: 'lifeguard_duty.added',
       entityType: 'lifeguard_duty',
       entityId: id,
-      data: { poolId: input.poolId, membershipId: input.membershipId, day: input.day },
+      data: {
+        poolId: input.poolId,
+        playingAreaId: input.playingAreaId,
+        membershipId: input.membershipId,
+        day: input.day,
+      },
     });
     return id;
   });
@@ -255,4 +293,67 @@ export async function onDuty(
       licensed: row.licensed,
     }));
   });
+}
+
+/**
+ * Another sport's week — POOLSE-156. Its recintos on this site, and the duties
+ * on them. No gaps: cover is a pool's legal question (Portaria 116/2008), and a
+ * court with nobody on it is not a court missing somebody.
+ */
+async function readAreaRoster(
+  tx: Tx,
+  facilityId: string,
+  from: string,
+  days: number,
+  sport: string,
+): Promise<Roster> {
+  const { rows: places } = await tx.query<{ id: string; name: string }>(
+    `SELECT id, name FROM playing_area
+      WHERE facility_id = $1 AND sport_id = $2 AND archived_at IS NULL
+      ORDER BY lower(name), id`,
+    [facilityId, sport],
+  );
+  const { rows: duties } = await tx.query<{
+    id: string;
+    playing_area_id: string;
+    membership_id: string;
+    name: string | null;
+    starts_at: Date;
+    ends_at: Date;
+    licensed: boolean;
+    period_id: string | null;
+  }>(
+    `SELECT l.id, l.playing_area_id, l.membership_id, ${personName('l.membership_id')} AS name,
+            l.starts_at, l.ends_at, l.period_id,
+            lifeguard_valid_on(l.organization_id, l.membership_id,
+                               (l.starts_at AT TIME ZONE f.timezone)::date) AS licensed
+       FROM lifeguard_duty l
+       JOIN playing_area a ON a.id = l.playing_area_id AND a.organization_id = l.organization_id
+       JOIN facility f ON f.id = a.facility_id AND f.organization_id = a.organization_id
+      WHERE a.facility_id = $1
+        AND a.sport_id = $2
+        AND l.archived_at IS NULL
+        AND l.starts_at < (($3::date + $4::int)::timestamp AT TIME ZONE f.timezone)
+        AND l.ends_at > ($3::date::timestamp AT TIME ZONE f.timezone)
+      ORDER BY l.starts_at, l.id`,
+    [facilityId, sport, from, days],
+  );
+  return {
+    sport,
+    placeKind: 'area',
+    places,
+    pools: [],
+    duties: duties.map((row) => ({
+      id: row.id,
+      placeId: row.playing_area_id,
+      poolId: null,
+      membershipId: row.membership_id,
+      name: row.name,
+      startsAt: row.starts_at.toISOString(),
+      endsAt: row.ends_at.toISOString(),
+      licensed: row.licensed,
+      periodId: row.period_id,
+    })),
+    gaps: [],
+  };
 }

@@ -118,3 +118,14 @@ water). The dark theme uses the brand's own dark steps. They replace the generic
 19-10-2026; teal and green are closer for a colour-blind reader, so every chart keeps its legend in words
 and its table. *Hoje, hora a hora* is one hue: past hours pale teal, this hour solid teal ink, the hours
 to come the brand teal.
+
+## Level colours — POOLSE-168 (4 November 2026)
+
+Levels and turmas are two colour sets. A level's eight (`--level-1…8`) come from Poolse's palette — teal, green,
+sea green, sand, orange, coral, lilac, ocean blue — found by a search for the set whose closest two are furthest
+apart with every bar at 3:1 or more on the card: closest solids ΔE2000 19.0 (light) and 18.4 (dark), closest
+16 % washes 4.8 and 4.7, against the shared set's 12.2 and 3.9. A turma's own colour (`--class-1…8`) keeps the
+eight the two used to share. The stored names (`teal … violet`) are unchanged, so no data moves; each slot took
+its nearest new family. The calendar draws a turma in its own colour when one was chosen, else in its level's;
+the Níveis legend, the calendar legend, the level picker and a turma card's accent read the level set, the
+turma picker the class set. `contrast:check` measures every bar and both chip lines on every wash, both themes.

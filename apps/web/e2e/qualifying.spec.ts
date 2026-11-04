@@ -44,6 +44,10 @@ test('QA 1 — no age groups: a greyed grid, the notice and one click to the FPN
   await expect(async () => {
     await create.focus();
     await page.keyboard.press('Enter');
+    // A bulk generation asks first (Rui, 04-11-2026) — answered from the keyboard too.
+    const confirm = page.getByRole('dialog').getByRole('button', { name: /^criar$|^create$/i });
+    await confirm.focus();
+    await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/tab=times&section=/, { timeout: 5_000 });
   }).toPass({ timeout: 30_000 });
 
@@ -101,7 +105,7 @@ test('QA 2 — the year wheel: scrolled to 2014 holds 2014; "20" then "15" jumps
   await page.keyboard.type('2014', { delay: 50 });
   await expect(toValue).toHaveValue('2014');
 
-  await form.getByLabel(/^nome$|^name$/i).fill('Teste invertido');
+  await form.getByLabel(/^nome\b|^name\b/i).fill('Teste invertido');
   await form.getByRole('button', { name: /^acrescentar|^add/i }).click();
   await expect(form.getByText(/o último ano não pode ser anterior ao primeiro|last year cannot be before the first/i)).toBeVisible();
 });

@@ -87,7 +87,7 @@ export async function GET(request: Request): Promise<Response> {
   // The register's own filters travel to the file (sweep 01-11-2026): the page
   // sent them and this route used to drop them, so an export from *Em atraso*
   // or from one sport's list handed over everybody.
-  for (const key of ['sort', 'sport', 'multi'] as const) {
+  for (const key of ['sort', 'sport', 'multi', 'classGroupId', 'insurance'] as const) {
     const value = (url.searchParams.get(key) ?? '').trim();
     if (value !== '') query.set(key, value);
   }
@@ -119,7 +119,11 @@ export async function GET(request: Request): Promise<Response> {
    * when it comes back. `sheet.test.ts` asserts exactly that, over the real
    * catalogue, in both locales.
    */
-  const headers = EXPORT_FIELDS.map((field) => t(`students.import.field.${field}`));
+  const headers = [
+    ...EXPORT_FIELDS.map((field) => t(`students.import.field.${field}`)),
+    // Export-only, after the import's own columns (POOLSE-164).
+    t('students.table.insurance.title'),
+  ];
 
   if (url.searchParams.get('format') === 'pdf') {
     /*
@@ -161,6 +165,10 @@ export async function GET(request: Request): Promise<Response> {
             : t(student.gender === 'male' ? 'students.genderMale' : 'students.genderFemale'),
         );
         set('isSocio', student.isSocio ? t('export.pdf.yes') : '');
+        // On paper the seguro in the reader's language — the last column.
+        if (student.insuranceState !== undefined) {
+          row[row.length - 1] = t(`students.table.insurance.${student.insuranceState}`);
+        }
         // POOLSE-131: on paper the estado civil and the country in words.
         const marital = student.identity?.maritalStatus ?? null;
         set('maritalStatus', marital === null ? '' : t(`students.identity.marital.${marital}`));

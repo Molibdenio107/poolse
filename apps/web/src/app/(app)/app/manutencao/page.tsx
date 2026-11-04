@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { AlertTriangle, Droplets, Package, Plus, SprayCan, Wrench } from 'lucide-react';
 import { apiFetch, type MaintenanceHome } from '@/lib/api';
+import { StaffBoardHome } from '@/components/staff-notes';
+import { NewNoteButton } from '@/components/staff-board-forms';
 import { describeLoad } from '@/lib/load-failure';
 import { timeAgo } from '@/lib/relative-time';
 import { LinkBusy } from '@/components/link-busy';
@@ -45,7 +47,11 @@ export default async function MaintenanceHomePage(): Promise<React.ReactElement>
           {t('app.maintenance.report')}
           <LinkBusy />
         </Link>
+        <NewNoteButton />
       </div>
+
+      {/* The staff board comes first — POOLSE-169. */}
+      <StaffBoardHome />
 
       {nothing && (
         <p className="rounded-lg border border-dashed border-border p-4 text-sm text-foreground-muted">

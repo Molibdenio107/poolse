@@ -29,7 +29,8 @@
     "toStudent": "Back to the student",
     "toClass": "Back to the class",
     "toInvoice": "Back to the document",
-    "toRecintos": "Back to the playing areas"
+    "toRecintos": "Back to the playing areas",
+    "toAvisos": "Back to notices"
   },
   "app": {
     "name": "Poolse",
@@ -514,6 +515,21 @@
         "required": "Choose at least one sport.",
         "notEnabled": "This sport is not switched on for the club."
       }
+    },
+    "table": {
+      "caption": "Team members",
+      "name": "Name",
+      "email": "Email",
+      "sports": "Sports",
+      "roles": "Roles",
+      "access": "Access",
+      "yes": "yes",
+      "no": "no",
+      "seen": "Last used {ago}",
+      "neverSeen": "Not used yet",
+      "noLogin": "No app account",
+      "noneForSport": "Nobody on the team has this sport.",
+      "sportsPrompt": "Sports: all"
     }
   },
   "salaries": {
@@ -1440,6 +1456,15 @@
       "pool": "{count, plural, =0 {No pools} one {# pool} other {# pools}}",
       "courts": "{count, plural, =0 {No courts} one {# court} other {# courts}}",
       "rooms": "{count, plural, =0 {No rooms} one {# room} other {# rooms}}"
+    },
+    "mediaTab": "Media",
+    "origin": {
+      "log": "Imported from the sheet",
+      "report": "Imported report"
+    },
+    "trendLegend": {
+      "reading": "Reading",
+      "lab": "Laboratory report"
     }
   },
   "classes": {
@@ -1983,10 +2008,11 @@
       "nav": "Price sections",
       "mensalidade": "Monthly fees",
       "quota": "Membership fee",
-      "joining": "Joining and insurance",
+      "joining": "Joining fee",
       "freeSwim": "Free swim",
       "categories": "Discounts",
-      "payments": "Payments"
+      "payments": "Payments",
+      "insurance": "Insurance"
     },
     "addFirstQuota": "Set the membership fee",
     "studentSection": {
@@ -1996,7 +2022,23 @@
     "combined": "Combined monthly fee",
     "combinedTotal": "total {amount}",
     "combinedUnpriced": "({count, plural, one {# class without a price} other {# classes without a price}})",
-    "combinedNoPrice": "no price"
+    "combinedNoPrice": "no price",
+    "external": {
+      "recordButton": "Invoiced outside Poolse",
+      "recordTitle": "Mark the period from {date} as invoiced outside Poolse?",
+      "recordMessage": "The monthly run leaves it out and the period stops being owed. Give the number of the invoice issued in the club's own program.",
+      "record": "Mark as invoiced",
+      "number": "External invoice no.",
+      "numberRequired": "Give the external invoice number (up to 60 characters).",
+      "alreadyCharged": "This period is already invoiced on {document}.",
+      "recorded": "Marked as invoiced outside Poolse.",
+      "invoiced": "Invoiced externally, no. {number} · period from {date}",
+      "invoicedShort": "Invoiced externally, no. {number}",
+      "archiveTitle": "Undo the mark for invoice no. {number}?",
+      "archiveMessage": "The period is unpaid again and the next monthly run includes it again.",
+      "archive": "Undo",
+      "toggle": "Invoiced outside Poolse"
+    }
   },
   "categories": {
     "title": "Fee categories",
@@ -2193,7 +2235,8 @@
         "birthplace": "Place of birth",
         "nationality": "Nationality",
         "snsNumber": "SNS number",
-        "socioSince": "Member since"
+        "socioSince": "Member since",
+        "turmas": "Classes"
       },
       "sheetLabel": "Sheet to import",
       "sheetOption": "{name} — {rows} rows",
@@ -2248,7 +2291,9 @@
         "noGuardian": "A minor with no guardian.",
         "guardianNotRecorded": "{value} will not be recorded: a guardian needs an email or a NIF.",
         "levelWillBeCreated": "The level {value} will be created.",
-        "taxNumberBelongsToAnother": "NIF {value} belongs to another student, so it is not copied over."
+        "taxNumberBelongsToAnother": "NIF {value} belongs to another student, so it is not copied over.",
+        "turmaNotFound": "There is no class {value}: the student is imported without it.",
+        "turmaAmbiguous": "More than one class is called {value}: the student is imported without it."
       },
       "matchedByNif": "This is {name}, by NIF.",
       "matchedByName": "Looks like {name}, by name and date of birth.",
@@ -2275,7 +2320,8 @@
         "snsNumber": "SNS number",
         "isSocio": "member",
         "socioNumber": "membership number",
-        "socioSince": "member since"
+        "socioSince": "member since",
+        "turmas": "classes"
       },
       "duplicateFile": "Repeats row {line}. Only one record is kept.",
       "importCount": "{count, plural, =0 {No rows chosen} one {Import # student} other {Import # students}}",
@@ -2284,7 +2330,12 @@
       "doneCount": "{count, plural, =0 {No students were created} one {# student created} other {# students created}}",
       "doneUpdated": "{count, plural, one {# student updated} other {# students updated}}.",
       "doneHint": "Rows with errors were left out.",
-      "toRegister": "Open the register"
+      "toRegister": "Open the register",
+      "doneEnrolled": "{count, plural, one {# class enrolment} other {# class enrolments}}.",
+      "enrolRefused": {
+        "full": "Line {line}: class {turma} is full, so the enrolment was not made.",
+        "clash": "Line {line}: class {turma} clashes with another of the student’s classes, so the enrolment was not made."
+      }
     },
     "firstName": "First name",
     "lastName": "Last name",
@@ -2453,12 +2504,36 @@
     },
     "sportFilter": "Sports",
     "sportAll": "All · {count}",
-    "sportMulti": "Several sports · {count}",
     "sportNone": "No sport · {count}",
     "levelInSport": "Level · {sport}",
     "sportLevel": {
       "wrongLadder": "That level is not on this sport's ladder.",
       "failed": "Could not save the level."
+    },
+    "filters": {
+      "title": "Filters",
+      "sport": "Sport",
+      "turma": "Class",
+      "noTurma": "No class",
+      "insurance": "Insurance",
+      "multi": "Multi-sport"
+    },
+    "table": {
+      "name": "Name",
+      "age": "Age",
+      "sports": "Sports",
+      "level": "Level",
+      "turmas": "Classes",
+      "fees": "Monthly fee",
+      "feesUpToDate": "Up to date",
+      "access": "Access",
+      "actions": "Actions",
+      "insurance": {
+        "title": "Insurance",
+        "insured": "Insured",
+        "lapsed": "Insurance lapsed",
+        "never": "No insurance"
+      }
     }
   },
   "advancement": {
@@ -2746,7 +2821,7 @@
     "approve": "Approve",
     "reject": "Refuse",
     "confirmReject": "Refuse the request",
-    "rejectHint": "Give the reason below.",
+    "queueReadOnly": "Only the owner or an admin approves or refuses. Here you see who asked and for which days.",
     "queueEmpty": "Nothing is waiting for approval.",
     "othersOff": "Already away on these days: {people}",
     "showEveryone": "Show everyone",
@@ -2775,7 +2850,11 @@
       "medical": "Sick leave",
       "personal": "Personal leave"
     },
-    "kindInvalid": "Choose a valid kind of leave."
+    "kindInvalid": "Choose a valid kind of leave.",
+    "approveTitle": "Approve {name}'s leave?",
+    "approveConfirm": "{count, plural, one {The day is marked as leave} other {The # days are marked as leave}} and the person is told by email.",
+    "rejectTitle": "Refuse {name}'s request?",
+    "rejectConfirm": "The person is told by email, with the reason you write here."
   },
   "weather": {
     "title": "Weather",
@@ -2835,7 +2914,8 @@
       "management": "Management",
       "operational": "Operations",
       "personal": "Personal",
-      "summary": "Today's summary"
+      "summary": "Today's summary",
+      "notes": "Staff notes and weather"
     },
     "widget": {
       "subscription": {
@@ -3057,6 +3137,9 @@
       "tankPeopleAt": "{count, plural, one {# person} other {# people}} at {hour}:00, in {lessons, plural, one {# lesson} other {# lessons}}",
       "tankEmptyAt": "No lessons at {hour}:00",
       "noTankLessons": "Some of this hour's lessons are in no tank (partnerships with no pool booked)."
+    },
+    "weather": {
+      "highLow": "High {high} · low {low}"
     }
   },
   "marketing": {
@@ -3573,14 +3656,33 @@
       "saveFailed": "The item could not be recorded.",
       "returnFailed": "The item could not be marked as returned.",
       "removeFailed": "The item could not be removed.",
-      "studentInvalid": "That student no longer exists at this club."
+      "studentInvalid": "That student no longer exists at this club.",
+      "returnTitle": "Mark \"{name}\" as returned?",
+      "returnConfirm": "It stays on the list for 7 more days and then leaves, if nothing changes. It stays on record.",
+      "archiveTitle": "Archive \"{name}\"?",
+      "archiveConfirm": "The item leaves lost and found. It stays on record and can be restored from Archive.",
+      "archiveLabel": "Archive {name}",
+      "leavesOn": "Leaves the list on {date}",
+      "placeUnknown": "Not given"
     },
     "section": {
       "nav": "Inventory sections",
       "inventory": "Inventory",
       "lost": "Lost and found"
     },
-    "noSitesHint": "Create one first and the inventory will have somewhere to live."
+    "noSitesHint": "Create one first and the inventory will have somewhere to live.",
+    "place": {
+      "site": "The site",
+      "spaces": "Spaces",
+      "pools": "Pools",
+      "recintos": "Playing areas",
+      "hint": "Where the item is kept: a space, a pool or a playing area of this site."
+    },
+    "editLabel": "Edit {name}",
+    "placeNotHere": "That place is not at this site.",
+    "archiveTitle": "Archive {name}?",
+    "archiveConfirm": "The item leaves the inventory. It stays on record and can be restored from Archive.",
+    "archiveAction": "Archive"
   },
   "slots": {
     "title": "Schedule grid",
@@ -3996,7 +4098,11 @@
     "note": "Counted from the lessons that actually took place. Closures and closed days reduce both sides of the sum.",
     "noGrid": "No schedule grid defined",
     "noCapacity": "No lane has a capacity recorded",
-    "unavailable": "No occupancy figures yet. This needs a published season, a slot grid and some bookings."
+    "unavailable": "No occupancy figures yet. This needs a published season, a slot grid and some bookings.",
+    "sportNav": "Occupancy sport",
+    "pickSport": "Choose a sport to see this site's occupancy.",
+    "sportCalendar": "{sport} calendar",
+    "sportPending": "There are no occupancy figures for {sport} yet: occupancy measures the pools' lane hours."
   },
   "timetableImport": {
     "warning": {
@@ -4308,7 +4414,8 @@
     "source": {
       "manual": "Transfer or cash",
       "mbway": "MB WAY",
-      "sepa": "Direct debit"
+      "sepa": "Direct debit",
+      "external_invoice": "External invoice"
     },
     "reference": "Reference",
     "referenceHint": "The bank reference, the MB WAY id, the receipt number. Optional.",
@@ -4376,7 +4483,12 @@
     },
     "selectAll": "Select all ({count})",
     "clearSelection": "Clear selection",
-    "monthSections": "This month's sections"
+    "monthSections": "This month's sections",
+    "externalNumber": "External invoice no.",
+    "externalNumberHint": "The number of the invoice issued in the club's own invoicing program, for example FT 2026/12.",
+    "externalNumberRequired": "Give the external invoice number (up to 60 characters).",
+    "paidByExternal": "Paid by external invoice no. {number}",
+    "externalCount": "{count, plural, one {# period was left out, invoiced outside Poolse} other {# periods were left out, invoiced outside Poolse}}."
   },
   "reception": {
     "title": "Reception",
@@ -5341,7 +5453,7 @@
     "removeKeepsHistory": "Removing takes the duty off the roster; it stays in the history.",
     "removeDuty": "Remove duty",
     "title": "Lifeguards",
-    "subtitle": "Who is on duty at each tank, week by week.",
+    "subtitle": "Who is on duty at each pool or playing area, week by week.",
     "sites": "Sites",
     "notPermitted": "Your role does not allow you to see the lifeguard roster.",
     "noSites": "There are no sites yet. Create one under Facilities to draw up the roster.",
@@ -5351,7 +5463,7 @@
     "nextWeek": "Next week",
     "thisWeek": "This week",
     "pools": "Tanks",
-    "hint": "Several people may be on duty at the same tank at once. The warnings are there so you notice in time, and they never block anything.",
+    "hint": "Several people may be on duty at the same place at once. The warnings are there so you notice in time, and they never block anything.",
     "today": "today",
     "closed": "Closed",
     "unknownPerson": "Unnamed person",
@@ -5414,7 +5526,12 @@
       "endHint": "{name}'s duties from the chosen date on leave the roster. Earlier ones stay as they are.",
       "endFrom": "From",
       "ended": "{removed, plural, =0 {Period ended.} one {Period ended · # duty removed.} other {Period ended · # duties removed.}}"
-    }
+    },
+    "sportNav": "Roster sport",
+    "pickSport": "Choose a sport to see this week's roster.",
+    "recintos": "Playing areas",
+    "noRecintos": "{site} has no {sport} playing areas yet.",
+    "noRequiredCover": "No required cover: record who was on duty here, with no uncovered hours."
   },
   "photo": {
     "uploadFor": "Upload a photograph of {name}",
@@ -5487,7 +5604,9 @@
       "partner_group": "Partner group",
       "class_schedule": "Class time slot",
       "swim_meet": "Meet",
-      "lesson_feedback": "Lesson feedback"
+      "lesson_feedback": "Lesson feedback",
+      "aviso": "Notice",
+      "staff_note": "Staff note"
     },
     "children": {
       "pool": "{count, plural, one {# pool} other {# pools}}",
@@ -5534,7 +5653,8 @@
       "partner": "Partnership archived",
       "student_fee": "Fee line archived",
       "swim_meet": "Meet archived",
-      "lesson_feedback": "Feedback archived"
+      "lesson_feedback": "Feedback archived",
+      "aviso": "Notice ended"
     },
     "restoredKeptToast": "Restored: {name}. {kept, plural, one {# linked record did not come back} other {# linked records did not come back}} because they changed since. A fee line for days already gone stays ended; add one from today."
   },
@@ -5636,13 +5756,11 @@
     "convertHint": "Creates the student and the guardian from the request and enrols them in the class. If the NIF already belongs to one of the club's students, the request is linked to that student.",
     "convertFailed": "Could not enrol.",
     "convertFailedConflict": "This request has already been handled.",
-    "converted": "Enrolled",
     "waitlist": "Waiting list",
     "waitlistTitle": "Put {name} on the waiting list",
     "waitlistHint": "Creates the student and the guardian and adds them to the end of the class's waiting list.",
     "waitlistFailed": "Could not add to the waiting list.",
     "waitlistFailedConflict": "This request has already been handled.",
-    "waitlisted": "On the waiting list",
     "groupFull": "This class is full. Use the waiting list.",
     "alreadyEnrolled": "This student is already in this class.",
     "trial": "Trial lesson",
@@ -5671,7 +5789,7 @@
     "reasonRequired": "Give a reason.",
     "dismissFailed": "Could not dismiss the request.",
     "dismissFailedConflict": "This request has already been handled.",
-    "dismissed": "Request dismissed",
+    "dismissed": "Request dismissed. It moved to Handled.",
     "settings": {
       "isOpen": "The form is open",
       "isClosed": "The form is closed",
@@ -5744,7 +5862,9 @@
       "byExistingDone": "Asked in the app by {name}, for one of the club's students."
     },
     "studentArchived": "The student this request names has since been archived. Restore them or dismiss the request.",
-    "sportFilter": "Requests by sport"
+    "sportFilter": "Requests by sport",
+    "convertedIn": "Student placed in {turma}. The request moved to Handled.",
+    "waitlistedIn": "On the waiting list for {turma}. The request moved to Handled."
   },
   "labResults": {
     "hint": "The monthly analyses by an accredited laboratory, graded against the national reference (NP 4542:2017). A non-compliant result alerts the owner, the admins and maintenance.",
@@ -5817,7 +5937,13 @@
     "laboratoryInvalid": "Laboratory name too long.",
     "reportReferenceInvalid": "Reference too long.",
     "samplePointInvalid": "Sampling point too long.",
-    "notesInvalid": "Notes too long."
+    "notesInvalid": "Notes too long.",
+    "origin": {
+      "typed": "Recorded",
+      "report": "Imported",
+      "unknown": "Origin not recorded"
+    },
+    "chemistryOnly": "Chemistry only, no microbiology: filed as a reading in History, with no NP 4542 grade."
   },
   "regulation": {
     "tab": "Regulation",
@@ -7051,7 +7177,7 @@
       "postal_code": "Postcode",
       "phone": "Mobile",
       "email": "Email",
-      "tax_number": "NIF",
+      "tax_number": "Tax number (NIF)",
       "id_document_number": "ID document number",
       "sns_number": "SNS number",
       "socio_number": "Member number",
@@ -7133,5 +7259,246 @@
   },
   "enrollment": {
     "clash": "This student already has a lesson at that time, in {turma} ({weekday, select, 1 {Monday} 2 {Tuesday} 3 {Wednesday} 4 {Thursday} 5 {Friday} 6 {Saturday} other {Sunday}} at {start})."
+  },
+  "confirm": {
+    "alunos": {
+      "repriceTitle": "Update “{name}” to the current price?",
+      "repriceMessage": "The line will cost {amount}, the price list's current amount.",
+      "repriceConfirm": "Update",
+      "feeLineTitle": "Remove the line “{name}”?",
+      "feeLineMessage": "This student stops being charged for the line; it can be restored from Archived.",
+      "feeLineConfirm": "Remove",
+      "paidTitle": "Mark “{name}” as paid for {date}?",
+      "paidMessage": "This period is recorded as paid; you can unmark it later if it was a mistake.",
+      "paidConfirm": "Mark as paid",
+      "unpaidTitle": "Unmark the payment of “{name}” for {date}?",
+      "unpaidMessage": "The payment recorded for this period is taken off and the period is unpaid again.",
+      "unpaidConfirm": "Unmark",
+      "cancelBookingTitle": "Cancel this make-up booking?",
+      "cancelBookingMessage": "The place in that class is freed and the credit becomes available for another booking.",
+      "newLinkTitle": "Create a new link for {name}?",
+      "newLinkMessage": "The previous link stops working; the new one is ready to share.",
+      "newLinkMessageEmail": "The previous link stops working and the new one is emailed to {email}.",
+      "revokeTitle": "Cancel the invitation for {name}?",
+      "revokeMessage": "The invitation link stops working; you can invite them again whenever you like.",
+      "recordTitle": "Remove this time?",
+      "recordMessage": "The time leaves the student's history and personal bests.",
+      "examTitle": "Archive the medical exam of {date}?",
+      "examMessage": "The exam no longer counts towards the student's medical exam validity.",
+      "leaveTitle": "Remove the leave starting on {date}?",
+      "leaveMessage": "The leave is taken off the student's record.",
+      "leaveConfirm": "Remove",
+      "consentGrantedTitle": "Record consent for “{kind}”?",
+      "consentGrantedMessage": "The consent is recorded as given; from then on it can only be withdrawn, not edited.",
+      "consentRefusedTitle": "Record a refusal for “{kind}”?",
+      "consentRefusedMessage": "The student's consent history records that this consent was refused.",
+      "removePhotoTitle": "Remove this photograph?",
+      "removePhotoMessage": "The photograph no longer appears in this gallery.",
+      "removeConfirm": "Remove",
+      "detachTitle": "{label}?",
+      "detachMessage": "The file is no longer attached to this record; you can upload another whenever you like.",
+      "idPhotoTitle": "Remove {name}'s photograph?",
+      "idPhotoMessage": "The photograph no longer appears; you can upload another whenever you like.",
+      "advanceTitle": "Move {name} up to {to}?",
+      "advanceMessage": "{name} moves to {to} and into the chosen class from {date}.",
+      "dismissTitle": "Dismiss the proposal for {name}?",
+      "dismissMessage": "The proposal leaves the queue and {name} stays at their current level.",
+      "skillTitle": "Remove “{name}” from this level?",
+      "skillMessage": "The skill is no longer part of this level.",
+      "importConfirm": "Import",
+      "importStudentsTitle": "{count, plural, one {Import # student?} other {Import # students?}}",
+      "importStudentsMessage": "{creating, plural, =0 {No new students are} one {# new student is} other {# new students are}} created and {updating, plural, =0 {none are} one {# is} other {# are}} updated, as the preview shows.",
+      "importTimesTitle": "{count, plural, one {Import # time?} other {Import # times?}}",
+      "importTimesMessage": "{added, plural, =0 {No times are} one {# time is} other {# times are}} added and {changed, plural, =0 {none are} one {# is} other {# are}} changed in these standards.",
+      "importSalariesTitle": "{count, plural, one {Import # pay rate?} other {Import # pay rates?}}",
+      "importSalariesMessage": "The chosen lines are saved in one go: either all of them go in, or none does.",
+      "importPartnersTitle": "Import {partners, plural, =0 {} one {1 partnership and } other {{partners} partnerships and }}{groups, plural, one {1 group} other {{groups} groups}}?",
+      "importPartnersMessage": "{creating, plural, =0 {No new groups are} one {# new group is} other {# new groups are}} created and {updating, plural, =0 {none are} one {# is} other {# are}} updated, with their days, as the preview shows.",
+      "importInventoryTitle": "{count, plural, one {Import # item?} other {Import # items?}}",
+      "importInventoryMessage": "{creating, plural, =0 {No items are} one {# item is} other {# items are}} added and {updating, plural, =0 {none are} one {# is} other {# are}} corrected in the inventory.",
+      "fpnTitle": "Create this season's FPN age groups?",
+      "fpnMessage": "The FPN age groups the season does not have yet are created; the ones it already has stay as they are.",
+      "fpnConfirm": "Create"
+    },
+    "equipa": {
+      "remove": "Remove",
+      "copy": "Copy",
+      "grant": "Grant",
+      "withdraw": "Withdraw",
+      "endEnrollmentTitle": "Take the student out of this class?",
+      "endEnrollmentMessage": "The student is no longer enrolled or on the waiting list in this class; to put them back, enrol them again.",
+      "removeSlotTitle": "Remove this time from the class?",
+      "removeSlotMessage": "Its future lessons not yet taught are cancelled; lessons already taught stay on record.",
+      "partnerDayTitle": "Remove the {day} day, at {time}?",
+      "partnerDayMessage": "The group stops using the pool on this day every week; you can add it back with “Add day”.",
+      "closureTitle": "Remove the closure “{reason}”?",
+      "closureMessage": "The closure stops applying and the future lessons it had cancelled return to the calendar.",
+      "generateTitle": "Generate lessons from {from} to {to}?",
+      "generateMessage": "Creates the missing lessons in those dates from the weekly timetable and applies the closures; existing lessons are not duplicated.",
+      "copyPlanTitle": "Copy the plan from {date}?",
+      "copyPlanMessage": "This lesson’s plan becomes the one from {date}, replacing whatever is already written.",
+      "revertTitle": "Revert this change?",
+      "revertMessage": "The fields changed in this entry go back to their previous value, and the revert is recorded in Activity.",
+      "revokeInviteTitle": "Revoke this invitation?",
+      "revokeInviteMessage": "The invitation link stops working; to give access, invite them again.",
+      "reissueTitle": "Resend this invitation?",
+      "reissueMessage": "The previous link stops working and a new one is issued, valid for another 24 hours and emailed when the invitation has an address.",
+      "removeRoleTitle": "Take the {role} role from {name}?",
+      "removeRoleMessage": "{name} immediately loses what the {role} role let them do; you can grant it again later.",
+      "grantRoleTitle": "Give {name} the {role} role?",
+      "grantRoleMessage": "{name} can immediately do what the {role} role allows in this club.",
+      "cancelReinviteTitle": "Cancel the invitation to {email}?",
+      "cancelReinviteMessage": "The link sent to the new address stops working and their current access stays as it is.",
+      "contractRemoveTitle": "Take off the current contract?",
+      "contractRemoveMessage": "There is no longer a current contract, and the document taken off stays under earlier versions.",
+      "qualificationArchiveTitle": "Archive “{name}”?",
+      "qualificationArchiveMessage": "The record no longer counts towards validity and stays in the history as archived, with no way to restore it.",
+      "withdrawVacationTitle": "Withdraw the request for {count, plural, one {# day} other {# days}}?",
+      "withdrawVacationMessage": "The request no longer awaits a decision; to take those days, you will need to make a new request.",
+      "endSessionTitle": "End the session on this other device?",
+      "endSessionMessage": "That device loses access to your account until you sign in on it again.",
+      "supportRevokeTitle": "Revoke Poolse support’s access?",
+      "supportRevokeMessage": "Poolse support can no longer enter the club, starting now; you can open new access whenever you like.",
+      "supportApproveTitle": "Give Poolse support access?",
+      "supportApproveMessage": "Poolse support may enter the club as an administrator for the time chosen, and you can revoke the access at any moment.",
+      "supportDeclineTitle": "Decline Poolse support’s request?",
+      "supportDeclineMessage": "The request is closed and Poolse support does not enter the club.",
+      "supportEndTitle": "End access to {club} now?",
+      "supportEndMessage": "The support window closes now and only reopens with a new consent from the Owner."
+    },
+    "instalacoes": {
+      "archive": "Archive",
+      "turnOn": "Turn on",
+      "planArchiveTitle": "Archive this price plan?",
+      "planArchiveMessage": "The plan leaves the price list and can no longer be chosen; it does not go to Archived to be restored.",
+      "periodArchiveTitle": "Archive the periodicity “{name}”?",
+      "periodArchiveMessage": "The periodicity leaves the price list and can no longer be chosen; it does not go to Archived to be restored.",
+      "slotRemoveTitle": "Remove the slot from {from} to {to}?",
+      "slotRemoveMessage": "The slot no longer appears on this site's grid; it does not go to Archived to be restored.",
+      "analysisRemoveTitle": "Remove this analysis?",
+      "analysisRemoveMessage": "The analysis no longer appears in this tank's water log; it does not go to Archived to be restored.",
+      "labResultArchiveTitle": "Archive this laboratory report?",
+      "labResultArchiveMessage": "The report leaves the laboratory history, along with the readings it brought; it does not go to Archived to be restored.",
+      "readingRemoveTitle": "Remove this reading?",
+      "readingRemoveMessage": "The reading leaves the meter's record and the next one is compared with the one before; it does not go to Archived to be restored.",
+      "completionRemoveTitle": "Remove this entry?",
+      "completionRemoveMessage": "The entry leaves the task's history, and the task is due again if it was the only one; it does not go to Archived to be restored.",
+      "contactRemoveTitle": "Remove the contact “{name}”?",
+      "contactRemoveMessage": "The contact no longer appears on this partnership; it does not go to Archived to be restored.",
+      "groupRemoveTitle": "Remove the group “{name}”?",
+      "groupRemoveMessage": "The group no longer appears on this partnership; it does not go to Archived to be restored.",
+      "publicPageOnTitle": "Turn on the public page for {pool}?",
+      "publicPageOnMessage": "Anyone with the link or the QR code will see this pool's latest readings, without signing in; you can turn it off here at any time.",
+      "feedbackArchiveTitle": "Archive this comment?",
+      "feedbackArchiveMessage": "The comment no longer appears here and can be restored from Archived.",
+      "restoreTitle": "Restore “{name}”?",
+      "restoreMessage": "It comes back where it was, with whatever was archived along with it; you can archive it again later.",
+      "restoreParentTitle": "Restore “{name}” first?",
+      "restoreParentMessage": "“{name}” comes back where it was; then you can restore this entry.",
+      "switchOnTitle": "Turn on “{name}”?",
+      "switchOnMessage": "It is available straight away to clubs that have this reader ticked.",
+      "switchOffTitle": "Turn off “{name}”?",
+      "switchOffMessage": "It stops working straight away in every club; you can turn it back on here.",
+      "enterSupportTitle": "Enter {club} as support?",
+      "enterSupportMessage": "You will work inside the club under the access the Owner granted; the entry is recorded and raises an alert.",
+      "modulesTitle": "Save the modules for {club}?",
+      "modulesMessage": "A module switched off disappears for the club and is refused straight away, with no data deleted; switching it back on restores everything as it was.",
+      "sportsTitle": "Save the sports for {club}?",
+      "sportsMessage": "A sport switched on becomes a line on the subscription and the club can create its recintos; one switched off no longer appears to them.",
+      "aiTitle": "Save the AI readers for {club}?",
+      "aiMessage": "A reader left unticked stops working for the club straight away, which can still fill things in by hand; the monthly cap applies at once.",
+      "readOnlyTitle": "Make {club} read-only?",
+      "readOnlyMessage": "The club can still view and export everything, but can no longer change anything until writing is restored.",
+      "writeRestoreTitle": "Restore writing for {club}?",
+      "writeRestoreMessage": "The club can change everything again straight away, and the deletion date is cancelled.",
+      "reopenTitle": "Reopen {club}?",
+      "reopenMessage": "Everyone at the club gets access back straight away."
+    }
+  },
+  "avisos": {
+    "title": "Notices",
+    "subtitle": "A notice shows in the app to families and students between two dates. It is not emailed.",
+    "new": "New notice",
+    "field": {
+      "shownFrom": "Show from",
+      "shownUntil": "Show until",
+      "subject": "Title",
+      "body": "Text"
+    },
+    "post": "Post notice",
+    "posting": "Posting…",
+    "posted": "Notice posted for {count, plural, one {# student} other {# students}}.",
+    "section": {
+      "live": "Live",
+      "upcoming": "Upcoming",
+      "past": "Past"
+    },
+    "empty": {
+      "live": "No live notices.",
+      "upcoming": "No notices scheduled.",
+      "past": "No past notices."
+    },
+    "emptyHint": "A new notice appears here once it is posted.",
+    "window": "{from} to {until}",
+    "meta": "{audience} · {count, plural, one {# student} other {# students}} · by {author}",
+    "end": "End",
+    "endTitle": "End the notice “{subject}”?",
+    "endMessage": "It stops showing in the app today. It can come back from the Archive if needed.",
+    "error": {
+      "fromRequired": "Give the first day.",
+      "untilRequired": "Give the last day.",
+      "untilBeforeFrom": "The last day cannot be before the first.",
+      "untilPast": "The last day has already passed.",
+      "nobody": "Nobody is in this audience today.",
+      "postFailed": "Could not post the notice.",
+      "endFailed": "Could not end the notice."
+    },
+    "app": {
+      "title": "{count, plural, one {Notice from the club} other {Notices from the club}}",
+      "close": "Close",
+      "until": "Until {date}",
+      "about": "About {names}"
+    }
+  },
+  "levelColours": {
+    "teal": "Teal",
+    "green": "Green",
+    "lime": "Sea green",
+    "amber": "Sand",
+    "orange": "Orange",
+    "rose": "Coral",
+    "magenta": "Lilac",
+    "violet": "Ocean blue"
+  },
+  "staffNotes": {
+    "title": "Staff board",
+    "hint": "A note for the people who work here. It stays up until whoever wrote it, or the office, takes it down.",
+    "empty": "No notes yet. Write the first one.",
+    "field": "Note",
+    "colourLabel": "Colour",
+    "pin": "Pin",
+    "pinning": "Pinning…",
+    "pinned": "Note pinned.",
+    "remove": "Take down",
+    "removeTitle": "Take this note off the board?",
+    "removeMessage": "It stops showing to the whole staff. The office can put it back from Archived.",
+    "removed": "Note taken down.",
+    "byline": "{name}, {date}",
+    "someone": "Someone on the staff",
+    "failed": "The staff board could not be loaded.",
+    "colour": {
+      "yellow": "Yellow",
+      "orange": "Orange",
+      "green": "Green",
+      "blue": "Blue"
+    },
+    "error": {
+      "bodyRequired": "Write the note.",
+      "bodyTooLong": "A note is at most 500 characters.",
+      "colour": "Pick one of the four colours.",
+      "pinFailed": "The note could not be pinned.",
+      "removeFailed": "The note could not be taken down."
+    },
+    "new": "New note"
   }
 }

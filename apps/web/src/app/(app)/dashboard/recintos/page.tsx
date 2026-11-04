@@ -127,9 +127,14 @@ export default async function RecintosPage({
   const perSite = await Promise.all(
     sites.facilities.map((site) =>
       apiFetch<FacilityDetail>(`/facilities/${site.id}`).then(
-        (detail) => ({ site, areas: detail.playingAreas.filter((area) => area.sportId === sport), refused: false }),
+        (detail) => ({
+          site,
+          areas: detail.playingAreas.filter((area) => area.sportId === sport),
+          canManage: detail.canManage,
+          refused: false,
+        }),
         (error: unknown) => {
-          if (error instanceof ApiError && error.status === 403) return { site, areas: [], refused: true };
+          if (error instanceof ApiError && error.status === 403) return { site, areas: [], canManage: false, refused: true };
           throw error;
         },
       ),
@@ -143,7 +148,7 @@ export default async function RecintosPage({
       back={backProp(back, t)}
     >
       <div className="flex flex-col gap-page-gap">
-        {perSite.map(({ site, areas, refused }) => (
+        {perSite.map(({ site, areas, canManage: mayManage, refused }) => (
           <div key={site.id} className="flex flex-col gap-3">
             {manyPlaces && (
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">{site.name}</h2>
@@ -151,7 +156,7 @@ export default async function RecintosPage({
             {refused ? (
               <p className="text-sm text-foreground-muted">{t('recintos.page.notYours')}</p>
             ) : (
-              <RecintosPanel facilityId={site.id} areas={areas} sports={[sport]} />
+              <RecintosPanel facilityId={site.id} areas={areas} sports={[sport]} canManage={mayManage} />
             )}
           </div>
         ))}
