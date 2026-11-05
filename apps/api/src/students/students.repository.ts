@@ -1571,6 +1571,76 @@ export async function updateStudent(
  * What a linked adult's record shows, and whose account holds it — POOLSE-177.
  * Null for everybody else, whose record is the club's alone.
  */
+/**
+ * The date of birth's standing — POOLSE-186. `declared` is a date that came from
+ * the person's own login and that the office has not confirmed.
+ */
+export async function birthDateState(
+  organizationId: string,
+  studentId: string,
+): Promise<{ declared: boolean; verifiedAt: string | null }> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ declared: boolean; verified_at: string | null }>(
+      `SELECT birth_date_declared_at IS NOT NULL AS declared, birth_date_verified_at AS verified_at
+         FROM student WHERE id = $1`,
+      [studentId],
+    );
+    return { declared: rows[0]?.declared ?? false, verifiedAt: rows[0]?.verified_at ?? null };
+  });
+}
+
+/**
+ * The office confirms a date of birth against the ID document, as it stands or
+ * corrected — POOLSE-186. A correction reaches the login too, as the record's own
+ * edit does, because the record reads through it. The value stays out of the log.
+ */
+export async function confirmBirthDateIn(
+  tx: Tx,
+  membershipId: string,
+  studentId: string,
+  birthDate: string | null,
+): Promise<'done' | 'not_found' | 'no_date'> {
+  const { rows } = await tx.query<{ birth_date: string | null }>(
+    `SELECT birth_date::text AS birth_date FROM student WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+    [studentId],
+  );
+  const row = rows[0];
+  if (row === undefined) return 'not_found';
+  const date = birthDate ?? row.birth_date;
+  if (date === null) return 'no_date';
+
+  const login = await readLoginOwned(tx, studentId);
+  if (login !== null) {
+    await tx.query(`UPDATE app_user SET birth_date = $2::date WHERE id = $1 AND birth_date IS DISTINCT FROM $2::date`, [
+      login.appUserId,
+      date,
+    ]);
+  }
+  await tx.query(
+    `UPDATE student
+        SET birth_date = $2::date, birth_date_declared_at = NULL,
+            birth_date_verified_at = now(), birth_date_verified_by = $3
+      WHERE id = $1`,
+    [studentId, date, membershipId],
+  );
+  await recordAudit(tx, {
+    action: 'student.birth_date_confirmed',
+    entityType: 'student',
+    entityId: studentId,
+    data: { corrected: date !== row.birth_date },
+  });
+  return 'done';
+}
+
+export async function confirmBirthDate(
+  organizationId: string,
+  membershipId: string,
+  studentId: string,
+  birthDate: string | null,
+): Promise<'done' | 'not_found' | 'no_date'> {
+  return withOrg(organizationId, (tx) => confirmBirthDateIn(tx, membershipId, studentId, birthDate));
+}
+
 async function readLoginOwned(
   tx: Tx,
   studentId: string,

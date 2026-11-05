@@ -19,6 +19,7 @@ export interface FamilySubmission {
   examinedOn: string | null;
   submittedAt: string;
   submittedByName: string | null;
+  studentBirthDate: string | null;
 }
 
 const INITIAL: FormState = { ok: false };
@@ -71,6 +72,8 @@ function Decide({ studentId, submission }: { studentId: string; submission: Fami
   const exam = submission.kind === 'medical_exam';
   const [result, setResult] = useSeeded<string>('');
   const [validUntil, setValidUntil] = useSeeded<string>('');
+  const id = submission.kind === 'id_document';
+  const [birthDate, setBirthDate] = useSeeded<string>(submission.studentBirthDate ?? '');
   const kind = t(`documents.submissions.kind.${submission.kind}`);
   return (
     <form action={action} className="flex flex-wrap items-end gap-2">
@@ -107,12 +110,25 @@ function Decide({ studentId, submission }: { studentId: string; submission: Fami
           </label>
         </>
       )}
+      {id && (
+        <label className="flex flex-col gap-1 text-sm">
+          {t('documents.submissions.birthDate')}
+          <input
+            type="date"
+            name="birthDate"
+            required
+            value={birthDate}
+            onChange={(event) => setBirthDate(event.target.value)}
+            className="h-control rounded-sm border border-border-strong bg-background px-2 text-control"
+          />
+        </label>
+      )}
       <ConfirmButton
         name="decision"
         value="accept"
         disabled={pending}
         title={t('documents.submissions.acceptTitle', { kind })}
-        message={t('documents.submissions.acceptMessage')}
+        message={t(id ? 'documents.submissions.acceptIdMessage' : 'documents.submissions.acceptMessage')}
         confirmLabel={t('documents.submissions.accept')}
         className="inline-flex h-control items-center rounded-sm bg-primary px-4 text-control font-semibold text-primary-foreground disabled:opacity-60"
       >

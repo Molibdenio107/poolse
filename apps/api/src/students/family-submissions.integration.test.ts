@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { encode } from 'jpeg-js';
 import { AppController } from '../app/app.controller.js';
 import { StudentDocumentsController } from './documents.controller.js';
+import { StudentsController } from './students.controller.js';
 import { getObjectBytes } from '../files/storage.js';
 import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant, type ScratchTenant } from '../test/harness.js';
 
@@ -229,5 +230,62 @@ test('the family’s actions are on the record, named, never valued', async () =
     );
     assert.equal(entry!.actor_membership_id, family.guardian);
     assert.equal(entry!.data.kind, 'socio_form');
+  });
+});
+
+test('POOLSE-186: an ID accepted with a date confirms it, and a correction stays out of the log', async () => {
+  await withScratchTenant(async (tenant) => {
+    const family = await seed(tenant);
+    await asGuardian(tenant, family, () =>
+      new AppController().sendDocument('id_document', family.child, 'cc.jpg', undefined, JPEG),
+    );
+    const { submissions } = await asOffice(tenant, () => new StudentDocumentsController().submissions(family.child));
+    assert.notEqual(submissions[0]!.studentBirthDate, null);
+
+    await asOffice(tenant, () =>
+      new StudentDocumentsController().accept(family.child, submissions[0]!.id, { birthDate: '2016-05-06' }),
+    );
+    const [row] = await tenant.sql<{ birth_date: string; verified: boolean }>(
+      `SELECT birth_date::text, birth_date_verified_at IS NOT NULL AS verified FROM student WHERE id = $1`,
+      [family.child],
+    );
+    assert.equal(row!.birth_date, '2016-05-06');
+    assert.equal(row!.verified, true);
+    const [log] = await tenant.sql<{ data: string }>(
+      `SELECT data::text FROM audit_log WHERE action = 'student.birth_date_confirmed' AND entity_id = $1`,
+      [family.child],
+    );
+    assert.equal(log!.data.includes('2016'), false);
+    assert.equal(log!.data.includes('"corrected": true'), true);
+  });
+});
+
+test('POOLSE-186: the office confirms a declared date, which opens the adult path; no date is a 409', async () => {
+  await withScratchTenant(async (tenant) => {
+    const org = tenant.organizationId;
+    const [adult] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name, birth_date, birth_date_declared_at)
+       VALUES ($1, 'Rui', 'Adulto', '1990-09-05', now()) RETURNING id`,
+      [org],
+    );
+    const [blank] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name) VALUES ($1, 'Sem', 'Data') RETURNING id`,
+      [org],
+    );
+    const adultPath = async (): Promise<boolean> => {
+      const [row] = await tenant.sql<{ adult: boolean }>(`SELECT student_is_adult_path($1, $2) AS adult`, [org, adult!.id]);
+      return row!.adult;
+    };
+    assert.equal(await adultPath(), false);
+    const before = await asOffice(tenant, () => new StudentsController().one(adult!.id));
+    assert.equal(before.birthDateState?.declared, true);
+
+    await asOffice(tenant, () => new StudentsController().confirmBirthDate(adult!.id, {}));
+    assert.equal(await adultPath(), true);
+    const after = await asOffice(tenant, () => new StudentsController().one(adult!.id));
+    assert.equal(after.birthDateState?.declared, false);
+    assert.notEqual(after.birthDateState?.verifiedAt, null);
+
+    await expectStatus(() => asOffice(tenant, () => new StudentsController().confirmBirthDate(blank!.id, {})), 409);
   });
 });

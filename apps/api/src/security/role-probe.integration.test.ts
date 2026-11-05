@@ -370,6 +370,9 @@ test('people, register and guardian lists refuse a guardian and a student (403)'
       new PeopleDedupController().duplicate(ADMIN_NIF),
     );
     await refused('GET students', 403, () => new StudentsController().list());
+    await refused('POST students/:id/birth-date/confirm', 403, () =>
+      new StudentsController().confirmBirthDate(NO_SUCH_ID, {}),
+    );
     await refused('GET guardians', 403, () => new GuardiansController().list());
     await refused('GET people-search/:marta/students', 403, () =>
       new PeopleSearchController().students(fixture.martaId),

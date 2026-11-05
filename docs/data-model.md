@@ -4479,3 +4479,13 @@ being inlined. `test/restorable.sql` rebuilds every expression and partial index
 - `boletim_template_field.width numeric(5,4)` (1 November 2026) is the white strip under a value, a fraction of the
   page width. Null means no strip; it stays on the page by CHECK.
 - `boletim_field` is the closed list Poolse fills. It equals `BOLETIM_FIELDS` in `@poolse/rules`, by test.
+
+### A declared date of birth — POOLSE-186, 5 November 2026
+
+Migration `1794653300000_student-birth-date-declared`.
+
+- **`student.birth_date_declared_at`**: the date came from the person's own login and the office has not confirmed it.
+- **`student.birth_date_verified_at` / `_by`**: the office confirmed the date. `student_birth_date_one_state` refuses both states at once.
+- **`student_birth_date_fill`**, **`membership_birth_date_fill`** and **`app_user_birth_date_fill`** fill a blank date from the login, unless a live guardian exists. **`student_birth_date_state`** clears both states when the date changes.
+- **`student_is_adult_path()`** refuses a declared date. `student_person` carries both columns and still reads a declared record through.
+- Asserted in `test/student-birth-date.sql`.

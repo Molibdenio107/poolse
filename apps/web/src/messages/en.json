@@ -197,6 +197,7 @@
       "saidNotGoing": "Said they are not coming",
       "savedGoing": "Sent: coming to the lesson",
       "savedNotGoing": "Sent: not coming to the lesson",
+      "needsBirthDate": "Add your date of birth in Profile so you can answer.",
       "guardianAnswers": "This student's guardian answers for them.",
       "notAllowed": "You cannot answer right now.",
       "failed": "The answer could not be saved. Try again.",
@@ -337,6 +338,15 @@
       "homes": "My areas",
       "signOut": "Sign out"
     }
+  },
+  "birthDateConfirm": {
+    "pending": "Date of birth to confirm",
+    "hint": "The person gave it themselves in the app. Check it against their ID document.",
+    "confirm": "Confirm the date",
+    "confirmTitle": "Confirm the date of birth?",
+    "confirmMessage": "This records that the date was checked against the ID document. If it is wrong, correct it below first.",
+    "confirmed": "Date of birth confirmed.",
+    "failed": "The date could not be confirmed."
   },
   "common": {
     "working": "Working…",
@@ -494,7 +504,8 @@
     "errors": {
       "nameTooLong": "Too long — 100 characters at most.",
       "phoneShape": "Not a valid number. Use digits, spaces and the signs + ( ) - .",
-      "birthDateInvalid": "Not a valid date.",
+      "birthDateRequired": "Enter the date of birth.",
+    "birthDateInvalid": "Not a valid date.",
       "birthDateTooEarly": "Earlier than 1900.",
       "birthDateFuture": "A date of birth cannot be in the future.",
       "localeInvalid": "Unsupported language.",
@@ -6997,6 +7008,9 @@
       "acceptMessage": "It is filed on the student's record, as a document handed in at the office would be.",
       "rejectTitle": "Reject “{kind}”?",
       "rejectMessage": "Nothing is filed and this sending cannot be recovered. The family can send it again.",
+      "acceptIdMessage": "It is filed on the student's record, and the date of birth is confirmed as written above.",
+      "birthDate": "Date of birth (as on the document)",
+      "needsBirthDate": "Enter the date of birth shown on the document.",
       "accepted": "Accepted and filed.",
       "rejected": "Rejected. Nothing was filed.",
       "needsResult": "Choose the exam's result.",

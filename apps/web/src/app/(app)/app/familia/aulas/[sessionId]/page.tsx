@@ -112,7 +112,7 @@ export default async function FamilyLesson({
               ) : (
                 <p className="text-sm text-foreground-muted">
                   {entry.going === null
-                    ? t('app.notice.guardianAnswers')
+                    ? t(entry.needsBirthDate ? 'app.notice.needsBirthDate' : 'app.notice.guardianAnswers')
                     : entry.going
                       ? t('app.notice.saidGoing')
                       : t('app.notice.saidNotGoing')}

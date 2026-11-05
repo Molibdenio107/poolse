@@ -172,6 +172,7 @@ export function StudentForm({
           type="date"
           label={t('students.birthDate')}
           initial={student?.birthDate ?? ''}
+          required={mode === 'create'}
           onValueChange={setBirthDate}
           className="max-w-none"
           {...fieldError('birthDate')}

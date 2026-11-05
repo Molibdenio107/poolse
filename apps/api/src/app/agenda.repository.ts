@@ -1,6 +1,6 @@
 import { ENROLLED_IN_SESSION, NOT_COMING_TO_SESSION } from '../dashboard/instructor.repository.js';
 import { withOrg } from '@poolse/db';
-import { mayAnswer } from '../feedback/feedback.repository.js';
+import { mayAnswer, needsBirthDate } from '../feedback/feedback.repository.js';
 
 /**
  * The family agenda — POOLSE-90 slice 1.
@@ -61,6 +61,8 @@ export interface AgendaEntry {
   going: boolean | null;
   /** This reader answers for this child (`family_may_answer()`). */
   mayAnswer: boolean;
+  /** The reader is this student, and no date of birth is held — POOLSE-186. */
+  needsBirthDate: boolean;
   /**
    * The lesson still takes an answer: a turma's, not cancelled, not started.
    * The trigger on `session_notice` is the guard; this only says it in advance.
@@ -142,6 +144,7 @@ async function readEntries(
               cs.moved_at IS NOT NULL AS moved,
               sn.going,
               ${mayAnswer('s', '$3::uuid')} AS "mayAnswer",
+              ${needsBirthDate('s', '$3::uuid')} AS "needsBirthDate",
               (cs.status <> 'cancelled' AND cs.starts_at > now()) AS "noticeOpen",
               mark.status::text AS attendance,
               ${LESSON_PAGE_ANSWERS} AS opens
@@ -225,6 +228,7 @@ export async function readCalendar(
               false AS moved,
               NULL::boolean AS going,
               false AS "mayAnswer",
+              false AS "needsBirthDate",
               false AS "noticeOpen",
               NULL::text AS attendance,
               false AS opens,

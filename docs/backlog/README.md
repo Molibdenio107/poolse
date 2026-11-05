@@ -207,6 +207,7 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-183](./POOLSE-183-custos-per-year-and-per-season.md) | *Custos* under Faturação: one chart with civil-year and época rulers, tiles per kind, faturado / estimado / total, averages per month, lesson hour, aluno-mês and m³ | Finance / Dashboards | Medium (pilot) | POOLSE-182, 28, 66 | 0 |
 | [POOLSE-184](./POOLSE-184-cost-suggestions-as-rules.md) | Sugestões on Custos as rules with evidence — six comparisons the ledger can prove, silence otherwise, no verdicts; first reader of `heating_degree_days` | Finance / Dashboards / AI | Low (post go-live) | POOLSE-183, 28, 5.4b | 0 |
 | [POOLSE-185](./POOLSE-185-progresso-skills-as-stickers-attendance-as-stamps.md) | A child sees their progress in the app: skills as stickers and attendance as stamps, on *Aulas*, split out of POOLSE-173 | Mobile app | Medium | 173, 175, 20, 13 | 1 |
+| [POOLSE-186](./POOLSE-186-a-declared-date-of-birth.md) | **Built 05-11-2026.** A date of birth a person gave reaches the club's record, and the office confirms it | Students / Mobile app | High (pilot) | POOLSE-177, POOLSE-179 |
 
 ## To discuss — raised 01-11-2026, parked until after the pilot has used the app
 

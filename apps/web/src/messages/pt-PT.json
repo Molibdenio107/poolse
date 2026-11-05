@@ -197,6 +197,7 @@
       "saidNotGoing": "Avisou que não vem",
       "savedGoing": "Avisado: vem à aula",
       "savedNotGoing": "Avisado: não vem à aula",
+      "needsBirthDate": "Indique a sua data de nascimento no Perfil para poder responder.",
       "guardianAnswers": "Quem responde por este aluno é o encarregado de educação.",
       "notAllowed": "Não é possível responder neste momento.",
       "failed": "Não foi possível guardar a resposta. Tente de novo.",
@@ -337,6 +338,15 @@
       "homes": "As minhas áreas",
       "signOut": "Terminar sessão"
     }
+  },
+  "birthDateConfirm": {
+    "pending": "Data de nascimento por confirmar",
+    "hint": "Foi indicada pela própria pessoa na aplicação. Confira-a com o documento de identificação.",
+    "confirm": "Confirmar a data",
+    "confirmTitle": "Confirmar a data de nascimento?",
+    "confirmMessage": "Fica registado que a data foi conferida com o documento de identificação. Se estiver errada, corrija-a primeiro em baixo.",
+    "confirmed": "Data de nascimento confirmada.",
+    "failed": "Não foi possível confirmar a data."
   },
   "common": {
     "working": "A processar…",
@@ -494,7 +504,8 @@
     "errors": {
       "nameTooLong": "Demasiado longo — no máximo 100 caracteres.",
       "phoneShape": "Número inválido. Use algarismos, espaços e os sinais + ( ) - .",
-      "birthDateInvalid": "Data inválida.",
+      "birthDateRequired": "Indique a data de nascimento.",
+    "birthDateInvalid": "Data inválida.",
       "birthDateTooEarly": "Data anterior a 1900.",
       "birthDateFuture": "A data de nascimento não pode ser no futuro.",
       "localeInvalid": "Idioma não suportado.",
@@ -6997,6 +7008,9 @@
       "acceptMessage": "Fica arquivado no registo do aluno, tal como um documento entregue na secretaria.",
       "rejectTitle": "Rejeitar «{kind}»?",
       "rejectMessage": "Nada fica arquivado e este envio não pode ser recuperado. A família pode voltar a enviar.",
+      "acceptIdMessage": "Fica arquivado no registo do aluno, e a data de nascimento fica confirmada tal como está escrita acima.",
+      "birthDate": "Data de nascimento (como está no documento)",
+      "needsBirthDate": "Indique a data de nascimento que consta do documento.",
       "accepted": "Aceite e arquivado.",
       "rejected": "Rejeitado. Nada foi arquivado.",
       "needsResult": "Escolha o resultado do exame.",

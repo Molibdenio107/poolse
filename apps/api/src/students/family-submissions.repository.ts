@@ -4,6 +4,7 @@ import { clubToday } from '../common/club-day.js';
 import { storeFile, type FilePurpose } from '../files/files.repository.js';
 import { fileCopyIn, readDocuments, type StudentDocumentKind } from './documents.repository.js';
 import { insertExamIn, type ExamResult } from './medical-exams.repository.js';
+import { confirmBirthDateIn } from './students.repository.js';
 
 /**
  * What a family sends — POOLSE-179 slice 2. A signed form, the ID photo or the
@@ -126,6 +127,8 @@ export interface Submission {
   examinedOn: string | null;
   submittedAt: string;
   submittedByName: string | null;
+  /** The date on the record, for the office to check against an ID (POOLSE-186). */
+  studentBirthDate: string | null;
 }
 
 /** What waits for the office on one student. */
@@ -135,8 +138,10 @@ export async function listPending(organizationId: string, studentId: string): Pr
       `SELECT s.id, s.kind::text AS kind, s.season_id AS "seasonId", s.file_id AS "fileId",
               f.content_type AS "contentType", f.original_name AS "originalName",
               s.examined_on::text AS "examinedOn", s.submitted_at AS "submittedAt",
-              nullif(btrim(concat_ws(' ', m.first_name, m.last_name)), '') AS "submittedByName"
+              nullif(btrim(concat_ws(' ', m.first_name, m.last_name)), '') AS "submittedByName",
+              st.birth_date::text AS "studentBirthDate"
          FROM family_submission s
+         JOIN student st ON st.organization_id = s.organization_id AND st.id = s.student_id
          JOIN stored_file f ON f.organization_id = s.organization_id AND f.id = s.file_id
          LEFT JOIN membership m ON m.organization_id = s.organization_id AND m.id = s.submitted_by
         WHERE s.student_id = $1 AND s.decision IS NULL
@@ -159,6 +164,7 @@ export async function acceptSubmission(
   studentId: string,
   submissionId: string,
   exam: { result: ExamResult; validUntil: string | null } | null,
+  birthDate: string | null = null,
 ): Promise<DecideOutcome> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ kind: StoredKind; season_id: string | null; file_id: string; examined_on: string | null }>(
@@ -185,6 +191,11 @@ export async function acceptSubmission(
       const filed = await fileCopyIn(tx, organizationId, membershipId, studentId, sent.kind, sent.season_id, sent.file_id);
       if (filed === 'not_found') return 'not_found';
       if (filed !== 'filed') return 'bad_file';
+      // POOLSE-186: an ID accepted with a date confirms it, as read off the card.
+      if (sent.kind === 'id_document' && birthDate !== null) {
+        const confirmed = await confirmBirthDateIn(tx, membershipId, studentId, birthDate);
+        if (confirmed !== 'done') return 'not_found';
+      }
     }
 
     await tx.query(

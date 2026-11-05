@@ -42,6 +42,7 @@ import { SectionPills, pickSection, sectionHref } from '@/components/section-pil
 import type { StudentDocuments } from '@/lib/fpn-forms';
 import { FpnSection, IdentificationSection } from './documents';
 import { FamilySubmissions, type FamilySubmission } from './family-submissions';
+import { BirthDateConfirm } from './birth-date-confirm';
 import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -413,6 +414,7 @@ export default async function StudentPage({
                     {/* A 16rem basis, so on a phone the form wraps under the photo
                         rather than shrinking beside it to a 138px column (POOLSE-88). */}
                     <div className="min-w-0 flex-1 basis-64">
+                      {loaded.birthDateState?.declared === true && <BirthDateConfirm studentId={loaded.id} />}
                       <StudentForm
                         organizationId={reg.organizationId}
                         levels={reg.levels}

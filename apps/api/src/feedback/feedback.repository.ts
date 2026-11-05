@@ -66,6 +66,7 @@ export interface FamilyFeedback {
   closesOn: string;
   /** This reader may answer for this child (rule 2). */
   mayAnswer: boolean;
+  needsBirthDate: boolean;
   feedback: LessonFeedback | null;
 }
 
@@ -87,6 +88,16 @@ const TZ = `coalesce(f.timezone, 'Europe/Lisbon')`;
  * POOLSE-90's *Vou / Não vou*. Read by the lesson page and by *Últimas aulas*,
  * so the list never offers what the page will not take.
  */
+/**
+ * The reader is this student, and nobody holds a date of birth for them, so the
+ * sentence is "add your date" rather than "your guardian answers" — POOLSE-186.
+ */
+export const needsBirthDate = (student: string, membership: string): string =>
+  `(${student}.birth_date IS NULL AND ${student}.membership_id = ${membership}
+    AND NOT EXISTS (SELECT 1 FROM guardian_link gl
+                     WHERE gl.organization_id = ${student}.organization_id
+                       AND gl.student_id = ${student}.id AND gl.archived_at IS NULL))`;
+
 export const mayAnswer = (student: string, membership: string): string =>
   `family_may_answer(${student}.organization_id, ${student}.id, ${membership})`;
 
@@ -149,6 +160,7 @@ async function familyFeedbackIn(
     closes_on: string;
     open: boolean;
     may_answer: boolean;
+    needs_birth_date: boolean;
     feedback_id: string | null;
   }>(
     `SELECT s.id AS student_id, ${shortName('s')} AS student_name, cs.status::text AS status, cs.ends_at <= now() AS ended,
@@ -156,6 +168,7 @@ async function familyFeedbackIn(
             to_char(lesson_feedback_closes_on(cs.organization_id, cs.pool_id, cs.starts_at), 'YYYY-MM-DD') AS closes_on,
             club_today() <= lesson_feedback_closes_on(cs.organization_id, cs.pool_id, cs.starts_at) AS open,
             ${mayAnswer('s', '$1')} AS may_answer,
+            ${needsBirthDate('s', '$1')} AS needs_birth_date,
             fb.id AS feedback_id
        FROM unnest($3::uuid[]) AS chosen(id)
        JOIN student_person s ON s.id = chosen.id AND s.archived_at IS NULL
@@ -184,6 +197,7 @@ async function familyFeedbackIn(
     state: stateOf(row),
     closesOn: row.closes_on,
     mayAnswer: row.may_answer,
+    needsBirthDate: row.needs_birth_date,
     feedback: row.feedback_id === null ? null : (found.get(row.feedback_id) ?? null),
   }));
 }

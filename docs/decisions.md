@@ -1351,3 +1351,5 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-05** — **A premium splits by day like every other cost** (POOLSE-182, Rui): 101,92 € in January and 92,05 € in February on a 1 200 € policy year, and the ticket's QA 4 was corrected rather than a second allocation rule added.
 
 - **2026-11-05** — **`guardian_link.can_view_progress` is ignored, so guardians see progress by default** (POOLSE-185, Rui). The column defaults to false and nothing reads it; honouring it would hide progress from every family until the office ticked each one.
+
+- **2026-11-05** — **A date a person gave fills a blank club date, and is declared until the office confirms it** (POOLSE-186, Rui). It counts for answering and sending at once. It stays out of `student_is_adult_path()`, so a typed date still never decides who signs consent. Confirming is a warning, never a gate. Required on the desktop form only: an import or an invitation must not fail over a blank cell.

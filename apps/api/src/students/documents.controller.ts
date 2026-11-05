@@ -14,6 +14,7 @@ import {
 import { isValidCcNumber, normalizeCcNumber } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
+import { parseBirthDate } from './students.controller.js';
 import { recordFamilyPrint } from './family-documents.repository.js';
 import {
   acceptSubmission,
@@ -201,7 +202,14 @@ export class StudentDocumentsController {
       }
       exam = { result: result as ExamResult, validUntil: typeof validUntil === 'string' ? validUntil : null };
     }
-    const outcome = await acceptSubmission(organizationId, membershipId, studentId, submissionId, exam);
+    const outcome = await acceptSubmission(
+      organizationId,
+      membershipId,
+      studentId,
+      submissionId,
+      exam,
+      parseBirthDate(body['birthDate']),
+    );
     if (outcome === 'not_found') throw new NotFoundException('Nothing waiting with that id');
     if (outcome === 'needs_result') throw new BadRequestException({ code: 'needs_result', message: 'An exam needs its result' });
     if (outcome === 'bad_file') throw new ConflictException('This file cannot be filed');

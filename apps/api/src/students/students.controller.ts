@@ -29,6 +29,8 @@ import {
 import { requireMyBooking, requireMyProposal } from '../tenant/assignment.js';
 
 interface StudentDetail extends Student {
+  /** The date of birth's standing; the office's only — POOLSE-186. */
+  birthDateState?: { declared: boolean; verifiedAt: string | null };
   /**
    * Whether this caller may open the medical record.
    *
@@ -80,6 +82,8 @@ import {
   searchPeople,
   studentsOf,
   familyStudents,
+  birthDateState,
+  confirmBirthDate,
   updateStudent,
   type DuplicateMatch,
   type GuardianInput,
@@ -515,6 +519,8 @@ export class StudentsController {
         canViewProgress: ((scope) => scope === null || scope.includes('pool'))(sportScope()),
         familyView: false,
         cover: await studentCover(organizationId, id),
+        // POOLSE-186: only the office confirms a date, so only it reads the state.
+        ...(hasRole('owner', 'admin') ? { birthDateState: await birthDateState(organizationId, id) } : {}),
       };
     }
 
@@ -538,6 +544,23 @@ export class StudentsController {
       familyView: true,
       cover: null,
     };
+  }
+
+  /**
+   * The office confirms a date of birth, normally against the ID document,
+   * as it stands or corrected — POOLSE-186.
+   */
+  @Post(':id/birth-date/confirm')
+  async confirmBirthDate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ confirmed: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId, membershipId } = currentTenant();
+    const outcome = await confirmBirthDate(organizationId, membershipId, id, parseBirthDate(body['birthDate']));
+    if (outcome === 'not_found') throw new NotFoundException('No such student');
+    if (outcome === 'no_date') throw new ConflictException({ code: 'no_birth_date', message: 'There is no date to confirm' });
+    return { confirmed: true };
   }
 
   /**
@@ -1301,7 +1324,7 @@ function optionalText(value: unknown, field: string, max: number): string | null
  * `current_date` is not IMMUTABLE and Postgres will not have it in a constraint.
  * So it is enforced here — and a student born tomorrow is a typo every time.
  */
-function parseBirthDate(value: unknown): string | null {
+export function parseBirthDate(value: unknown): string | null {
   const raw = typeof value === 'string' ? value.trim() : '';
   if (raw.length === 0) return null;
 
