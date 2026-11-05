@@ -259,3 +259,10 @@ The header's corner is the club's logo, read through `/files/<id>`, or its initi
 ## Documentos — POOLSE-179, slice 1
 
 One row on *Aulas* opens `/app/familia/documentos`: per child, a status for each paper, limited by the sports of their active turmas (`documentsForSports` in `@poolse/rules`; the FPN declaration is swimming's). `GET /app/documents` carries no number, file or name. *Preencher e imprimir* opens the office's own print page under `/app/familia/documentos/:id/…`, through `requireOfficeOrFamily`: a family's own child only, with the SNS number left off, and the print is audited as `student.document_printed`. Sending a paper from the phone is slice 2.
+
+## Documentos — POOLSE-179, slice 2: a family sends
+
+Where *Enviar* shows (`canSend`), a live encarregado, or the student from 18, sends one paper at a time to `POST /app/documents/:kind?child=`: an FPN declaration, the boletim, the ID document or the exame médico, which also asks for the date on it. A minor's own login reads and gets a 403; another family's child is a 404. PDF, JPEG, PNG and HEIC, 10 MB, judged by content, ten sendings an hour per person.
+
+Nothing on file changes when a family sends. The row waits in `family_submission` and reads *Enviado — a aguardar a secretaria* until the office decides (`docs/features/students.md`). An ID photo is never shown back.
+

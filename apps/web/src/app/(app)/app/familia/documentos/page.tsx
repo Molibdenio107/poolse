@@ -8,13 +8,16 @@ import { describeLoad } from '@/lib/load-failure';
 import { LinkBusy } from '@/components/link-busy';
 import { PageError } from '@/components/page-shell';
 import { ChildFilter } from '../child-filter';
+import { SendDocument } from './send-document';
 
 /**
  * *Documentos* — POOLSE-179, slice 1. What the club has on file for each child,
  * as a status, limited to the papers of the sports the child is in, and the
  * club's own forms filled in. A screen deeper in, so it has its own *Voltar*.
  *
- * Sending a paper from the phone is slice 2.
+ * Slice 2: a paper can be sent from here. It waits for the office (*Enviado — a
+ * aguardar a secretaria*) and changes nothing on file until the office accepts
+ * it. An ID photo is never shown back, only its status.
  */
 export default async function FamilyDocuments({
   searchParams,
@@ -48,6 +51,7 @@ export default async function FamilyDocuments({
   const status = (row: AppDocumentRow): string => {
     if (row.status === 'missing') return t('app.documents.status.missing');
     if (row.status === 'expired') return t('app.documents.status.expired');
+    if (row.status === 'sent') return t('app.documents.status.sent');
     return row.validUntil === null
       ? t('app.documents.status.ok')
       : t('app.documents.status.okUntil', { date: formatDate(row.validUntil) });
@@ -94,6 +98,16 @@ export default async function FamilyDocuments({
                 )}
                 {row.notConfigured && (
                   <span className="text-sm text-foreground-muted">{t('app.documents.notConfigured')}</span>
+                )}
+                {row.canSend && (
+                  <details className="group">
+                    <summary className="inline-flex min-h-control cursor-pointer items-center text-sm font-medium text-primary">
+                      {row.status === 'missing' ? t('app.documents.send.open') : t('app.documents.send.openAgain')}
+                    </summary>
+                    <div className="pt-2">
+                      <SendDocument child={one.id} kind={row.kind} />
+                    </div>
+                  </details>
                 )}
               </li>
             ))}

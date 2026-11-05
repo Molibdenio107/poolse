@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Body,
   Controller,
   Get,
@@ -14,6 +15,13 @@ import { isValidCcNumber, normalizeCcNumber } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
 import { recordFamilyPrint } from './family-documents.repository.js';
+import {
+  acceptSubmission,
+  listPending,
+  rejectSubmission,
+  type Submission,
+} from './family-submissions.repository.js';
+import { EXAM_RESULTS, type ExamResult } from './medical-exams.repository.js';
 import { requireOfficeOrFamily } from './student-access.js';
 import { CoreRoute } from '../tenant/modules.js';
 import {
@@ -162,6 +170,56 @@ export class StudentDocumentsController {
     if (outcome === 'bad_file') throw new BadRequestException('Upload the file first');
     if (outcome === 'bad_season') throw new BadRequestException('No such season');
     return { filed: true };
+  }
+
+  /** What the family sent and the office has not decided — POOLSE-179 slice 2. */
+  @Get('submissions')
+  async submissions(@Param('studentId', ParseUUIDPipe) studentId: string): Promise<{ submissions: Submission[] }> {
+    requireRole('owner', 'admin');
+    return { submissions: await listPending(currentTenant().organizationId, studentId) };
+  }
+
+  /**
+   * Accept: filed as the office files a copy (a current one is replaced), or, for
+   * an exam, recorded with the result the office reads off the certificate.
+   */
+  @Post('submissions/:submissionId/accept')
+  async accept(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Param('submissionId', ParseUUIDPipe) submissionId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ accepted: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId, membershipId } = currentTenant();
+    const result = body['result'];
+    const validUntil = body['validUntil'];
+    let exam: { result: ExamResult; validUntil: string | null } | null = null;
+    if (result !== undefined) {
+      if (!(EXAM_RESULTS as readonly unknown[]).includes(result)) throw new BadRequestException('Unknown result');
+      if (validUntil !== undefined && validUntil !== null && (typeof validUntil !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(validUntil))) {
+        throw new BadRequestException('validUntil is a date');
+      }
+      exam = { result: result as ExamResult, validUntil: typeof validUntil === 'string' ? validUntil : null };
+    }
+    const outcome = await acceptSubmission(organizationId, membershipId, studentId, submissionId, exam);
+    if (outcome === 'not_found') throw new NotFoundException('Nothing waiting with that id');
+    if (outcome === 'needs_result') throw new BadRequestException({ code: 'needs_result', message: 'An exam needs its result' });
+    if (outcome === 'bad_file') throw new ConflictException('This file cannot be filed');
+    return { accepted: true };
+  }
+
+  /** Reject: nothing is filed, and a sealed file (ID photo, exam) is shredded. */
+  @Post('submissions/:submissionId/reject')
+  async reject(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Param('submissionId', ParseUUIDPipe) submissionId: string,
+  ): Promise<{ rejected: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId, membershipId } = currentTenant();
+    if ((await rejectSubmission(organizationId, membershipId, studentId, submissionId)) !== 'done') {
+      throw new NotFoundException('Nothing waiting with that id');
+    }
+    return { rejected: true };
   }
 
   /** The ID document with the number in full, for the record (each read audited). */

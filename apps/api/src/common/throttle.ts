@@ -117,6 +117,13 @@ export const throttlerOptions: ThrottlerModuleOptions = {
 export const STRICT = { default: { ttl: seconds(60), limit: STRICT_LIMIT } };
 
 /**
+ * A family sending documents — POOLSE-179: ten an hour per person. A child has
+ * four papers at most; ten leaves room for a retake and stops a script filling
+ * the bucket.
+ */
+export const FAMILY_UPLOAD = { default: { ttl: seconds(3600), limit: 10 } };
+
+/**
  * What counts as "the same caller".
  *
  * **This is the part that matters, more than either number.** The stock guard

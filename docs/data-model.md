@@ -4253,6 +4253,40 @@ Migration `1794651400000_staff-id-document-photo`.
   by retention. It acts on the request's own club only and only destroys a key.
 - **`apply_retention()`** clears both columns with the number, so retention shreds the photos.
 
+### Student ID document photograph, sealed — POOLSE-179 slice 2, 5 November 2026
+
+Migration `1794653000000_student-id-document-sealed`.
+
+- **`file_purpose`** gains `student_id_document`, and **`stored_file_sealed`** names it. The FPN
+  declarations and the boletim stay `student_document` and stay plain.
+- **`student_document_id_sealed`** (BEFORE INSERT or UPDATE OF `file_id`, `kind`): a `student_document`
+  of kind `id_document` must point at a `student_id_document` file, and such a file at nothing else.
+  Rows filed before the migration keep their plain file until
+  `apps/api/src/files/reseal-student-id-documents.ts` moves them (a dry run unless `--apply`).
+- **`student_document_id_shreds`** (AFTER UPDATE OF `replaced_at`, `file_id`) and
+  **`student_anonymised_id_shreds`** (AFTER UPDATE OF `student.anonymised_at`) call the definer
+  `student_id_document_shred(org, file)`, `staff_id_document_shred`'s shape: one club, only
+  destroys. A replaced ID photo is shredded at once; every one goes when retention anonymises the
+  student.
+- Asserted in `test/student-id-document.sql`.
+
+### What a family sends — POOLSE-179 slice 2, 5 November 2026
+
+Migration `1794653100000_family-submission`.
+
+```
+enum family_submission_kind: fpn_declaration | fpn_declaration_minor | socio_form | id_document | medical_exam
+enum family_submission_decision: accepted | rejected
+```
+
+- **`family_submission`**: `student_id`, `kind`, `season_id` (the FPN declarations only, by CHECK), `file_id`, `examined_on` (exams only, by CHECK), `submitted_by`, `submitted_at`, `decision` / `decided_by` / `decided_at` (whole, by CHECK; `decided_by` may be null only for retention). Composite FKs; tenant RLS.
+- **Grants:** `poolse_app` holds SELECT, INSERT and `UPDATE (decision, decided_by, decided_at)`.
+- **Indexes:** a partial unique index allows one pending per child, kind and season, and `family_submission_file_once` allows one sending per file.
+- **`family_submission_guard`**: the file's purpose follows the kind, and a decision is final.
+- **`family_submission_shred(org, submission)`** is a definer with one club, and only destroys a sealed file not filed on a record. Triggers call it on reject, on `student.anonymised_at` (everything sent) and on `health_erased_at` (the exams).
+- **Nothing is filed by the table.** Accepting goes through `fileCopyIn` / `insertExamIn`.
+- In `TENANT_TABLES`. Asserted in `test/family-submission.sql`.
+
 ### Staff contract — POOLSE-149 slice C, 2 November 2026
 
 Migration `1794651500000_staff-contract`.

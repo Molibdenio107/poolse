@@ -4,6 +4,7 @@ import { recordAudit } from '../audit/audit.js';
 import { clubToday } from '../common/club-day.js';
 import { readDocuments } from './documents.repository.js';
 import { listExams } from './medical-exams.repository.js';
+import { maySendFor, pendingKinds } from './family-submissions.repository.js';
 
 /**
  * A child's papers as a family sees them — POOLSE-179. A status per document and
@@ -12,13 +13,16 @@ import { listExams } from './medical-exams.repository.js';
  */
 export interface FamilyDocumentRow {
   kind: FamilyDocument;
-  status: 'missing' | 'ok' | 'expired';
+  /** `sent`: the family sent one and the office has not decided yet (POOLSE-179 slice 2). */
+  status: 'missing' | 'ok' | 'expired' | 'sent';
   /** `YYYY-MM-DD`, for a paper that lapses. */
   validUntil: string | null;
   /** What the form prints from, when it is a form the club has set up. */
   print: { path: 'boletim' | 'fpn'; seasonId: string | null; minor: boolean } | null;
   /** A form the club prints, and the club has not set it up. */
   notConfigured: boolean;
+  /** This reader may send this kind now: a live encarregado or an adult student, nothing waiting. */
+  canSend: boolean;
 }
 
 /** The sports of a student's active turmas, by each turma's recinto. */
@@ -42,6 +46,7 @@ async function sportsOf(organizationId: string, studentId: string): Promise<stri
 export async function familyDocuments(
   organizationId: string,
   studentId: string,
+  membershipId: string,
 ): Promise<FamilyDocumentRow[] | null> {
   const held = await readDocuments(organizationId, studentId);
   if (held === null) return null;
@@ -61,6 +66,7 @@ export async function familyDocuments(
         validUntil: null,
         print: held.templates[form] ? { path: 'fpn', seasonId: season, minor } : null,
         notConfigured: !held.templates[form],
+        canSend: false,
       };
     }
     if (kind === 'socio_form') {
@@ -70,6 +76,7 @@ export async function familyDocuments(
         validUntil: null,
         print: held.templates.socio_form ? { path: 'boletim', seasonId: null, minor } : null,
         notConfigured: !held.templates.socio_form,
+        canSend: false,
       };
     }
     // id_document; the exam's status is added by the caller.
@@ -81,12 +88,17 @@ export async function familyDocuments(
       validUntil: until,
       print: null,
       notConfigured: false,
+      canSend: false,
     };
   };
 
   // `false`: the note and the file are the office's. The result stays there too.
   const exams = await listExams(organizationId, studentId, false);
-  return documentsForSports(await sportsOf(organizationId, studentId)).map((kind) => {
+  const [pending, maySend] = await Promise.all([
+    pendingKinds(organizationId, studentId),
+    maySendFor(organizationId, membershipId, studentId),
+  ]);
+  const rows: FamilyDocumentRow[] = documentsForSports(await sportsOf(organizationId, studentId)).map((kind): FamilyDocumentRow => {
     if (kind !== 'medical_exam') return row(kind);
     return {
       kind,
@@ -94,7 +106,18 @@ export async function familyDocuments(
       validUntil: exams?.current?.validUntil ?? null,
       print: null,
       notConfigured: false,
+      canSend: false,
     };
+  });
+
+  // POOLSE-179 slice 2: something sent and waiting reads as such, and is not
+  // sent twice. The office's own status wins only once it has decided.
+  return rows.map((one): FamilyDocumentRow => {
+    const waiting =
+      one.kind === 'fpn_declaration'
+        ? pending.has('fpn_declaration') || pending.has('fpn_declaration_minor')
+        : pending.has(one.kind);
+    return { ...one, status: waiting ? 'sent' : one.status, canSend: maySend && !waiting };
   });
 }
 

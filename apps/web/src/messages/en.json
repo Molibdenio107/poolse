@@ -67,7 +67,28 @@
         "missing": "Missing",
         "ok": "Up to date",
         "okUntil": "Up to date (until {date})",
-        "expired": "Expired"
+        "expired": "Expired",
+        "sent": "Sent — waiting for the office"
+      },
+      "send": {
+        "open": "Send",
+        "openAgain": "Send a new one",
+        "file": "File for {kind}",
+        "examDate": "Exam date (as on the document)",
+        "submit": "Send to the office",
+        "hint": "A PDF or a photo (iPhone photos too), up to 10 MB. It waits for the office and only replaces what the club holds once accepted.",
+        "sent": "Sent. The office will review it.",
+        "failed": "It could not be sent. Try again.",
+        "refused": {
+          "fileType": "This file is not a PDF or a photo.",
+          "tooLarge": "The file is larger than 10 MB.",
+          "empty": "Choose a file.",
+          "examDate": "Give the exam date, which cannot be in the future.",
+          "alreadySent": "One is already waiting for the office.",
+          "guardianSends": "A guardian sends this document.",
+          "noSeason": "The club has not opened the season yet.",
+          "tooMany": "Too many sendings in the last hour. Try later."
+        }
       },
       "kind": {
         "fpn_declaration": "FPN declaration",
@@ -6932,6 +6953,38 @@
     "openExisting": "Open the record"
   },
   "documents": {
+    "submissions": {
+      "title": "{count, plural, one {Sent by the family: # document to review} other {Sent by the family: # documents to review}}",
+      "kind": {
+        "fpn_declaration": "FPN declaration",
+        "fpn_declaration_minor": "FPN declaration (minors)",
+        "socio_form": "Membership form",
+        "id_document": "ID document",
+        "medical_exam": "Medical exam"
+      },
+      "sentBy": "Sent by {name} on {when}",
+      "someone": "a family member",
+      "examinedOn": "exam on {date}",
+      "result": "Result",
+      "chooseResult": "Choose…",
+      "results": {
+        "fit": "Fit",
+        "fit_with_conditions": "Fit with conditions",
+        "unfit": "Unfit"
+      },
+      "validUntil": "Valid until (optional)",
+      "accept": "Accept",
+      "reject": "Reject",
+      "acceptTitle": "Accept “{kind}”?",
+      "acceptMessage": "It is filed on the student's record, as a document handed in at the office would be.",
+      "rejectTitle": "Reject “{kind}”?",
+      "rejectMessage": "Nothing is filed and this sending cannot be recovered. The family can send it again.",
+      "accepted": "Accepted and filed.",
+      "rejected": "Rejected. Nothing was filed.",
+      "needsResult": "Choose the exam's result.",
+      "gone": "This sending has already been decided.",
+      "failed": "The decision could not be saved."
+    },
     "sectionsLabel": "Document sections",
     "section": {
       "identificacao": "Identification",

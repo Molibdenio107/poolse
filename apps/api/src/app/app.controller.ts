@@ -54,6 +54,11 @@ import {
   type AppRequestOptions,
 } from '../leads/app-requests.repository.js';
 import { LEAD_CONSENT_VERSION } from '../leads/public-leads.controller.js';
+import { Throttle } from '@nestjs/throttler';
+import { FAMILY_UPLOAD } from '../common/throttle.js';
+import { judgeUpload } from '../files/upload-check.js';
+import { heicToJpeg, looksLikeHeic } from '../files/heic.js';
+import { SENDABLE, sendDocument, type SendableKind } from '../students/family-submissions.repository.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -203,11 +208,77 @@ export class AppController {
         chosen.map(async (one) => ({
           id: one.id,
           name: one.name,
-          documents: (await familyDocuments(organizationId, one.id)) ?? [],
+          documents: (await familyDocuments(organizationId, one.id, membershipId)) ?? [],
         })),
       ),
       family: mine.map((one) => ({ id: one.id, name: one.name })),
     };
+  }
+
+  /**
+   * A family sends a document — POOLSE-179 slice 2. The raw file in the body,
+   * as `POST /files` takes it; `kind` is one of `SENDABLE`, and an exam carries
+   * the date read off it. A live encarregado, or the student from 18; anybody
+   * else, and another family's child, is a 404. Nothing the office holds
+   * changes until it accepts (`family_submission`).
+   *
+   * An iPhone's HEIC is turned into a JPEG first, then judged like any upload:
+   * by its bytes, 10 MB at most. Ten sendings an hour per person.
+   */
+  @Throttle(FAMILY_UPLOAD)
+  @Post('documents/:kind')
+  async sendDocument(
+    @Param('kind') kind: string,
+    @Query('child') child: string | undefined,
+    @Query('name') name: string | undefined,
+    @Query('examinedOn') examinedOn: string | undefined,
+    @Body() body: unknown,
+  ): Promise<{ sent: true }> {
+    requireRole('guardian', 'student');
+    if (!(SENDABLE as readonly string[]).includes(kind)) throw new NotFoundException('No such document');
+    if (child === undefined || !UUID.test(child)) throw new NotFoundException('No such student');
+    let date: string | null = null;
+    if (kind === 'medical_exam') {
+      if (examinedOn === undefined || !/^\d{4}-\d{2}-\d{2}$/.test(examinedOn) || examinedOn > clubToday()) {
+        throw new BadRequestException({ code: 'exam_date', message: 'The exam date is needed, and not in the future' });
+      }
+      date = examinedOn;
+    }
+    const { organizationId, membershipId } = currentTenant();
+    // Another family's child is a 404 before anything about it is read.
+    const mine = await familyStudents(organizationId, membershipId);
+    if (!mine.some((one) => one.id === child)) throw new NotFoundException('No such student');
+
+    // The kind must be one this child's sports ask for (BA 2).
+    const documents = await familyDocuments(organizationId, child, membershipId);
+    const row = documents?.find((one) => one.kind === kind);
+    if (row === undefined) throw new NotFoundException('No such document');
+    if (!row.canSend) {
+      if (row.status === 'sent') throw new ConflictException({ code: 'already_sent', message: 'One is already waiting for the office' });
+      // A minor's own login reads its papers and never sends them (BA 1, QA 6).
+      throw new ForbiddenException({ code: 'minor_reads_only', message: 'A guardian sends this' });
+    }
+
+    let raw = body;
+    let fileName = name;
+    if (Buffer.isBuffer(body) && looksLikeHeic(body)) {
+      const jpeg = await heicToJpeg(body);
+      if (jpeg === 'too_large') throw new BadRequestException({ code: 'file_too_large', message: 'This photo is too large' });
+      if (jpeg === 'unreadable') throw new BadRequestException({ code: 'file_type', message: 'This photo could not be read' });
+      raw = jpeg;
+      fileName = (name ?? 'foto').replace(/\.(heic|heif)$/i, '') + '.jpg';
+    }
+    const { bytes, contentType, originalName } = judgeUpload(
+      kind === 'id_document' ? 'student_id_document' : kind === 'medical_exam' ? 'medical_certificate' : 'student_document',
+      raw,
+      fileName,
+    );
+
+    const outcome = await sendDocument(organizationId, membershipId, child, kind as SendableKind, date, bytes, contentType, originalName);
+    if (outcome === 'not_found') throw new NotFoundException('No such student');
+    if (outcome === 'pending') throw new ConflictException({ code: 'already_sent', message: 'One is already waiting for the office' });
+    if (outcome === 'no_season') throw new ConflictException({ code: 'no_season', message: 'The club has no published season' });
+    return { sent: true };
   }
 
   /**

@@ -32,6 +32,73 @@ The office already has all of it (POOLSE-132/133/134): the ID document encrypted
 3. **`medical_exam.result`:** a family's upload has no result, so the column has to allow that for the office to fill in.
 4. **Rate limit, a family's upload route, *enviado pela família* on the office's tab, and the security review.**
 
+### Slice 2, part 1 — the ID photo is sealed (built 05-11-2026)
+
+- **Migration `1794653000000_student-id-document-sealed`.** A new purpose, `student_id_document`, is in `SEALED_PURPOSES` and in the `stored_file_sealed` CHECK. The FPN forms and boletim stay plain `student_document`. A trigger refuses an `id_document` on anything but a sealed file. A replaced ID photo is shredded at once (it used to be kept), and retention's anonymisation shreds them all. `test/student-id-document.sql` has 4 assertions. On a fresh database all 207 earlier migrations, this one, its down and up again, and the whole `db:test` suite pass.
+- **API:** the office uploads with `purpose=student_id_document`. `fileCopy` requires that purpose for `id_document` and refuses it for every other kind. Each read writes `student.id_document_read` (photo).
+- **Existing plaintext ID photos** stay until `apps/api/src/files/reseal-student-id-documents.ts` runs in each environment. It is a dry run unless `--apply`. It seals, checks the round trip, re-points, audits `file.resealed`, then **deletes the plaintext object**.
+
+#### Security review (05-11-2026, diff scope)
+
+**[S2] The ID photos filed before tonight are still plaintext in the bucket.** *Confidence: certain.* Anyone holding the uploads bucket's token can read a child's identity card. Fix: run the re-seal, a dry run first and then `--apply`, in staging and then production. Cost: minutes. Listed in `docs/security.md` until done.
+
+**[S4] One file can be filed on two students.** `fileCopy` does not check whether the file id is already filed. Replacing or anonymising one student would then shred the other student's current photo. Only the office can do this, and only by replaying a file id. Fix: `NOT EXISTS (SELECT 1 FROM student_document WHERE file_id = $1)` in `fileCopy`. Cost: minutes.
+
+**[S4] An ID photo uploaded but never filed is never shredded.** If `POST /files` succeeds and the `copies` call fails, a sealed file with a live key stays readable by the office for ever, and retention never reaches it (no student is linked). Fix: one route that uploads and files together (the staff photo's `write: null` shape), or a nightly sweep. Cost: an evening.
+
+**[S4] Crypto-shredding vs database backups.** A shredded key survives in the 30-day pg backups, so a restore within 30 days revives it. This applies to every sealed purpose, not only this one. Fix: one paragraph in `security.md`, *Two limits worth knowing*. Cost: minutes.
+
+**What held:**
+- Tenant isolation: 608 existing assertions and 4 new ones pass.
+- The CHECK refuses a sealed purpose without a key, and the trigger refuses a plain ID photo.
+- The definer helper sets `search_path`, re-checks the club, only destroys, and another club cannot call it on ours (test 4).
+- Reads are office-only and audited, and the uploader rule does not apply to sealed purposes.
+- The envelope binds club and file id.
+- The re-seal deletes only after commit and after a verified round trip.
+- `sql:check` is green, and there are no secrets in the diff.
+
+**Not reviewed:** the family upload (not built yet), HEIC, the AI reader's call on an ID photo (unchanged, flag-gated).
+
+### Slice 2, part 2 — a family sends (built 05-11-2026)
+
+Rui decided on 05-11-2026: convert HEIC, give the exam no result until the office reads it, and "don't break anything".
+
+- **`family_submission`** (migration `1794653100000_family-submission`). What a family sends waits here and **changes nothing on file** until the office accepts it. A pending exam therefore never becomes the child's standing, and a wrong upload never replaces or shreds the office's copy. That makes `medical_exam.result` nullable unnecessary, so it stays NOT NULL: the office types the result when it accepts.
+  - One pending per child, kind and season.
+  - The file's purpose must match the kind: an ID is a sealed `student_id_document`, an exam a sealed `medical_certificate`, a form a plain `student_document`.
+  - A decision is final.
+  - A rejected sealed file is shredded. Anonymisation shreds everything sent; erasing health data shreds the exams.
+  - `test/family-submission.sql` has 5 assertions.
+- **`POST /app/documents/:kind?child=`** takes the raw file.
+  - Who may send: a live encarregado, or the student from 18. A minor's own login gets **403**, another family's child **404**.
+  - The kind must be one the child's sports ask for.
+  - Throttled at **10 an hour** per person (`FAMILY_UPLOAD`).
+  - **HEIC → JPEG** (`files/heic.ts`, `heic-decode` + `jpeg-js`, pinned). The size is read before decoding, with a 50 MP cap; EXIF, GPS included, is not carried over. The result is then judged like any upload: sniffed, 10 MB at most.
+  - Audited `student.document_sent`.
+- **The office:** `GET /students/:id/documents/submissions`, then `…/:sid/accept` (an exam needs `result`) or `…/:sid/reject`. Accepting files the copy through `fileCopyIn` / `insertExamIn` in one transaction. Both are audited. The panel *Enviado pela família* sits above the Documentos sections.
+- **The family:** *Documentos* shows *Enviado — a aguardar a secretaria*, and *Enviar* where `canSend`. The ID photo is never shown back.
+- **Also fixed:** the review's [S4] *one file on two students*. `fileCopyIn` now refuses a file that is already filed.
+- **Tests:** `family-submissions.integration.test.ts` has 5 tests (QA 4–7 and the accept/reject paths). On a fresh database: 613 SQL assertions, and **all 1,129 API integration tests** with the platform role and a local S3 stand-in. API and web typecheck, 257 API unit tests and 104 rules tests pass. The web unit tests pass 311 of 312; the one failure is `date-format.test.ts`, where this machine's Node ICU puts spaces around a date range's dash, so check it on Windows.
+
+#### Security review of the upload path (05-11-2026)
+
+**[S4, fixed 05-11-2026: a reject archives the file, so `openFile` serves it to nobody, the sender included; the bucket object stays until a sweep exists] Rejected plain forms stay in the bucket.** A rejected FPN declaration or boletim is a plain file, so it is not shredded and never deleted, and it carries a signature. Fix: archive on reject, and a sweep that deletes objects of archived, unreferenced `student_document` files. Cost: an evening.
+
+**[S4, fixed 05-11-2026: `files/jpeg-metadata.ts`, for every JPEG upload in `judgeUpload`. It is lossless: APP1/APP13 are cut out and a minimal orientation tag is written back. Tested on a real EXIF file: GPS and make gone, orientation 6 kept] JPEGs keep their EXIF.** HEIC is re-encoded, but a JPEG from Android or an iPhone set to *Most Compatible* keeps its GPS. The file is sealed for an ID photo or an exam, and office-only for the rest. Fix: strip EXIF from JPEG on upload with `jpeg-js` (decode, then encode). Cost: an hour.
+
+**[S4, fixed 05-11-2026: one HEIC decode at a time, process-wide] Decoding memory.** A 50 MP HEIC decodes to about 200 MB of RGBA. The throttle bounds it per person, not across people. Fix if Railway's memory is tight: a cap of 24 MP, or one decode at a time. Cost: minutes.
+
+**What held:**
+- A stranger's child is a 404 before anything is read, and that is tested.
+- A minor's own login gets a 403, and that is tested.
+- A renamed executable is refused, and that is tested.
+- The bucket holds ciphertext for an ID photo, and that is tested.
+- A sending files nothing, and that is tested.
+- A decision is final.
+- Only the office decides (`requireRole('owner','admin')`).
+- The definer helper re-checks the club, and another club cannot shred ours (SQL test 5).
+- `security:check` is green, and the new packages have no advisories.
+
 ### BA — rules
 
 1. **Where**: a *Documentos* row on *Aulas* (POOLSE-175) per child, opening `/app/familia/documentos?child=` — a screen deeper in. Guardian always; the student's own login from 18 (the adult path, `family_may_answer()`'s adult branch) — a minor's login reads, never uploads.

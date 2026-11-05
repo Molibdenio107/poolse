@@ -67,7 +67,28 @@
         "missing": "Em falta",
         "ok": "Em dia",
         "okUntil": "Em dia (até {date})",
-        "expired": "Expirado"
+        "expired": "Expirado",
+        "sent": "Enviado — a aguardar a secretaria"
+      },
+      "send": {
+        "open": "Enviar",
+        "openAgain": "Enviar uma nova",
+        "file": "Ficheiro para {kind}",
+        "examDate": "Data do exame (como está no documento)",
+        "submit": "Enviar à secretaria",
+        "hint": "PDF ou fotografia (também do iPhone), até 10 MB. Fica a aguardar a secretaria e só substitui o que o clube tem depois de aceite.",
+        "sent": "Enviado. A secretaria vai rever.",
+        "failed": "Não foi possível enviar. Tente de novo.",
+        "refused": {
+          "fileType": "Este ficheiro não é um PDF nem uma fotografia.",
+          "tooLarge": "O ficheiro tem mais de 10 MB.",
+          "empty": "Escolha um ficheiro.",
+          "examDate": "Indique a data do exame, que não pode ser no futuro.",
+          "alreadySent": "Já há um a aguardar a secretaria.",
+          "guardianSends": "Este documento é enviado pelo encarregado de educação.",
+          "noSeason": "O clube ainda não abriu a época.",
+          "tooMany": "Demasiados envios na última hora. Tente mais tarde."
+        }
       },
       "kind": {
         "fpn_declaration": "Declaração FPN",
@@ -6932,6 +6953,38 @@
     "openExisting": "Abrir a ficha"
   },
   "documents": {
+    "submissions": {
+      "title": "{count, plural, one {Enviado pela família: # documento por rever} other {Enviado pela família: # documentos por rever}}",
+      "kind": {
+        "fpn_declaration": "Declaração FPN",
+        "fpn_declaration_minor": "Declaração FPN (menores)",
+        "socio_form": "Boletim de sócio",
+        "id_document": "Documento de identificação",
+        "medical_exam": "Exame médico"
+      },
+      "sentBy": "Enviado por {name} em {when}",
+      "someone": "um membro da família",
+      "examinedOn": "exame de {date}",
+      "result": "Resultado",
+      "chooseResult": "Escolher…",
+      "results": {
+        "fit": "Apto",
+        "fit_with_conditions": "Apto condicionalmente",
+        "unfit": "Não apto"
+      },
+      "validUntil": "Válido até (opcional)",
+      "accept": "Aceitar",
+      "reject": "Rejeitar",
+      "acceptTitle": "Aceitar «{kind}»?",
+      "acceptMessage": "Fica arquivado no registo do aluno, tal como um documento entregue na secretaria.",
+      "rejectTitle": "Rejeitar «{kind}»?",
+      "rejectMessage": "Nada fica arquivado e este envio não pode ser recuperado. A família pode voltar a enviar.",
+      "accepted": "Aceite e arquivado.",
+      "rejected": "Rejeitado. Nada foi arquivado.",
+      "needsResult": "Escolha o resultado do exame.",
+      "gone": "Este envio já foi decidido.",
+      "failed": "Não foi possível guardar a decisão."
+    },
     "sectionsLabel": "Secções dos documentos",
     "section": {
       "identificacao": "Identificação",

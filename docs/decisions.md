@@ -1343,3 +1343,6 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-05** — **The family app's soft look ships without stickers, stamps or a new icon font** (POOLSE-173, Rui's "keep the geometric forms for the menus"). No app screen shows skills or attendance, and a family has no read of skills, so `Selo` and `Stamp` move to POOLSE-185, after POOLSE-175 (Rui); `lucide-react` stays.
 
 - **2026-11-05** — **The family's calendar links to a lesson only as far as the lesson's page answers** (POOLSE-175): two weeks ahead and back inside the feedback window, so a row further out is plain. *Início* is the heroes alone now, and the rows are *Aulas*.
+
+- **2026-11-05** — **What a family sends changes nothing until the office accepts it** (POOLSE-179 slice 2, Rui: convert HEIC, leave the exam's result to the office, "don't break anything"). It waits in `family_submission` rather than on `student_document` or `medical_exam`, so `medical_exam.result` stays NOT NULL: a pending exam never becomes the child's standing, and a wrong upload never replaces or shreds the office's copy.
+

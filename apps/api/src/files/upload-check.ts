@@ -1,6 +1,7 @@
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import type { FilePurpose } from './files.repository.js';
 import { MAX_FILE_BYTES, sniffType, storageConfigured, WORD } from './storage.js';
+import { stripJpegMetadata } from './jpeg-metadata.js';
 
 // A boletim template is stored as an image: a PDF is drawn to one in the browser (POOLSE-142).
 const IMAGE_ONLY = new Set<FilePurpose>(['facility_photo', 'pool_photo', 'logo', 'student_photo', 'staff_photo', 'boletim_template']);
@@ -37,5 +38,8 @@ export function judgeUpload(
     throw new BadRequestException({ code: 'file_type', message: 'This needs an image' });
   }
   const originalName = (name ?? '').trim().slice(0, 200) || `file.${contentType.split('/')[1]}`;
-  return { bytes: body, contentType, originalName };
+  // A phone's EXIF — where the photo was taken, above all — never reaches the
+  // bucket (POOLSE-179 review). Lossless; the orientation is kept.
+  const bytes = contentType === 'image/jpeg' ? stripJpegMetadata(body) : body;
+  return { bytes, contentType, originalName };
 }

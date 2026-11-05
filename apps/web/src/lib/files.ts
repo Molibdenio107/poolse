@@ -44,6 +44,7 @@ export type FilePurpose =
   | 'staff_photo'
   | 'own_photo'
   | 'student_document'
+  | 'student_id_document'
   | 'boletim_template';
 
 export function purposeOf(target: FileTarget): FilePurpose {

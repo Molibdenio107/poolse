@@ -31,6 +31,7 @@ export type FilePurpose =
   | 'student_document'
   | 'boletim_template'
   | 'staff_id_document'
+  | 'student_id_document'
   | 'staff_contract';
 
 /**
@@ -47,6 +48,9 @@ export const SEALED_PURPOSES: ReadonlySet<FilePurpose> = new Set<FilePurpose>([
   // POOLSE-149: a staff member's ID document photograph. Not health data, but
   // a copy of an identity card is the document fraud starts from.
   'staff_id_document',
+  // POOLSE-179: a student's ID document photograph — a child's Cartão de
+  // Cidadão. Its own purpose so the FPN forms and boletim stay plain.
+  'student_id_document',
 ]);
 
 const OFFICE: readonly MemberRole[] = ['owner', 'admin'];
@@ -96,6 +100,11 @@ export const RULES: Record<FilePurpose, { write: readonly MemberRole[] | null; r
   // POST /files — the staff record's own route stores and attaches it — and
   // read by the office and, a question about a row, the person (see openFile).
   staff_id_document: { write: null, read: OFFICE },
+  // POOLSE-179: a student's ID document photograph, sealed. Uploaded by the
+  // office through POST /files and filed by the record's own route, which
+  // refuses it under any other kind (and the database refuses a plain file
+  // as an ID photo). Read by the office only; every read audited.
+  student_id_document: { write: OFFICE, read: OFFICE },
   // POOLSE-149: a staff member's contract, PDF or Word. Never through POST
   // /files — the record's own route files it as a version — and read as pay is:
   // owner and admin, an Admin never the Owner's, and the person (see openFile).
@@ -203,6 +212,7 @@ export async function openFile(
       photo_consented: boolean;
       own_child_photo: boolean;
       id_document_holder: string | null;
+      id_document_student: string | null;
       contract_holder: string | null;
       contract_holder_is_owner: boolean;
     }>(
@@ -237,6 +247,10 @@ export async function openFile(
                 WHERE m.organization_id = f.organization_id
                   AND (m.id_document_front_file_id = f.id OR m.id_document_back_file_id = f.id)
                 LIMIT 1) AS id_document_holder,
+              -- Whose ID document photograph this is, for the audit (POOLSE-179).
+              (SELECT d.student_id FROM student_document d
+                WHERE d.organization_id = f.organization_id AND d.file_id = f.id
+                LIMIT 1) AS id_document_student,
               -- Whose contract this file is, and whether that is the Owner (POOLSE-149).
               cv.membership_id AS contract_holder,
               EXISTS (SELECT 1 FROM membership_role r
@@ -306,6 +320,14 @@ export async function openFile(
               entityType: 'membership',
               entityId: row.id_document_holder ?? fileId,
               data: { fileId },
+            }
+          : row.purpose === 'student_id_document'
+          ? {
+              // As the number is read (POOLSE-132): who opened whose.
+              action: 'student.id_document_read',
+              entityType: row.id_document_student === null ? 'stored_file' : 'student',
+              entityId: row.id_document_student ?? fileId,
+              data: { fileId, photo: true },
             }
           : {
               action: 'file.read',

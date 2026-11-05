@@ -5718,10 +5718,13 @@ export interface AppChild {
 /** One paper on *Documentos* — POOLSE-179. */
 export interface AppDocumentRow {
   kind: 'fpn_declaration' | 'socio_form' | 'id_document' | 'medical_exam';
-  status: 'missing' | 'ok' | 'expired';
+  /** `sent`: the family sent one and the office has not decided yet (POOLSE-179 slice 2). */
+  status: 'missing' | 'ok' | 'expired' | 'sent';
   validUntil: string | null;
   print: { path: 'boletim' | 'fpn'; seasonId: string | null; minor: boolean } | null;
   notConfigured: boolean;
+  /** This reader may send this kind now: a live encarregado or an adult student, nothing waiting. */
+  canSend: boolean;
 }
 
 export interface AppChildDocuments {

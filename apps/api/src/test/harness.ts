@@ -230,6 +230,8 @@ const TENANT_TABLES = [
   // POOLSE-133: a student's exame médico; child of student and stored_file.
   'medical_exam',
   // POOLSE-132: signed forms on a student; child of student, season and stored_file.
+  // POOLSE-179: names a student, a season, a file and two memberships.
+  'family_submission',
   'student_document',
   'student_medical_leave',
   'consent',

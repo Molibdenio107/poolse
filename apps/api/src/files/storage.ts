@@ -1,4 +1,5 @@
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -59,6 +60,15 @@ export async function putObject(key: string, body: Buffer, contentType: string):
 export async function getObject(key: string): Promise<Readable> {
   const result = await s3().send(new GetObjectCommand({ Bucket: bucket(), Key: key }));
   return result.Body as Readable;
+}
+
+/**
+ * Removes an object for good. Only the POOLSE-179 re-seal calls it, to drop a
+ * plaintext copy once its sealed replacement is filed: the app itself never
+ * deletes — a file let go is archived, or crypto-shredded.
+ */
+export async function deleteObject(key: string): Promise<void> {
+  await s3().send(new DeleteObjectCommand({ Bucket: bucket(), Key: key }));
 }
 
 /** The whole object in memory — for a sealed file, which is opened before it is served (10 MB at most). */

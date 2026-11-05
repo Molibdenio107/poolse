@@ -278,6 +278,10 @@ existing student only has blanks filled).
 `app_user.last_seen_at`, stamped by `/me` (`touch_app_user_seen`, at most every 15 minutes, never failing
 the read). *Acesso à app* reads *Usa a app · último acesso há 3 dias*, or *Entrou a …, sem acessos depois*.
 
+## What a family sent — POOLSE-179
+
+*Enviado pela família* sits above the sections of the record's *Documentos* tab (`GET /students/:id/documents/submissions`, owner and admin). *Aceitar* files the copy through the office's own path, in one transaction, and an exam needs the result the office reads off it. *Rejeitar* files nothing: a sealed file is shredded, a plain one archived, and the family can send again. Both ask first, and a decision is final. Until then nothing on the record changes, so a pending exam is never the child's standing.
+
 ## Documentos — POOLSE-132
 
 The tab formerly *Documento de identificação*. Three sections: **Identificação** (the ID upload, and the ID
