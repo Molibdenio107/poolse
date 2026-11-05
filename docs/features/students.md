@@ -708,3 +708,13 @@ every list filters by it.
   in `import.ts`, `enrolmentsRefused` on the result).
 - *Convidar membros* sits on the header's right; *Convidar aluno* stays above the list. The page is `width="wide"`,
   the second wide page after the calendar.
+
+## A linked adult's details — POOLSE-177
+
+An adult-path student with a login reads their name, email, birth date and phone from their own account, on the record, the list, search and every document drawn from them. A guardian's phone reads through to the child's *Contactos* the same way (`person_phone`), and so does an emergency contact's. A minor with a login, and a student with none, are the club's record. A record with no birth date reads through too, when there is no guardian and the login's own date says adult; consent and age rules still wait for the club's date.
+
+**The office** (owner, admin): a linked adult's name and email are read-only, with no label beside them (Rui, 05-11-2026), and a change is a 409 `field_owned_by_app_user`. Birth date and phone may be corrected: they land on the person's account, which is one row in every club they belong to, and the birth date also lands on the club's record, which the rules read. Audited on the student, named and never valued.
+
+**The app:** *O meu perfil* says whose it is, *Encarregado de educação de …* or *A sua conta*. Editing it never changes a child's record.
+
+Reading through costs the Alunos list its sort index, about 14 ms on 400 students. `docs/data-model.md`, *A student read through their login*.

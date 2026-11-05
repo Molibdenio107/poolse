@@ -253,15 +253,18 @@ const GROUP_COLUMNS = `
                                  -- The precedence is resolved in SQL so a roster
                                  -- prints the effective answer without knowing it.
                                  'feeCategoryId', e.fee_category_id,
-                                 'feeCategoryName', (
-                                   SELECT fc.name FROM fee_category fc
-                                    WHERE fc.id = enrolment_fee_category(e.organization_id, e.id)
-                                 ))
+                                 'feeCategoryName', fc.name)
                ORDER BY e.status, e.waiting_position NULLS FIRST, ${nameOrder('s')}
              ), '[]'::json)
       FROM enrollment e
-      JOIN student s
+      JOIN student_person s
         ON s.id = e.student_id AND s.organization_id = e.organization_id
+      -- The view holds the precedence; joined rather than asked once per row
+      -- through enrolment_fee_category(), which was most of this list's time.
+      LEFT JOIN enrolment_fee_category_all applies
+        ON applies.enrollment_id = e.id AND applies.organization_id = e.organization_id
+      LEFT JOIN fee_category fc
+        ON fc.id = applies.category_id AND fc.organization_id = e.organization_id
      WHERE e.organization_id = cg.organization_id
        AND e.class_group_id = cg.id
        AND e.status <> 'ended'
@@ -1194,7 +1197,7 @@ export async function listEnrollmentClashes(organizationId: string): Promise<Enr
                 'classGroupId', g.id, 'turma', g.name,
                 'weekday', cs.weekday, 'startTime', to_char(cs.start_time, 'HH24:MI'))) AS slots
          FROM enrollment e
-         JOIN student s
+         JOIN student_person s
            ON s.id = e.student_id AND s.organization_id = e.organization_id AND s.archived_at IS NULL
          JOIN class_group g
            ON g.id = e.class_group_id AND g.organization_id = e.organization_id AND g.archived_at IS NULL

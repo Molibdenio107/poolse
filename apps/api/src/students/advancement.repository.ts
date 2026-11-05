@@ -140,7 +140,7 @@ export async function listProposals(
                     LEFT JOIN app_user iu ON iu.id = im.app_user_id
                 ), '[]'::jsonb) AS candidates
            FROM transfer_proposal p
-           JOIN student s        ON s.id = p.student_id AND s.organization_id = p.organization_id
+           JOIN student_person s        ON s.id = p.student_id AND s.organization_id = p.organization_id
            JOIN student_level fl ON fl.id = p.from_level_id AND fl.organization_id = p.organization_id
            JOIN student_level tl ON tl.id = p.to_level_id AND tl.organization_id = p.organization_id
            LEFT JOIN season se   ON se.id = p.season_id AND se.organization_id = p.organization_id

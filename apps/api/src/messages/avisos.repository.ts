@@ -213,7 +213,7 @@ export async function avisosForReader(organizationId: string, membershipId: stri
     const { rows } = await tx.query<{ id: string; subject: string; body: string; shown_until: string; names: string[] }>(
       `WITH mine AS (
               SELECT s.id, s.first_name
-                FROM student s
+                FROM student_person s
                WHERE s.archived_at IS NULL
                  AND (s.membership_id = $1
                       OR EXISTS (SELECT 1 FROM guardian_link g

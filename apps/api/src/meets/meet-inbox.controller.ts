@@ -3,6 +3,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -14,7 +15,7 @@ import {
 import { currentTenant } from '../tenant/tenant.context.js';
 import { canArchive, requireRole } from '../tenant/roles.js';
 import { readPageQuery } from '../common/pagination.js';
-import { PoolseModule } from '../tenant/modules.js';
+import { moduleIsOn, PoolseModule } from '../tenant/modules.js';
 import { storageConfigured } from '../files/storage.js';
 import {
   discardInbox,
@@ -45,6 +46,19 @@ interface InboxResponse extends InboxList {
   receiving: boolean;
 }
 
+/**
+ * The menu's badge, shared with `GET /shell` — POOLSE-172. The module is asked
+ * here too because the shell is core: `ModuleGuard` speaks only for this route.
+ */
+export async function pendingInboxForReader(): Promise<number> {
+  requireRole(...TEACHING);
+  if (!moduleIsOn('competition')) {
+    throw new ForbiddenException({ code: 'module_disabled', message: 'This module is switched off' });
+  }
+  requireCompetition();
+  return pendingInboxCount(currentTenant().organizationId);
+}
+
 @PoolseModule('competition')
 @Controller('meet-inbox')
 export class MeetInboxController {
@@ -64,9 +78,7 @@ export class MeetInboxController {
   /** The menu's badge — the layout asks on every page, so one indexed count. */
   @Get('count')
   async count(): Promise<{ pending: number }> {
-    requireRole(...TEACHING);
-    requireCompetition();
-    return { pending: await pendingInboxCount(currentTenant().organizationId) };
+    return { pending: await pendingInboxForReader() };
   }
 
   /**

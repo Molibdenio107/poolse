@@ -130,6 +130,10 @@ no query text, no tenant. A header, never a row: per-tenant counts stay `Request
 `PERF_LOG_FILE`, set only on a machine being measured, also appends one JSON line per request (ids masked) for
 the perf spec; never set it in production. How it is used: [`docs/perf/README.md`](../perf/README.md).
 
+## The shell's reads — POOLSE-172 (5 November 2026)
+
+The `(app)` layout makes two calls per page change, in one round: `/me`, and `GET /shell` for the logo, the circles, the meet inbox count, the subscription alert and the support status. `/shell` is an ordinary tenant route, so a suspended club's 403 reads as nothing to draw. Each part keeps its gate in the function its old route also calls, and is `null` when it is not this reader's or it failed; a failure is logged and costs that part only. On the web it is `readShell` in `lib/shell.ts`, once per request. Memberships are never cached across requests.
+
 ## Sentry
 
 Optional and off by default. Set `SENTRY_DSN` (API and Next server) and

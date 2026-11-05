@@ -87,6 +87,7 @@ import { FeedbackController } from '../feedback/feedback.controller.js';
 import { NoticesController } from '../notices/notices.controller.js';
 import { PushController } from '../push/push.controller.js';
 import { AttentionController } from '../attention/attention.controller.js';
+import { ShellController } from '../shell/shell.controller.js';
 import { AppAvisosController, AvisosController } from '../messages/avisos.controller.js';
 import { StaffNotesController } from '../staff-notes/staff-notes.controller.js';
 
@@ -958,10 +959,11 @@ test('student documents and FPN settings refuse a guardian and a student (403)',
     await refused('POST students/:id/documents/copies', 403, () =>
       docs.file(fixture.aliceId, { kind: 'socio_form', fileId: NO_SUCH_ID }),
     );
-    await refused('GET students/:id/documents/fpn', 403, () => docs.print(fixture.aliceId, undefined, undefined));
+    // POOLSE-179: a filled form answers the child's own family, so a stranger gets a family's 404.
+    await refused('GET students/:id/documents/fpn', 404, () => docs.print(fixture.aliceId, undefined, undefined));
     await refused('GET students/:id/documents/id-document', 403, () => docs.idDocument(fixture.aliceId));
     await refused('PATCH fpn-settings', 403, () => new FpnSettingsController().save({ association: 'X' }));
-    await refused('GET students/:id/boletim', 403, () => new BoletimController().print(fixture.aliceId));
+    await refused('GET students/:id/boletim', 404, () => new BoletimController().print(fixture.aliceId));
     // POOLSE-142 — the club's own boletim template.
     const template = new DocumentTemplatesController();
     await refused('GET settings/document-templates/:kind', 403, () => template.read('socio_form'));
@@ -1268,6 +1270,7 @@ test("app mode: a family reads its own agenda and lessons, and nobody else's (PO
     assert.deepEqual((await new AppController().medicalLeave()).leaves, []);
     await refused('GET app/lessons/:id as a stranger', 404, () => new AppController().lesson(fixture.sessionId));
     await refused('GET app/lessons/not-a-uuid', 404, () => new AppController().lesson('not-a-uuid'));
+    await refused('GET app/fees for a stranger', 404, () => new AppController().fees(fixture.aliceId));
     // POOLSE-121: nobody to ask for but a new child, and never somebody else's.
     assert.deepEqual((await new AppController().enrolmentOptions()).people, []);
     await refused('POST app/enrolment-requests for a stranger', 404, () =>
@@ -1423,6 +1426,22 @@ test('GET attention answers a guardian and a student with an empty map', async (
     assert.deepEqual(
       await new AttentionController().read(),
       { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {} },
+      who.label,
+    );
+  });
+});
+
+test('GET shell gives a guardian and a student the logo and nothing that is not theirs — POOLSE-172', async () => {
+  await asEach(async (who) => {
+    assert.deepEqual(
+      await new ShellController().read(),
+      {
+        logoFileId: null,
+        attention: { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {} },
+        meetInboxPending: null,
+        subscriptionAlert: null,
+        supportStatus: null,
+      },
       who.label,
     );
   });

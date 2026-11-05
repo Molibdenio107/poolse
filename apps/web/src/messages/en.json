@@ -42,8 +42,63 @@
       "teaching": "My lessons",
       "maintenance": "Maintenance"
     },
+    "fees": {
+      "overdue": "Overdue",
+      "upcoming": "Next payments",
+      "paid": "Paid",
+      "nothing": "Nothing",
+      "until": "By {date}",
+      "penalty": "Late charge",
+      "sharedWith": "Joint invoice with {names}",
+      "comingSoon": "Paying in the app is coming soon. For now, pay by bank transfer or MB WAY.",
+      "kind": {
+        "mensalidade": "Monthly fee",
+        "inscricao": "Registration",
+        "seguro": "Insurance",
+        "quota": "Membership fee"
+      }
+    },
+    "documents": {
+      "title": "Documents",
+      "backTo": "Back to documents",
+      "print": "Fill in and print",
+      "notConfigured": "The club has not set up this document yet.",
+      "status": {
+        "missing": "Missing",
+        "ok": "Up to date",
+        "okUntil": "Up to date (until {date})",
+        "expired": "Expired"
+      },
+      "kind": {
+        "fpn_declaration": "FPN declaration",
+        "socio_form": "Membership form",
+        "id_document": "ID document",
+        "medical_exam": "Medical exam"
+      }
+    },
     "family": {
       "title": "Schedule",
+      "calendar": {
+        "label": "Lesson calendar",
+        "previous": "Previous month",
+        "next": "Next month",
+        "lesson": "Lesson",
+        "planned": "Planned",
+        "closedRange": "Closed from {from} to {to}",
+        "closedDay": "Closed on {date}",
+        "notYet": "No lessons booked yet — the office is still setting up the classes.",
+        "noneThisMonth": "No lessons this month.",
+        "attendance": {
+          "present": "Present",
+          "absent": "Absent",
+          "excused": "Excused absence"
+        }
+      },
+      "hero": {
+        "nothing": "No lessons booked",
+        "closedUntil": "Closed until {date}",
+        "count": "{enrolled, plural, one {# enrolled} other {# enrolled}}{notComing, plural, =0 {} one { · # said they are not coming} other { · # said they are not coming}}"
+      },
       "today": "Today",
       "tomorrow": "Tomorrow",
       "water": "Water at {celsius} °C · taken {ago}",
@@ -51,7 +106,6 @@
       "closed": "Closed",
       "cancelled": "Cancelled",
       "moved": "Moved for this week only",
-      "feesTitle": "Monthly fees",
       "owing": "Overdue: {amount}",
       "toPay": "To pay: {amount}",
       "toPayBy": "To pay: {amount}, by {date}",
@@ -59,7 +113,6 @@
       "nobody": "No student is linked to this account yet. Please speak to the club.",
       "childFilter": "Show the lessons of",
       "everyone": "Everyone",
-      "empty": "There are no lessons in the next two weeks.",
       "backToAgenda": "Back to the agenda",
       "backToLessons": "Back to the lessons",
       "alsoComing": "{count, plural, one {# of your children is in this lesson.} other {# of your children are in this lesson.}}",
@@ -72,11 +125,7 @@
       "certificateReplace": "Replace certificate",
       "certificateSent": "Certificate sent on {date}.",
       "certificateMissing": "No certificate yet.",
-      "certificatesFailed": "The medical leaves could not be loaded.",
-      "next": "Next: {when} · {name}",
-      "noNext": "No lessons booked",
-      "noFees": "There are no fees to show.",
-      "noPastLessons": "There are no past lessons or certificates to show yet."
+      "certificatesFailed": "The medical leaves could not be loaded."
     },
     "feedback": {
       "title": "How it went",
@@ -245,6 +294,11 @@
       "perfil": "Profile"
     },
     "profile": {
+      "edit": "Edit details",
+      "settings": "Settings",
+      "backTo": "Back to my profile",
+      "guardianOf": "Guardian of {names}",
+      "ownAccount": "Your account",
       "preferences": "Preferences",
       "homes": "My areas",
       "signOut": "Sign out"
@@ -2351,6 +2405,7 @@
     "archive": "Archive",
     "confirmArchive": "Archive {name}?",
     "nameRequired": "A first and last name are required.",
+    "ownedByLogin": "This student manages their name and email in the app.",
     "createFailed": "Could not add the student.",
     "saveFailed": "Could not save the changes.",
     "archiveFailed": "Could not archive.",
@@ -6142,6 +6197,8 @@
       "student": {
         "created": "Student created",
         "updated": "Record changed",
+        "identity_backfilled": "Details aligned with the student’s account",
+        "document_printed": "Form printed by the family",
         "filled": "Record completed by an import",
         "archived": "Student archived",
         "restored": "Student restored",

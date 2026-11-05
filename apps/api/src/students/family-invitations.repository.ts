@@ -103,7 +103,7 @@ interface InviteeRow {
 
 const INVITEES_SQL = `
   WITH s AS (
-    SELECT * FROM student WHERE id = $1 AND archived_at IS NULL
+    SELECT * FROM student_person WHERE id = $1 AND archived_at IS NULL
   ),
   people AS (
     SELECT 'guardian'::text AS kind, gl.guardian_membership_id AS membership_id,
@@ -185,7 +185,7 @@ export async function listInvitees(
   return withOrg(organizationId, async (tx) => {
     const student = await tx.query<{ name: string; organization_name: string }>(
       `SELECT ${displayName('s')} AS name, o.name AS organization_name
-         FROM student s JOIN organization o ON o.id = s.organization_id
+         FROM student_person s JOIN organization o ON o.id = s.organization_id
         WHERE s.id = $1 AND s.archived_at IS NULL`,
       [studentId],
     );
@@ -442,7 +442,7 @@ async function giveStudentAMembership(tx: Tx, input: CreateFamilyInvitation): Pr
   // `accept_invitation` then clears it, Clerk owning the name from there.
   const { rows } = await tx.query<{ id: string }>(
     `INSERT INTO membership (organization_id, status, first_name, last_name)
-     SELECT $1, 'active', s.first_name, s.last_name FROM student s WHERE s.id = $2
+     SELECT $1, 'active', s.first_name, s.last_name FROM student_person s WHERE s.id = $2
      RETURNING id`,
     [input.organizationId, input.studentId],
   );
@@ -520,7 +520,7 @@ export async function previewBulk(organizationId: string, filters: BulkFilters):
 
 export async function previewBulkIn(tx: Tx, filters: BulkFilters): Promise<BulkPreview> {
   const { rows: students } = await tx.query<{ id: string }>(
-    `SELECT s.id FROM student s
+    `SELECT s.id FROM student_person s
       WHERE s.archived_at IS NULL
         AND ($1::uuid IS NULL OR s.level_id = $1::uuid)
         AND ${searchPredicate(

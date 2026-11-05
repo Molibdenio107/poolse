@@ -64,6 +64,12 @@ setup('keep the E2E club open', async () => {
           AND (o.billing_mode <> 'comped' OR o.subscription_status <> 'active' OR o.read_only_at IS NOT NULL)`,
       [E2E_EMAIL],
     );
+    // A run that dies inside `theme.spec` leaves its choice stored, and that
+    // spec restores what it finds, so it would stay for every run after it.
+    await db.query(
+      `UPDATE app_user SET theme_preference = 'system', locale = 'pt-PT' WHERE lower(cached_email) = lower($1)`,
+      [E2E_EMAIL],
+    );
   } finally {
     await db.end();
   }

@@ -117,6 +117,12 @@ export function resetPriceCache(): void {
   priceCache = null;
 }
 
+/** The avatar's warning, shared with `GET /shell` — POOLSE-172. */
+export async function subscriptionAlertForReader(): Promise<{ alert: SubscriptionAlert | null; canOpen: boolean }> {
+  requireRole('owner', 'admin');
+  return { alert: await readSubscriptionAlert(currentTenant().organizationId), canOpen: hasRole('owner') };
+}
+
 @CoreRoute()
 @Controller('subscription')
 export class SubscriptionController {
@@ -160,9 +166,8 @@ export class SubscriptionController {
    * `subscriptionAlert`, one definition.
    */
   @Get('alert')
-  async alert(): Promise<{ alert: SubscriptionAlert | null; canOpen: boolean }> {
-    requireRole('owner', 'admin');
-    return { alert: await readSubscriptionAlert(currentTenant().organizationId), canOpen: hasRole('owner') };
+  alert(): Promise<{ alert: SubscriptionAlert | null; canOpen: boolean }> {
+    return subscriptionAlertForReader();
   }
 
   /**

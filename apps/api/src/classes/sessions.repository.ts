@@ -665,7 +665,7 @@ const SESSION_COLUMNS = `
   coalesce((
     SELECT array_agg(${shortName('s')} ORDER BY ${nameOrder('s')})
       FROM enrollment e
-      JOIN student s ON s.id = e.student_id AND s.organization_id = e.organization_id
+      JOIN student_person s ON s.id = e.student_id AND s.organization_id = e.organization_id
      WHERE e.organization_id = cs.organization_id
        AND e.class_group_id = cs.class_group_id
        AND e.status = 'active'
@@ -771,12 +771,21 @@ export async function listSessions(
   to: string,
 ): Promise<Session[]> {
   return withOrg(organizationId, async (tx) => {
+    /*
+     * The first line decides which days; it reads each site's own timezone, so
+     * no index can serve it. The second only narrows what it has to look at
+     * (POOLSE-172): two days either side is wider than any timezone can move a
+     * day, so it can never exclude a session the first line would keep.
+     */
     const { rows } = await tx.query<SessionRow>(
       `SELECT ${SESSION_COLUMNS} ${SESSION_JOINS}
         WHERE (cs.starts_at AT TIME ZONE coalesce(f.timezone, 'Europe/Lisbon'))::date
               BETWEEN $1::date AND $2::date
+          AND cs.organization_id = $3
+          AND cs.starts_at >= ($1::date - 2)::timestamptz
+          AND cs.starts_at <  ($2::date + 3)::timestamptz
         ORDER BY cs.starts_at`,
-      [from, to],
+      [from, to, organizationId],
     );
     return rows.map(toSession);
   });

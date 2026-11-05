@@ -229,3 +229,33 @@ only the office ends an aviso. The text is the club's, as plain text. `docs/feat
 The instructor's *Hoje* (`/app/aulas`) and the maintenance home (`/app/manutencao`) open on the staff board,
 the same one as the Painel's (`StaffBoardHome`, `GET /staff-notes`), with *Novo recado* in the page's header.
 Two notes to a row on a phone. A failure is one muted line, never the page. `docs/features/dashboard.md`.
+
+## Início is the next lesson — POOLSE-174
+
+One `NextLessonHero` per child: the first coming lesson that is not cancelled, its day in words, time, turma and tank, and the water with its age. The hero always opens the lesson; the chips above narrow the list. With nothing coming it says *Sem aulas marcadas*, or *Encerrado até dd-MM-yyyy* when a closure is why. The fee line sits beneath it, in the same sentence as *Pagamentos*, and links there.
+
+The lesson's page shows the instructor and the plan above *Vem à aula?*, and who is coming as a count: *12 inscritos · 2 avisaram que não vêm*. **No other child's name reaches a family**: `GET /app/lessons/:id` carries numbers only. The two counts are one definition with the instructor's home (`ENROLLED_IN_SESSION`, `NOT_COMING_TO_SESSION`). The rows stay below the heroes until POOLSE-175 moves them to *Aulas*.
+
+## Soft on a phone — POOLSE-173
+
+App mode under a finger and below `md` is rounder: cards 16 px, the hero and a bottom sheet 20 px, buttons and chips pill, fields 12 px. Tab-screen titles are 28 px, section labels sentence case, buttons bold, and a tap presses to `.97` unless reduced motion is on. The tokens sit on `body:has([data-surface='app'])`, because a dialog portals out of the surface. A laptop and the backoffice keep the sharp scale. The tab bar's shapes do not change; only its container rounds. Stickers for skills and stamps for attendance are POOLSE-185.
+
+## Aulas is a calendar — POOLSE-175
+
+`GET /app/agenda?from=&to=` answers a window of at most 31 days, inside six months ahead and three back (`agendaWindowAllowed` in `@poolse/rules`, which the stepper's edges read too); anything else is a 400, half a window included. With no window it is the two weeks it always was.
+
+The tab shows a month: a seven-day strip with a dot for a lesson and hatching for a closed day, the closures as bands with their reason, then the month's lessons by day. A past lesson says this child's own mark in words. Past the generated lessons the turma's weekly pattern shows as *Previsto* and opens nothing. *Últimas aulas* and the certificates follow. A row links to the lesson only where the lesson's page answers, which the API says per entry (`opens`). The rows left *Início*.
+
+## Perfil reads first — POOLSE-176
+
+*Perfil* shows the photo, the name, whose profile it is, birth date and phone, with nothing to type. *Editar dados* opens the same `ProfileForm` in a sheet, with the photo's upload; a save closes it. One row leads to *Definições*, a screen deeper in with language, theme, this phone's notifications and the club's email. The switcher, *Abrir o backoffice*, the devices and *Terminar sessão* stay on *Perfil*.
+
+The header's corner is the club's logo, read through `/files/<id>`, or its initials, and is not a link. App mode's layout reads `/shell` for it. `/dashboard/profile` is unchanged.
+
+## Pagamentos — POOLSE-178
+
+`GET /app/fees` (guardian or student; `?child=`, and another family's child is a 404) gives each child *Em dívida*, the next three payments and the last six settled, then where to pay. Every section is always there, *Nada* when empty. Amounts are the agreed ones from the fee read, and *Pagos* names periods with no euros, because a payment stores no amount. *Em dívida* is `balance`'s definition, each line's current occurrence. A line says *Fatura conjunta com …* when the reader's other child is on the same live document, and it can name nobody else. The last line says paying in the app is coming; it is a sentence, not a disabled button.
+
+## Documentos — POOLSE-179, slice 1
+
+One row on *Aulas* opens `/app/familia/documentos`: per child, a status for each paper, limited by the sports of their active turmas (`documentsForSports` in `@poolse/rules`; the FPN declaration is swimming's). `GET /app/documents` carries no number, file or name. *Preencher e imprimir* opens the office's own print page under `/app/familia/documentos/:id/…`, through `requireOfficeOrFamily`: a family's own child only, with the SNS number left off, and the print is audited as `student.document_printed`. Sending a paper from the phone is slice 2.

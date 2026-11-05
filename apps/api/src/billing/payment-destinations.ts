@@ -114,7 +114,7 @@ export async function payToFor(organizationId: string, studentId: string): Promi
     // Nothing invoiced yet: the student's name is what the office can match.
     const { rows } = await tx.query<{ name: string }>(
       `SELECT btrim(coalesce(first_name, '') || ' ' || coalesce(last_name, '')) AS name
-         FROM student WHERE id = $1`,
+         FROM student_person WHERE id = $1`,
       [studentId],
     );
     return { destinations, reference: rows[0]?.name ?? '' };

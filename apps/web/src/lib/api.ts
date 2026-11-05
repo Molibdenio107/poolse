@@ -1701,6 +1701,8 @@ export interface Student {
    * point away from her.
    */
   isAdultStudent: boolean;
+  /** POOLSE-177: a linked adult, whose name and email are their own account's. */
+  identityFromLogin: boolean;
   isGuardian: boolean;
   /** The sports of the active turmas — on lists only (multi-sport Slice 3). */
   sports?: PoolseSport[];
@@ -5624,6 +5626,8 @@ export interface AppAgendaEntry {
   standIn: boolean;
   status: 'scheduled' | 'cancelled' | 'completed';
   byClosure: boolean;
+  /** The last day of the closure that reached it — POOLSE-174. */
+  closedUntil: string | null;
   cancellationReason: string | null;
   moved: boolean;
   /** *Vou / Não vou* — POOLSE-90 slice 2: the last answer, or null. */
@@ -5711,6 +5715,70 @@ export interface AppChild {
   payTo: PayTo | null;
 }
 
+/** One paper on *Documentos* — POOLSE-179. */
+export interface AppDocumentRow {
+  kind: 'fpn_declaration' | 'socio_form' | 'id_document' | 'medical_exam';
+  status: 'missing' | 'ok' | 'expired';
+  validUntil: string | null;
+  print: { path: 'boletim' | 'fpn'; seasonId: string | null; minor: boolean } | null;
+  notConfigured: boolean;
+}
+
+export interface AppChildDocuments {
+  id: string;
+  name: string;
+  documents: AppDocumentRow[];
+}
+
+/** One fee occurrence on *Pagamentos* — POOLSE-178. */
+export interface AppFeeItem {
+  lineId: string;
+  kind: 'mensalidade' | 'inscricao' | 'seguro' | 'quota';
+  periodStart: string;
+  recurring: boolean;
+  seasonName: string | null;
+  className: string | null;
+}
+
+export interface AppFeeCharge extends AppFeeItem {
+  amountCents: number;
+  dueOn: string | null;
+  sharedWith: string[];
+}
+
+export interface AppChildFees {
+  id: string;
+  name: string;
+  overdue: AppFeeCharge[];
+  upcoming: AppFeeCharge[];
+  paid: AppFeeItem[];
+  penaltyCents: number;
+  payTo: PayTo | null;
+}
+
+/** One line on the family's calendar — POOLSE-175. */
+export interface AppCalendarEntry extends Omit<AppAgendaEntry, 'sessionId'> {
+  /** Null on a day of the weekly pattern, past the generated lessons. */
+  sessionId: string | null;
+  generated: boolean;
+  attendance: 'present' | 'absent' | 'excused' | null;
+  /** The lesson's page answers it. */
+  opens: boolean;
+}
+
+export interface AppCalendarClosure {
+  id: string;
+  reason: string;
+  startsOn: string;
+  endsOn: string;
+  scope: 'site' | 'tank';
+}
+
+export interface AppCalendar extends Omit<AppAgenda, 'entries'> {
+  entries: AppCalendarEntry[];
+  closures: AppCalendarClosure[];
+}
+
 export interface AppAgenda {
   children: AppChild[];
   entries: AppAgendaEntry[];
@@ -5724,6 +5792,8 @@ export interface AppLesson {
   water: AppWater[];
   /** Each of the reader's children in this lesson, and where their feedback stands. */
   feedback: FamilyFeedback[];
+  /** Who the lesson expects, as numbers and never names — POOLSE-174. Null enrolled for a parceria. */
+  count: { enrolled: number | null; notComing: number };
 }
 
 /**

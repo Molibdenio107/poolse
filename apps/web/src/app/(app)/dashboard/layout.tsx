@@ -4,15 +4,14 @@ import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
 import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import { AppSidebar, ClubBrandOrSections, MobileMenu, SportShell, type Badges } from '../app-sidebar';
-import type { SubscriptionAlertView } from '@/lib/subscription-alert';
 import { modulesOf } from '@/lib/modules';
 import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
 import { CommandPalette } from '@/components/command-palette';
 import { readAttention } from '@/lib/attention';
+import { readShell } from '@/lib/shell';
 import { SuspendedNotice } from './suspended-notice';
 import { ClubSupportStrip, SupportEndedNotice, SupportSessionBanner } from './support-strip';
-import { loadSupportStatus } from './support.actions';
 
 /**
  * The backoffice shell.
@@ -142,49 +141,14 @@ async function currentViewer(): Promise<Viewer> {
 }
 
 /**
- * The club's logo for the brand slot, read beside `/me` rather than inside
- * it: `/me` comes from a SECURITY DEFINER function and one image id is not
- * worth changing its shape. A failure is no logo — a corner, not a page.
+ * What the menu's entries count: POOLSE-120's circles, already narrowed by the
+ * API to who can act, and POOLSE-114's files waiting in *Recebidos por email*
+ * for the people who import a meet in a club with the competition module. Null
+ * from the shell is no badge, never a broken menu.
  */
-async function brandLogo(): Promise<string | null> {
-  try {
-    return (await apiFetch<{ fileId: string | null }>('/settings/logo')).fileId;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * What the menu's entries count — POOLSE-114's files waiting in *Recebidos por
- * email*, for the people who import a meet in a club with the competition
- * module. One indexed count; a failure is no badge, never a broken menu.
- */
-async function menuBadges(roles: readonly string[], modules: readonly string[]): Promise<Badges> {
-  // POOLSE-120: what needs doing, already narrowed by the API to who can act.
+async function menuBadges(meetInboxPending: number | null): Promise<Badges> {
   const attention = (await readAttention()).menu;
-  if (!modules.includes('competition') || !['owner', 'admin', 'instructor'].some((role) => roles.includes(role))) {
-    return attention;
-  }
-  try {
-    return { ...attention, meetInbox: (await apiFetch<{ pending: number }>('/meet-inbox/count')).pending };
-  } catch {
-    return attention;
-  }
-}
-
-/**
- * The subscription warning on the avatar — Rui, 28-10-2026. Owner and admin
- * only; the API decides whether there is one. It replaced the read-only banner
- * every member saw, so a read-only club is told through its owner and admins.
- * A failure is no icon, never a broken header.
- */
-async function subscriptionWarning(roles: readonly string[]): Promise<SubscriptionAlertView | null> {
-  if (!roles.includes('owner') && !roles.includes('admin')) return null;
-  try {
-    return await apiFetch<SubscriptionAlertView>('/subscription/alert');
-  } catch {
-    return null;
-  }
+  return meetInboxPending === null ? attention : { ...attention, meetInbox: meetInboxPending };
 }
 
 export default async function DashboardLayout({
@@ -192,20 +156,26 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }): Promise<React.ReactElement> {
-  const [{ roles, support, clubGone, kind, modules, sports, organizationName, suspended }, logoFileId] =
-    await Promise.all([currentViewer(), brandLogo()]);
+  /*
+   * `/me` and the shell in one round — POOLSE-172. The shell needs no answer
+   * from `/me`, because the API decides what each reader gets, and each of its
+   * parts is `null` when there is nothing to draw: the logo, the subscription
+   * warning on the avatar (owner and admin, Rui 28-10-2026), the support status.
+   */
+  const [{ roles, support, clubGone, kind, modules, sports, organizationName, suspended }, shell] =
+    await Promise.all([currentViewer(), readShell()]);
+  const { logoFileId, subscriptionAlert: subscription } = shell;
 
   // A support window that ended, with this browser still pointed at its club.
   if (clubGone) return <SupportEndedNotice />;
 
   const t = await getTranslations();
 
-  const [badges, subscription] =
-    suspended === null ? await Promise.all([menuBadges(roles, modules), subscriptionWarning(roles)]) : [{}, null];
+  const badges = suspended === null ? await menuBadges(shell.meetInboxPending) : {};
 
   // The club's own strip — the Owner and the Admins, never support itself.
   const clubManager = support === null && (roles.includes('owner') || roles.includes('admin'));
-  const supportStatus = clubManager ? await loadSupportStatus() : null;
+  const supportStatus = clubManager ? shell.supportStatus : null;
 
   /*
    * Instead of the shell, not inside it.

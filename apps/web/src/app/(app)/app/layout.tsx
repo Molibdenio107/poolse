@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { apiFetch, type Me } from '@/lib/api';
 import { hatsOf } from '@/lib/app-hats';
+import { readShell } from '@/lib/shell';
 import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
 import { SuspendedNotice } from '../dashboard/suspended-notice';
@@ -48,10 +49,7 @@ export default async function AppModeLayout({
   return (
     <AppFrame
       organizationName={membership.organizationName}
-      user={{
-        name: [me.user.firstName, me.user.lastName].filter(Boolean).join(' ') || (me.user.email ?? ''),
-        avatarUrl: me.user.avatarUrl,
-      }}
+      logoFileId={(await readShell()).logoFileId}
       homes={hats.homes}
       staff={hats.staff}
       chrome={

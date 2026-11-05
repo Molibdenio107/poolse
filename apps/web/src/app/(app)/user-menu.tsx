@@ -1,9 +1,13 @@
 'use client';
 
+import { useSyncExternalStore } from 'react';
 import { UserButton } from '@clerk/nextjs';
 import { AlertTriangle, Archive, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { subscriptionAlertSentence, type SubscriptionAlertView } from '@/lib/subscription-alert';
+
+/** Never changes after hydration, so nothing to subscribe to. */
+const noSubscription = (): (() => void) => () => undefined;
 
 /**
  * The avatar menu at the top right, carrying sign-out and now "O meu perfil".
@@ -28,6 +32,13 @@ import { subscriptionAlertSentence, type SubscriptionAlertView } from '@/lib/sub
  * alone says nothing, so the words are always one click away and never in a
  * tooltip. The owner's line opens Subscrição; an admin's says only the owner can
  * renew, because the page is the owner's alone.
+ *
+ * **Clerk's button is drawn only after hydration** (05-11-2026). What it renders
+ * depends on whether Clerk's script has loaded: nothing on the server, its own
+ * element in a browser where the script won the race against hydration. That
+ * mismatch made React rebuild the document from the root, which strips every
+ * attribute from `<html>`, the `dark` class included. The placeholder holds its
+ * place, so the header does not move when the avatar arrives.
  */
 export function UserMenu({
   canArchive = false,
@@ -43,39 +54,44 @@ export function UserMenu({
   const alert = subscription?.alert ?? null;
   const sentence = alert === null ? null : subscriptionAlertSentence(t, alert);
   const warningIcon = <AlertTriangle className="size-4 text-warning" aria-hidden />;
+  const hydrated = useSyncExternalStore(noSubscription, () => true, () => false);
 
   return (
     <span className="relative inline-flex">
-      <UserButton>
-        <UserButton.MenuItems>
-          {sentence !== null && subscription?.canOpen === true && (
+      {hydrated ? (
+        <UserButton>
+          <UserButton.MenuItems>
+            {sentence !== null && subscription?.canOpen === true && (
+              <UserButton.Link
+                href="/dashboard/profile/subscription"
+                label={sentence}
+                labelIcon={warningIcon}
+              />
+            )}
+            {sentence !== null && subscription?.canOpen !== true && (
+              <UserButton.Action
+                label={`${sentence} ${t('subscriptionAlert.ownerRenews')}`}
+                labelIcon={warningIcon}
+                onClick={() => undefined}
+              />
+            )}
             <UserButton.Link
-              href="/dashboard/profile/subscription"
-              label={sentence}
-              labelIcon={warningIcon}
+              href={profileHref}
+              label={t('profile.title')}
+              labelIcon={<UserRound className="size-4" aria-hidden />}
             />
-          )}
-          {sentence !== null && subscription?.canOpen !== true && (
-            <UserButton.Action
-              label={`${sentence} ${t('subscriptionAlert.ownerRenews')}`}
-              labelIcon={warningIcon}
-              onClick={() => undefined}
-            />
-          )}
-          <UserButton.Link
-            href={profileHref}
-            label={t('profile.title')}
-            labelIcon={<UserRound className="size-4" aria-hidden />}
-          />
-          {canArchive && (
-            <UserButton.Link
-              href="/dashboard/arquivados"
-              label={t('archive.title')}
-              labelIcon={<Archive className="size-4" aria-hidden />}
-            />
-          )}
-        </UserButton.MenuItems>
-      </UserButton>
+            {canArchive && (
+              <UserButton.Link
+                href="/dashboard/arquivados"
+                label={t('archive.title')}
+                labelIcon={<Archive className="size-4" aria-hidden />}
+              />
+            )}
+          </UserButton.MenuItems>
+        </UserButton>
+      ) : (
+        <span aria-hidden className="size-7 rounded-full bg-surface-muted" />
+      )}
       {sentence !== null && (
         // On the avatar's corner; it takes no click, so the avatar still opens the menu.
         <span className="pointer-events-none absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-surface ring-1 ring-border">

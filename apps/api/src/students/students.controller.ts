@@ -624,6 +624,12 @@ export class StudentsController {
 
     if (outcome === 'bad_level') throw new BadRequestException('No such level');
     if (outcome === 'not_found') throw new NotFoundException('No such student');
+    if (outcome === 'owned_by_login') {
+      throw new ConflictException({
+        code: 'field_owned_by_app_user',
+        message: 'This student manages their name and email in the app',
+      });
+    }
     return { updated: true };
   }
 

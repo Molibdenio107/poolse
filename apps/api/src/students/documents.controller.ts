@@ -13,6 +13,8 @@ import {
 import { isValidCcNumber, normalizeCcNumber } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
+import { recordFamilyPrint } from './family-documents.repository.js';
+import { requireOfficeOrFamily } from './student-access.js';
 import { CoreRoute } from '../tenant/modules.js';
 import {
   FPN_DISCIPLINES,
@@ -178,10 +180,12 @@ export class StudentDocumentsController {
     @Query('season') season?: string,
     @Query('minor') minor?: string,
   ): Promise<FpnPrint> {
-    requireRole('owner', 'admin');
+    const reader = await requireOfficeOrFamily(studentId);
     const seasonId = season !== undefined && /^[0-9a-f-]{36}$/i.test(season) ? season : null;
-    const found = await fpnPrint(currentTenant().organizationId, studentId, seasonId, minor === '1');
+    const { organizationId } = currentTenant();
+    const found = await fpnPrint(organizationId, studentId, seasonId, minor === '1');
     if (found === null) throw new NotFoundException('No such student');
+    if (reader === 'family') await recordFamilyPrint(organizationId, studentId, 'fpn');
     return found;
   }
 }
@@ -192,10 +196,14 @@ export class StudentDocumentsController {
 export class BoletimController {
   @Get()
   async print(@Param('studentId', ParseUUIDPipe) studentId: string): Promise<BoletimPrint> {
-    requireRole('owner', 'admin');
-    const found = await boletimPrint(currentTenant().organizationId, studentId);
+    const reader = await requireOfficeOrFamily(studentId);
+    const { organizationId } = currentTenant();
+    const found = await boletimPrint(organizationId, studentId);
     if (found === null) throw new NotFoundException('No such student');
-    return found;
+    if (reader === 'office') return found;
+    // POOLSE-131: the SNS number is read by the office alone.
+    await recordFamilyPrint(organizationId, studentId, 'boletim');
+    return { ...found, snsNumber: null };
   }
 }
 

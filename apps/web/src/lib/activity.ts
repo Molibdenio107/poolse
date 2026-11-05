@@ -36,6 +36,8 @@ export function formatActivityValue(t: Translate, field: string, value: Activity
 export const LABELLED_ACTIONS: ReadonlySet<string> = new Set([
   'student.created',
   'student.updated',
+  'student.identity_backfilled',
+  'student.document_printed',
   'student.filled',
   'student.archived',
   'student.restored',

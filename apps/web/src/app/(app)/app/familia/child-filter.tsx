@@ -15,7 +15,7 @@ export async function ChildFilter({
   chosen,
 }: {
   base: string;
-  children: AppChild[];
+  children: Pick<AppChild, 'id' | 'name'>[];
   chosen: string | undefined;
 }): Promise<React.ReactElement | null> {
   if (children.length < 2) return null;

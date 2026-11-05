@@ -42,8 +42,63 @@
       "teaching": "As minhas aulas",
       "maintenance": "Manutenção"
     },
+    "fees": {
+      "overdue": "Em dívida",
+      "upcoming": "Próximos pagamentos",
+      "paid": "Pagos",
+      "nothing": "Nada",
+      "until": "Até {date}",
+      "penalty": "Acréscimo por atraso",
+      "sharedWith": "Fatura conjunta com {names}",
+      "comingSoon": "Pagar na app — em breve. Por agora, pague por transferência ou MB WAY.",
+      "kind": {
+        "mensalidade": "Mensalidade",
+        "inscricao": "Inscrição",
+        "seguro": "Seguro",
+        "quota": "Quota"
+      }
+    },
+    "documents": {
+      "title": "Documentos",
+      "backTo": "Voltar aos documentos",
+      "print": "Preencher e imprimir",
+      "notConfigured": "O clube ainda não configurou este documento.",
+      "status": {
+        "missing": "Em falta",
+        "ok": "Em dia",
+        "okUntil": "Em dia (até {date})",
+        "expired": "Expirado"
+      },
+      "kind": {
+        "fpn_declaration": "Declaração FPN",
+        "socio_form": "Boletim de sócio",
+        "id_document": "Documento de identificação",
+        "medical_exam": "Exame médico"
+      }
+    },
     "family": {
       "title": "Agenda",
+      "calendar": {
+        "label": "Calendário de aulas",
+        "previous": "Mês anterior",
+        "next": "Mês seguinte",
+        "lesson": "Aula",
+        "planned": "Previsto",
+        "closedRange": "Encerrado de {from} a {to}",
+        "closedDay": "Encerrado a {date}",
+        "notYet": "Ainda não há aulas marcadas — a secretaria ainda está a montar as turmas.",
+        "noneThisMonth": "Sem aulas neste mês.",
+        "attendance": {
+          "present": "Presente",
+          "absent": "Faltou",
+          "excused": "Falta justificada"
+        }
+      },
+      "hero": {
+        "nothing": "Sem aulas marcadas",
+        "closedUntil": "Encerrado até {date}",
+        "count": "{enrolled, plural, one {# inscrito} other {# inscritos}}{notComing, plural, =0 {} one { · # avisou que não vem} other { · # avisaram que não vêm}}"
+      },
       "today": "Hoje",
       "tomorrow": "Amanhã",
       "water": "Água a {celsius} °C · medida {ago}",
@@ -51,7 +106,6 @@
       "closed": "Encerrado",
       "cancelled": "Cancelada",
       "moved": "Mudou só esta semana",
-      "feesTitle": "Mensalidades",
       "owing": "Em dívida: {amount}",
       "toPay": "Por pagar: {amount}",
       "toPayBy": "Por pagar: {amount}, até {date}",
@@ -59,7 +113,6 @@
       "nobody": "Ainda não há nenhum aluno associado a esta conta. Fale com o clube.",
       "childFilter": "Mostrar as aulas de",
       "everyone": "Todos",
-      "empty": "Não há aulas nas próximas duas semanas.",
       "backToAgenda": "Voltar à agenda",
       "backToLessons": "Voltar às aulas",
       "alsoComing": "{count, plural, one {# dos seus educandos está nesta aula.} other {# dos seus educandos estão nesta aula.}}",
@@ -72,11 +125,7 @@
       "certificateReplace": "Substituir atestado",
       "certificateSent": "Atestado enviado em {date}.",
       "certificateMissing": "Ainda sem atestado.",
-      "certificatesFailed": "Não foi possível carregar as baixas médicas.",
-      "next": "Próxima: {when} · {name}",
-      "noNext": "Sem aulas marcadas",
-      "noFees": "Não há mensalidades a mostrar.",
-      "noPastLessons": "Ainda não há aulas passadas nem atestados a mostrar."
+      "certificatesFailed": "Não foi possível carregar as baixas médicas."
     },
     "feedback": {
       "title": "Como correu",
@@ -245,6 +294,11 @@
       "perfil": "Perfil"
     },
     "profile": {
+      "edit": "Editar dados",
+      "settings": "Definições",
+      "backTo": "Voltar ao perfil",
+      "guardianOf": "Encarregado de educação de {names}",
+      "ownAccount": "A sua conta",
       "preferences": "Preferências",
       "homes": "As minhas áreas",
       "signOut": "Terminar sessão"
@@ -2351,6 +2405,7 @@
     "archive": "Arquivar",
     "confirmArchive": "Arquivar {name}?",
     "nameRequired": "Indique o nome próprio e o apelido.",
+    "ownedByLogin": "Este aluno gere o seu nome e email na app.",
     "createFailed": "Não foi possível adicionar o aluno.",
     "saveFailed": "Não foi possível guardar as alterações.",
     "archiveFailed": "Não foi possível arquivar.",
@@ -6142,6 +6197,8 @@
       "student": {
         "created": "Aluno criado",
         "updated": "Ficha alterada",
+        "identity_backfilled": "Dados acertados com a conta do aluno",
+        "document_printed": "Formulário impresso pela família",
         "filled": "Ficha completada por importação",
         "archived": "Aluno arquivado",
         "restored": "Aluno restaurado",

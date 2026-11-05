@@ -84,6 +84,7 @@ import {
 import { MeetsController } from './meets/meets.controller.js';
 import { MeetInboxController } from './meets/meet-inbox.controller.js';
 import { AttentionController } from './attention/attention.controller.js';
+import { ShellController } from './shell/shell.controller.js';
 import { FeedbackController } from './feedback/feedback.controller.js';
 import { NoticesController } from './notices/notices.controller.js';
 import { PushController } from './push/push.controller.js';
@@ -296,6 +297,7 @@ export const IDENTITY_ONLY_ROUTES = [
     MeetsController,
     MeetInboxController,
     AttentionController,
+    ShellController,
     FeedbackController,
     NoticesController,
     PushController,

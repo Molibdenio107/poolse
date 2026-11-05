@@ -88,9 +88,10 @@ export const RULES: Record<FilePurpose, { write: readonly MemberRole[] | null; r
   // POOLSE-132: a signed FPN declaration or boletim de sócio — the office's
   // file. It carries an ID number and a signature, so not a coach's.
   student_document: { write: OFFICE, read: OFFICE },
-  // POOLSE-142: the club's own boletim, an image of its paper form. The office
-  // configures it and prints it; a family never reads the blank.
-  boletim_template: { write: OFFICE, read: OFFICE },
+  // POOLSE-142: the club's own boletim, an image of its paper form, which holds
+  // nobody's details. Written by the office; read by anyone since POOLSE-179,
+  // because a family's filled form is drawn on it.
+  boletim_template: { write: OFFICE, read: ANYONE },
   // POOLSE-149: the photograph of a staff member's ID document. Never through
   // POST /files — the staff record's own route stores and attaches it — and
   // read by the office and, a question about a row, the person (see openFile).

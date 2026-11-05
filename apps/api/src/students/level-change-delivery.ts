@@ -34,7 +34,7 @@ export async function deliverLevelChangeNotice(
                 n.reason::text AS reason,
                 o.name, o.locale
            FROM level_change_notice n
-           JOIN student s ON s.id = n.student_id AND s.organization_id = n.organization_id
+           JOIN student_person s ON s.id = n.student_id AND s.organization_id = n.organization_id
            JOIN organization o ON o.id = n.organization_id
           WHERE n.id = $1`,
         [noticeId],

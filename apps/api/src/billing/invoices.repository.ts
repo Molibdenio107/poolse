@@ -483,7 +483,7 @@ const CANDIDATE_SQL = `
     -- The season an inscrição or a seguro is for, which is the club's own word
     -- for a charge that has no level.
     LEFT JOIN season se ON se.id = sf.season_id AND se.organization_id = sf.organization_id
-    JOIN student st ON st.id = sf.student_id
+    JOIN student_person st ON st.id = sf.student_id
     JOIN LATERAL (
       SELECT (extract(year FROM age($2::date, date_trunc('month', sf.starts_on)::date)) * 12
               + extract(month FROM age($2::date, date_trunc('month', sf.starts_on)::date)))::int AS k

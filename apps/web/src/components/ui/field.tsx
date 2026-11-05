@@ -258,6 +258,7 @@ export function TextField({
   placeholder,
   maxLength,
   inputMode,
+  readOnly,
   onValueChange,
   className,
   inputClassName,
@@ -276,6 +277,8 @@ export function TextField({
    * keeps a phone showing the right keyboard.
    */
   inputMode?: 'numeric' | 'decimal' | 'tel';
+  /** Shown and still sent, not editable: a value somebody else owns (POOLSE-177). */
+  readOnly?: boolean | undefined;
   /**
    * Extra classes on the `<input>` itself, where `className` styles the column.
    *
@@ -329,9 +332,10 @@ export function TextField({
         placeholder={placeholder}
         maxLength={maxLength}
         inputMode={inputMode}
+        readOnly={readOnly}
         aria-invalid={shown === undefined ? undefined : true}
         aria-describedby={describedBy === '' ? undefined : describedBy}
-        className={cn(CONTROL_LINE, shown !== undefined && INVALID, inputClassName)}
+        className={cn(CONTROL_LINE, shown !== undefined && INVALID, readOnly === true && 'bg-surface-muted', inputClassName)}
       />
       {hint !== undefined && (
         <p id={`${id}-hint`} className="text-sm text-foreground-muted">

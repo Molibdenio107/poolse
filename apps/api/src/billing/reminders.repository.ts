@@ -106,7 +106,7 @@ async function payersOf(tx: Tx, facilityId: string, invoiceIds: string[]): Promi
                        LIMIT 1)) AS payer_name,
             coalesce(
               CASE WHEN c.payer_membership_id IS NOT NULL THEN person_email(c.payer_membership_id)::text
-                   ELSE (SELECT st.contact_email::text FROM student st WHERE st.id = c.payer_student_id) END,
+                   ELSE (SELECT st.contact_email::text FROM student_person st WHERE st.id = c.payer_student_id) END,
               (SELECT o.snapshot_email FROM owed o
                 WHERE o.payer_membership_id IS NOT DISTINCT FROM c.payer_membership_id
                   AND o.payer_student_id IS NOT DISTINCT FROM c.payer_student_id

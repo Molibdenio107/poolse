@@ -1,16 +1,14 @@
 import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
-import { withFrom } from '@/lib/back';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type AppAgenda, type AppAgendaEntry, type AppAviso } from '@/lib/api';
+import { ApiError, apiFetch, type AppAgenda, type AppAviso } from '@/lib/api';
 import { FamilyAvisos } from './avisos';
 import { describeLoad } from '@/lib/load-failure';
 import { PageError } from '@/components/page-shell';
-import { EntryCard, dayHeading } from './agenda-parts';
 import { ChildFilter } from './child-filter';
-import { PersonAvatar } from '@/components/person-avatar';
-import { ChevronRight, UserPlus } from 'lucide-react';
+import { NextLessonHero } from '@/components/app/next-lesson-hero';
+import { UserPlus } from 'lucide-react';
 
 /**
  * The family agenda — POOLSE-90 slice 1 (roadmap 3.3 and 3.6).
@@ -24,6 +22,9 @@ import { ChevronRight, UserPlus } from 'lucide-react';
  * *Início* since POOLSE-136: a card per child with the next lesson, then the
  * coming lessons as rows. Fees moved to *Pagamentos*, past lessons and
  * certificates to *Aulas*, the push switch to *Perfil* — one task per screen.
+ *
+ * Since POOLSE-174 the card is `NextLessonHero`, which opens the lesson, and
+ * since POOLSE-175 the coming lessons as rows are *Aulas*.
  */
 export default async function FamilyAgenda({
   searchParams,
@@ -48,13 +49,8 @@ export default async function FamilyAgenda({
     return <PageError message={t(failure.key)} {...(failure.detail === '' ? {} : { detail: failure.detail })} />;
   }
 
-  const several = agenda.children.length > 1;
-  const nameOf = new Map(agenda.children.map((one) => [one.id, one.name]));
+  const shown = child === undefined ? agenda.children : agenda.children.filter((one) => one.id === child);
   const water = new Map(agenda.water.map((one) => [one.poolId, one]));
-  const byDay = new Map<string, AppAgendaEntry[]>();
-  for (const entry of agenda.entries) {
-    byDay.set(entry.localDate, [...(byDay.get(entry.localDate) ?? []), entry]);
-  }
 
   return (
     <>
@@ -68,72 +64,23 @@ export default async function FamilyAgenda({
         <>
           <ChildFilter base="/app/familia" children={agenda.children} chosen={child} />
 
-          {/* The handoff's child cards: each child and their next lesson, one tap to them alone. */}
-          {child === undefined && (
-            <ul className="flex flex-col gap-2">
-              {agenda.children.map((one) => {
-                const next = agenda.entries.find((entry) => entry.studentId === one.id && entry.status !== 'cancelled');
-                const body = (
-                  <>
-                    {/* The handoff's child card (POOLSE-140): a 44 px avatar, the name at 700. */}
-                    <PersonAvatar id={one.id} name={one.name} className="size-11 text-sm" />
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="app-card-name font-bold">{one.name}</span>
-                      <span className="app-secondary text-sm text-foreground-muted">
-                        {next === undefined
-                          ? t('app.family.noNext')
-                          : t('app.family.next', {
-                              when: `${dayHeading(t, next.localDate)} · ${next.localTime}`,
-                              name: next.className,
-                            })}
-                      </span>
-                    </span>
-                    {several && <ChevronRight className="size-4 shrink-0 text-foreground-muted" aria-hidden />}
-                  </>
-                );
-                const card = 'flex min-h-[64px] items-center gap-3 rounded bg-surface px-4 py-3 shadow-card';
-                return (
-                  <li key={one.id}>
-                    {several ? (
-                      <Link
-                        href={`/app/familia?child=${one.id}`}
-                        className={`${card} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
-                      >
-                        {body}
-                        <LinkBusy />
-                      </Link>
-                    ) : (
-                      <div className={card}>{body}</div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          {agenda.entries.length === 0 ? (
-            <p className="text-foreground-muted">{t('app.family.empty')}</p>
-          ) : (
-            [...byDay.entries()].map(([date, entries]) => (
-              <section key={date} className="flex flex-col">
-                <h2 className="app-section-label">{dayHeading(t, date)}</h2>
-                {/* Rows, not cards (rule 6): edge to edge, a hairline between. */}
-                <ul className="flex flex-col divide-y divide-border">
-                  {entries.map((entry) => (
-                    <li key={`${entry.sessionId}-${entry.studentId}`}>
-                      <EntryCard
-                        entry={entry}
-                        childName={several && child === undefined ? (nameOf.get(entry.studentId) ?? null) : null}
-                        water={entry.poolId === null ? null : (water.get(entry.poolId) ?? null)}
-                        href={withFrom(`/app/familia/aulas/${entry.sessionId}`, child === undefined ? '/app/familia' : `/app/familia?child=${encodeURIComponent(child)}`)}
-                        row
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))
-          )}
+          {/* POOLSE-174: the next lesson for each child. The calendar is *Aulas* (POOLSE-175). */}
+          <ul className="flex flex-col gap-3">
+            {shown.map((one) => {
+              const own = agenda.entries.filter((entry) => entry.studentId === one.id);
+              const next = own.find((entry) => entry.status !== 'cancelled');
+              return (
+                <li key={one.id}>
+                  <NextLessonHero
+                    child={one}
+                    entries={own}
+                    water={next?.poolId == null ? null : (water.get(next.poolId) ?? null)}
+                    from={child === undefined ? '/app/familia' : `/app/familia?child=${child}`}
+                  />
+                </li>
+              );
+            })}
+          </ul>
         </>
       )}
 

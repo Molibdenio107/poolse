@@ -142,7 +142,7 @@ export async function importMeet(
     }>(
       `SELECT s.id, s.first_name, s.last_name, to_char(s.birth_date, 'YYYY-MM-DD') AS birth_date,
               s.federation_licence AS licence, ${displayName('s')} AS name
-         FROM student s WHERE s.archived_at IS NULL`,
+         FROM student_person s WHERE s.archived_at IS NULL`,
     );
     const students: CandidateStudent[] = studentRows.map((row) => ({
       id: row.id,
@@ -564,7 +564,7 @@ export async function findMeet(organizationId: string, meetId: string): Promise<
           WHERE a.time_ms <= a.entry_ms
           GROUP BY a.record_id
        )
-       SELECT r.id, r.student_id, ${displayName('s')} AS student_name, r.stroke, r.distance_m,
+       SELECT r.id, r.student_id, ${displayName('person')} AS student_name, r.stroke, r.distance_m,
               r.course, r.lenex_round AS round, r.lenex_event_number AS event, r.time_ms,
               to_char(r.swum_on, 'YYYY-MM-DD') AS swum_on, b.is_best,
               (coalesce(l.competitive, false) AND s.federation_licence IS NULL) AS licence_missing,
@@ -587,6 +587,7 @@ export async function findMeet(organizationId: string, meetId: string): Promise<
          JOIN bests b ON b.id = r.id
          LEFT JOIN made ON made.record_id = r.id
          JOIN student s ON s.id = r.student_id AND s.organization_id = r.organization_id
+         JOIN student_person person ON person.id = s.id
          LEFT JOIN student_level l ON l.id = s.level_id AND l.organization_id = s.organization_id
         WHERE r.meet_id = $1 AND r.archived_at IS NULL AND s.archived_at IS NULL
         ORDER BY r.lenex_event_number NULLS LAST, r.stroke, r.distance_m, r.time_ms`,

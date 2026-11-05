@@ -182,6 +182,9 @@ export async function updateStudentAction(
   try {
     await apiPatch(`/students/${studentId}`, body, { organizationId });
   } catch (error) {
+    if (error instanceof ApiError && error.code === 'field_owned_by_app_user') {
+      return { ok: false, errorKey: 'students.ownedByLogin' };
+    }
     return withFields(error, 'students.saveFailed');
   }
 

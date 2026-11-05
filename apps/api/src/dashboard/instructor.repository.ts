@@ -65,6 +65,20 @@ const STILL_NEXT = `
   AND (cs.ends_at > now() OR (cs.class_group_id IS NOT NULL AND NOT ${REGISTER_TAKEN}))
 `;
 
+/**
+ * Who a lesson expects, as numbers, for `cs` a `class_session`: the instructor's
+ * home and a family's lesson page read the same two. Never names (POOLSE-174).
+ */
+export const ENROLLED_IN_SESSION = `CASE WHEN cs.class_group_id IS NULL THEN NULL ELSE (
+                SELECT count(*)::int FROM enrollment e
+                 WHERE e.organization_id = cs.organization_id AND e.class_group_id = cs.class_group_id
+                   AND e.status <> 'waiting'
+                   AND e.joined_on <= cs.occurs_on AND (e.ended_on IS NULL OR e.ended_on >= cs.occurs_on)
+              ) END`;
+export const NOT_COMING_TO_SESSION = `(SELECT count(*)::int FROM session_notice sn
+                WHERE sn.organization_id = cs.organization_id AND sn.class_session_id = cs.id
+                  AND NOT sn.going)`;
+
 export interface NextClass {
   sessionId: string;
   classGroupId: string | null;
@@ -273,15 +287,8 @@ export async function readMyWeek(
               (cs.status = 'cancelled') AS cancelled,
               ${REGISTER_TAKEN} AS register_taken,
               (cs.ends_at <= now()) AS past,
-              CASE WHEN cs.class_group_id IS NULL THEN NULL ELSE (
-                SELECT count(*)::int FROM enrollment e
-                 WHERE e.organization_id = cs.organization_id AND e.class_group_id = cs.class_group_id
-                   AND e.status <> 'waiting'
-                   AND e.joined_on <= cs.occurs_on AND (e.ended_on IS NULL OR e.ended_on >= cs.occurs_on)
-              ) END AS enrolled,
-              (SELECT count(*)::int FROM session_notice sn
-                WHERE sn.organization_id = cs.organization_id AND sn.class_session_id = cs.id
-                  AND NOT sn.going) AS not_coming
+              ${ENROLLED_IN_SESSION} AS enrolled,
+              ${NOT_COMING_TO_SESSION} AS not_coming
          ${JOINS}
         WHERE cs.resolved_instructor_id = $1
           AND cs.starts_at >= now() - interval '8 days'

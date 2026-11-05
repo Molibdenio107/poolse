@@ -143,7 +143,7 @@ async function existingStudents(tx: Tx): Promise<ExistingStudent[]> {
             (SELECT coalesce(array_agg(e.class_group_id), '{}')::text[]
                FROM enrollment e
               WHERE e.student_id = s.id AND e.status = 'active') AS turma_ids
-       FROM student s
+       FROM student_person s
       WHERE s.archived_at IS NULL`,
     [],
   );

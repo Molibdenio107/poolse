@@ -9,7 +9,6 @@ import { laneLabel } from '@/lib/lanes';
 import { formatCents } from '@/lib/money';
 import { timeAgo } from '@/lib/relative-time';
 import { cn } from '@/lib/utils';
-import { PaymentDestinations } from '@/components/payment-destinations';
 
 type T = Awaited<ReturnType<typeof getTranslations>>;
 
@@ -52,14 +51,20 @@ export async function EntryCard({
   water,
   href,
   row = false,
+  attendance = null,
+  planned = false,
 }: {
-  entry: AppAgendaEntry;
+  entry: Omit<AppAgendaEntry, 'sessionId'>;
   /** Shown when the agenda holds more than one child. */
   childName: string | null;
   water: AppWater | null;
   href: string | null;
   /** A row in a list (POOLSE-136, app mode's tabs): edge to edge, no card. */
   row?: boolean;
+  /** The child's mark on a past lesson (POOLSE-175), in words with its icon. */
+  attendance?: 'present' | 'absent' | 'excused' | null;
+  /** A day of the weekly pattern, not yet a lesson (POOLSE-175). */
+  planned?: boolean;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const cancelled = entry.status === 'cancelled';
@@ -89,6 +94,17 @@ export async function EntryCard({
           </span>
         )}
         {/* Each state in words with its icon — never by colour or a strike alone. */}
+        {planned && <span className="text-sm font-medium text-foreground-muted">{t('app.family.calendar.planned')}</span>}
+        {attendance !== null && (
+          <span className="flex items-center gap-1 text-sm font-medium">
+            {attendance === 'present' ? (
+              <Check className="size-3.5 shrink-0" aria-hidden />
+            ) : (
+              <X className="size-3.5 shrink-0" aria-hidden />
+            )}
+            {t(`app.family.calendar.attendance.${attendance}`)}
+          </span>
+        )}
         {cancelled && entry.byClosure && (
           <span className="flex items-center gap-1 text-sm font-medium text-warning">
             <Lock className="size-3.5 shrink-0" aria-hidden />
@@ -144,60 +160,24 @@ export async function EntryCard({
 }
 
 /**
- * What each child owes, read-only — `balance` from the fee read, never re-added
- * (POOLSE-90). It links to the child's own fee page.
+ * One child's fees in a sentence — *Pagamentos* and *Início* say the same one.
+ * Three states: overdue is a debt; unpaid before its date is not.
  */
-export async function FeeStatus({ children }: { children: AppChild[] }): Promise<React.ReactElement | null> {
+export async function FeeSentence({ fees }: { fees: NonNullable<AppChild['fees']> }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
-  const owing = children.filter((child) => child.fees !== null);
-  if (owing.length === 0) return null;
-  // One account per club, so one block; the reference is each child's own.
-  const paying = owing.filter((child) => child.payTo !== null);
-  const destinations = paying[0]?.payTo?.destinations ?? null;
-
-  return (
-    <section className="flex flex-col gap-2 rounded-lg bg-surface p-3 shadow-card">
-      <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">{t('app.family.feesTitle')}</h2>
-      <ul className="flex flex-col divide-y divide-border">
-        {owing.map((child) => (
-          <li key={child.id}>
-            <Link
-              href={`/dashboard/students/${child.id}?tab=fees`}
-              className="flex min-h-control items-center justify-between gap-3 py-2 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              <span className="font-medium">{child.name}</span>
-              {/* Three states: overdue is a debt; unpaid before its date is not. */}
-              {child.fees!.overdueCount > 0 ? (
-                <span className="text-sm font-medium text-danger">
-                  {t('app.family.owing', { amount: formatCents(locale, child.fees!.outstandingCents) })}
-                </span>
-              ) : child.fees!.outstandingCents > 0 ? (
-                <span className="text-sm">
-                  {child.fees!.nextDueOn === null
-                    ? t('app.family.toPay', { amount: formatCents(locale, child.fees!.outstandingCents) })
-                    : t('app.family.toPayBy', {
-                        amount: formatCents(locale, child.fees!.outstandingCents),
-                        date: formatDate(child.fees!.nextDueOn),
-                      })}
-                </span>
-              ) : (
-                <span className="text-sm text-success">{t('app.family.upToDate')}</span>
-              )}
-              <LinkBusy />
-            </Link>
-          </li>
-        ))}
-      </ul>
-      {destinations !== null && (
-        <PaymentDestinations
-          destinations={destinations}
-          references={paying.map((child) => ({
-            label: paying.length > 1 ? child.name : undefined,
-            reference: child.payTo!.reference,
-          }))}
-        />
-      )}
-    </section>
-  );
+  const amount = formatCents(locale, fees.outstandingCents);
+  if (fees.overdueCount > 0) {
+    return <span className="text-sm font-medium text-danger">{t('app.family.owing', { amount })}</span>;
+  }
+  if (fees.outstandingCents > 0) {
+    return (
+      <span className="text-sm">
+        {fees.nextDueOn === null
+          ? t('app.family.toPay', { amount })
+          : t('app.family.toPayBy', { amount, date: formatDate(fees.nextDueOn) })}
+      </span>
+    );
+  }
+  return <span className="text-sm text-success">{t('app.family.upToDate')}</span>;
 }

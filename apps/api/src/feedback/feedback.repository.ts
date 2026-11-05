@@ -158,7 +158,7 @@ async function familyFeedbackIn(
             ${mayAnswer('s', '$1')} AS may_answer,
             fb.id AS feedback_id
        FROM unnest($3::uuid[]) AS chosen(id)
-       JOIN student s ON s.id = chosen.id AND s.archived_at IS NULL
+       JOIN student_person s ON s.id = chosen.id AND s.archived_at IS NULL
        JOIN class_session cs ON cs.id = $2 AND cs.organization_id = s.organization_id
        LEFT JOIN attendance a
               ON a.organization_id = cs.organization_id AND a.class_session_id = cs.id AND a.student_id = s.id

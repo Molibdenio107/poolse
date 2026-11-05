@@ -401,7 +401,7 @@ go-live.
 ```
 student
   id, organization_id, first_name, last_name, birth_date, level_id,
-  app_user_id (nullable), membership_id (nullable), notes,
+  app_user_id (nullable, no writer: see student_person), membership_id (nullable), notes,
   contact_email, contact_phone, tax_number, archived_at,
   is_socio boolean not null default false, socio_number, socio_since
   unique (organization_id, socio_number) where archived_at is null
@@ -715,6 +715,22 @@ tax_number)` and `(organization_id, email)` are what make "this person already e
 the role instead" both cheap to check and safe under two operators doing it at once. NIF is
 matched before email: two people can share a household address, and only one can have a
 given tax number.
+
+### A student read through their login — POOLSE-177
+
+**`student_person` is `student` as the club reads it.** It has every column of `student`, under the same names, plus `identity_from_login`. An adult-path student whose `membership_id` reaches a login reads `first_name`, `last_name`, `birth_date`, `contact_email` and `contact_phone` from `app_user`, each falling back to the student's own column. Everybody else reads the student's columns. `security_invoker`, so RLS applies. A read that shows a person selects from it; a new `student` column is added to it too (`student-person.sql` test 1).
+
+**The link is `student.membership_id` → `membership.app_user_id`.** `student.app_user_id` has no writer.
+
+**Adult path only, so there is no CHECK and nothing is nulled.** The path is derived, and a 17-year-old turns 18 with no write, so a constraint cannot hold it, and a null birth date would itself take the student off the path. The columns stay, as the club's record and the fallback.
+
+**A record with no birth date reads through too, for the display only:** no date on the club's record, no live guardian, and a login whose own date makes them an adult. `student_is_adult_path()` is not changed, because it decides who signs their own consent, and a date a person typed must not decide that. A date on the club's record always wins.
+
+**Rules read `student.birth_date`**: the adult path (the view's own test), age bands, FPN age groups and retention, so nobody moves their own age group from a phone. An office correction writes both. An adult who changes their birth date in the app changes what the record shows and not those rules.
+
+**An anonymised student never reads through.** `person_phone(membership_id)` sits beside `person_name` and `person_email`.
+
+**The backfill** wrote the office's birth date and phone to `app_user` and logged `student.identity_backfilled`, naming the fields and no value. Clerk's name and email stood. A login with a membership in another club was left out.
 
 ### How a name is written, shortened and filed
 

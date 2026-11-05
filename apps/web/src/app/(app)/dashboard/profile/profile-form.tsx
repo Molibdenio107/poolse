@@ -32,8 +32,11 @@ const THEMES = ['light', 'dark', 'system'] as const;
 export function ProfileForm({
   me,
   withPreferences = true,
+  onSaved,
 }: {
   me: Me;
+  /** A save that worked: app mode's sheet closes (POOLSE-176). Stable, or it refires. */
+  onSaved?: () => void;
   /**
    * The language and theme fields. App mode's *O meu perfil* sets this false and
    * has its own rows for them (Rui, 31-10-2026); the stored values still travel
@@ -64,7 +67,8 @@ export function ProfileForm({
      */
     void user?.reload();
     router.refresh();
-  }, [state.ok, state.theme, user, router]);
+    onSaved?.();
+  }, [state.ok, state.theme, user, router, onSaved]);
 
   const errorFor = (field: string): string | undefined => state.fields?.[field];
 

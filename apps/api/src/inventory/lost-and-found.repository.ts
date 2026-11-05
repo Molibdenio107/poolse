@@ -124,7 +124,7 @@ export async function listLostAndFound(
               CASE WHEN l.status = 'returned'
                    THEN l.updated_at + make_interval(days => $2) END AS leaves_list_at
          FROM lost_and_found_item l
-         LEFT JOIN student s
+         LEFT JOIN student_person s
                 ON s.id = l.student_id AND s.organization_id = l.organization_id
         WHERE l.facility_id = $1 AND l.archived_at IS NULL
           -- A returned item leaves the list after a week untouched (Rui, 04-11-2026).
@@ -268,7 +268,7 @@ export async function studentsForPicker(
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string; name: string }>(
       `SELECT s.id, ${shortName('s')} AS name
-         FROM student s
+         FROM student_person s
         WHERE s.archived_at IS NULL
         ORDER BY ${nameOrder('s')}`,
       [],
