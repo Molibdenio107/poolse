@@ -1063,7 +1063,7 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
  * The screen title and the section labels are styled here, by element and one
  * class, so no page sets a size. Under a finger the phone type scale applies:
  * body 17, secondary 15, title 22 / 700, labels 13 uppercase; a laptop keeps
- * the current scale. The maintenance home (`classic`) is untouched.
+ * the current scale. The maintenance home has worn them since POOLSE-181.
  */
 [data-shell='tabs'] {
   --app-body: 1rem;

@@ -36,5 +36,14 @@ export const GUARDIAN_SESSION = resolve(__dirname, '.auth/guardian.json');
 export const E2E_GUARDIAN_EMAIL = process.env['E2E_GUARDIAN_EMAIL'];
 export const E2E_GUARDIAN_PASSWORD = process.env['E2E_GUARDIAN_PASSWORD'];
 
+/** Maintenance only, in the E2E user's club — POOLSE-181. Dev Clerk instance only, like the others. */
+export const MAINTENANCE_SESSION = resolve(__dirname, '.auth/maintenance.json');
+
+export const E2E_MAINTENANCE_EMAIL = process.env['E2E_MAINTENANCE_EMAIL'];
+export const E2E_MAINTENANCE_PASSWORD = process.env['E2E_MAINTENANCE_PASSWORD'];
+
+export const NO_MAINTENANCE =
+  'Set E2E_MAINTENANCE_EMAIL and E2E_MAINTENANCE_PASSWORD to run the maintenance home specs.';
+
 export const NO_GUARDIAN =
   'Set E2E_GUARDIAN_EMAIL and E2E_GUARDIAN_PASSWORD to run the family half of the app-mode specs.';

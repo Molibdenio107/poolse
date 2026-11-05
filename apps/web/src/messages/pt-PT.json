@@ -220,6 +220,15 @@
     },
     "maintenance": {
       "title": "Manutenção",
+      "record": {
+        "title": "Registar",
+        "complete": "Concluir tarefa",
+        "clean": "Limpeza",
+        "report": "Reportar avaria",
+        "nothingToComplete": "Não há tarefas por concluir.",
+        "nothingToClean": "Não há espaços por limpar.",
+        "backTo": "Voltar a Registar"
+      },
       "backTo": "Voltar à manutenção",
       "report": "Reportar",
       "allDone": "Nada por fazer: sem tarefas em atraso, espaços por limpar ou problemas abertos.",
@@ -311,6 +320,10 @@
       "aulas": {
         "hoje": "Hoje",
         "semana": "Semana"
+      },
+      "manutencao": {
+        "hoje": "Hoje",
+        "registar": "Registar"
       },
       "perfil": "Perfil"
     },

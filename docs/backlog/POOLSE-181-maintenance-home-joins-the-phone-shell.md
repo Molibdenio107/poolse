@@ -4,6 +4,14 @@
 
 **Type:** Feature · **Area:** Mobile app / Maintenance · **Priority:** Medium (pilot) · **Depends on** [POOLSE-136](./POOLSE-136-the-app-phone-shell.md), [POOLSE-90](./POOLSE-90-the-app-agenda-per-role.md) slice 3, [POOLSE-169](./POOLSE-169-dashboard-post-it-for-staff.md)
 
+### As built (05-11-2026) — wins over what follows
+
+- **Classic shape removed.** `app-frame.tsx` has two shapes now, tabs and detail. Its `chrome` and `staff` props went with the old header, and the layout no longer renders `PreferenceControls` / `UserMenu` for app mode. All of that is on *Perfil* and *Definições*.
+- **`TabbedHat` is every hat.** `isHat()` in `app-hats.ts` validates `?home=` for `tabFor`, *Perfil* and *Definições*, which accepted only `family | teaching` before.
+- ***Registar*** reads `/app/maintenance`, the same endpoint as *Hoje*. Its sheets reuse `OneTap`, with no new action. *Reportar* opened with `?from=registar` goes back to *Registar*. That is a fixed token, never a path, so it can't be used as an open redirect.
+- **Hoje's list is unchanged**, but the page now wears the tab screens' type scale (`data-shell="tabs"`), so the title and section sizes follow the other homes.
+- **e2e:** there is no maintenance storage state in `e2e/.auth`, so QA 1–3 are manual until a fixture exists. `app-hats.test.ts` covers the tabs.
+
 ### PO — why this exists
 
 Rui, 05-11-2026: *"i would also like to see a 'teachers and maintenance mobile view'"*. Reviewed the same day: the instructor has the shell (POOLSE-136: *Hoje*, *Semana*, *Perfil*); the maintenance home is the one app screen still wearing its pre-shell header — POOLSE-136 said so: *"The maintenance home keeps its old header until its own phone view."* This is that view. The to-do list itself (tasks, espaços, avarias, pools) is right and stays; what it lacks is the bar, the profile and a place to record something without being sent to the backoffice.

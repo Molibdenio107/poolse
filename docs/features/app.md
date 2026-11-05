@@ -178,8 +178,7 @@ Each home's own screens wear tabs; everything else in app mode is a screen deepe
   `--safe-bottom`), from `md` a row under the header. A coarse pointer only switches on the
   phone type scale (17 / 15 / 22 / 13 px).
 - **No bar on a screen deeper in** — a lesson's page, *Pedir inscrição* — which has its own
-  *Voltar*, so no bar ever covers its Save. **The maintenance home keeps its old header** until
-  its own phone view.
+  *Voltar*, so no bar ever covers its Save. The maintenance home joined the shell with POOLSE-181.
 - **Lists are rows**: the agenda and the instructor's lessons are hairline-separated rows, 44 px
   at least, not cards.
 - **A dialog in app mode is `placement="sheet"`**: a bottom sheet below `md` (scrim, grabber,
@@ -270,3 +269,8 @@ Nothing on file changes when a family sends. The row waits in `family_submission
 
 Opened with `?from=/app…` on a phone, the register is compact: a row is the name, the family's *Confirmou / não vem* chip and three 44 px cells, each a glyph with its word beneath. The warnings are one line above the roll (*2 sem seguro · 1 exame em falta*) that opens a sheet with the names. From `md` up, and from the backoffice calendar, it is unchanged.
 
+## The maintenance home in the shell — POOLSE-181
+
+Maintenance has three tabs: *Hoje*, *Registar* and *Perfil*. *Registar* reads `/app/maintenance`, the endpoint *Hoje* reads: *Concluir tarefa* and *Limpeza* open a sheet of what is open, using the same one-tap forms, and *Reportar avaria* opens the existing form, whose *Voltar* returns to *Registar*. A water analysis is still recorded in the pool's water tab.
+
+`app-frame.tsx` has two shapes now, tabs and detail; the old staff header is gone, and its controls live on *Perfil* and *Definições*.

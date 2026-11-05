@@ -4,7 +4,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { SignOutButton } from '@clerk/nextjs';
 import { ChevronRight, LayoutDashboard, LogOut, Settings } from 'lucide-react';
 import { apiFetch, type ActiveSession, type Me } from '@/lib/api';
-import { hatsOf } from '@/lib/app-hats';
+import { hatsOf, isHat } from '@/lib/app-hats';
 import { outcome } from '@/lib/load-failure';
 import { formatDate, formatStamp } from '@/lib/date-format';
 import { LinkBusy } from '@/components/link-busy';
@@ -39,7 +39,7 @@ export default async function AppProfilePage({
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const asked = (await searchParams).home;
-  const home = asked === 'family' || asked === 'teaching' ? asked : undefined;
+  const home = isHat(asked) ? asked : undefined;
 
   let me: Me;
   try {

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { isHat } from '@/lib/app-hats';
 import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ArrowLeft } from 'lucide-react';
@@ -34,7 +35,7 @@ export default async function AppSettingsPage({
   if (membership === undefined) redirect('/dashboard');
 
   const [locale, theme] = await Promise.all([getLocale(), readTheme()]);
-  const back = home === 'family' || home === 'teaching' ? `/app/perfil?home=${home}` : '/app/perfil';
+  const back = isHat(home) ? `/app/perfil?home=${home}` : '/app/perfil';
 
   return (
     <>

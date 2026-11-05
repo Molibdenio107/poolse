@@ -8,9 +8,12 @@ import {
   E2E_GUARDIAN_PASSWORD,
   E2E_INSTRUCTOR_EMAIL,
   E2E_INSTRUCTOR_PASSWORD,
+  E2E_MAINTENANCE_EMAIL,
+  E2E_MAINTENANCE_PASSWORD,
   E2E_PASSWORD,
   GUARDIAN_SESSION,
   INSTRUCTOR_SESSION,
+  MAINTENANCE_SESSION,
   PHONE_SESSION,
 } from './session';
 
@@ -79,6 +82,12 @@ setup('keep the E2E club open', async () => {
 setup('sign in the E2E guardian', async ({ page }) => {
   setup.setTimeout(90_000);
   await signIn(page, E2E_GUARDIAN_EMAIL, E2E_GUARDIAN_PASSWORD, GUARDIAN_SESSION);
+});
+
+// Maintenance, for its home — POOLSE-181.
+setup('sign in the E2E maintenance login', async ({ page }) => {
+  setup.setTimeout(90_000);
+  await signIn(page, E2E_MAINTENANCE_EMAIL, E2E_MAINTENANCE_PASSWORD, MAINTENANCE_SESSION);
 });
 
 async function signIn(

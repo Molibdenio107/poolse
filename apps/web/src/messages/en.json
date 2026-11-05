@@ -220,6 +220,15 @@
     },
     "maintenance": {
       "title": "Maintenance",
+      "record": {
+        "title": "Record",
+        "complete": "Complete a task",
+        "clean": "Cleaning",
+        "report": "Report a fault",
+        "nothingToComplete": "No tasks to complete.",
+        "nothingToClean": "No spaces to clean.",
+        "backTo": "Back to Record"
+      },
       "backTo": "Back to maintenance",
       "report": "Report",
       "allDone": "Nothing to do: no overdue tasks, spaces to clean or open issues.",
@@ -311,6 +320,10 @@
       "aulas": {
         "hoje": "Today",
         "semana": "Week"
+      },
+      "manutencao": {
+        "hoje": "Today",
+        "registar": "Record"
       },
       "perfil": "Profile"
     },

@@ -73,9 +73,9 @@ good on a phone are slice 3's section here.
 
 **Touch sizes.** A control reads `h-control`. A target that is not a control (*Voltar*, a card's link, a list's name) takes `coarse:-my-3 coarse:py-3`. The `coarse:` variant is `@media (pointer: coarse)`. The padding and the margin cancel, so the target reaches 44 px and nothing moves. A change to `tailwind.config.ts` reaches the dev server only after `.next` is cleared. Below `sm` a centred dialog is full-screen, with the safe areas inside it, and its × is a control-sized square.
 
-The tier-1 screens are proved by `e2e/phone-*.spec.ts` as two users. One is the E2E owner. The
-other is an instructor in the same club, `E2E_INSTRUCTOR_EMAIL` / `E2E_INSTRUCTOR_PASSWORD`, on
-the dev Clerk instance only. `auth.setup.ts` signs both in. A spec that needs its own data writes
+The tier-1 screens are proved by `e2e/phone-*.spec.ts` as the E2E owner and logins in the same
+club with one role each: an instructor, a guardian and maintenance (`E2E_INSTRUCTOR_*`,
+`E2E_GUARDIAN_*`, `E2E_MAINTENANCE_*`), on the dev Clerk instance only. `auth.setup.ts` signs them all in. A spec that needs its own data writes
 it through `DATABASE_URL` from a fixture under `e2e/`, never into the reference seed's classes.
 
 **Within a section the most specific entry lights up** (20-10-2026). Competição's first child, Provas,

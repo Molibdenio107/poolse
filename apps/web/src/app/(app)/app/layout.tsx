@@ -2,8 +2,6 @@ import { redirect } from 'next/navigation';
 import { apiFetch, type Me } from '@/lib/api';
 import { hatsOf } from '@/lib/app-hats';
 import { readShell } from '@/lib/shell';
-import { PreferenceControls } from '../preference-controls';
-import { UserMenu } from '../user-menu';
 import { SuspendedNotice } from '../dashboard/suspended-notice';
 import { AppFrame } from './app-frame';
 
@@ -51,13 +49,6 @@ export default async function AppModeLayout({
       organizationName={membership.organizationName}
       logoFileId={(await readShell()).logoFileId}
       homes={hats.homes}
-      staff={hats.staff}
-      chrome={
-        <>
-          <PreferenceControls />
-          <UserMenu profileHref="/app/perfil" />
-        </>
-      }
     >
       {children}
     </AppFrame>

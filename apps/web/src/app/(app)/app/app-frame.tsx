@@ -8,10 +8,9 @@ import { LinkBusy } from '@/components/link-busy';
 import { TabGlyph } from '@/components/app-tab-glyphs';
 import { TABS, tabFor, type AppHat } from '@/lib/app-hats';
 import { cn } from '@/lib/utils';
-import { AppSwitcher } from './app-switcher';
 
 /**
- * App mode's frame — POOLSE-136. Three shapes, decided by the address:
+ * App mode's frame — POOLSE-136. Two shapes, decided by the address:
  *
  * - **A tab screen** (a home's own tabs): a header with only the club's name, the
  *   bottom tab bar below `md` and the same tabs as a row under the header from
@@ -19,18 +18,15 @@ import { AppSwitcher } from './app-switcher';
  *   `data-shell="tabs"` turns on the phone type scale (globals.css).
  * - **A screen deeper in** (a lesson, a form): the same header, no tabs — it has
  *   its own *Voltar*, and no bar can sit over its Save bar.
- * - **The maintenance home**: the header it had (rule 10) — preferences, the
- *   avatar, the switcher and *Abrir o backoffice* — until its own phone view.
  *
- * Preferences, the avatar, the switcher, push and *Abrir o backoffice* live on
- * *Perfil* for the tabbed homes (rule 4), so the header has nothing to hide.
+ * The maintenance home kept its pre-shell header until POOLSE-181 gave it its
+ * own tabs. Preferences, the switcher, push and *Abrir o backoffice* live on
+ * *Perfil* for every home (rule 4), so the header has nothing to hide.
  */
 export function AppFrame({
   organizationName,
   logoFileId,
   homes,
-  staff,
-  chrome,
   children,
 }: {
   organizationName: string;
@@ -38,50 +34,31 @@ export function AppFrame({
   /** The club's logo, for the corner; null draws its initials (POOLSE-176). */
   logoFileId: string | null;
   homes: AppHat[];
-  staff: boolean;
-  /** The language, theme and avatar controls — server components, rendered by the layout. */
-  chrome: React.ReactNode;
   children: React.ReactNode;
 }): React.ReactElement {
-  const t = useTranslations();
   const pathname = usePathname();
-  const classic = pathname.startsWith('/app/manutencao') || homes.every((hat) => hat === 'maintenance');
   // The tab screens' paths; the query only says which tab, which the bar reads itself.
-  const tabbed =
-    !classic &&
-    ['/app/familia', '/app/familia/aulas', '/app/familia/pagamentos', '/app/aulas', '/app/perfil'].includes(
-      pathname.replace(/\/$/, ''),
-    );
+  const tabbed = [
+    '/app/familia',
+    '/app/familia/aulas',
+    '/app/familia/pagamentos',
+    '/app/aulas',
+    '/app/manutencao',
+    '/app/manutencao/registar',
+    '/app/perfil',
+  ].includes(pathname.replace(/\/$/, ''));
 
   return (
     <div
       data-surface="app"
-      data-shell={classic ? 'classic' : tabbed ? 'tabs' : 'detail'}
+      data-shell={tabbed ? 'tabs' : 'detail'}
       className="flex min-h-dvh flex-col bg-background pl-safe-left pr-safe-right"
     >
       <header className="sticky top-0 z-20 bg-surface pt-safe-top shadow-hairline-b print:hidden">
         <div className="mx-auto flex h-14 w-full max-w-2xl items-center justify-between gap-3 px-4">
           <span className="min-w-0 truncate text-sm font-semibold">{organizationName}</span>
-          {classic ? (
-            <div className="flex items-center gap-3">{chrome}</div>
-          ) : (
-            <ClubCorner name={organizationName} logoFileId={logoFileId} />
-          )}
+          <ClubCorner name={organizationName} logoFileId={logoFileId} />
         </div>
-        {classic && (homes.length > 1 || staff) && (
-          <div className="mx-auto flex w-full max-w-2xl flex-wrap items-center gap-2 px-4 pb-2">
-            <AppSwitcher homes={homes} />
-            {staff && (
-              <Link
-                href="/dashboard"
-                className="ml-auto inline-flex h-control items-center justify-center rounded-sm px-3 text-control text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                {t('app.openBackoffice')}
-                <LinkBusy />
-              </Link>
-            )}
-          </div>
-        )}
         {tabbed && (
           <Suspense fallback={null}>
             <TabBar homes={homes} placement="top" />
