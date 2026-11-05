@@ -36,6 +36,7 @@ import { QualificationsController } from '../staff/qualifications.controller.js'
 import { FilesController } from '../files/files.controller.js';
 import { SensitiveController } from '../sensitive/sensitive.controller.js';
 import { InventoryController } from '../inventory/inventory.controller.js';
+import { CostsController } from '../costs/costs.controller.js';
 import { InvitationsController } from '../invitations/invitations.controller.js';
 import {
   FamilyInvitationsBulkController,
@@ -626,6 +627,15 @@ test('operational reads refuse non-staff (403)', async () => {
     await refused('GET spaces', 403, () => new SpacesController().list(fac));
     await refused('GET spaces/:id', 403, () => new SpacesController().detail(NO_SUCH_ID));
     await refused('GET inventory', 403, () => new InventoryController().list(fac));
+    // POOLSE-182: the ledger is the office's; recording is staff's.
+    await refused('GET costs/months', 403, () => new CostsController().months('2026-01-01', '2026-12-31'));
+    await refused('GET costs/window', 403, () => new CostsController().window('2026-01-01', '2026-12-31'));
+    await refused('POST costs/purchases', 403, () =>
+      new CostsController().purchase({ inventoryItemId: NO_SUCH_ID, quantity: 1, amountCents: 1, boughtOn: '2026-01-01' }),
+    );
+    await refused('POST costs/maintenance-service', 403, () =>
+      new CostsController().service({ maintenanceRequestId: NO_SUCH_ID, amountCents: 1, performedOn: '2026-01-01' }),
+    );
     await refused('GET inventory/export', 403, () => new InventoryController().exportAll(fac));
     await refused('GET inventory/lost-and-found', 403, () =>
       new InventoryController().lostAndFound(fac),

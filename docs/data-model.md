@@ -4287,6 +4287,32 @@ enum family_submission_decision: accepted | rejected
 - **Nothing is filed by the table.** Accepting goes through `fileCopyIn` / `insertExamIn`.
 - In `TENANT_TABLES`. Asserted in `test/family-submission.sql`.
 
+### The cost ledger — POOLSE-182, 5 November 2026
+
+Migration `1794653200000_cost-ledger`.
+
+```
+enum cost_kind: electricity | gas | water | maintenance_service | materials | insurance | salary | fixed | other
+enum cost_basis: invoice | estimate
+enum cost_recurrence: none | monthly | yearly
+```
+
+- **`cost_entry`**: water, maintenance services, fixed costs and other.
+  - Columns: `amount_cents` (net), `vat_cents`, `basis`, `facility_id` (null for the whole club), `supplier`, `document_number`, `file_id`, `note`, `recorded_by`, `archived_at`.
+  - A one-off has `period_from`/`period_to`; a template has `recurrence` and `effective_from`/`effective_to`; an occurrence has `template_id`.
+  - A service names `maintenance_request_id` or `task_completion_id`, never both.
+  - The kind is limited by CHECK: energy and salaries are read through, and materials and insurance have their own homes.
+  - Unique `(organization_id, template_id, period_from)` counts archived rows, so *não pago* stays out.
+- **`inventory_purchase`**: item, quantity, amount, VAT, `bought_on`, supplier, document, file. **`inventory_item.unit_cost_cents`** is the last purchase's, for information only.
+- **`insurance_policy.premium_cents` / `premium_vat_cents`**: the premium spreads over `valid_from … valid_to`.
+- **`cost_month`** `(organization_id, source_kind, source_id, month)`: `share_cents`, `vat_cents`, `kind`, `basis`, `facility_id`. It is derived, kept by triggers on the four sources (`energy_invoice` included), and never written on read. `poolse_app` holds SELECT, INSERT and DELETE.
+- **Functions:**
+  - `allocate_cost(from, to, cents)`: by day, rounding carried forward, an exact sum.
+  - `cost_window(from, to)`: a window's totals, splitting a month by days.
+  - `salary_months(from, to, without_owner)`: pay accrued on read.
+  - `materialise_fixed_costs(until)`: generates occurrences, idempotently.
+- Tenant RLS on all three tables, composite FKs, in `TENANT_TABLES`. Asserted in `test/cost-allocation.sql`.
+
 ### Staff contract — POOLSE-149 slice C, 2 November 2026
 
 Migration `1794651500000_staff-contract`.

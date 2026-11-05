@@ -32,6 +32,7 @@ import { FacilitiesController } from './facilities/facilities.controller.js';
 import { DashboardController } from './dashboard/dashboard.controller.js';
 import { HealthController } from './health/health.controller.js';
 import { InventoryController } from './inventory/inventory.controller.js';
+import { CostsController } from './costs/costs.controller.js';
 import { SpacesController } from './spaces/spaces.controller.js';
 import { MaintenanceController } from './maintenance/maintenance.controller.js';
 import { MessagesController } from './messages/messages.controller.js';
@@ -221,6 +222,7 @@ export const IDENTITY_ONLY_ROUTES = [
     InvitationsController,
     FacilitiesController,
     InventoryController,
+    CostsController,
     SpacesController,
     MaintenanceController,
     EnergyController,

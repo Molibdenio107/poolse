@@ -15,6 +15,7 @@ looks for it.
 | [facilities.md](facilities.md) | Sites, tanks, lanes, capacity |
 | [personal.md](personal.md) | One person and their own pool: the signup choice, and what the app hides |
 | [spaces.md](spaces.md) | Espaços, the cleaning log, maintenance requests |
+| [costs.md](costs.md) | The cost ledger: every euro the club spends, allocated by day into months |
 | [maintenance.md](maintenance.md) | Planned maintenance: recurring tasks, who they are for, and the record of every time one was done |
 | [water-quality.md](water-quality.md) | The NP 4542 reference bands, a pool's use, and grading a laboratory result |
 | [public-notices.md](public-notices.md) | The complaints-book link and the versioned operating regulation on every public page |

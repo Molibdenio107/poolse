@@ -4,6 +4,31 @@
 
 **Type:** Architecture · **Area:** Finance / Energy / Maintenance / Data model · **Priority:** Medium (pilot) · **Depends on** [POOLSE-28](./POOLSE-28-heating-cost-per-lesson-hour.md), [POOLSE-106](./POOLSE-106-energy-page-dashboard-collapsible-import-bill-reading.md), [POOLSE-128](./POOLSE-128-energy-roll-up-and-allocation-per-recinto.md), [POOLSE-58](./README.md) (salaries), [POOLSE-154](./POOLSE-154-inventory-fixes-location-link-roles.md) · **Unblocks** [POOLSE-183](./POOLSE-183-custos-per-year-and-per-season.md), [POOLSE-184](./POOLSE-184-cost-suggestions-as-rules.md)
 
+### As built (05-11-2026) — wins over what follows
+
+Migration `1794653200000_cost-ledger`; API `apps/api/src/costs/`; tests `test/cost-allocation.sql` (7) and `costs.integration.test.ts` (6). On a fresh database the whole `db:test` and all 1,397 API tests pass.
+
+- **`allocate_cost(from, to, cents)`** splits by day, as rule 2 says. Rounding is carried forward, so shares are never negative and always sum to the amount exactly; what is left over lands in the last month. The rule as written (round each month, remainder to the last) can go negative on tiny amounts.
+- **QA 4 was corrected to rule 2 (Rui, 05-11-2026):** a premium splits by day like any other cost.
+- **`cost_month`** is kept by triggers on `cost_entry`, `inventory_purchase`, `insurance_policy` (premium) and **`energy_invoice`**. Editing or archiving a bill re-allocates it, so a bill is never copied, only projected. Existing bills were allocated once by the migration. The month rows hold net and VAT side by side.
+- **Tariffs: no double counting (decided 05-11-2026).** Rule 5 asked for sub-meter tariff costs in the ledger, but a sub-meter is a slice of the general supply's bill, and adding it would count those euros twice. Built instead:
+  - a tariff estimate enters only for a **supply** (a meter with its own CPE/CUI) in a month **no bill of that meter covers**, which is the gap a late bill leaves;
+  - it is priced by the energy module's own `liveTariffJoin`;
+  - sub-meters stay in POOLSE-28's per-tank report;
+  - QA 3, which assumed sub-meter rows, does not apply, and a tariff edit already audits itself.
+- **Salaries** are read on demand by `salary_months()`, never stored. Monthly pay is amount × pay periods (12/14) / 12. Hourly pay is amount × weekly hours × 52 / 12; a rate with no hours is left out and counted (`salariesWithoutHours`). **An Admin's figures leave the Owner's pay out**, as every pay read does.
+- **Recurring fixed costs:** a template (`recurrence` + effective dates) generates occurrences up to **today** through `materialise_fixed_costs()`, which runs on create and on every ledger read. A month not yet reached is not yet spent. An occurrence archived as *não pago* is never generated again (the unique index counts archived rows on purpose).
+- **Routes** (owner/admin unless said):
+  - `GET /costs/months?from&to` and `GET /costs/window?from&to`, windows up to ten years. The window splits a month by days.
+  - `POST /costs` and `POST /costs/:id/archive`.
+  - `POST /costs/maintenance-service` (also **maintenance**, answered with an id only).
+  - `POST /costs/purchases` (also **maintenance**; stock rises and `unit_cost_cents` is set in the same transaction).
+  - `PUT /costs/premiums/:policyId`.
+  - Instructors and families: 403, in the role probe.
+- **Open, small:**
+  - maintenance may record a service on any avaria or task in the club. "A request they handle" has no owner column to check.
+  - `cost_month` is written by the app role through triggers, so it is not tamper-proof against the app itself.
+
 ### PO — why this exists
 
 Rui, 05-11-2026: *"We also need to show the electricity/gas/maintenance/energy costs per year and per season. We need to find a formula to tell the owner the average costs of everything together but separated at the same time per civil year and per season."*
@@ -42,7 +67,7 @@ Energy has euros (bills are facts, tariffs are estimates), salaries have euros, 
 1. Given a 930 € bill for 12-12 to 11-01, when allocated, then December 600,00 € and January 330,00 €, sum exact.
 2. Given an época 15-09-2026 → 31-07-2027 and a civil year 2026, then September's shares split 14/30 to before the época and 16/30 to it; the two windows read the same `cost_month` rows.
 3. Given a tariff on sub-meter X changed for March, then only March's estimate rows for X change and one audit row names both totals; the billed meter's rows are untouched.
-4. Given a premium of 1 200 € on a policy 01-01 → 31-12, then 100 € ± rounding per month, remainder in December.
+4. Given a premium of 1 200 € on a policy 01-01 → 31-12-2026, then 101,92 € in January and 92,05 € in February, by day, summing exactly to 1 200 €.
 5. Given a purchase of 10 × cloro at 180 €, then `inventory_item.quantity` rises by 10 in the same transaction and `unit_cost_cents` is 1 800.
 6. Given a maintenance login, `GET /costs/*` → 403, `POST /maintenance-requests/:id/cost` → 201.
 7. Cross-tenant: a `cost_entry` naming another tenant's `facility_id` is refused by the composite FK; `cost_month` rows never cross `organization_id`.

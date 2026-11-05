@@ -1346,3 +1346,8 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 
 - **2026-11-05** — **What a family sends changes nothing until the office accepts it** (POOLSE-179 slice 2, Rui: convert HEIC, leave the exam's result to the office, "don't break anything"). It waits in `family_submission` rather than on `student_document` or `medical_exam`, so `medical_exam.result` stays NOT NULL: a pending exam never becomes the child's standing, and a wrong upload never replaces or shreds the office's copy.
 
+- **2026-11-05** — **A sub-meter's tariff estimate stays out of the ledger** (POOLSE-182, reversing the ticket's rule 5): a sub-meter is a slice of the general supply's bill, so adding it would count those euros twice. A tariff estimate enters only for a supply, in a month no bill of that meter covers.
+
+- **2026-11-05** — **A premium splits by day like every other cost** (POOLSE-182, Rui): 101,92 € in January and 92,05 € in February on a 1 200 € policy year, and the ticket's QA 4 was corrected rather than a second allocation rule added.
+
+- **2026-11-05** — **`guardian_link.can_view_progress` is ignored, so guardians see progress by default** (POOLSE-185, Rui). The column defaults to false and nothing reads it; honouring it would hide progress from every family until the office ticked each one.

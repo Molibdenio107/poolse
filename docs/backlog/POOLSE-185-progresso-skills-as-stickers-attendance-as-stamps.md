@@ -25,7 +25,7 @@ The rules for how a sticker and a stamp look are POOLSE-173's rules 8, 9 and 12,
 5. **A family reads only its own child.** Anybody else is a 404, the answer `requireActsForStudent` gives a stranger.
 6. **A club with no skills defined** for the child's level shows no sticker section, rather than an empty one. Skills are core, not a module.
 
-**Open:** `guardian_link.can_view_progress` exists, defaults to false, and no code reads it. Honouring it as it stands would hide progress from every guardian. Default: do not read it here, as the family's own attendance read does not, and say so in the docs. Rui to confirm before this is built, because POOLSE-174's rule 6 also names it.
+**Answered (Rui, 05-11-2026): ignored, guardians see progress by default.** `guardian_link.can_view_progress` exists, defaults to false, and no code reads it. Honouring it as it stands would hide progress from every guardian. Default: do not read it here, as the family's own attendance read does not, and say so in the docs. Rui to confirm before this is built, because POOLSE-174's rule 6 also names it.
 
 ### Dev notes
 
@@ -52,5 +52,5 @@ The rules for how a sticker and a stamp look are POOLSE-173's rules 8, 9 and 12,
 - [ ] `Selo` and `Stamp` built and wired to real skill states and attendance marks.
 - [ ] One new family read for skills, scoped to the reader's own child, with cross-family and cross-tenant denials and a role-probe line.
 - [ ] `GET /skills/turma/:classGroupId` is unchanged.
-- [ ] The `can_view_progress` question is answered and written down.
+- [x] The `can_view_progress` question is answered and written down.
 - [ ] Light and dark AA; reduced motion respected.
