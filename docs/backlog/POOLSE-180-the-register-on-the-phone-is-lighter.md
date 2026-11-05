@@ -4,6 +4,15 @@
 
 **Type:** Feature · **Area:** Mobile app / Staff / Attendance · **Priority:** Medium (pilot) · **Depends on** [POOLSE-88](./POOLSE-88-staff-on-the-phone.md), [POOLSE-90](./POOLSE-90-the-app-agenda-per-role.md), [POOLSE-13](./POOLSE-13-attendance-states-colour-scheme-drop-the-static-atrasado.md), [POOLSE-133](./POOLSE-133-exame-medico.md)
 
+### As built (05-11-2026) — wins over what follows
+
+- **`compact` comes from `?from=/app…`, not `data-surface`.** The register lives under `/dashboard`, outside the app frame, so there is no `data-surface` to read. The page sets `compact` from the origin `readFrom` already validates; the backoffice calendar sends no `from`, so it never turns on. Below `md` only: every compact class is `max-md:` or undone at `md:`.
+- **No `components/app/segmented.tsx` yet.** One consumer, so the control stays inline in `register-form.tsx` as two class sets. Extract it when POOLSE-176's sheets want it.
+- **Avatar is initials only** (`PersonAvatar` with no photo), because this screen has no photo-consent check.
+- **Warning line:** *N sem seguro · N exames em falta*. *Exames em falta* counts both missing and expired; the sheet names which one.
+- **Contrast (QA 6):** the three chosen tones' words are in `check-contrast.mjs` as `*-ink` on their `/15` wash, which is what `text-primary` and the others resolve to. All pass.
+- **e2e:** `phone-poolside.spec.ts` › *the register from app mode — POOLSE-180*. QA 3 is the existing register tests, which open without `from`.
+
 ### PO — why this exists
 
 Rui, 05-11-2026: *"on mobile app, 'for teaching and maintenance' when viewing students on the classes etc, the information about a student having no insurance or no medical exam on a class detail screen is not needed. Then, the 'present, excused and absent' labels also do not need to be there, its to much visual information. — The mobile app is not the core it is supposed to be simple and clean."*

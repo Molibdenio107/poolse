@@ -12,6 +12,8 @@ import {
   selectedTone,
 } from '@/components/attendance-state';
 import { cn } from '@/lib/utils';
+import { Dialog } from '@/components/ui/dialog';
+import { PersonAvatar } from '@/components/person-avatar';
 import type { FormState } from '../../../actions';
 import { recordAttendanceAction } from './attendance.actions';
 
@@ -37,7 +39,18 @@ const INITIAL: FormState = { ok: false };
  * Radios rather than a dropdown per student. A dropdown is two taps and a
  * scroll on a phone held over a wet poolside; four visible options are one tap.
  */
-export function RegisterForm({ register }: { register: Register & { organizationId: string } }): React.ReactElement {
+export function RegisterForm({
+  register,
+  compact = false,
+}: {
+  register: Register & { organizationId: string };
+  /**
+   * POOLSE-180: opened from app mode. Below `md` each row is the name and one
+   * control, and the seguro / exame chips become one line above the roll. From
+   * `md` up nothing changes — every compact class is `max-md:` or undone at `md:`.
+   */
+  compact?: boolean;
+}): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(recordAttendanceAction, INITIAL);
   // Vou / Não vou by student, and how many said they are not coming.
@@ -59,6 +72,19 @@ export function RegisterForm({ register }: { register: Register & { organization
   );
 
   const marked = Object.values(marks).filter((value) => value !== '').length;
+
+  /*
+   * POOLSE-180 rule 3: the warnings as a count. The office needs them per row;
+   * the instructor on the deck needs to know they exist, and who, on a tap.
+   */
+  const uninsured = register.entries.filter((entry) => !entry.insured).length;
+  const examMissing = register.entries.filter(
+    (entry) => entry.examState !== undefined && entry.examState !== 'valid',
+  ).length;
+  const warned = register.entries.filter(
+    (entry) => !entry.insured || (entry.examState !== undefined && entry.examState !== 'valid'),
+  );
+  const [warningsOpen, setWarningsOpen] = useState(false);
 
   function setAll(status: string): void {
     setMarks(Object.fromEntries(register.entries.map((entry) => [entry.studentId, status])));
@@ -150,14 +176,66 @@ export function RegisterForm({ register }: { register: Register & { organization
         </p>
       )}
 
+      {/*
+        POOLSE-180: one muted line instead of a chip per row, on a phone in app
+        mode only. A lesson with nothing to warn shows nothing. A button, because
+        it opens the names; the words carry it, the icon is a hint.
+      */}
+      {compact && warned.length > 0 && (
+        <>
+          <button
+            type="button"
+            onClick={() => setWarningsOpen(true)}
+            className="flex min-h-control items-center gap-1.5 self-start text-left text-sm text-foreground-muted underline-offset-2 hover:underline md:hidden"
+          >
+            <AlertTriangle aria-hidden className="size-4 shrink-0" />
+            {[
+              uninsured > 0 ? t('attendance.warnings.noInsurance', { count: uninsured }) : null,
+              examMissing > 0 ? t('attendance.warnings.exam', { count: examMissing }) : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </button>
+          <Dialog
+            open={warningsOpen}
+            onClose={() => setWarningsOpen(false)}
+            title={t('attendance.warnings.title')}
+            closeLabel={t('common.close')}
+            placement="sheet"
+          >
+            <ul className="flex flex-col divide-y divide-border">
+              {warned.map((entry) => (
+                <li key={entry.studentId} className="flex flex-col gap-0.5 py-2">
+                  <span className="font-medium">{entry.shortName}</span>
+                  <span className="text-sm text-foreground-muted">
+                    {[
+                      entry.insured ? null : t('attendance.noInsurance'),
+                      entry.examState === undefined || entry.examState === 'valid'
+                        ? null
+                        : entry.examState === 'expired'
+                          ? t('attendance.examExpired')
+                          : t('attendance.examNone'),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Dialog>
+        </>
+      )}
+
       <ul className="flex flex-col divide-y divide-border rounded border border-border bg-surface">
         {register.entries.map((entry) => (
           <li key={entry.studentId} className="flex flex-col gap-2 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span
-                className="flex flex-wrap items-center gap-2 font-medium"
+                className={cn('flex flex-wrap items-center gap-2 font-medium', compact && 'max-md:font-bold')}
                 title={entry.displayName}
               >
+                {/* POOLSE-180 rule 2: initials only — a photo needs its consent check, and this has none. */}
+                {compact && <PersonAvatar id={entry.studentId} name={entry.shortName} size="sm" className="md:hidden" />}
                 {entry.shortName}
                 {/*
                   Why somebody unexpected is on the list — POOLSE-21 criterion 8.
@@ -209,14 +287,24 @@ export function RegisterForm({ register }: { register: Register & { organization
                   </span>
                 )}
                 {!entry.insured && (
-                  <span className="flex items-center gap-1 rounded border border-warning/40 bg-warning/10 px-2 py-0.5 text-sm font-normal text-warning">
+                  <span
+                    className={cn(
+                      'flex items-center gap-1 rounded border border-warning/40 bg-warning/10 px-2 py-0.5 text-sm font-normal text-warning',
+                      compact && 'max-md:hidden',
+                    )}
+                  >
                     <AlertTriangle aria-hidden className="attention size-3.5" />
                     {t('attendance.noInsurance')}
                   </span>
                 )}
                 {/* POOLSE-133: the exame médico, the seguro's way. */}
                 {entry.examState !== undefined && entry.examState !== 'valid' && (
-                  <span className="flex items-center gap-1 rounded border border-warning/40 bg-warning/10 px-2 py-0.5 text-sm font-normal text-warning">
+                  <span
+                    className={cn(
+                      'flex items-center gap-1 rounded border border-warning/40 bg-warning/10 px-2 py-0.5 text-sm font-normal text-warning',
+                      compact && 'max-md:hidden',
+                    )}
+                  >
                     <AlertTriangle aria-hidden className="attention size-3.5" />
                     {entry.examState === 'expired' ? t('attendance.examExpired') : t('attendance.examNone')}
                   </span>
@@ -225,12 +313,24 @@ export function RegisterForm({ register }: { register: Register & { organization
 
               {/*
                 On a phone the three states are one full-width row of equal
-                thirds — about 96px each at 360px, which "Falta justificada"
-                fills only by wrapping onto two lines and dropping its icon.
-                The word carries the state, so the icon is the part that can go;
-                `min-h-control` keeps a wrapped segment at 44px or taller.
+                thirds — about 96px each at 360px. In the backoffice, "Falta
+                justificada" fills that only by wrapping and dropping its icon;
+                the word carries the state there.
+
+                From app mode (POOLSE-180) it is the other way round, and on
+                purpose: one 44px cell per state with the glyph on top and the
+                word beneath at 11px, which fits both at 96px. The word stays, so
+                colour and glyph are never alone; it reads as a label, not a
+                sentence. Radios stay radios: arrow keys move between the three.
+                Every compact class is undone at `md`, so a laptop is unchanged.
               */}
-              <fieldset className="grid w-full grid-cols-3 gap-1 sm:flex sm:w-auto sm:flex-wrap">
+              <fieldset
+                className={
+                  compact
+                    ? 'grid w-full grid-cols-3 gap-1 md:flex md:w-auto md:flex-wrap'
+                    : 'grid w-full grid-cols-3 gap-1 sm:flex sm:w-auto sm:flex-wrap'
+                }
+              >
                 <legend className="sr-only">
                   {t('attendance.statusFor', { name: entry.displayName })}
                 </legend>
@@ -238,7 +338,9 @@ export function RegisterForm({ register }: { register: Register & { organization
                   <label
                     key={status}
                     className={cn(
-                      'inline-flex min-h-control items-center justify-center px-1.5 text-center text-control leading-tight cursor-pointer gap-1.5 rounded-sm border transition-colors sm:h-control sm:px-4',
+                      compact
+                        ? 'inline-flex min-h-control flex-col items-center justify-center gap-0.5 px-1 text-center text-[11px] leading-tight cursor-pointer rounded-sm border transition-colors md:h-control md:flex-row md:gap-1.5 md:px-4 md:text-control'
+                        : 'inline-flex min-h-control items-center justify-center px-1.5 text-center text-control leading-tight cursor-pointer gap-1.5 rounded-sm border transition-colors sm:h-control sm:px-4',
                       // The label and the glyph render whether or not the state
                       // is chosen, so colour is never the only thing carrying it.
                       marks[entry.studentId] === status
@@ -256,7 +358,7 @@ export function RegisterForm({ register }: { register: Register & { organization
                       }
                       className="sr-only"
                     />
-                    <span className="inline-flex max-sm:hidden">
+                    <span className={compact ? 'inline-flex' : 'inline-flex max-sm:hidden'}>
                       <AttendanceIcon status={status} />
                     </span>
                     {t(`attendance.${status}`)}

@@ -266,3 +266,7 @@ Where *Enviar* shows (`canSend`), a live encarregado, or the student from 18, se
 
 Nothing on file changes when a family sends. The row waits in `family_submission` and reads *Enviado — a aguardar a secretaria* until the office decides (`docs/features/students.md`). An ID photo is never shown back.
 
+## The register from app mode — POOLSE-180
+
+Opened with `?from=/app…` on a phone, the register is compact: a row is the name, the family's *Confirmou / não vem* chip and three 44 px cells, each a glyph with its word beneath. The warnings are one line above the roll (*2 sem seguro · 1 exame em falta*) that opens a sheet with the names. From `md` up, and from the backoffice calendar, it is unchanged.
+

@@ -3372,7 +3372,12 @@
     "noticeGoing": "Confirmed",
     "noticeNotGoing": "Said not coming",
     "examExpired": "Medical exam expired",
-    "examNone": "No medical exam"
+    "examNone": "No medical exam",
+    "warnings": {
+      "title": "Insurance and medical exam",
+      "noInsurance": "{count, plural, one {# without insurance} other {# without insurance}}",
+      "exam": "{count, plural, one {# medical exam missing} other {# medical exams missing}}"
+    }
   },
   "calendar": {
     "resizeLanes": "Drag to change how many lanes it uses",

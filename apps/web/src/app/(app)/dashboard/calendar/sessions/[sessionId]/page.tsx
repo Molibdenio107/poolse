@@ -56,6 +56,13 @@ export default async function AttendancePage({
   const calendarWeek = week === undefined ? '/dashboard/calendar' : `/dashboard/calendar?week=${week}`;
   // The dashboard's next-class card sends `from`; the calendar sends `week`.
   const origin = readFrom(from);
+  /*
+   * POOLSE-180: opened from app mode (the instructor's *Aulas*), the register is
+   * the light one below `md`. Read from the validated origin because this page
+   * lives under `/dashboard`, outside the app frame, so there is no
+   * `data-surface` here to ask. The backoffice calendar sends no `from`.
+   */
+  const compact = origin !== null && (origin === '/app' || origin.startsWith('/app/') || origin.startsWith('/app?'));
 
   return (
     <PageShell
@@ -182,7 +189,7 @@ export default async function AttendancePage({
               )}
             </section>
           ) : register.canRecord ? (
-            <RegisterForm register={register} />
+            <RegisterForm register={register} compact={compact} />
           ) : (
             <section className="rounded bg-surface p-5 shadow-card">
               <p className="text-sm text-foreground-muted">{t('attendance.readOnly')}</p>

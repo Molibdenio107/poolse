@@ -3372,7 +3372,12 @@
     "noticeGoing": "Confirmou",
     "noticeNotGoing": "Avisou que não vem",
     "examExpired": "Exame médico expirado",
-    "examNone": "Sem exame médico"
+    "examNone": "Sem exame médico",
+    "warnings": {
+      "title": "Seguro e exame médico",
+      "noInsurance": "{count, plural, one {# sem seguro} other {# sem seguro}}",
+      "exam": "{count, plural, one {# exame em falta} other {# exames em falta}}"
+    }
   },
   "calendar": {
     "resizeLanes": "Arraste para alterar as pistas ocupadas",

@@ -176,6 +176,49 @@ test.describe('the register, as the instructor', () => {
   });
 });
 
+test.describe('the register from app mode — POOLSE-180', () => {
+  test.use({ storageState: INSTRUCTOR_SESSION });
+
+  test('QA 1, 4 — rows are a name and one control; warnings are one line above the roll', async ({ page }) => {
+    const lesson = await poolsideLesson();
+    await visit(page, `/dashboard/calendar/sessions/${lesson.sessionId}?from=%2Fapp%2Faulas`, 'domcontentloaded');
+    await page.getByRole('button', { name: /guardar presenças|save the register/i }).waitFor();
+
+    // No seguro or exame chip on any row. They stay in the markup for `md` up, so ask what shows.
+    await expect(
+      page
+        .locator('ul li')
+        .getByText(/^(sem seguro|no insurance|sem exame médico|no medical exam|exame médico expirado|medical exam expired)$/i)
+        .filter({ visible: true }),
+    ).toHaveCount(0);
+
+    // Every cell: 44px, inside 360px, glyph and word both there.
+    const cells = await page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLElement>('fieldset label')).map((el) => {
+        const box = el.getBoundingClientRect();
+        return { height: box.height, right: box.right, glyph: el.querySelector('svg') !== null, text: el.textContent?.trim() ?? '' };
+      }),
+    );
+    expect(cells).toHaveLength(POOLSIDE_STUDENTS * 3);
+    for (const cell of cells) {
+      expect(cell.height, cell.text).toBeGreaterThanOrEqual(44);
+      expect(cell.right, cell.text).toBeLessThanOrEqual(360);
+      expect(cell.glyph, cell.text).toBe(true);
+      expect(cell.text.length, 'the word stays').toBeGreaterThan(0);
+    }
+
+    // If the lesson has anybody to warn about, the line opens the names.
+    const line = page.getByRole('button', { name: /sem seguro|exames? em falta|without insurance|medical exams? missing/i });
+    if ((await line.count()) > 0) {
+      // Retried: a tap that lands before hydration opens nothing (`openMenu`'s shape).
+      await expect(async () => {
+        if ((await page.getByRole('dialog').count()) === 0) await line.tap();
+        await expect(page.getByRole('dialog')).toBeVisible({ timeout: 1_000 });
+      }).toPass({ timeout: 15_000 });
+    }
+  });
+});
+
 test.describe('the register, as the owner', () => {
   test('an owner marks a class they do not teach the same way', async ({ page }) => {
     const lesson = await poolsideLesson();
