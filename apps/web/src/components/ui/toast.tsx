@@ -118,7 +118,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }): Reac
             each toast turns them back on for its own box.
           */
           <div
-            className="pointer-events-none fixed inset-x-0 top-[calc(1rem+var(--safe-top))] z-[60] flex flex-col items-center gap-2 px-4"
+            className="toast-stack pointer-events-none fixed inset-x-0 top-[calc(1rem+var(--safe-top))] z-[60] flex flex-col items-center gap-2 px-4"
             aria-live="polite"
           >
             {toasts.map((toast) => (
@@ -183,7 +183,9 @@ function ToastCard({
         worked".
       */
       role={toast.tone === 'success' ? 'status' : 'alert'}
+      data-tone={toast.tone}
       className={cn(
+        'toast-card',
         /*
           Width follows the words — round 8.
 

@@ -81,7 +81,7 @@ test('QA 6 — maintenance records a service and a purchase, and is refused ever
     const { months } = await asOwner(tenant, () => new CostsController().months('2026-11-01', '2026-11-30'));
     const service = months.find((one) => one.kind === 'maintenance_service');
     assert.equal(service?.netCents, 25000);
-    assert.equal(service?.basis, 'invoice');
+    assert.equal(service?.basis, 'estimate', 'no document number, so it is not Faturado');
   });
 });
 
@@ -194,7 +194,14 @@ test('a supply’s unbilled month is estimated from its tariff; a billed month i
 
 const recordWater = (tenant: ScratchTenant, month: string, amountCents: number, vatCents = 0): Promise<{ id: string }> =>
   asOwner(tenant, () =>
-    new CostsController().record({ kind: 'water', amountCents, vatCents, periodFrom: `${month}-01`, periodTo: `${month}-28` }),
+    new CostsController().record({
+      kind: 'water',
+      amountCents,
+      vatCents,
+      periodFrom: `${month}-01`,
+      periodTo: `${month}-28`,
+      documentNumber: 'FT 1',
+    }),
   );
 
 test('183 QA 1 — one set of rows, two rulers: an época cuts where its dates do, a year where it ends', async () => {
@@ -285,7 +292,8 @@ test('189 QA 2 — a monthly cost shows every month, and stopping it keeps the p
     await asOwner(tenant, () => controller.archive(id));
     assert.deepEqual((await asOwner(tenant, () => controller.entries())).entries, []);
     const after = await asOwner(tenant, () => controller.overview('civil', '2026'));
-    assert.equal(after.invoicedCents, before.invoicedCents, 'the months already generated stay');
+    assert.equal(after.estimatedCents, before.estimatedCents, 'the months already generated stay');
+    assert.equal(after.invoicedCents, 0, 'no document, so nothing here is Faturado');
   });
 });
 
@@ -299,5 +307,15 @@ test('189 QA 5 and 6 — an instructor reads no entries, and another club sees n
         expectStatus(() => new CostsController().premium('00000000-0000-4000-8000-000000000000', { premiumCents: 1 }), 404),
       );
     });
+  });
+});
+
+test('Faturado needs a document: the same cost typed with a number is invoiced, without one estimated', async () => {
+  await withScratchTenant(async (tenant) => {
+    const body = { kind: 'water', amountCents: 1_000, periodFrom: '2025-03-01', periodTo: '2025-03-31' };
+    await asOwner(tenant, () => new CostsController().record(body));
+    await asOwner(tenant, () => new CostsController().record({ ...body, documentNumber: 'FT 9' }));
+    const seen = await asOwner(tenant, () => new CostsController().overview('civil', '2025'));
+    assert.deepEqual([seen.invoicedCents, seen.estimatedCents], [1_000, 1_000]);
   });
 });

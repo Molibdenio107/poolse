@@ -1370,4 +1370,6 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 
 - **2026-11-06** — **An owner picks a view on the app and sees a real person's app, read-only and audited** (POOLSE-188, Rui, over a picker of held roles and over sample data), the same for support under a grant.
 
-- **2026-11-06** — **The family's triangle tab is Marcas, and Pagamentos is a row on Perfil** (Rui): payments are looked at rarely, and a swimmer's times are what the app is for. Health integrations come to that tab after go-live. *Últimas aulas* moved to *Início*.
+- **2026-11-06** — **The family's triangle tab is Progressos, and Pagamentos is a row on Perfil** (Rui): payments are looked at rarely, and a swimmer's times are what the app is for. Health integrations come to that tab after go-live. *Últimas aulas* moved to *Início*.
+
+- **2026-11-06** — ***Faturado* means a document exists** (Rui): a typed cost or purchase with no document number counts as *Estimado*, **changing** POOLSE-182's default. A policy's premium stays invoiced, because the policy is the document.

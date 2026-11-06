@@ -243,10 +243,10 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
     await expect(page.locator('header').getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: /^(mensalidades|monthly fees)$/i })).toHaveCount(0);
 
-    await expect(bar.getByRole('link', { name: /^(marcas|records)$/i })).toHaveAttribute('href', '/app/familia/marcas');
+    await expect(bar.getByRole('link', { name: /^(progressos|progress)$/i })).toHaveAttribute('href', '/app/familia/progressos');
     await expect(bar.getByRole('link', { name: /^(pagamentos|payments)$/i })).toHaveCount(0);
-    await visit(page, '/app/familia/marcas');
-    await expect(bottomBar(page).getByRole('link', { name: /^(marcas|records)$/i })).toHaveAttribute('aria-current', 'page');
+    await visit(page, '/app/familia/progressos');
+    await expect(bottomBar(page).getByRole('link', { name: /^(progressos|progress)$/i })).toHaveAttribute('aria-current', 'page');
     await visit(page, '/app/perfil?home=family');
     await expect(page.getByRole('link', { name: /^(pagamentos|payments)$/i })).toHaveAttribute('href', '/app/familia/pagamentos');
     await visit(page, '/app/familia/pagamentos');

@@ -42,7 +42,7 @@ const q = (query = '') => new URLSearchParams(query);
 test("a home's own tabs carry the bar; a screen deeper in does not", () => {
   assert.deepEqual(tabFor('/app/familia', q(), ['family', 'teaching']), { hat: 'family', index: 0 });
   assert.deepEqual(tabFor('/app/familia/aulas', q('child=x'), ['family', 'teaching']), { hat: 'family', index: 1 });
-  assert.deepEqual(tabFor('/app/familia/marcas', q(), ['family', 'teaching']), { hat: 'family', index: 2 });
+  assert.deepEqual(tabFor('/app/familia/progressos', q(), ['family', 'teaching']), { hat: 'family', index: 2 });
   assert.equal(tabFor('/app/familia/pagamentos', q(), ['family', 'teaching']), null, 'on Perfil since 06-11-2026');
   assert.equal(tabFor('/app/familia/aulas/abc', q(), ['family', 'teaching']), null);
   assert.equal(tabFor('/app/familia/inscrever', q(), ['family', 'teaching']), null);

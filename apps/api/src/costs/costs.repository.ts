@@ -297,9 +297,9 @@ export async function recordCost(organizationId: string, membershipId: string, i
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO cost_entry (organization_id, facility_id, kind, amount_cents, vat_cents, period_from, period_to,
                                recurrence, effective_from, effective_to, supplier, document_number, note,
-                               maintenance_request_id, task_completion_id, recorded_by)
+                               maintenance_request_id, task_completion_id, recorded_by, basis)
        VALUES ($1, $2, $3::cost_kind, $4, $5, $6::date, $7::date, $8::cost_recurrence, $9::date, $10::date,
-               $11, $12, $13, $14, $15, $16)
+               $11, $12, $13, $14, $15, $16, $17::cost_basis)
        RETURNING id`,
       [
         organizationId,
@@ -318,6 +318,8 @@ export async function recordCost(organizationId: string, membershipId: string, i
         input.maintenanceRequestId,
         input.taskCompletionId,
         membershipId,
+        // *Faturado* means a document exists (Rui, 06-11-2026).
+        input.documentNumber === null ? 'estimate' : 'invoice',
       ],
     );
     const id = rows[0]!.id;

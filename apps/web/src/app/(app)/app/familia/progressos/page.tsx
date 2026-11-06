@@ -8,7 +8,7 @@ import { PageError } from '@/components/page-shell';
 import { ChildFilter } from '../child-filter';
 
 /**
- * *Marcas* — the triangle tab (Rui, 06-11-2026). Each child's best times, per
+ * *Progressos* — the triangle tab (Rui, 06-11-2026). Each child's best times, per
  * stroke, distance and pool length, as `GET /students/:id/progression` gives them
  * to a family. A club with competition off, or a child with no times, reads one
  * short line. Health integrations come here after go-live.
@@ -36,8 +36,8 @@ export default async function FamilyRecords({
 
   return (
     <>
-      <h1>{t('app.tabs.familia.marcas')}</h1>
-      <ChildFilter base="/app/familia/marcas" children={everyone} chosen={child} />
+      <h1>{t('app.tabs.familia.progressos')}</h1>
+      <ChildFilter base="/app/familia/progressos" children={everyone} chosen={child} />
 
       {rows.map((one) => {
         const bests = one.progress.state === 'ok' ? one.progress.data.bests : [];

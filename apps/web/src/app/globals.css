@@ -1172,3 +1172,46 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
   -webkit-mask-image: linear-gradient(to right, transparent, #000 3rem, #000 calc(100% - 3rem), transparent);
   mask-image: linear-gradient(to right, transparent, #000 3rem, #000 calc(100% - 3rem), transparent);
 }
+
+/*
+ * A message in the family app on a phone (Rui, 06-11-2026): a full-width bar above
+ * the tab bar, where a thumb and an eye already are, in a solid colour. Each ink
+ * clears 4.6:1 on the surface, so the surface on the ink clears it too, in both
+ * themes. The backoffice keeps its quiet toast.
+ */
+@media (max-width: 767.98px) {
+  body:has([data-surface='app']) .toast-stack {
+    top: auto;
+    bottom: calc(var(--safe-bottom) + 5.75rem);
+  }
+  body:has([data-surface='app']) .toast-card {
+    width: 100%;
+    max-width: none;
+    align-items: center;
+    border: 0;
+    padding: 0.875rem 1rem;
+    color: rgb(var(--surface));
+  }
+  body:has([data-surface='app']) .toast-card[data-tone='success'] {
+    background-color: rgb(var(--success-ink));
+  }
+  body:has([data-surface='app']) .toast-card[data-tone='warning'] {
+    background-color: rgb(var(--warning-ink));
+  }
+  body:has([data-surface='app']) .toast-card[data-tone='danger'] {
+    background-color: rgb(var(--danger-ink));
+  }
+  body:has([data-surface='app']) .toast-card :is(p, svg, button) {
+    color: rgb(var(--surface));
+    border-color: currentColor;
+  }
+  body:has([data-surface='app']) .toast-card p {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  body:has([data-surface='app']) .toast-card > svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0;
+  }
+}

@@ -41,7 +41,7 @@ export function AppFrame({
   const tabbed = [
     '/app/familia',
     '/app/familia/aulas',
-    '/app/familia/marcas',
+    '/app/familia/progressos',
     '/app/aulas',
     '/app/manutencao',
     '/app/manutencao/registar',

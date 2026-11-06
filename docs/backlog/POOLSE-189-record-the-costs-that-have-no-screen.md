@@ -9,7 +9,7 @@
 - *Registar custo* on *Custos* takes water, fixed, a maintenance service with no avaria, and other, once or recurring, and lists what was typed (`GET /costs/entries`). Archiving a recurring cost stops the months to come and keeps the past.
 - *Registar compra* on each inventory row, *Registar custo* on each avaria, and a premium form on each policy, all in `custos/cost-forms.tsx`.
 - **Rule 1, in part:** a service on a task done has no form yet; the API takes it.
-- **Basis:** a typed cost counts as *Faturado*, with or without a document number, as POOLSE-182 left it. Asked of Rui.
+- **Basis (Rui, 06-11-2026):** a typed cost or purchase is *Faturado* only with a document number; without one it is *Estimado*. A premium stays invoiced.
 
 ### PO — why this exists
 
