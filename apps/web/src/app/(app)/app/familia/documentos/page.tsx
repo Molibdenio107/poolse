@@ -158,6 +158,9 @@ export default async function FamilyDocuments({
                   {row.notConfigured && (
                     <span className="text-sm text-foreground-muted">{t('app.documents.notConfigured')}</span>
                   )}
+                  {row.awaitsDate === true && (
+                    <span className="text-sm text-foreground-muted">{t('app.documents.review.awaitsDate')}</span>
+                  )}
                 </li>
               );
             })}

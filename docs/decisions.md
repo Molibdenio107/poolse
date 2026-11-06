@@ -1401,3 +1401,5 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-06** — **The app's menu bar is on every screen** (Rui), **reversing** POOLSE-136's *a screen deeper in has no tabs*: it lights the tab that leads there, and a Save bar sits above it.
 
 - **2026-11-06** — **A Cartão de Cidadão needs only its 8 digits** (Rui): the rest is optional, for students and staff alike, through the one `isValidCcNumber`. Written whole, it must still pass its check.
+
+- **2026-11-06** — **Security pass on POOLSE-190 to 195, safer defaults taken while Rui was away; he may reverse any.** Hidden minors leave the API as figures and never as rows, and under three hidden students what they said is not given at all, because a figure would name the child. A date of birth a person only typed does not open the FPN form: an adult waits for the office to confirm it, and a minor could otherwise type 1990 and read the ID number. An instructor gets no WhatsApp link to a child's own phone.

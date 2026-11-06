@@ -103,12 +103,11 @@ test('QA 2–3: the reader’s child by name, adults as Carlos S., other minors 
     const seen = await actingAs(tenant, { membershipId: f.parent, roles: ['guardian'] }, () =>
       new AppController().classmates(f.session),
     );
-    const names = seen.people.map((one) => one.name);
+    const names: (string | null)[] = seen.people.map((one) => one.name);
     assert.ok(names.includes('Alice S.'));
     assert.ok(names.includes('Carlos S.'));
-    assert.equal(names.filter((one) => one === null).length, 1, 'the other child has no name');
-    const hidden = seen.people.find((one) => one.name === null)!;
-    assert.equal(hidden.photoFileId, null);
+    assert.equal(names.length, 2, 'the other child is no row at all');
+    assert.deepEqual(seen.hidden, { count: 1, going: null, done: null }, 'one hidden child says nothing');
 
     const wire = JSON.stringify(seen);
     assert.equal(wire.includes('Bruna'), false);

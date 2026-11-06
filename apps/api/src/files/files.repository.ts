@@ -267,7 +267,7 @@ export async function openFile(
                    AND cs.occurs_on BETWEEN club_today() - 7 AND club_today() + 14
                   JOIN enrollment us
                     ON us.organization_id = cs.organization_id AND us.class_group_id = cs.class_group_id
-                   AND us.status <> 'waiting'
+                   AND us.status = 'active'
                   JOIN student my ON my.id = us.student_id AND my.organization_id = us.organization_id
                  WHERE im.organization_id = f.organization_id AND im.photo_file_id = f.id
                    AND my.archived_at IS NULL

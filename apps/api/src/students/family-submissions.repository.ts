@@ -53,6 +53,27 @@ export async function maySendFor(organizationId: string, membershipId: string, s
   return withOrg(organizationId, (tx) => maySend(tx, membershipId, studentId));
 }
 
+/**
+ * Whether this person handles the FPN form: reads its details, changes them, takes
+ * it. As `maySendFor`, but a date of birth the person only typed does not count
+ * (POOLSE-193, security pass 06-11-2026): a minor could otherwise type 1990 and
+ * read the ID number on file. An adult waits for the office to confirm the date.
+ */
+export async function mayTakeFpnFor(organizationId: string, membershipId: string, studentId: string): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    if (!(await maySend(tx, membershipId, studentId))) return false;
+    const { rows } = await tx.query<{ guardian: boolean; declared: boolean }>(
+      `SELECT EXISTS (SELECT 1 FROM guardian_link gl
+                       WHERE gl.student_id = s.id AND gl.guardian_membership_id = $2 AND gl.archived_at IS NULL) AS guardian,
+              s.birth_date_declared_at IS NOT NULL AS declared
+         FROM student s WHERE s.id = $1`,
+      [studentId, membershipId],
+    );
+    const row = rows[0];
+    return row !== undefined && (row.guardian || !row.declared);
+  });
+}
+
 export type SendOutcome = { sent: true; id: string } | 'not_found' | 'pending' | 'no_season';
 
 export async function sendDocument(

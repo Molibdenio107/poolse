@@ -141,6 +141,7 @@ test('the person corrects their details, named in the log, and the download open
         postalCode: '4700-001',
         idDocumentType: 'other',
         idDocumentNumber: 'AB123',
+        idDocumentIssuedOn: '',
         idDocumentValidUntil: '2099-01-01',
         disciplines: ['pura', 'masters'],
       });
@@ -173,6 +174,7 @@ test('a body cannot clear the number, and a signed copy waiting locks the detail
         idDocumentType: 'other',
         idDocumentNumber: '',
         idDocumentClear: true,
+        idDocumentIssuedOn: '',
         idDocumentValidUntil: '2099-01-01',
       });
       assert.equal((await app.fpnReview(child)).idDocumentNumber, '12345678', 'the number on file stays');

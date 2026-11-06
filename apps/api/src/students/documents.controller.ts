@@ -23,6 +23,7 @@ import {
   rejectSubmission,
   type Submission,
   maySendFor,
+  mayTakeFpnFor,
 } from './family-submissions.repository.js';
 import { EXAM_RESULTS, type ExamResult } from './medical-exams.repository.js';
 import { requireOfficeOrFamily } from './student-access.js';
@@ -266,7 +267,7 @@ export class StudentDocumentsController {
     // POOLSE-193: the one who signs takes it, and only once it is complete. The
     // office's desk path never asked, and does not now.
     if (reader === 'family') {
-      if (!membershipId || !(await maySendFor(organizationId, membershipId, studentId))) {
+      if (!membershipId || !(await mayTakeFpnFor(organizationId, membershipId, studentId))) {
         throw new ForbiddenException({ code: 'minor_reads_only', message: 'A guardian takes this form' });
       }
       const held = await readDocuments(organizationId, studentId);
@@ -288,13 +289,15 @@ export class BoletimController {
   @Get()
   async print(@Param('studentId', ParseUUIDPipe) studentId: string): Promise<BoletimPrint> {
     const reader = await requireOfficeOrFamily(studentId);
-    const { organizationId } = currentTenant();
+    const { organizationId, membershipId } = currentTenant();
     const found = await boletimPrint(organizationId, studentId);
     if (found === null) throw new NotFoundException('No such student');
     if (reader === 'office') return found;
     // POOLSE-131: the SNS number is read by the office alone.
     await recordFamilyPrint(organizationId, studentId, 'boletim');
-    return { ...found, snsNumber: null };
+    // A minor's own login takes neither form's ID number (POOLSE-193).
+    const signs = membershipId !== undefined && membershipId !== null && (await maySendFor(organizationId, membershipId, studentId));
+    return { ...found, snsNumber: null, ...(signs ? {} : { idDocumentNumber: null }) };
   }
 }
 

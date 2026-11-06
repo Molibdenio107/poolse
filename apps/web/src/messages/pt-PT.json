@@ -102,6 +102,7 @@
         "saved": "Dados guardados.",
         "failed": "Não foi possível guardar.",
         "locked": "Há uma declaração assinada a aguardar o clube.",
+        "awaitsDate": "À espera de o clube confirmar a data de nascimento.",
         "numberHint": "No Cartão de Cidadão bastam os 8 algarismos; o resto é opcional.",
         "none": "Escolher…",
         "club": "O clube ainda tem de preencher: {fields}.",

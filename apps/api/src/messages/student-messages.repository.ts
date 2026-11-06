@@ -51,6 +51,7 @@ interface RecipientRow {
   guardian_membership_id: string | null;
   email: string | null;
   phone: string | null;
+  adult: boolean;
 }
 
 /** Who a message about this student reaches, with their phone. Null when absent. */
@@ -59,7 +60,8 @@ async function readRecipients(organizationId: string, studentId: string): Promis
     const { rows } = await tx.query<RecipientRow>(
       `SELECT r.name, r.guardian_membership_id, r.email::text AS email,
               nullif(btrim(CASE WHEN r.guardian_membership_id IS NOT NULL THEN person_phone(r.guardian_membership_id)
-                                ELSE coalesce(person_phone(s.membership_id), s.contact_phone) END), '') AS phone
+                                ELSE coalesce(person_phone(s.membership_id), s.contact_phone) END), '') AS phone,
+              coalesce(student_is_adult_path($1, s.id), false) AS adult
          FROM message_recipients($1, 'student', NULL, NULL, NULL, NULL, NULL, $2) r
          JOIN student s ON s.id = r.student_id AND s.organization_id = $1
         ORDER BY r.guardian_membership_id IS NULL, r.name`,
@@ -73,13 +75,23 @@ async function readRecipients(organizationId: string, studentId: string): Promis
 export async function studentMessageRecipients(
   organizationId: string,
   studentId: string,
+  staffScoped = false,
 ): Promise<StudentMessageRecipient[]> {
   return (await readRecipients(organizationId, studentId)).map((row) => ({
     name: row.name,
     isGuardian: row.guardian_membership_id !== null,
     hasEmail: row.email !== null,
-    hasPhone: whatsappUrl(row.phone, '') !== null,
+    hasPhone: reachableByPhone(row, staffScoped) && whatsappUrl(row.phone, '') !== null,
   }));
+}
+
+/**
+ * An instructor never opens a private conversation with a child (security pass,
+ * 06-11-2026): the guardian, or the student once proved adult. The office may,
+ * because its fallback to the student is the record's own.
+ */
+function reachableByPhone(row: RecipientRow, staffScoped: boolean): boolean {
+  return !staffScoped || row.guardian_membership_id !== null || row.adult;
 }
 
 /** What was sent about this student. `sentBy` narrows it to one person's own. */
@@ -162,6 +174,8 @@ export interface SendOptions {
   health?: boolean;
   /** Told the aviso's id, inside the transaction. */
   onAviso?: (tx: Tx, avisoId: string) => Promise<void>;
+  /** An instructor writing: no WhatsApp to a child's own phone. */
+  staffScoped?: boolean;
 }
 
 async function raiseAvisoIn(
@@ -230,7 +244,7 @@ export async function recordStudentWhatsApp(
 ): Promise<{ id: string; links: { name: string; url: string }[] }> {
   const text = `${words.subject}\n\n${words.body}`;
   const people = (await readRecipients(organizationId, studentId)).flatMap((row) => {
-    const url = whatsappUrl(row.phone, text);
+    const url = reachableByPhone(row, options.staffScoped === true) ? whatsappUrl(row.phone, text) : null;
     return url === null ? [] : [{ ...row, url }];
   });
   if (people.length === 0) throw new NoRecipientsError();

@@ -345,16 +345,46 @@ export interface Classmates {
   instructor: { name: string; photoUrl: string | null; standIn: boolean } | null;
   enrolled: number | null;
   notComing: number;
-  /** Everybody but those who said *Não vou*. A minor who is not the reader's own has no name, id or photo. */
-  people: { name: string | null; photoFileId: string | null; going: boolean | null; challengeDone: boolean | null }[];
+  /** The reader's own and adults, but those who said *Não vou*. */
+  people: { name: string; photoFileId: string | null; going: boolean | null; challengeDone: boolean | null }[];
+  /**
+   * Everybody else, as figures and never as rows: a row per child, in order, is a
+   * child. `going` and `done` are null under `HIDDEN_FLOOR`, where a figure would
+   * say who it was.
+   */
+  hidden: { count: number; going: number | null; done: number | null };
 }
+
+/** Fewer hidden students than this, and what they said stays unsaid. */
+const HIDDEN_FLOOR = 3;
+
+/** Who is in the lesson, with `$2` the reader's own: the one definition of both reads below. */
+const LESSON_PEOPLE = `WITH x AS (
+           SELECT s.first_name, s.last_name, s.photo_file_id, sn.going, fb.challenge_done,
+                  coalesce(s.id = ANY($2::uuid[]) OR student_is_adult_path(s.organization_id, s.id), false) AS shown,
+                  EXISTS (SELECT 1 FROM consent pc
+                           WHERE pc.organization_id = s.organization_id AND pc.student_id = s.id
+                             AND pc.kind = 'photo' AND pc.granted AND pc.withdrawn_at IS NULL) AS consented
+             FROM class_session cs
+             JOIN enrollment e
+               ON e.organization_id = cs.organization_id AND e.class_group_id = cs.class_group_id
+              AND e.status <> 'waiting' AND e.joined_on <= cs.occurs_on
+              AND (e.ended_on IS NULL OR e.ended_on >= cs.occurs_on)
+             JOIN student_person s ON s.id = e.student_id AND s.organization_id = e.organization_id AND s.archived_at IS NULL
+             LEFT JOIN session_notice sn
+               ON sn.organization_id = cs.organization_id AND sn.class_session_id = cs.id AND sn.student_id = s.id
+             LEFT JOIN lesson_feedback fb
+               ON fb.organization_id = cs.organization_id AND fb.class_session_id = cs.id
+              AND fb.student_id = s.id AND fb.archived_at IS NULL
+            WHERE cs.id = $1 AND sn.going IS NOT FALSE
+         )`;
 
 /**
  * The lesson's people for this reader — POOLSE-194 (Rui, 06-11-2026).
  *
- * **In SQL, and only what may leave.** A minor who is not the reader's own comes
- * back with no name, no id and no file: a blank painted over on a screen is still
- * in the response. Minor means not proved adult, so `student_is_adult_path()`
+ * **In SQL, and only what may leave.** A minor who is not the reader's own leaves
+ * as a figure and never as a row: a blank painted over on a screen is still in the
+ * response, and a row's place in a sorted list is a name. Minor means not proved adult, so `student_is_adult_path()`
  * decides: a declared date or a live guardian hides the person. *Não vou* is a
  * count, so those rows never leave. The numbers are the instructor's own.
  */
@@ -383,36 +413,30 @@ export async function readClassmates(
     );
     const row = lesson.rows[0];
     const people = await tx.query<{
-      name: string | null;
+      name: string;
       photo_file_id: string | null;
       going: boolean | null;
       challenge_done: boolean | null;
     }>(
-      `SELECT CASE WHEN x.shown THEN btrim(split_part(x.first_name, ' ', 1) || ' ' || left(x.last_name, 1) || '.') END AS name,
-              CASE WHEN x.shown AND x.consented THEN x.photo_file_id END AS photo_file_id,
+      `${LESSON_PEOPLE}
+       SELECT btrim(split_part(x.first_name, ' ', 1) || ' ' || left(x.last_name, 1) || '.') AS name,
+              CASE WHEN x.consented THEN x.photo_file_id END AS photo_file_id,
               x.going, x.challenge_done
-         FROM (
-           SELECT s.first_name, s.last_name, s.photo_file_id, sn.going, fb.challenge_done,
-                  (s.id = ANY($2::uuid[]) OR student_is_adult_path(s.organization_id, s.id)) AS shown,
-                  EXISTS (SELECT 1 FROM consent pc
-                           WHERE pc.organization_id = s.organization_id AND pc.student_id = s.id
-                             AND pc.kind = 'photo' AND pc.granted AND pc.withdrawn_at IS NULL) AS consented
-             FROM class_session cs
-             JOIN enrollment e
-               ON e.organization_id = cs.organization_id AND e.class_group_id = cs.class_group_id
-              AND e.status <> 'waiting' AND e.joined_on <= cs.occurs_on
-              AND (e.ended_on IS NULL OR e.ended_on >= cs.occurs_on)
-             JOIN student_person s ON s.id = e.student_id AND s.organization_id = e.organization_id AND s.archived_at IS NULL
-             LEFT JOIN session_notice sn
-               ON sn.organization_id = cs.organization_id AND sn.class_session_id = cs.id AND sn.student_id = s.id
-             LEFT JOIN lesson_feedback fb
-               ON fb.organization_id = cs.organization_id AND fb.class_session_id = cs.id
-              AND fb.student_id = s.id AND fb.archived_at IS NULL
-            WHERE cs.id = $1 AND sn.going IS NOT FALSE
-         ) x
-        ORDER BY x.going IS TRUE DESC, x.shown DESC, x.first_name`,
+         FROM x
+        WHERE x.shown
+        ORDER BY x.going IS TRUE DESC, x.first_name`,
       [sessionId, mine],
     );
+    const hidden = await tx.query<{ count: number; going: number; done: number }>(
+      `${LESSON_PEOPLE}
+       SELECT count(*)::int AS count,
+              count(*) FILTER (WHERE x.going IS TRUE)::int AS going,
+              count(*) FILTER (WHERE x.challenge_done IS TRUE)::int AS done
+         FROM x
+        WHERE NOT x.shown`,
+      [sessionId, mine],
+    );
+    const figures = hidden.rows[0] ?? { count: 0, going: 0, done: 0 };
     return {
       instructor:
         row === undefined || row.instructor === null || row.instructor === ''
@@ -426,6 +450,11 @@ export async function readClassmates(
         going: one.going,
         challengeDone: one.challenge_done,
       })),
+      hidden: {
+        count: figures.count,
+        going: figures.count < HIDDEN_FLOOR ? null : figures.going,
+        done: figures.count < HIDDEN_FLOOR ? null : figures.done,
+      },
     };
   });
 }

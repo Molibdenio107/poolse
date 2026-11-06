@@ -351,6 +351,12 @@ export async function saveLessonChallenge(
           WHERE class_group_id = $1 AND on_date = $2::date AND archived_at IS NULL`,
         [occurrence.class_group_id, occurrence.on_date],
       );
+      await recordAudit(tx, {
+        action: 'lessonChallenge.cleared',
+        entityType: 'class_session',
+        entityId: sessionId,
+        data: { classGroupId: occurrence.class_group_id, onDate: occurrence.local_date },
+      });
       return 'cleared';
     }
     await tx.query(
@@ -360,6 +366,12 @@ export async function saveLessonChallenge(
        DO UPDATE SET body = EXCLUDED.body, updated_by = EXCLUDED.updated_by`,
       [organizationId, occurrence.class_group_id, occurrence.on_date, text, membershipId],
     );
+    await recordAudit(tx, {
+      action: 'lessonChallenge.saved',
+      entityType: 'class_session',
+      entityId: sessionId,
+      data: { classGroupId: occurrence.class_group_id, onDate: occurrence.local_date },
+    });
     return 'saved';
   });
 }

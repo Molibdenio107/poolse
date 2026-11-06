@@ -5832,7 +5832,8 @@ export interface AppClassmates {
   instructor: { name: string; photoUrl: string | null; standIn: boolean } | null;
   enrolled: number | null;
   notComing: number;
-  people: { name: string | null; photoFileId: string | null; going: boolean | null; challengeDone: boolean | null }[];
+  people: { name: string; photoFileId: string | null; going: boolean | null; challengeDone: boolean | null }[];
+  hidden: { count: number; going: number | null; done: number | null };
 }
 
 export interface AppChild {
@@ -5860,6 +5861,7 @@ export interface AppDocumentRow {
   /** The FPN form's mandatory fields still empty — POOLSE-193. */
   missing: string[];
   incomplete: boolean;
+  awaitsDate?: boolean;
 }
 
 /** `GET /app/documents/fpn` — POOLSE-193. */

@@ -204,7 +204,7 @@ export async function archiveAviso(
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ sent_by_membership_id: string; subject: string }>(
       `SELECT sent_by_membership_id, subject FROM message
-        WHERE id = $1 AND channel = 'app' AND archived_at IS NULL
+        WHERE id = $1 AND channel = 'app' AND archived_at IS NULL AND audience <> 'student'
         FOR UPDATE`,
       [avisoId],
     );

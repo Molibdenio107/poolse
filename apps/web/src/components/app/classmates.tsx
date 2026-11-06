@@ -30,12 +30,10 @@ export async function Classmates({
       <PhotoZoom src={url} name={name} label={t('app.classmates.seePhoto', { name })} className="size-7 coarse:size-9" />
     );
   if (data.instructor === null && data.enrolled === null) return null;
-  const named = data.people.filter((person) => person.name !== null);
-  const hidden = data.people.filter((person) => person.name === null);
-  const goingHidden = hidden.filter((person) => person.going === true).length;
-  const doneHidden = hidden.filter((person) => person.challengeDone === true).length;
+  const named = data.people;
+  const { count: hiddenCount, going: goingHidden, done: doneHidden } = data.hidden;
   const row = (person: AppClassmates['people'][number], index: number): React.ReactElement => {
-    const name = person.name as string;
+    const name = person.name;
     return (
       <li key={index} className="flex min-h-9 items-center gap-2 text-sm">
         {avatar(`classmate-${index}`, name, photoUrlFor(person.photoFileId))}
@@ -88,11 +86,11 @@ export async function Classmates({
             named.length > 0 && <ul className="flex flex-col gap-1">{named.map(row)}</ul>
           )}
           {/* One line, however many: a roll of nameless rows says nothing a phone has room for. */}
-          {hidden.length > 0 && (
+          {hiddenCount > 0 && (
             <p className="text-sm text-foreground-muted">
-              {t(named.length > 0 ? 'app.classmates.others' : 'app.classmates.all', { count: hidden.length })}
-              {goingHidden > 0 && ` · ${t('app.classmates.othersGoing', { count: goingHidden })}`}
-              {doneHidden > 0 && ` · ${t('app.classmates.othersDone', { count: doneHidden })}`}
+              {t(named.length > 0 ? 'app.classmates.others' : 'app.classmates.all', { count: hiddenCount })}
+              {goingHidden !== null && goingHidden > 0 && ` · ${t('app.classmates.othersGoing', { count: goingHidden })}`}
+              {doneHidden !== null && doneHidden > 0 && ` · ${t('app.classmates.othersDone', { count: doneHidden })}`}
             </p>
           )}
         </>

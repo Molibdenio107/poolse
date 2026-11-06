@@ -62,7 +62,7 @@ export class StudentMessagesController {
     await requireReach(studentId);
     const own = hasRole('owner', 'admin') ? null : (membershipId ?? null);
     return {
-      recipients: await studentMessageRecipients(organizationId, studentId),
+      recipients: await studentMessageRecipients(organizationId, studentId, !hasRole('owner', 'admin')),
       messages: await listStudentMessages(organizationId, studentId, own),
       emailConfigured: emailIsConfigured(),
     };
@@ -92,7 +92,10 @@ export class StudentMessagesController {
 
     try {
       if (channel === 'whatsapp') {
-        const { id, links } = await recordStudentWhatsApp(organizationId, membershipId, studentId, words, today, { shownUntil });
+        const { id, links } = await recordStudentWhatsApp(organizationId, membershipId, studentId, words, today, {
+          shownUntil,
+          staffScoped: !hasRole('owner', 'admin'),
+        });
         return { id, links, emailConfigured: emailIsConfigured() };
       }
       const { id } = await sendStudentEmail(organizationId, membershipId, studentId, words, today, { shownUntil });

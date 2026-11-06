@@ -63,7 +63,7 @@ import { judgeUpload } from '../files/upload-check.js';
 import { heicToJpeg, looksLikeHeic } from '../files/heic.js';
 import { readDocumentEdit, saveEdit } from '../students/documents.controller.js';
 import { parseIdentity } from '../students/identity.js';
-import { maySendFor, SENDABLE, sendDocument, type SendableKind } from '../students/family-submissions.repository.js';
+import { mayTakeFpnFor, SENDABLE, sendDocument, type SendableKind } from '../students/family-submissions.repository.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -205,7 +205,7 @@ export class AppController {
     if (child === undefined || !mine.some((one) => one.id === child)) {
       throw new NotFoundException('No such student');
     }
-    if (!membershipId || !(await maySendFor(organizationId, membershipId, child))) {
+    if (!membershipId || !(await mayTakeFpnFor(organizationId, membershipId, child))) {
       throw new ForbiddenException({ code: 'minor_reads_only', message: 'A guardian takes this form' });
     }
     const review = await familyFpnReview(organizationId, child, membershipId);
@@ -230,11 +230,14 @@ export class AppController {
     if (child === undefined || !mine.some((one) => one.id === child)) {
       throw new NotFoundException('No such student');
     }
-    if (!membershipId || !(await maySendFor(organizationId, membershipId, child))) {
+    if (!membershipId || !(await mayTakeFpnFor(organizationId, membershipId, child))) {
       throw new ForbiddenException({ code: 'minor_reads_only', message: 'A guardian takes this form' });
     }
     const rows = await familyDocuments(organizationId, child, membershipId);
-    if (rows?.find((one) => one.kind === 'fpn_declaration')?.status === 'sent') {
+    const row = rows?.find((one) => one.kind === 'fpn_declaration');
+    // A child no form is asked of has nothing to correct: the same answer as the read.
+    if (row === undefined) throw new NotFoundException('No such document');
+    if (row.status === 'sent') {
       throw new ConflictException({ code: 'already_sent', message: 'A signed copy is waiting for the office' });
     }
     // Named keys only, and only those sent: a body cannot reach `idDocumentClear`,
@@ -246,9 +249,13 @@ export class AppController {
     if (identity !== undefined && Object.keys(address).length < 3) {
       throw new BadRequestException({ code: 'partial_address', message: 'The address is saved as one group' });
     }
-    const edit = readDocumentEdit(
-      sent(['idDocumentType', 'idDocumentNumber', 'idDocumentIssuedOn', 'idDocumentValidUntil', 'disciplines']),
-    );
+    // The ID document is one group too: its save writes both dates, so a body that
+    // left one out would blank it.
+    const document = sent(['idDocumentType', 'idDocumentNumber', 'idDocumentIssuedOn', 'idDocumentValidUntil']);
+    if (Object.keys(document).length > 0 && Object.keys(document).length < 4) {
+      throw new BadRequestException({ code: 'partial_id_document', message: 'The ID document is saved as one group' });
+    }
+    const edit = readDocumentEdit({ ...document, ...sent(['disciplines']) });
     await saveEdit(organizationId, child, {
       ...edit,
       ...(identity === undefined

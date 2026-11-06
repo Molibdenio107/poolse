@@ -4,7 +4,7 @@ import { recordAudit } from '../audit/audit.js';
 import { clubToday } from '../common/club-day.js';
 import { fpnPrint, readDocuments } from './documents.repository.js';
 import { listExams } from './medical-exams.repository.js';
-import { maySendFor, pendingKinds } from './family-submissions.repository.js';
+import { maySendFor, mayTakeFpnFor, pendingKinds } from './family-submissions.repository.js';
 
 /**
  * A child's papers as a family sees them — POOLSE-179. A status per document and
@@ -27,6 +27,8 @@ export interface FamilyDocumentRow {
   missing: string[];
   /** This reader could act on the form, and mandatory data stops them. */
   incomplete: boolean;
+  /** The date of birth was only typed: the FPN form waits for the office to confirm it. */
+  awaitsDate?: boolean;
 }
 
 /** What the phone's review shows before the FPN form is downloaded — POOLSE-193 rule 2. */
@@ -128,9 +130,10 @@ export async function familyDocuments(
 
   // `false`: the note and the file are the office's. The result stays there too.
   const exams = await listExams(organizationId, studentId, false);
-  const [pending, maySend] = await Promise.all([
+  const [pending, maySend, mayTakeFpn] = await Promise.all([
     pendingKinds(organizationId, studentId),
     maySendFor(organizationId, membershipId, studentId),
+    mayTakeFpnFor(organizationId, membershipId, studentId),
   ]);
   const rows: FamilyDocumentRow[] = documentsForSports(await sportsOf(organizationId, studentId)).map((kind): FamilyDocumentRow => {
     if (kind !== 'medical_exam') return row(kind);
@@ -153,15 +156,18 @@ export async function familyDocuments(
       one.kind === 'fpn_declaration'
         ? pending.has('fpn_declaration') || pending.has('fpn_declaration_minor')
         : pending.has(one.kind);
-    const incomplete = maySend && !waiting && one.missing.length > 0;
+    const fpn = one.kind === 'fpn_declaration';
+    const may = fpn ? mayTakeFpn : maySend;
+    const incomplete = may && !waiting && one.missing.length > 0;
     return {
       ...one,
       status: waiting ? 'sent' : one.status,
       // The boletim is only ever downloaded (Rui, 06-11-2026).
-      canSend: maySend && !waiting && one.kind !== 'socio_form' && !incomplete,
+      canSend: may && !waiting && one.kind !== 'socio_form' && !incomplete,
       incomplete,
+      awaitsDate: fpn && maySend && !mayTakeFpn,
       // A minor's own login reads the FPN form's state and does not take it (POOLSE-193 rule 1).
-      print: one.kind === 'fpn_declaration' && !maySend ? null : one.print,
+      print: fpn && !mayTakeFpn ? null : one.print,
     };
   });
 }

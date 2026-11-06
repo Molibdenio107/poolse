@@ -101,6 +101,7 @@
         "saved": "Details saved.",
         "failed": "Could not be saved.",
         "locked": "A signed declaration is waiting for the club.",
+        "awaitsDate": "Waiting for the club to confirm the date of birth.",
         "numberHint": "For a Cartão de Cidadão the 8 digits are enough; the rest is optional.",
         "none": "Choose…",
         "club": "The club still has to fill in: {fields}.",

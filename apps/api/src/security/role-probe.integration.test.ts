@@ -1659,6 +1659,15 @@ test('POOLSE-157 rule 7: a guardian and a student are refused every staff screen
   });
 });
 
+test('POOLSE-193, -194: the family’s FPN and classmates routes answer a stranger with nothing', async () => {
+  await asEach(async ({ label }) => {
+    const app = new AppController();
+    await refused(`GET app/documents/fpn as ${label}`, 404, () => app.fpnReview(NO_SUCH_ID));
+    await refused(`PATCH app/documents/fpn as ${label}`, 404, () => app.saveFpnDetails(NO_SUCH_ID, {}));
+    await refused(`GET app/lessons/:id/classmates as ${label}`, 404, () => app.classmates(NO_SUCH_ID));
+  });
+});
+
 test('POOLSE-195: a family reads a Desafio and never writes one', async () => {
   await asEach(async ({ label }) => {
     await refused(`PUT sessions/:id/challenge as ${label}`, 403, () =>

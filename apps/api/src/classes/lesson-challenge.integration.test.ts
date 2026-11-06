@@ -156,8 +156,26 @@ test('QA 8: a minor’s result reaches another family only as a count', async ()
     const seen = await actingAs(tenant, { membershipId: parent, roles: ['guardian'] }, () =>
       new AppController().classmates(f.session),
     );
-    const hidden = seen.people.find((one) => one.name === null)!;
-    assert.equal(hidden.challengeDone, true);
+    // Alice is the one other child, so a figure would name her.
+    assert.deepEqual(seen.hidden, { count: 1, going: null, done: null });
     assert.equal(JSON.stringify(seen).includes('Alice'), false);
+
+    // With three hidden, the figure names nobody.
+    for (const first of ['Carla', 'Diana']) {
+      const [more] = await tenant.sql<{ id: string }>(
+        `INSERT INTO student (organization_id, first_name, last_name, birth_date)
+         VALUES ($1, $2, 'Lopes', club_today() - interval '12 years') RETURNING id`,
+        [tenant.organizationId, first],
+      );
+      await tenant.sql(
+        `INSERT INTO enrollment (organization_id, class_group_id, student_id, status, joined_on)
+         VALUES ($1, $2, $3, 'active', club_today() - 30)`,
+        [tenant.organizationId, groupRow!.class_group_id, more!.id],
+      );
+    }
+    const more = await actingAs(tenant, { membershipId: parent, roles: ['guardian'] }, () =>
+      new AppController().classmates(f.session),
+    );
+    assert.deepEqual(more.hidden, { count: 3, going: 0, done: 1 });
   });
 });
