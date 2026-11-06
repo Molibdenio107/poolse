@@ -9,6 +9,7 @@
 - **Built:** the classmates list and the instructor on *Início* and each lesson (`GET /app/lessons/:id/classmates`), the family's own child's photo, tap to zoom (`components/app/photo-zoom.tsx`, shared with the logo), and the two widened photo rules in `files.repository.ts`.
 - **The hidden students are one line** (*Mais 13 alunos · 4 vão*), not a row each: thirteen *Um aluno* rows pushed the rest of *Início* off the phone. It says *Um aluno* for one.
 - **Listed by name:** the reader's own and adults, each *Vou* or *Inscrito*. Rule 9 asked for who answered *Vou*; Rui's first message also asked for who is *inscrito*.
+- **On *Início*, past four people the rest fold behind *Ver todos*** (Rui, 06-11-2026).
 - **Not built:** the backoffice sweep of rule 1, and the privacy notice item on the go-live checklist.
 
 ### PO — why this exists

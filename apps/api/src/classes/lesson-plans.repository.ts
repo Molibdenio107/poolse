@@ -1,4 +1,4 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 
 /**
@@ -43,6 +43,8 @@ export interface LessonPlan {
   onDate: string;
   /** Empty string when nothing has been written yet. */
   body: string;
+  /** The *Desafio* — POOLSE-195. Empty when there is none. */
+  challenge: string;
   updatedAt: string | null;
   /** Who last wrote it, composed by the server. Null when nobody has. */
   updatedBy: string | null;
@@ -288,6 +290,7 @@ export async function readLessonPlan(
       partnerGroupId: occurrence.partner_group_id,
       onDate: occurrence.local_date,
       body: row?.body ?? '',
+      challenge: await readChallengeIn(tx, occurrence.class_group_id, occurrence.on_date),
       updatedAt: row?.updated_at.toISOString() ?? null,
       updatedBy: row?.updated_by ?? null,
       canEdit: canWrite(occurrence, roles, membershipId),
@@ -314,6 +317,53 @@ export type SavePlanOutcome = 'saved' | 'cleared' | 'notFound' | 'refused';
  * people saving Tuesday's plan at once end with one plan and a known winner
  * rather than a duplicate nobody reads.
  */
+/** The live Desafio of one lesson, or an empty string. */
+export async function readChallengeIn(tx: Tx, classGroupId: string | null, onDate: string): Promise<string> {
+  if (classGroupId === null) return '';
+  const { rows } = await tx.query<{ body: string }>(
+    `SELECT body FROM lesson_challenge
+      WHERE class_group_id = $1 AND on_date = $2::date AND archived_at IS NULL`,
+    [classGroupId, onDate],
+  );
+  return rows[0]?.body ?? '';
+}
+
+/**
+ * Sets the *Desafio* — POOLSE-195. Whoever may write the plan, `canWrite`'s answer.
+ * Emptying it ends it: the answers keep the words they answered.
+ */
+export async function saveLessonChallenge(
+  organizationId: string,
+  sessionId: string,
+  body: string,
+  roles: readonly string[],
+  membershipId: string,
+): Promise<'saved' | 'cleared' | 'notFound' | 'refused' | 'partner'> {
+  const occurrence = await occurrenceOf(organizationId, sessionId);
+  if (occurrence === null) return 'notFound';
+  if (!canWrite(occurrence, roles, membershipId)) return 'refused';
+  if (occurrence.class_group_id === null) return 'partner';
+  const text = body.trim();
+  return withOrg(organizationId, async (tx) => {
+    if (text === '') {
+      await tx.query(
+        `UPDATE lesson_challenge SET archived_at = now()
+          WHERE class_group_id = $1 AND on_date = $2::date AND archived_at IS NULL`,
+        [occurrence.class_group_id, occurrence.on_date],
+      );
+      return 'cleared';
+    }
+    await tx.query(
+      `INSERT INTO lesson_challenge (organization_id, class_group_id, on_date, body, updated_by)
+       VALUES ($1, $2, $3::date, $4, $5)
+       ON CONFLICT (organization_id, class_group_id, on_date) WHERE archived_at IS NULL
+       DO UPDATE SET body = EXCLUDED.body, updated_by = EXCLUDED.updated_by`,
+      [organizationId, occurrence.class_group_id, occurrence.on_date, text, membershipId],
+    );
+    return 'saved';
+  });
+}
+
 export async function saveLessonPlan(
   organizationId: string,
   sessionId: string,

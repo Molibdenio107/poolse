@@ -21,6 +21,8 @@ export interface LessonPlan {
   partnerGroupId: string | null;
   onDate: string;
   body: string;
+  /** The *Desafio* — POOLSE-195. */
+  challenge: string;
   updatedAt: string | null;
   updatedBy: string | null;
   /** The API's own answer, so the screen and the guard cannot disagree. */
@@ -65,6 +67,10 @@ export async function saveLessonPlanAction(previous: PlanState, formData: FormDa
 
   try {
     await apiPut(`/sessions/${sessionId}/plan`, { body });
+    // A turma's lesson carries one; a partnership's form sends none.
+    if (formData.has('challenge')) {
+      await apiPut(`/sessions/${sessionId}/challenge`, { body: String(formData.get('challenge') ?? '') });
+    }
   } catch (error) {
     // A 403 here is the row-level rule, not a role: "only this class's
     // instructor, an owner or an admin". Said in words, and without the API's

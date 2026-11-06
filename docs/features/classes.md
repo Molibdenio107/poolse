@@ -96,3 +96,7 @@ lessons in a row. The rule is in `docs/data-model.md`.
   or changed; the club moves the child or the turma by hand. The section and the line exist
   only while there is somebody on the list. `GET /class-groups/clashes` is owner/admin, and
   the list is exempt from paging as a queue worked down.
+
+## The Desafio — POOLSE-195
+
+An optional short text beside a turma's lesson plan, 200 characters, written by whoever may write the plan (`PUT /sessions/:id/challenge`). Emptying it ends it. Families read it with the plan, below it, in a colour of its own. After the lesson it is answered *Consegui* or *Não consegui* inside the feedback, under the feedback's own rules, and it is optional. The instructor and the office read the answers on the feedback list. Classmates see them under POOLSE-194's rules: by name for adults, a count for minors. It is the student's own word, never a grade.

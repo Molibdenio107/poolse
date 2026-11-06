@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ArrowLeft, CalendarCheck, NotebookPen } from 'lucide-react';
+import { ArrowLeft, CalendarCheck, NotebookPen, Target } from 'lucide-react';
 import { ApiError, apiFetch, type AppClassmates, type AppLesson } from '@/lib/api';
 import { Classmates } from '@/components/app/classmates';
 import type { LessonPlan } from '../../../../dashboard/calendar/lesson-plan.actions';
@@ -91,6 +91,20 @@ export default async function FamilyLesson({
           <p className="text-sm text-foreground-muted">{t('app.family.noPlan')}</p>
         )}
       </section>
+
+      {/*
+        POOLSE-195: below the plan, in a colour of its own, to try. Read here, and
+        answered in the feedback after the lesson.
+      */}
+      {plan !== null && plan.challenge.trim() !== '' && (
+        <section className="flex flex-col gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 shadow-card">
+          <h2 className="flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider">
+            <Target className="size-4 text-warning" aria-hidden />
+            {t('app.family.challenge')}
+          </h2>
+          <p className="whitespace-pre-wrap font-medium">{plan.challenge}</p>
+        </section>
+      )}
 
       {/*
         Vou / Não vou — POOLSE-90 slice 2: one per child, only while the lesson

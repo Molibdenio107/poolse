@@ -1659,6 +1659,14 @@ test('POOLSE-157 rule 7: a guardian and a student are refused every staff screen
   });
 });
 
+test('POOLSE-195: a family reads a Desafio and never writes one', async () => {
+  await asEach(async ({ label }) => {
+    await refused(`PUT sessions/:id/challenge as ${label}`, 403, () =>
+      new SessionsCalendarController().saveChallenge(NO_SUCH_ID, { body: 'a' }),
+    );
+  });
+});
+
 test('POOLSE-192: a scheduled exam — a guardian and a student reach none of it', async () => {
   await asEach(async ({ label }) => {
     const schedule = new MedicalExamScheduleController();

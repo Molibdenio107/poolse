@@ -23,15 +23,21 @@ export function FeedbackForm({
   studentId,
   mood: savedMood,
   comment: savedComment,
+  challenge,
+  challengeDone,
 }: {
   sessionId: string;
   studentId: string;
   mood: number | null;
   comment: string | null;
+  /** The lesson's Desafio: optional to answer, and the mood stays the required one. */
+  challenge: string | null;
+  challengeDone: boolean | null;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(saveFeedbackAction, INITIAL);
   const [mood, setMood] = useSeeded(savedMood === null ? '' : String(savedMood));
+  const [done, setDone] = useSeeded(challengeDone === null ? '' : String(challengeDone));
   const [length, setLength] = useState((savedComment ?? '').length);
   // The box re-seeds to what was saved (trimmed by the API) without telling
   // `onValueChange`, so the counter follows the saved text too (sweep 27-10).
@@ -96,6 +102,28 @@ export function FeedbackForm({
         hint={t('app.feedback.commentHint', { used: length, max: MAX_COMMENT })}
         {...(state.fields?.['comment'] === undefined ? {} : { error: t(state.fields['comment']) })}
       />
+
+      {challenge !== null && (
+        <fieldset className="flex flex-col gap-2 rounded border border-warning/40 bg-warning/10 p-3">
+          <legend className="px-1 text-sm font-medium">{t('app.family.challenge')}</legend>
+          <p className="text-sm">{challenge}</p>
+          <div className="flex gap-2">
+            {(['true', 'false'] as const).map((value) => (
+              <label key={value} className="flex min-h-control flex-1 items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="challengeDone"
+                  value={value}
+                  checked={done === value}
+                  onChange={() => setDone(value)}
+                  className="size-5"
+                />
+                {t(value === 'true' ? 'app.feedback.challengeDone' : 'app.feedback.challengeNotDone')}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
 
       <p className="text-sm text-foreground-muted">{t('app.feedback.notAnonymous')}</p>
 

@@ -39,6 +39,8 @@ export async function FeedbackPanel({
           studentId={standing.studentId}
           mood={feedback?.mood ?? null}
           comment={feedback?.comment ?? null}
+          challenge={standing.challenge}
+          challengeDone={feedback?.challengeDone ?? null}
         />
         <p className="text-sm text-foreground-muted">
           {t('app.feedback.editableUntil', { date: formatDate(standing.closesOn) })}

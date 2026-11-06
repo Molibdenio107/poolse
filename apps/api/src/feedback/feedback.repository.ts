@@ -34,6 +34,10 @@ export interface LessonFeedback {
   /** 1 (muito mal) to 5 (muito bem). */
   mood: number;
   comment: string | null;
+  /** *Consegui* or *Não consegui* — POOLSE-195. The student's word, never a grade. */
+  challengeDone: boolean | null;
+  /** The Desafio it answered, as it read then. */
+  challengeText: string | null;
   /** Derived from the author's relation to the student; null once anonymised. */
   authoredBy: AuthoredBy | null;
   authorName: string | null;
@@ -68,6 +72,8 @@ export interface FamilyFeedback {
   mayAnswer: boolean;
   needsBirthDate: boolean;
   feedback: LessonFeedback | null;
+  /** The lesson's Desafio, to answer here — POOLSE-195. Null when it has none. */
+  challenge: string | null;
 }
 
 /** A trigger refusal, named: the controller answers it as a 409. */
@@ -105,7 +111,7 @@ export const mayAnswer = (student: string, membership: string): string =>
 const FEEDBACK_COLUMNS = `
   fb.id, fb.class_session_id AS "sessionId", fb.student_id AS "studentId",
   ${displayName('s')} AS "studentName",
-  fb.mood, fb.comment,
+  fb.mood, fb.comment, fb.challenge_done AS "challengeDone", fb.challenge_text AS "challengeText",
   CASE
     WHEN fb.author_membership_id IS NULL THEN NULL
     WHEN fb.author_membership_id = s.membership_id THEN 'student'
@@ -190,6 +196,14 @@ async function familyFeedbackIn(
 
   const ids = rows.map((row) => row.feedback_id).filter((id): id is string => id !== null);
   const found = new Map((await feedbackByIds(tx, ids)).map((one) => [one.id, one]));
+  const desafio = await tx.query<{ body: string }>(
+    `SELECT c.body FROM class_session cs
+       JOIN lesson_challenge c
+         ON c.organization_id = cs.organization_id AND c.class_group_id = cs.class_group_id
+        AND c.on_date = cs.occurs_on AND c.archived_at IS NULL
+      WHERE cs.id = $1`,
+    [sessionId],
+  );
 
   return rows.map((row) => ({
     studentId: row.student_id,
@@ -199,6 +213,7 @@ async function familyFeedbackIn(
     mayAnswer: row.may_answer,
     needsBirthDate: row.needs_birth_date,
     feedback: row.feedback_id === null ? null : (found.get(row.feedback_id) ?? null),
+    challenge: desafio.rows[0]?.body ?? null,
   }));
 }
 
@@ -230,20 +245,33 @@ export async function saveFeedback(
   membershipId: string,
   sessionId: string,
   studentId: string,
-  input: { mood: number; comment: string | null },
+  input: { mood: number; comment: string | null; challengeDone?: boolean | null },
 ): Promise<LessonFeedback> {
   return withOrg(organizationId, async (tx) => {
     await tx.query('SAVEPOINT feedback_write');
     let id: string;
     try {
       const { rows } = await tx.query<{ id: string }>(
-        `INSERT INTO lesson_feedback (organization_id, class_session_id, student_id, mood, comment, author_membership_id)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `WITH desafio AS (
+           SELECT c.body FROM class_session cs
+             JOIN lesson_challenge c
+               ON c.organization_id = cs.organization_id AND c.class_group_id = cs.class_group_id
+              AND c.on_date = cs.occurs_on AND c.archived_at IS NULL
+            WHERE cs.id = $2
+         )
+         INSERT INTO lesson_feedback (organization_id, class_session_id, student_id, mood, comment, author_membership_id,
+                                      challenge_done, challenge_text)
+         SELECT $1, $2, $3, $4, $5, $6,
+                -- With no Desafio on the lesson, there is nothing to have answered.
+                CASE WHEN d.body IS NULL THEN NULL ELSE $7::boolean END,
+                CASE WHEN $7::boolean IS NULL THEN NULL ELSE d.body END
+           FROM (SELECT 1) one LEFT JOIN desafio d ON true
          ON CONFLICT (organization_id, class_session_id, student_id) WHERE archived_at IS NULL
          DO UPDATE SET mood = excluded.mood, comment = excluded.comment,
-                       author_membership_id = excluded.author_membership_id
+                       author_membership_id = excluded.author_membership_id,
+                       challenge_done = excluded.challenge_done, challenge_text = excluded.challenge_text
          RETURNING id`,
-        [organizationId, sessionId, studentId, input.mood, input.comment, membershipId],
+        [organizationId, sessionId, studentId, input.mood, input.comment, membershipId, input.challengeDone ?? null],
       );
       id = rows[0]!.id;
     } catch (error) {

@@ -53,6 +53,7 @@ import { requireMySession } from '../tenant/assignment.js';
 import {
   readLessonPlan,
   familyMayReadPlan,
+  saveLessonChallenge,
   saveLessonPlan,
   type LessonPlan,
 } from './lesson-plans.repository.js';
@@ -86,6 +87,9 @@ const MAX_REASON = 200;
  * document, and documents wait on file storage like everything else.
  */
 const MAX_PLAN = 8000;
+
+/** A *Desafio* is a line, not a plan — POOLSE-195. */
+const MAX_CHALLENGE = 200;
 /**
  * The widest window anyone may ask for in one request.
  *
@@ -805,6 +809,32 @@ export class SessionsCalendarController {
     if (outcome === 'refused') {
       throw new ForbiddenException('Only this class instructor, an owner or an admin may plan it');
     }
+    return { saved: outcome === 'saved' };
+  }
+
+  /**
+   * The *Desafio* — POOLSE-195. Optional and short, on the plan's own guard: "this
+   * class's instructor" is a fact about a row, so the repository answers it.
+   */
+  @Put(':id/challenge')
+  async saveChallenge(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ saved: boolean }> {
+    requireRole('owner', 'admin', 'instructor');
+    const { organizationId, roles, membershipId } = currentTenant();
+    if (!membershipId) throw new ForbiddenException();
+    const text = body['body'];
+    if (typeof text !== 'string') throw new BadRequestException('body must be text');
+    if ([...text.trim()].length > MAX_CHALLENGE) {
+      throw new BadRequestException(`body must be at most ${MAX_CHALLENGE} characters`);
+    }
+    const outcome = await saveLessonChallenge(organizationId, id, text, roles, membershipId);
+    if (outcome === 'notFound') throw new NotFoundException('No such class');
+    if (outcome === 'refused') {
+      throw new ForbiddenException('Only this class instructor, an owner or an admin may set it');
+    }
+    if (outcome === 'partner') throw new BadRequestException('A partnership has no Desafio');
     return { saved: outcome === 'saved' };
   }
 

@@ -64,6 +64,7 @@
       "others": "{count, plural, one {Mais # aluno} other {Mais # alunos}}",
       "all": "{count, plural, one {# aluno} other {# alunos}}",
       "seeAll": "Ver todos ({count})",
+      "othersDone": "{count, plural, one {# conseguiu} other {# conseguiram}}",
       "othersGoing": "{count, plural, one {# vai} other {# vão}}",
       "going": "Vou",
       "enrolled": "Inscrito",
@@ -146,6 +147,7 @@
       }
     },
     "family": {
+      "challenge": "Desafio",
       "title": "Agenda",
       "calendar": {
         "label": "Calendário de aulas",
@@ -195,6 +197,9 @@
       "certificatesFailed": "Não foi possível carregar as baixas médicas."
     },
     "feedback": {
+      "challengeDone": "Consegui",
+      "challengeNotDone": "Não consegui",
+      "challengeLine": "Desafio: {text}",
       "title": "Como correu",
       "titleFor": "Como correu · {name}",
       "prompt": "Como correu a aula?",
@@ -3608,6 +3613,8 @@
     "adding": "A adicionar…",
     "backToCalendar": "Voltar ao calendário",
     "plan": {
+      "challenge": "Desafio",
+      "challengeHint": "Opcional. Um desafio curto para os alunos tentarem, por exemplo: 4 piscinas sem parar.",
       "title": "Plano de treino",
       "label": "Plano desta aula",
       "placeholder": "400 m de aquecimento, 8 × 25 costas, viragens…",

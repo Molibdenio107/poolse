@@ -15,13 +15,19 @@ export async function saveFeedbackAction(_previous: FormState, formData: FormDat
   const studentId = String(formData.get('studentId') ?? '');
   const mood = Number(formData.get('mood') ?? '');
   const comment = String(formData.get('comment') ?? '');
+  const done = formData.get('challengeDone');
 
   if (!Number.isInteger(mood) || mood < 1 || mood > 5) {
     return { ok: false, fields: { mood: 'app.feedback.error.mood' } };
   }
 
   try {
-    await apiPut(`/app/lessons/${sessionId}/feedback`, { studentId, mood, comment });
+    await apiPut(`/app/lessons/${sessionId}/feedback`, {
+      studentId,
+      mood,
+      comment,
+      ...(done === 'true' || done === 'false' ? { challengeDone: done === 'true' } : {}),
+    });
   } catch (error) {
     if (error instanceof ApiError) {
       if (error.status === 400 && Object.keys(error.fields).length > 0) return { ok: false, fields: error.fields };

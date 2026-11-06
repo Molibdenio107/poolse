@@ -346,7 +346,7 @@ export interface Classmates {
   enrolled: number | null;
   notComing: number;
   /** Everybody but those who said *Não vou*. A minor who is not the reader's own has no name, id or photo. */
-  people: { name: string | null; photoFileId: string | null; going: boolean | null }[];
+  people: { name: string | null; photoFileId: string | null; going: boolean | null; challengeDone: boolean | null }[];
 }
 
 /**
@@ -382,12 +382,17 @@ export async function readClassmates(
       [sessionId],
     );
     const row = lesson.rows[0];
-    const people = await tx.query<{ name: string | null; photo_file_id: string | null; going: boolean | null }>(
+    const people = await tx.query<{
+      name: string | null;
+      photo_file_id: string | null;
+      going: boolean | null;
+      challenge_done: boolean | null;
+    }>(
       `SELECT CASE WHEN x.shown THEN btrim(split_part(x.first_name, ' ', 1) || ' ' || left(x.last_name, 1) || '.') END AS name,
               CASE WHEN x.shown AND x.consented THEN x.photo_file_id END AS photo_file_id,
-              x.going
+              x.going, x.challenge_done
          FROM (
-           SELECT s.first_name, s.last_name, s.photo_file_id, sn.going,
+           SELECT s.first_name, s.last_name, s.photo_file_id, sn.going, fb.challenge_done,
                   (s.id = ANY($2::uuid[]) OR student_is_adult_path(s.organization_id, s.id)) AS shown,
                   EXISTS (SELECT 1 FROM consent pc
                            WHERE pc.organization_id = s.organization_id AND pc.student_id = s.id
@@ -400,6 +405,9 @@ export async function readClassmates(
              JOIN student_person s ON s.id = e.student_id AND s.organization_id = e.organization_id AND s.archived_at IS NULL
              LEFT JOIN session_notice sn
                ON sn.organization_id = cs.organization_id AND sn.class_session_id = cs.id AND sn.student_id = s.id
+             LEFT JOIN lesson_feedback fb
+               ON fb.organization_id = cs.organization_id AND fb.class_session_id = cs.id
+              AND fb.student_id = s.id AND fb.archived_at IS NULL
             WHERE cs.id = $1 AND sn.going IS NOT FALSE
          ) x
         ORDER BY x.going IS TRUE DESC, x.shown DESC, x.first_name`,
@@ -412,7 +420,12 @@ export async function readClassmates(
           : { name: row.instructor, photoUrl: row.photo_url, standIn: row.stand_in },
       enrolled: row?.enrolled ?? null,
       notComing: row?.not_coming ?? 0,
-      people: people.rows.map((one) => ({ name: one.name, photoFileId: one.photo_file_id, going: one.going })),
+      people: people.rows.map((one) => ({
+        name: one.name,
+        photoFileId: one.photo_file_id,
+        going: one.going,
+        challengeDone: one.challenge_done,
+      })),
     };
   });
 }

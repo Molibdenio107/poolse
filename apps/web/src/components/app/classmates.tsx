@@ -33,13 +33,19 @@ export async function Classmates({
   const named = data.people.filter((person) => person.name !== null);
   const hidden = data.people.filter((person) => person.name === null);
   const goingHidden = hidden.filter((person) => person.going === true).length;
+  const doneHidden = hidden.filter((person) => person.challengeDone === true).length;
   const row = (person: AppClassmates['people'][number], index: number): React.ReactElement => {
     const name = person.name as string;
     return (
       <li key={index} className="flex min-h-9 items-center gap-2 text-sm">
         {avatar(`classmate-${index}`, name, photoUrlFor(person.photoFileId))}
         <span className="min-w-0 flex-1 truncate">{name}</span>
-        {person.going === true ? (
+        {/* POOLSE-195: their own word on the Desafio, never a grade. */}
+        {person.challengeDone !== null ? (
+          <span className="font-medium">
+            {t(person.challengeDone ? 'app.feedback.challengeDone' : 'app.feedback.challengeNotDone')}
+          </span>
+        ) : person.going === true ? (
           <span className="flex items-center gap-1 font-medium text-success">
             <Check className="size-3.5" aria-hidden />
             {t('app.classmates.going')}
@@ -86,6 +92,7 @@ export async function Classmates({
             <p className="text-sm text-foreground-muted">
               {t(named.length > 0 ? 'app.classmates.others' : 'app.classmates.all', { count: hidden.length })}
               {goingHidden > 0 && ` · ${t('app.classmates.othersGoing', { count: goingHidden })}`}
+              {doneHidden > 0 && ` · ${t('app.classmates.othersDone', { count: doneHidden })}`}
             </p>
           )}
         </>

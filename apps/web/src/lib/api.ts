@@ -5831,7 +5831,7 @@ export interface AppClassmates {
   instructor: { name: string; photoUrl: string | null; standIn: boolean } | null;
   enrolled: number | null;
   notComing: number;
-  people: { name: string | null; photoFileId: string | null; going: boolean | null }[];
+  people: { name: string | null; photoFileId: string | null; going: boolean | null; challengeDone: boolean | null }[];
 }
 
 export interface AppChild {
@@ -5968,6 +5968,8 @@ export interface LessonFeedback {
   /** 1 (muito mal) to 5 (muito bem). */
   mood: number;
   comment: string | null;
+  challengeDone: boolean | null;
+  challengeText: string | null;
   authoredBy: 'student' | 'guardian' | null;
   authorName: string | null;
   lessonDate: string;
@@ -5987,6 +5989,7 @@ export interface FamilyFeedback {
   mayAnswer: boolean;
   needsBirthDate: boolean;
   feedback: LessonFeedback | null;
+  challenge: string | null;
 }
 
 export interface RecentLesson {

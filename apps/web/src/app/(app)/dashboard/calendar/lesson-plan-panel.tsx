@@ -97,6 +97,7 @@ export function LessonPlanPanel({
    * spent five minutes writing at the exact moment the save came back.
    */
   const [body, setBody] = useState('');
+  const [challenge, setChallenge] = useState('');
   const openedFor = useRef<string | null>(null);
 
   // A newly opened lesson is fetched once. Keyed on the id rather than on the
@@ -121,6 +122,7 @@ export function LessonPlanPanel({
   useEffect(() => {
     if (plan === undefined || planFor !== sessionId) return;
     setBody(plan.body);
+    setChallenge(plan.challenge);
   }, [plan, planFor, sessionId]);
 
   const canEdit = plan?.canEdit === true;
@@ -257,6 +259,24 @@ export function LessonPlanPanel({
                 />
               </div>
 
+              {/* POOLSE-195: optional and short, under the plan. A turma's only. */}
+              {plan?.classGroupId != null && (
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="lesson-challenge" className="text-sm font-medium">
+                    {t('calendar.plan.challenge')}
+                  </label>
+                  <textarea
+                    id="lesson-challenge"
+                    value={challenge}
+                    onChange={(event) => setChallenge(event.target.value)}
+                    rows={2}
+                    maxLength={200}
+                    placeholder={t('calendar.plan.challengeHint')}
+                    className={cn(CONTROL_LINE, 'h-auto resize-none py-2 leading-relaxed')}
+                  />
+                </div>
+              )}
+
               {/*
                 The teacher, immediately above Save.
 
@@ -279,6 +299,7 @@ export function LessonPlanPanel({
                     const data = new FormData();
                     data.set('sessionId', sessionId);
                     data.set('body', body);
+                    if (plan?.classGroupId != null) data.set('challenge', challenge);
                     startTransition(() => save(data));
                   }}
                   className={BUTTON}

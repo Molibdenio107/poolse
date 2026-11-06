@@ -36,6 +36,14 @@ export async function FeedbackList({
             </p>
             <MoodFace mood={item.mood} />
             {item.comment !== null && <p className="whitespace-pre-wrap break-words">{item.comment}</p>}
+            {item.challengeDone !== null && item.challengeText !== null && (
+              <p className="text-sm">
+                {t('app.feedback.challengeLine', { text: item.challengeText })}{' · '}
+                <span className="font-medium">
+                  {t(item.challengeDone ? 'app.feedback.challengeDone' : 'app.feedback.challengeNotDone')}
+                </span>
+              </p>
+            )}
             <p className="text-sm text-foreground-muted">
               {[
                 item.authoredBy === 'student'

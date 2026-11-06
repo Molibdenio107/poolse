@@ -492,6 +492,7 @@ export class AppController {
       return await saveFeedback(organizationId, membershipId, sessionId, input.studentId, {
         mood: input.mood,
         comment: input.comment,
+        challengeDone: input.challengeDone,
       });
     } catch (error) {
       if (error instanceof FeedbackRefusedError) {
@@ -601,7 +602,12 @@ export function parseAppRequest(body: Record<string, unknown>, today: string = c
   };
 }
 
-function parseFeedback(body: Record<string, unknown>): { studentId: string; mood: number; comment: string | null } {
+function parseFeedback(body: Record<string, unknown>): {
+  studentId: string;
+  mood: number;
+  comment: string | null;
+  challengeDone: boolean | null;
+} {
   const studentId = body['studentId'];
   if (typeof studentId !== 'string' || !UUID.test(studentId)) {
     throw new BadRequestException({ message: 'studentId is required', fields: { studentId: 'app.feedback.error.student' } });
@@ -621,7 +627,11 @@ function parseFeedback(body: Record<string, unknown>): { studentId: string; mood
       fields: { comment: 'app.feedback.error.tooLong' },
     });
   }
-  return { studentId, mood, comment };
+  const done = body['challengeDone'];
+  if (done !== undefined && done !== null && typeof done !== 'boolean') {
+    throw new BadRequestException({ message: 'challengeDone is yes or no' });
+  }
+  return { studentId, mood, comment, challengeDone: done ?? null };
 }
 
 /** The water at the tanks these lessons are in — never when the module is off. */

@@ -216,7 +216,7 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-192](./POOLSE-192-schedule-a-medical-exam.md) | **Built 06-11-2026.** The office schedules a student's medical exam and reminds them of it, by message and in the app | Students | High (pilot) | 191, 133 | 0 |
 | [POOLSE-193](./POOLSE-193-the-student-signs-the-fpn-form-from-the-phone.md) | **Built 06-11-2026; real phones outstanding.** The student checks the FPN form on the phone, downloads a real PDF, signs it and sends it back, and the club only reviews the signed copy | Mobile app / Students / Documents | High (pilot) | 179, 142, 177, 190 | 0 |
 | [POOLSE-194](./POOLSE-194-photos-classmates-and-the-instructor-in-the-app.md) | A student's photo shows wherever they appear, and the app shows who is in the class and who teaches it | Mobile app / Students / Interface | Medium (pilot) | 174 | 0 |
-| [POOLSE-195](./POOLSE-195-desafio-in-the-training-plan.md) | The instructor sets a *Desafio* in the training plan, and the student says after class whether they did it | Classes / Mobile app | Medium (pilot) | 116, 194 | 0 |
+| [POOLSE-195](./POOLSE-195-desafio-in-the-training-plan.md) | **Built 06-11-2026.** The instructor sets a *Desafio* in the training plan, and the student says after class whether they did it | Classes / Mobile app | Medium (pilot) | 116, 194 | 0 |
 
 ## To discuss — raised 01-11-2026, parked until after the pilot has used the app
 

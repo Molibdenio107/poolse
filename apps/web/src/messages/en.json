@@ -63,6 +63,7 @@
       "others": "{count, plural, one {# more student} other {# more students}}",
       "all": "{count, plural, one {# student} other {# students}}",
       "seeAll": "See everyone ({count})",
+      "othersDone": "{count, plural, other {# did it}}",
       "othersGoing": "{count, plural, other {# going}}",
       "going": "Going",
       "enrolled": "Enrolled",
@@ -145,6 +146,7 @@
       }
     },
     "family": {
+      "challenge": "Challenge",
       "title": "Schedule",
       "calendar": {
         "label": "Lesson calendar",
@@ -194,6 +196,9 @@
       "certificatesFailed": "The medical leaves could not be loaded."
     },
     "feedback": {
+      "challengeDone": "I did it",
+      "challengeNotDone": "I did not",
+      "challengeLine": "Challenge: {text}",
       "title": "How it went",
       "titleFor": "How it went · {name}",
       "prompt": "How did the lesson go?",
@@ -3606,6 +3611,8 @@
     "adding": "Adding…",
     "backToCalendar": "Back to the calendar",
     "plan": {
+      "challenge": "Challenge",
+      "challengeHint": "Optional. A short challenge for the students to try, for example: 4 lengths without stopping.",
       "title": "Training plan",
       "label": "This lesson's plan",
       "placeholder": "400 m warm-up, 8 × 25 backstroke, turns…",

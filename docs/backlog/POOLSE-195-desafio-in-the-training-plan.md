@@ -4,6 +4,12 @@
 
 **Type:** Feature · **Area:** Classes / Mobile app · **Priority:** Medium (pilot) · **Depends on** [POOLSE-116](./POOLSE-116-lesson-feedback-from-the-family-app.md) · **Build after** POOLSE-194 (Rui, 06-11-2026)
 
+### As built (06-11-2026)
+
+- **Its own table, `lesson_challenge`,** not a column on `lesson_plan`: the plan refuses a blank body and deletes its row when emptied, and a Desafio stands alone.
+- **Rule 10 changed:** removing a Desafio does not ask first, because each answer keeps the words it answered and nothing is lost.
+- `app.feedback` answers carry `challenge_text`, and a lesson with no Desafio stores no answer.
+
 ### PO — why this exists
 
 Rui, 06-11-2026: *"on 'Classes' training plan, add a 'Desafio' section to challenge the students to do something, this is not mandatory but should also reflect on the mobile app. The student on the app can then after the class set if it was successful or not the 'desafio'. This is created by the instructor, similar to the training plan, but a shorter text box of course."*
