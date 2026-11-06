@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Download, Plus } from 'lucide-react';
 import { ApiError, apiFetch, type AppChildDocuments, type AppDocumentRow } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { describeLoad } from '@/lib/load-failure';
@@ -15,10 +15,16 @@ import { SendDocument } from './send-document';
  * as a status, limited to the papers of the sports the child is in, and the
  * club's own forms filled in. A screen deeper in, so it has its own *Voltar*.
  *
+ * Icons, not words (Rui, 06-11-2026): a plus sends and an arrow downloads, each
+ * named to a screen reader. The boletim is download only.
+ *
  * Slice 2: a paper can be sent from here. It waits for the office (*Enviado — a
  * aguardar a secretaria*) and changes nothing on file until the office accepts
  * it. An ID photo is never shown back, only its status.
  */
+const ICON =
+  'inline-flex h-control w-control shrink-0 items-center justify-center rounded-sm text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+
 export default async function FamilyDocuments({
   searchParams,
 }: {
@@ -60,11 +66,12 @@ export default async function FamilyDocuments({
   return (
     <>
       <Link
-        href={`/app/familia/aulas${query}`}
+        href="/app/perfil?home=family"
+        aria-label={t('app.profile.backTo')}
         className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline coarse:-my-3 coarse:py-3"
       >
         <ArrowLeft className="size-4" aria-hidden />
-        {t('app.family.backToLessons')}
+        {t('common.back')}
         <LinkBusy />
       </Link>
 
@@ -77,40 +84,62 @@ export default async function FamilyDocuments({
         <section key={one.id} className="flex flex-col gap-1 rounded bg-surface p-4 shadow-card">
           {several && <h2 className="font-bold">{one.name}</h2>}
           <ul className="flex flex-col divide-y divide-border">
-            {one.documents.map((row) => (
-              <li key={row.kind} className="flex flex-col gap-1 py-3">
-                <span className="flex items-baseline justify-between gap-3">
-                  <span className="font-medium">{t(`app.documents.kind.${row.kind}`)}</span>
-                  <span className={`shrink-0 text-sm ${row.status === 'ok' ? 'text-success' : 'font-medium text-warning'}`}>
-                    {status(row)}
-                  </span>
+            {one.documents.map((row) => {
+              const kind = t(`app.documents.kind.${row.kind}`);
+              const heading = (
+                <span className="flex min-w-0 flex-col">
+                  <span className="font-medium">{kind}</span>
+                  {/* The boletim is only ever downloaded, so it has no state to report. */}
+                  {row.kind !== 'socio_form' && (
+                    <span className={`text-sm ${row.status === 'ok' ? 'text-success' : 'font-medium text-warning'}`}>
+                      {status(row)}
+                    </span>
+                  )}
                 </span>
-                {row.print !== null && (
-                  // A plain anchor, never prefetched: opening it reads, and may
-                  // decrypt, the child's details, and the read is audited.
-                  <a
-                    href={printHref(one.id, row)}
-                    className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline coarse:-my-2 coarse:py-2"
-                  >
-                    <Printer className="size-4" aria-hidden />
-                    {t('app.documents.print')}
-                  </a>
-                )}
-                {row.notConfigured && (
-                  <span className="text-sm text-foreground-muted">{t('app.documents.notConfigured')}</span>
-                )}
-                {row.canSend && (
-                  <details className="group">
-                    <summary className="inline-flex min-h-control cursor-pointer items-center text-sm font-medium text-primary">
-                      {row.status === 'missing' ? t('app.documents.send.open') : t('app.documents.send.openAgain')}
-                    </summary>
-                    <div className="pt-2">
-                      <SendDocument child={one.id} kind={row.kind} />
+              );
+              const download = row.print !== null && (
+                // A plain anchor, never prefetched: opening it reads, and may
+                // decrypt, the child's details, and the read is audited.
+                <a
+                  href={printHref(one.id, row)}
+                  aria-label={t('app.documents.download', { kind })}
+                  className={ICON}
+                >
+                  <Download className="size-5" aria-hidden />
+                </a>
+              );
+              return (
+                <li key={row.kind} className="flex flex-col gap-1 py-2">
+                  {row.canSend ? (
+                    <details className="group">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+                        {heading}
+                        <span className="flex shrink-0 items-center gap-1">
+                          {download}
+                          <span className={ICON}>
+                            <Plus className="size-5 transition-transform group-open:rotate-45" aria-hidden />
+                            <span className="sr-only">
+                              {t(row.status === 'missing' ? 'app.documents.send.open' : 'app.documents.send.openAgain', { kind })}
+                            </span>
+                          </span>
+                        </span>
+                      </summary>
+                      <div className="pt-2">
+                        <SendDocument child={one.id} kind={row.kind} />
+                      </div>
+                    </details>
+                  ) : (
+                    <div className="flex min-h-control items-center justify-between gap-3">
+                      {heading}
+                      {download}
                     </div>
-                  </details>
-                )}
-              </li>
-            ))}
+                  )}
+                  {row.notConfigured && (
+                    <span className="text-sm text-foreground-muted">{t('app.documents.notConfigured')}</span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
       ))}

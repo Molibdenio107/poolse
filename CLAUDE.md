@@ -247,6 +247,7 @@ Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before tou
 - A side sheet fits the window; the one growable thing inside it takes the slack.
 - Eight level tints, measured in both themes, and always shown at full strength somewhere.
 - A page that fails unexpectedly lands in `dashboard/error.tsx`
+- The family app says the least it can (Rui, 06-11-2026): short labels, *Voltar* with the destination for screen readers only, icons with names for a screen reader, no sentence that repeats a control.
 - The family app is soft on a phone
 
 ### Calendar, classes and recintos

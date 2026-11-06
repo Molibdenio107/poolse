@@ -117,7 +117,8 @@ export async function familyDocuments(
       one.kind === 'fpn_declaration'
         ? pending.has('fpn_declaration') || pending.has('fpn_declaration_minor')
         : pending.has(one.kind);
-    return { ...one, status: waiting ? 'sent' : one.status, canSend: maySend && !waiting };
+    // The boletim is only ever downloaded (Rui, 06-11-2026).
+    return { ...one, status: waiting ? 'sent' : one.status, canSend: maySend && !waiting && one.kind !== 'socio_form' };
   });
 }
 

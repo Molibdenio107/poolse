@@ -1,8 +1,5 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
-import { ChevronRight, FileText } from 'lucide-react';
-import { LinkBusy } from '@/components/link-busy';
 import { agendaWeekOf, agendaWeekRange, isAgendaWeek } from '@poolse/rules';
 import { ApiError, apiFetch, type AppCalendar, type AppCalendarEntry, type FamilyLeave } from '@/lib/api';
 import { withFrom } from '@/lib/back';
@@ -139,19 +136,6 @@ export default async function FamilyLessons({
       {earlier.map(([date, entries]) => dayRows(date, entries))}
 
       {certificates}
-
-      {/* POOLSE-179: one row, a screen deeper in. */}
-      <Link
-        href={child === undefined ? '/app/familia/documentos' : `/app/familia/documentos?child=${child}`}
-        className="flex min-h-control items-center justify-between gap-3 rounded bg-surface px-4 py-3 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-      >
-        <span className="flex items-center gap-3">
-          <FileText className="size-5 text-primary" aria-hidden />
-          {t('app.documents.title')}
-        </span>
-        <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
-        <LinkBusy />
-      </Link>
 
       {leaves.state === 'failed' && <PageError message={t('app.family.certificatesFailed')} />}
     </>

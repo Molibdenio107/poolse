@@ -7,7 +7,6 @@ import { formatDate } from '@/lib/date-format';
 import { addDays, today } from '@/lib/dates';
 import { laneLabel } from '@/lib/lanes';
 import { formatCents } from '@/lib/money';
-import { timeAgo } from '@/lib/relative-time';
 import { cn } from '@/lib/utils';
 
 type T = Awaited<ReturnType<typeof getTranslations>>;
@@ -28,9 +27,8 @@ export function dayHeading(t: T, date: string): string {
 }
 
 /**
- * The water at a lesson's tank: the temperature and how long ago it was taken.
- * Always with its age, so three-day-old water never reads as this morning's
- * (POOLSE-90, QA 6).
+ * The water at a lesson's tank: the temperature, and nothing else (Rui, 06-11-2026,
+ * reversing POOLSE-90's "always with its age": the app stays simple).
  */
 export async function WaterLine({ water }: { water: AppWater }): Promise<React.ReactElement> {
   const t = await getTranslations();
@@ -39,7 +37,7 @@ export async function WaterLine({ water }: { water: AppWater }): Promise<React.R
   return (
     <span className="flex items-center gap-1 text-sm">
       <Thermometer className="size-3.5 shrink-0" aria-hidden />
-      {t('app.family.water', { celsius, ago: timeAgo(water.takenAt, locale) ?? '' })}
+      {t('app.family.water', { celsius })}
     </span>
   );
 }

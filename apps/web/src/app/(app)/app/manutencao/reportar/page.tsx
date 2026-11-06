@@ -27,10 +27,11 @@ export default async function ReportIssuePage({
     <>
       <Link
         href={fromRecord ? '/app/manutencao/registar' : '/app/manutencao'}
+        aria-label={fromRecord ? t('app.maintenance.record.backTo') : t('app.maintenance.backTo')}
         className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline coarse:-my-3 coarse:py-3 coarse:pr-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <ArrowLeft className="size-4" aria-hidden />
-        {fromRecord ? t('app.maintenance.record.backTo') : t('app.maintenance.backTo')}
+        {t('common.back')}
         <LinkBusy />
       </Link>
       <h1 className="text-xl font-semibold tracking-tight">{t('app.maintenance.report')}</h1>
