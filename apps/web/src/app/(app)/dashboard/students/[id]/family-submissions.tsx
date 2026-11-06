@@ -19,14 +19,16 @@ export interface FamilySubmission {
   examinedOn: string | null;
   submittedAt: string;
   submittedByName: string | null;
+  submittedByRole: 'student' | 'guardian';
   studentBirthDate: string | null;
 }
 
 const INITIAL: FormState = { ok: false };
 
 /**
- * *Enviado pela família* — POOLSE-179 slice 2. What a family sent and the office
- * has not decided, above the sections, so it is seen whichever one is open.
+ * *Por rever* — POOLSE-179 slice 2. What a family or a student sent and the office
+ * has not decided, above the sections, so it is seen whichever one is open. Each
+ * line says who sent it, from the sender's relation and never the age (POOLSE-190).
  * Nothing on file changes until *Aceitar*; an exam is accepted with the result
  * the office reads off the certificate. *Rejeitar* files nothing, and destroys
  * a sealed file (an ID photo, an exam). Both ask first.
@@ -51,7 +53,7 @@ export function FamilySubmissions({
           <li key={one.id} className="flex flex-col gap-2 py-3">
             <span className="font-medium">{t(`documents.submissions.kind.${one.kind}`)}</span>
             <span className="text-sm text-foreground-muted">
-              {t('documents.submissions.sentBy', {
+              {t(one.submittedByRole === 'student' ? 'documents.submissions.sentByStudent' : 'documents.submissions.sentByGuardian', {
                 name: one.submittedByName ?? t('documents.submissions.someone'),
                 when: formatStamp(one.submittedAt),
               })}

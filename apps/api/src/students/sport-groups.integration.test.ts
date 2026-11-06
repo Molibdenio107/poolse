@@ -100,6 +100,7 @@ test('a lead’s sport is its turma’s, else its level’s, else none — and t
     // The circle: each sport's Pedidos its own, the shared entry the rest (rule 7).
     const attention = await readAttention(org, {
       leads: true,
+      review: false,
       water: false,
       maintenance: false,
       families: null,
@@ -115,6 +116,7 @@ test('a pool-only club keeps one circle counting every lead (QA 1)', async () =>
     await lead(tenant, 'Outra');
     const attention = await readAttention(tenant.organizationId, {
       leads: true,
+      review: false,
       water: false,
       maintenance: false,
       families: null,

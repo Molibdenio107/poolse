@@ -388,9 +388,13 @@
   "birthDateConfirm": {
     "pending": "Data de nascimento por confirmar",
     "hint": "Foi indicada pela própria pessoa na aplicação. Confira-a com o documento de identificação.",
+    "hintNoDocument": "Foi indicada pela própria pessoa na aplicação, e ainda não há documento de identificação para a conferir.",
+    "hintBeside": "Compare a data indicada com o documento de identificação abaixo.",
+    "declaredDate": "Data indicada: {date}",
     "confirm": "Confirmar a data",
     "confirmTitle": "Confirmar a data de nascimento?",
     "confirmMessage": "Fica registado que a data foi conferida com o documento de identificação. Se estiver errada, corrija-a primeiro em baixo.",
+    "confirmMessageBeside": "Fica registado que a data foi conferida com o documento de identificação. Se estiver errada, corrija-a primeiro no separador Geral.",
     "confirmed": "Data de nascimento confirmada.",
     "failed": "Não foi possível confirmar a data."
   },
@@ -4153,6 +4157,7 @@
   "attention": {
     "menuBadge": "{count, plural, one {# coisa por tratar} other {# coisas por tratar}}",
     "dot": "{count, plural, one {# coisa por tratar aqui} other {# coisas por tratar aqui}}",
+    "studentReview": "{count, plural, one {# coisa por rever} other {# coisas por rever}}",
     "familiesLabel": "Famílias",
     "familiesValue": "{count, plural, one {# resposta por ver} other {# respostas por ver}}"
   },
@@ -7032,7 +7037,7 @@
   },
   "documents": {
     "submissions": {
-      "title": "{count, plural, one {Enviado pela família: # documento por rever} other {Enviado pela família: # documentos por rever}}",
+      "title": "{count, plural, one {Por rever: # documento} other {Por rever: # documentos}}",
       "kind": {
         "fpn_declaration": "Declaração FPN",
         "fpn_declaration_minor": "Declaração FPN (menores)",
@@ -7040,8 +7045,9 @@
         "id_document": "Documento de identificação",
         "medical_exam": "Exame médico"
       },
-      "sentBy": "Enviado por {name} em {when}",
-      "someone": "um membro da família",
+      "sentByStudent": "Enviado pelo aluno ({name}) em {when}",
+      "sentByGuardian": "Enviado pelo encarregado ({name}) em {when}",
+      "someone": "sem nome registado",
       "examinedOn": "exame de {date}",
       "result": "Resultado",
       "chooseResult": "Escolher…",

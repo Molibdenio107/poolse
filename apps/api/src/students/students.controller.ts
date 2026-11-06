@@ -30,7 +30,7 @@ import { requireMyBooking, requireMyProposal } from '../tenant/assignment.js';
 
 interface StudentDetail extends Student {
   /** The date of birth's standing; the office's only — POOLSE-186. */
-  birthDateState?: { declared: boolean; verifiedAt: string | null };
+  birthDateState?: { declared: boolean; verifiedAt: string | null; idDocument: 'pending' | 'on_file' | 'none' };
   /**
    * Whether this caller may open the medical record.
    *

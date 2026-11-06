@@ -387,9 +387,13 @@
   "birthDateConfirm": {
     "pending": "Date of birth to confirm",
     "hint": "The person gave it themselves in the app. Check it against their ID document.",
+    "hintNoDocument": "The person gave it themselves in the app, and there is no ID document yet to check it against.",
+    "hintBeside": "Compare the date given with the ID document below.",
+    "declaredDate": "Date given: {date}",
     "confirm": "Confirm the date",
     "confirmTitle": "Confirm the date of birth?",
     "confirmMessage": "This records that the date was checked against the ID document. If it is wrong, correct it below first.",
+    "confirmMessageBeside": "This records that the date was checked against the ID document. If it is wrong, correct it on the General tab first.",
     "confirmed": "Date of birth confirmed.",
     "failed": "The date could not be confirmed."
   },
@@ -4151,6 +4155,7 @@
   "attention": {
     "menuBadge": "{count, plural, one {# thing to deal with} other {# things to deal with}}",
     "dot": "{count, plural, one {# thing to deal with here} other {# things to deal with here}}",
+    "studentReview": "{count, plural, one {# thing to review} other {# things to review}}",
     "familiesLabel": "Families",
     "familiesValue": "{count, plural, one {# answer to read} other {# answers to read}}"
   },
@@ -7030,7 +7035,7 @@
   },
   "documents": {
     "submissions": {
-      "title": "{count, plural, one {Sent by the family: # document to review} other {Sent by the family: # documents to review}}",
+      "title": "{count, plural, one {To review: # document} other {To review: # documents}}",
       "kind": {
         "fpn_declaration": "FPN declaration",
         "fpn_declaration_minor": "FPN declaration (minors)",
@@ -7038,8 +7043,9 @@
         "id_document": "ID document",
         "medical_exam": "Medical exam"
       },
-      "sentBy": "Sent by {name} on {when}",
-      "someone": "a family member",
+      "sentByStudent": "Sent by the student ({name}) on {when}",
+      "sentByGuardian": "Sent by the guardian ({name}) on {when}",
+      "someone": "no name on file",
       "examinedOn": "exam on {date}",
       "result": "Result",
       "chooseResult": "Choose…",

@@ -8,13 +8,16 @@ import { readShell } from './shell';
  * failure is no circles, never a broken page.
  */
 export interface Attention {
-  menu: Partial<Record<'leads' | 'facilities' | 'calendar', number>>;
+  /** By menu key; a sport's copy is `<key>:<sport>`, so the keys are not a closed set. */
+  menu: Record<string, number>;
   facilities: Record<string, number>;
   pools: Record<string, number>;
   spaces: Record<string, number>;
   sessions: Record<string, number>;
+  /** Students with something to review — POOLSE-190. */
+  students: Record<string, number>;
 }
 
-const NOTHING: Attention = { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {} };
+const NOTHING: Attention = { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {} };
 
 export const readAttention = cache(async (): Promise<Attention> => (await readShell()).attention ?? NOTHING);

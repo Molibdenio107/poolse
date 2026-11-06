@@ -1447,7 +1447,7 @@ test('GET attention answers a guardian and a student with an empty map', async (
   await asEach(async (who) => {
     assert.deepEqual(
       await new AttentionController().read(),
-      { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {} },
+      { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {} },
       who.label,
     );
   });
@@ -1459,7 +1459,7 @@ test('GET shell gives a guardian and a student the logo and nothing that is not 
       await new ShellController().read(),
       {
         logoFileId: null,
-        attention: { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {} },
+        attention: { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {} },
         meetInboxPending: null,
         subscriptionAlert: null,
         supportStatus: null,

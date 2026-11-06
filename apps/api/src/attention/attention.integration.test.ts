@@ -147,7 +147,7 @@ test("QA 4: a family's Não vou lights the calendar for that lesson's teacher, n
       assert.equal((await attention.read()).menu['calendar'], 1);
     });
     await actingAs(tenant, { membershipId: parent, roles: ['guardian'] }, async () => {
-      assert.deepEqual(await attention.read(), { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {} });
+      assert.deepEqual(await attention.read(), { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {} });
     });
   });
 });

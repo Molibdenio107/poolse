@@ -84,10 +84,10 @@ test('QA 2: with two sports each gets a group, in order, where Turmas stood, and
   const poolCalendar = poolGroup.children?.find((item) => item.key === 'calendar.title');
   assert.equal(poolCalendar?.badge, 'calendar');
   assert.ok((poolCalendar?.children ?? []).length > 0);
-  // Only Pedidos carries a circle in a court's group, and it is that sport's own (POOLSE-143).
+  // Only Alunos and Pedidos carry a circle in a court's group, each that sport's own (POOLSE-143, -190).
   assert.deepEqual(
     flat(tennisGroup.children ?? []).filter((item) => item.badge !== undefined).map((item) => [item.badge, item.badgePerSport]),
-    [['leads', true]],
+    [['students', true], ['leads', true]],
   );
   const tennisTurmas = tennisGroup.children?.find((item) => item.key === 'classes.title');
   assert.deepEqual(tennisTurmas?.children, [], 'Épocas and Reposições read no sport yet');

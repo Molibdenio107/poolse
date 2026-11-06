@@ -4,6 +4,7 @@ import { readPoolWater } from '../dashboard/management.repository.js';
 import { labValues, type LabParameter } from '../facilities/lab-results.repository.js';
 import { TASK_STATE } from '../maintenance/maintenance.repository.js';
 import { readLeadsWidget, waitingLeadsBySport } from '../leads/leads.repository.js';
+import { studentsToReview } from '../students/students.repository.js';
 
 /**
  * Where something needs doing — POOLSE-120 (Rui, 28-10-2026).
@@ -18,22 +19,26 @@ import { readLeadsWidget, waitingLeadsBySport } from '../leads/leads.repository.
  * Every verdict is an existing one, never a second definition: water is
  * `excursions` against `resolveBands` over `readPoolWater` (the dashboard's
  * read), a lab report is `gradeLabResult`, a task is the maintenance module's
- * `TASK_STATE`, a pre-registration is the Pedidos count. Each kind is one
- * statement whatever the number of sites.
+ * `TASK_STATE`, a pre-registration is the Pedidos count, a student to review is
+ * `studentsToReview`. Each kind is one statement whatever the number of sites.
  */
 
 export interface Attention {
-  /** By menu key: `leads`, `facilities`, `calendar`. Absent means nothing. */
+  /** By menu key: `leads`, `facilities`, `calendar`, `students`. Absent means nothing. */
   menu: Record<string, number>;
   facilities: Record<string, number>;
   pools: Record<string, number>;
   spaces: Record<string, number>;
   /** Lessons a family answered for — *Não vou* to come, or feedback this week. */
   sessions: Record<string, number>;
+  /** Students the office has something to review on — POOLSE-190. */
+  students: Record<string, number>;
 }
 
 export interface AttentionScope {
   leads: boolean;
+  /** What families sent and dates of birth to confirm: the office's to decide. */
+  review: boolean;
   water: boolean;
   maintenance: boolean;
   /** Families' answers: `all` for the office, `mine` for a teacher, or none. */
@@ -41,7 +46,7 @@ export interface AttentionScope {
   membershipId: string;
 }
 
-export const NOTHING: Attention = { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {} };
+export const NOTHING: Attention = { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {} };
 
 function add(map: Record<string, number>, key: string | null, by = 1): void {
   if (key === null) return;
@@ -49,7 +54,16 @@ function add(map: Record<string, number>, key: string | null, by = 1): void {
 }
 
 export async function readAttention(organizationId: string, scope: AttentionScope): Promise<Attention> {
-  const out: Attention = { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {} };
+  const out: Attention = { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {} };
+
+  if (scope.review) {
+    // The menu counts students, each sport's copy its own: `students:<sport>`.
+    for (const student of await studentsToReview(organizationId)) {
+      out.students[student.id] = student.items;
+      add(out.menu, 'students');
+      for (const sport of student.sports) add(out.menu, `students:${sport}`);
+    }
+  }
 
   if (scope.leads) {
     /*

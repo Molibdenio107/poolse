@@ -414,7 +414,14 @@ export default async function StudentPage({
                     {/* A 16rem basis, so on a phone the form wraps under the photo
                         rather than shrinking beside it to a 138px column (POOLSE-88). */}
                     <div className="min-w-0 flex-1 basis-64">
-                      {loaded.birthDateState?.declared === true && <BirthDateConfirm studentId={loaded.id} />}
+                      {loaded.birthDateState?.declared === true && (
+                        <BirthDateConfirm
+                          studentId={loaded.id}
+                          birthDate={loaded.birthDate}
+                          idDocument={loaded.birthDateState.idDocument}
+                          documentHref={sectionHref(`/dashboard/students/${id}`, { tab: 'document', from }, 'identificacao')}
+                        />
+                      )}
                       <StudentForm
                         organizationId={reg.organizationId}
                         levels={reg.levels}
@@ -582,6 +589,10 @@ export default async function StudentPage({
                 />
                 {current === 'identificacao' && (
                   <>
+                    {/* POOLSE-190: the date is confirmed beside what it is checked against. */}
+                    {loaded.birthDateState?.declared === true && loaded.birthDateState.idDocument === 'on_file' && (
+                      <BirthDateConfirm studentId={loaded.id} birthDate={loaded.birthDate} idDocument="on_file" />
+                    )}
                     {/*
                       The ID document's photograph and its details, together: a photo dropped
                       anywhere on the page is filed and, with the reader on, read into the form

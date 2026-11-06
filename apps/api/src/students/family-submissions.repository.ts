@@ -127,6 +127,8 @@ export interface Submission {
   examinedOn: string | null;
   submittedAt: string;
   submittedByName: string | null;
+  /** Who sent it, by their relation to the student and never by age — POOLSE-190. */
+  submittedByRole: 'student' | 'guardian';
   /** The date on the record, for the office to check against an ID (POOLSE-186). */
   studentBirthDate: string | null;
 }
@@ -139,6 +141,7 @@ export async function listPending(organizationId: string, studentId: string): Pr
               f.content_type AS "contentType", f.original_name AS "originalName",
               s.examined_on::text AS "examinedOn", s.submitted_at AS "submittedAt",
               nullif(btrim(concat_ws(' ', m.first_name, m.last_name)), '') AS "submittedByName",
+              CASE WHEN st.membership_id = s.submitted_by THEN 'student' ELSE 'guardian' END AS "submittedByRole",
               st.birth_date::text AS "studentBirthDate"
          FROM family_submission s
          JOIN student st ON st.organization_id = s.organization_id AND st.id = s.student_id

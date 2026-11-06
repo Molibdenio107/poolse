@@ -105,7 +105,7 @@ export interface Item {
  * `meetInbox` is POOLSE-114's count; the rest are POOLSE-120's circles — what
  * needs doing, from `GET /attention`, cleared when it is done.
  */
-export type BadgeKey = 'meetInbox' | 'leads' | 'facilities' | 'calendar';
+export type BadgeKey = 'meetInbox' | 'leads' | 'facilities' | 'calendar' | 'students';
 /** By badge key, and `<key>:<sport>` for a per-sport copy (POOLSE-143). */
 export type Badges = Partial<Record<string, number>>;
 
@@ -415,6 +415,9 @@ export const SECTIONS: Item[] = [
     kinds: ['business'],
     // POOLSE-143: the shared register stays; each sport gets it filtered.
     perSport: 'copy',
+    // POOLSE-190: students to review. Only the office's answer ever holds any.
+    badge: 'students',
+    badgePerSport: true,
     // Ordered by how close each one sits to a student — round 6. Encarregados
     // first, directly under Alunos, because a guardian is a person attached to a
     // student and the two lists are read together; Níveis next, being what a

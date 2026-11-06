@@ -1573,19 +1573,63 @@ export async function updateStudent(
  */
 /**
  * The date of birth's standing — POOLSE-186. `declared` is a date that came from
- * the person's own login and that the office has not confirmed.
+ * the person's own login and that the office has not confirmed. `idDocument` is
+ * what there is to check it against (POOLSE-190): a family's copy waiting, a copy
+ * on file, or neither. It reads no sealed file, so it audits nothing.
  */
 export async function birthDateState(
   organizationId: string,
   studentId: string,
-): Promise<{ declared: boolean; verifiedAt: string | null }> {
+): Promise<{ declared: boolean; verifiedAt: string | null; idDocument: 'pending' | 'on_file' | 'none' }> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ declared: boolean; verified_at: string | null }>(
-      `SELECT birth_date_declared_at IS NOT NULL AS declared, birth_date_verified_at AS verified_at
-         FROM student WHERE id = $1`,
+    const { rows } = await tx.query<{
+      declared: boolean;
+      verified_at: string | null;
+      id_document: 'pending' | 'on_file' | 'none';
+    }>(
+      `SELECT s.birth_date_declared_at IS NOT NULL AS declared, s.birth_date_verified_at AS verified_at,
+              CASE
+                WHEN EXISTS (SELECT 1 FROM family_submission f
+                              WHERE f.student_id = s.id AND f.kind = 'id_document' AND f.decision IS NULL) THEN 'pending'
+                WHEN EXISTS (SELECT 1 FROM student_document d
+                              WHERE d.student_id = s.id AND d.kind = 'id_document' AND d.replaced_at IS NULL) THEN 'on_file'
+                ELSE 'none'
+              END AS id_document
+         FROM student s WHERE s.id = $1`,
       [studentId],
     );
-    return { declared: rows[0]?.declared ?? false, verifiedAt: rows[0]?.verified_at ?? null };
+    return {
+      declared: rows[0]?.declared ?? false,
+      verifiedAt: rows[0]?.verified_at ?? null,
+      idDocument: rows[0]?.id_document ?? 'none',
+    };
+  });
+}
+
+/**
+ * Who the office has something to review on — POOLSE-190: anything a family sent
+ * and nobody has decided, and a date of birth nobody has confirmed, per live
+ * student, with the sports the register filters by, so a circle and the filtered
+ * list cannot disagree. `AttentionController` decides who may read it.
+ */
+export async function studentsToReview(
+  organizationId: string,
+): Promise<{ id: string; sports: string[]; items: number }[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string; sports: string[]; items: number }>(
+      `SELECT r.id, r.sports, r.pending + r.declared AS items
+         FROM (
+           SELECT s.id, ${STUDENT_SPORTS('s')}::text[] AS sports,
+                  (SELECT count(*)::int FROM family_submission f
+                    WHERE f.student_id = s.id AND f.organization_id = s.organization_id
+                      AND f.decision IS NULL) AS pending,
+                  (s.birth_date_declared_at IS NOT NULL)::int AS declared
+             FROM student s
+            WHERE s.archived_at IS NULL
+         ) r
+        WHERE r.pending + r.declared > 0`,
+    );
+    return rows;
   });
 }
 

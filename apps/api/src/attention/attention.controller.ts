@@ -10,7 +10,8 @@ import { NOTHING, readAttention, type Attention } from './attention.repository.j
  * refusal. **Only who can act is counted** (Rui, 28-10-2026): water and
  * maintenance for owner, admin and maintenance; pre-registrations for owner
  * and admin; families' answers for the teacher of the lesson, and every lesson
- * for the office — each in a module that is on.
+ * for the office; students to review for owner and admin — each in a module that
+ * is on.
  */
 @CoreRoute()
 @Controller('attention')
@@ -29,6 +30,7 @@ export async function attentionForReader(): Promise<Attention> {
   const upkeep = office || hasRole('maintenance');
   const scope = {
     leads: office,
+    review: office,
     water: upkeep && moduleIsOn('water_quality'),
     maintenance: upkeep && moduleIsOn('maintenance'),
     families: office ? ('all' as const) : hasRole('instructor') ? ('mine' as const) : null,

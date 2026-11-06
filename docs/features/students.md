@@ -284,7 +284,11 @@ A new student on the desktop form needs a date of birth; imports and invitations
 
 ## What a family sent — POOLSE-179
 
-*Enviado pela família* sits above the sections of the record's *Documentos* tab (`GET /students/:id/documents/submissions`, owner and admin). *Aceitar* files the copy through the office's own path, in one transaction, and an exam needs the result the office reads off it. *Rejeitar* files nothing: a sealed file is shredded, a plain one archived, and the family can send again. Both ask first, and a decision is final. Until then nothing on the record changes, so a pending exam is never the child's standing.
+*Por rever* sits above the sections of the record's *Documentos* tab (`GET /students/:id/documents/submissions`, owner and admin). *Aceitar* files the copy through the office's own path, in one transaction, and an exam needs the result the office reads off it. *Rejeitar* files nothing: a sealed file is shredded, a plain one archived, and the family can send again. Both ask first, and a decision is final. Until then nothing on the record changes, so a pending exam is never the child's standing.
+
+**Who sees it** (POOLSE-190): a student with anything waiting there, or a date of birth to confirm, raises a circle on *Alunos* (counting students; each sport's copy counts its own) and a dot beside the name in the list, in every filter and without changing the order. Owner and admin only; each clears when the thing is decided. Each line says *Enviado pelo aluno* or *Enviado pelo encarregado*, from who sent it and never from the age.
+
+*Data de nascimento por confirmar* shows the date given. Its button opens the ID on *Documentos*: a copy waiting is accepted there, which confirms the date; a copy on file shows the same banner above it, and that one confirms. With no ID, it says so and confirms directly.
 
 ## Documentos — POOLSE-132
 

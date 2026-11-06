@@ -10,6 +10,8 @@ import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { backLabelKey, readFrom } from '@/lib/back';
 import { AgedOutFlag } from '@/components/aged-out-flag';
 import { PersonAvatar } from '@/components/person-avatar';
+import { AttentionDot } from '@/components/attention-dot';
+import { readAttention } from '@/lib/attention';
 import { BirthdayFlag } from '@/components/birthday-flag';
 import { photoUrlFor } from '@/lib/photo';
 import { ArchiveStudentButton } from './student-forms';
@@ -123,6 +125,7 @@ export default async function StudentsPage({
   // The club's own `/me`: its name for a shared link, and whether it has a
   // second sport — the only case the *Modalidades* chips and column appear in.
   const me = await apiFetch<Me>('/me').catch(() => null);
+  const attention = await readAttention();
   const clubSports = me?.memberships[0]?.sports ?? [];
   const multiSport = isMultiSport(clubSports);
 
@@ -520,6 +523,11 @@ export default async function StudentsPage({
                               >
                                 {shorten(student.shortName ?? '', 20)}
                               </FromLink>
+                              {/* POOLSE-190: beside the name, and the order stays the list's own. */}
+                              <AttentionDot
+                                count={attention.students[student.id]}
+                                label={t('attention.studentReview', { count: attention.students[student.id] ?? 0 })}
+                              />
                               <BirthdayFlag birthDate={student.birthDate} />
                               {/* Both capacities, on one row — POOLSE-23 AC6. */}
                               {student.isAdultStudent && (

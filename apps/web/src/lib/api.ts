@@ -1703,7 +1703,7 @@ export interface StudentIdentity {
 
 export interface Student {
   /** The date of birth's standing, for the office only — POOLSE-186. */
-  birthDateState?: { declared: boolean; verifiedAt: string | null };
+  birthDateState?: { declared: boolean; verifiedAt: string | null; idDocument: 'pending' | 'on_file' | 'none' };
   /** Their level in each sport other than swimming — POOLSE-148; on the record only. */
   sportLevels?: { sport: PoolseSport; levelId: string; levelName: string }[];
   /** When this student left and when their data goes — 7b.8. Null while enrolled. */
