@@ -241,9 +241,9 @@ App mode under a finger and below `md` is rounder: cards 16 px, the hero and a b
 
 ## Aulas is a calendar — POOLSE-175
 
-`GET /app/agenda?from=&to=` answers a window of at most 31 days, inside six months ahead and three back (`agendaWindowAllowed` in `@poolse/rules`, which the stepper's edges read too); anything else is a 400, half a window included. With no window it is the two weeks it always was.
+`GET /app/agenda?from=&to=` answers a window of at most 31 days, inside six months ahead and three back (`agendaWindowAllowed` in `@poolse/rules`; the stepper's edges are `agendaWeekRange`, the first and last whole week it answers); anything else is a 400, half a window included. With no window it is the two weeks it always was.
 
-The tab shows a month: a seven-day strip with a dot for a lesson and hatching for a closed day, the closures as bands with their reason, then the month's lessons by day. A past lesson says this child's own mark in words. Past the generated lessons the turma's weekly pattern shows as *Previsto* and opens nothing. *Últimas aulas* and the certificates follow. A row links to the lesson only where the lesson's page answers, which the API says per entry (`opens`). The rows left *Início*.
+The tab shows a week, Monday to Sunday (`?week=`, the Monday): a seven-day strip with a dot for a lesson and hatching for a closed day, whose arrows move one week, then that week's lessons by day. A closure is the hatching and the legend; no sentence repeats it (Rui, 06-11-2026). A past lesson says this child's own mark in words. Past the generated lessons the turma's weekly pattern shows as *Previsto* and opens nothing. *Últimas aulas* and the certificates follow. A row links to the lesson only where the lesson's page answers, which the API says per entry (`opens`). The rows left *Início*.
 
 ## Perfil reads first — POOLSE-176
 

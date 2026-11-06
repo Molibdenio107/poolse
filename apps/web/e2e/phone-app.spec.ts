@@ -11,7 +11,12 @@ import {
   NO_GUARDIAN,
   NO_TEST_USER,
 } from './session';
+import { agendaWeekOf, agendaWeekRange } from '@poolse/rules';
 import { poolsideLesson, poolsideTomorrow, poolsideYesterday } from './poolside-fixture';
+
+/** The club's day, some days from now, as `YYYY-MM-DD`. */
+const clubDay = (offset: number): string =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(Date.now() + offset * 86_400_000);
 
 /**
  * App mode on a phone — POOLSE-90 slice 1, QA 1, 3 and the lesson page, as a
@@ -140,8 +145,8 @@ test.describe('as a guardian, before a lesson', () => {
     await expect(notGoing).toHaveAttribute('aria-pressed', 'true');
     await noSidewaysScroll(page);
 
-    // The rows are *Aulas* since POOLSE-175; tomorrow's month, for the last of one.
-    await visit(page, `/app/familia/aulas?month=${new Date(Date.now() + 86_400_000).toISOString().slice(0, 7)}`);
+    // The rows are *Aulas* since POOLSE-175; tomorrow's week, for a Sunday.
+    await visit(page, `/app/familia/aulas?week=${agendaWeekOf(clubDay(1))}`);
     await expect(
       page.locator(`a[href^="/app/familia/aulas/${sessionId}"]`).filter({ hasText: 'Ana Poolside' }),
     ).toContainText(/avisou que não vem|said they are not coming/i);
@@ -296,22 +301,29 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
     await expect(page.getByRole('link', { name: /voltar ao perfil|back to my profile/i })).toHaveAttribute('href', '/app/perfil?home=family');
   });
 
-  test('POOLSE-175 — Aulas is a calendar: the month steps, keeps the child, and stops at its edges', async ({ page }) => {
+  test('POOLSE-175 — Aulas is a calendar: the week steps, keeps its seven days, and stops at its edges', async ({ page }) => {
     await visit(page, '/app/familia/aulas');
     const calendar = page.getByRole('region', { name: /calendário de aulas|lesson calendar/i });
     await expect(calendar).toBeVisible();
     await expect(page.getByText(/aulas passadas nem atestados|no past lessons or certificates/i)).toHaveCount(0);
+    await expect(page.getByText(/encerrado (de|a) \d|closed (from|on) \d/i)).toHaveCount(0);
 
-    // Seven days, and the lessons of the month below them.
-    await expect(calendar.getByRole('listitem')).toHaveCount(7);
-    const next = page.getByRole('link', { name: /mês seguinte|next month/i });
+    const days = async (): Promise<string[]> => calendar.getByRole('listitem').allInnerTexts();
+    const shown = await days();
+    expect(shown).toHaveLength(7);
+    const next = page.getByRole('link', { name: /semana seguinte|next week/i });
     // By each link's own address: a tap during hydration can land on nothing.
-    for (let step = 0; step < 6; step += 1) {
-      const href = await next.getAttribute('href');
-      expect(href).toMatch(/month=\d{4}-\d{2}/);
-      await visit(page, href!);
-    }
-    // Six months ahead is the edge: no further link, and the API agrees.
+    const href = await next.getAttribute('href');
+    expect(href).toMatch(/week=\d{4}-\d{2}-\d{2}/);
+    await visit(page, href!);
+    // A whole week on: seven new days, none of the old ones.
+    const after = await days();
+    expect(after).toHaveLength(7);
+    expect(after.filter((day) => shown.includes(day))).toHaveLength(0);
+
+    // The last week is the edge: no further link, and the API agrees.
+    await visit(page, `/app/familia/aulas?week=${agendaWeekRange(clubDay(0)).last}`);
+    await expect(calendar.getByRole('listitem')).toHaveCount(7);
     await expect(next).toHaveCount(0);
     await noSidewaysScroll(page);
   });

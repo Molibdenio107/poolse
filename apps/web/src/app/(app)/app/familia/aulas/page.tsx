@@ -1,26 +1,25 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { ChevronRight, FileText, Lock } from 'lucide-react';
+import { ChevronRight, FileText } from 'lucide-react';
 import { LinkBusy } from '@/components/link-busy';
-import { agendaMonthRange, isAgendaMonth, monthDays } from '@poolse/rules';
+import { agendaWeekOf, agendaWeekRange, isAgendaWeek } from '@poolse/rules';
 import { ApiError, apiFetch, type AppCalendar, type AppCalendarEntry, type FamilyLeave } from '@/lib/api';
 import { withFrom } from '@/lib/back';
-import { formatDate } from '@/lib/date-format';
 import { addDays, today } from '@/lib/dates';
 import { describeLoad, outcome } from '@/lib/load-failure';
 import { storageConfigured } from '@/lib/storage-status';
 import { PageError } from '@/components/page-shell';
-import { MonthStrip } from '@/components/app/month-strip';
+import { WeekStrip } from '@/components/app/week-strip';
 import { EntryCard, dayHeading } from '../agenda-parts';
 import { FamilyCertificates } from '../certificates';
 import { RecentLessons } from '../feedback';
 import { ChildFilter } from '../child-filter';
 
 /**
- * *Aulas* is the family's calendar — POOLSE-175. A month at a time, six ahead
- * and three back: its lessons, its closures and, past the lessons the club has
- * generated, the weekly pattern as *Previsto*. Under it, *Últimas aulas*
+ * *Aulas* is the family's calendar — POOLSE-175. A week at a time (Rui, 06-11-2026),
+ * reaching six months ahead and three back: its lessons, its closures on the strip
+ * and, past the lessons the club has generated, the weekly pattern as *Previsto*. Under it, *Últimas aulas*
  * (POOLSE-116) and the medical certificates (POOLSE-109), as POOLSE-136 left them.
  *
  * Nothing here is edited. A row opens the lesson's page only where that page
@@ -29,17 +28,16 @@ import { ChildFilter } from '../child-filter';
 export default async function FamilyLessons({
   searchParams,
 }: {
-  searchParams: Promise<{ child?: string; month?: string }>;
+  searchParams: Promise<{ child?: string; week?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { child, month: asked } = await searchParams;
+  const { child, week: asked } = await searchParams;
   const day = today();
-  const thisMonth = day.slice(0, 7);
-  const { first, last } = agendaMonthRange(day);
-  const month = isAgendaMonth(asked) && asked >= first && asked <= last ? asked : thisMonth;
-  const { from, to } = monthDays(month);
+  const thisWeek = agendaWeekOf(day);
+  const { first, last } = agendaWeekRange(day);
+  const week = isAgendaWeek(asked) && asked >= first && asked <= last ? asked : thisWeek;
 
-  const query = new URLSearchParams({ from, to });
+  const query = new URLSearchParams({ from: week, to: addDays(week, 6) });
   if (child !== undefined) query.set('child', child);
 
   let agenda: AppCalendar;
@@ -52,7 +50,7 @@ export default async function FamilyLessons({
   }
 
   const here = new URLSearchParams();
-  if (month !== thisMonth) here.set('month', month);
+  if (week !== thisWeek) here.set('week', week);
   if (child !== undefined) here.set('child', child);
   const path = here.size === 0 ? '/app/familia/aulas' : `/app/familia/aulas?${here.toString()}`;
 
@@ -118,34 +116,19 @@ export default async function FamilyLessons({
       <h1>{t('app.tabs.familia.aulas')}</h1>
       <ChildFilter base="/app/familia/aulas" children={agenda.children} chosen={child} />
 
-      <MonthStrip
-        month={month}
+      <WeekStrip
+        week={week}
         today={day}
         child={child}
         lessonDays={new Set(byDay.keys())}
         closedDays={closedDays}
       />
 
-      {agenda.closures.map((closure) => (
-        <p key={closure.id} className="flex items-start gap-2 rounded bg-surface-muted p-3 text-sm">
-          <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <span>
-            {closure.startsOn === closure.endsOn
-              ? t('app.family.calendar.closedDay', { date: formatDate(closure.startsOn) })
-              : t('app.family.calendar.closedRange', {
-                  from: formatDate(closure.startsOn),
-                  to: formatDate(closure.endsOn),
-                })}
-            {closure.reason === '' ? '' : ` — ${closure.reason}`}
-          </span>
-        </p>
-      ))}
-
       {byDay.size === 0 && (
         <p className="text-foreground-muted">
-          {month === thisMonth && agenda.recent.length === 0
+          {week === thisWeek && agenda.recent.length === 0
             ? t('app.family.calendar.notYet')
-            : t('app.family.calendar.noneThisMonth')}
+            : t('app.family.calendar.noneThisWeek')}
         </p>
       )}
 

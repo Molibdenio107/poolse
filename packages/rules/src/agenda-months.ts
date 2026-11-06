@@ -1,6 +1,6 @@
 /**
  * How far the family's calendar reaches — POOLSE-175. Six months ahead and three
- * back, whole months, one month at a time.
+ * back, whole months, stepped a Monday-to-Sunday week at a time (Rui, 06-11-2026).
  *
  * Here because the stepper that stops at the edge and the API that refuses past
  * it must agree. Dates are `YYYY-MM-DD` strings and months `YYYY-MM`, compared as
@@ -11,16 +11,11 @@ export const AGENDA_MONTHS_AHEAD = 6;
 /** The longest window `GET /app/agenda` answers: a month, either end included. */
 export const AGENDA_WINDOW_MAX_DAYS = 31;
 
-const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MS = 86_400_000;
 
 function utc(date: string): number {
   return Date.parse(`${date}T00:00:00Z`);
-}
-
-export function isAgendaMonth(value: string | undefined): value is string {
-  return value !== undefined && MONTH.test(value);
 }
 
 export function shiftMonth(month: string, by: number): string {
@@ -41,6 +36,40 @@ export function monthDays(month: string): { from: string; to: string } {
 export function agendaMonthRange(today: string): { first: string; last: string } {
   const month = today.slice(0, 7);
   return { first: shiftMonth(month, -AGENDA_MONTHS_BACK), last: shiftMonth(month, AGENDA_MONTHS_AHEAD) };
+}
+
+/** Monday 0 … Sunday 6. */
+function weekday(date: string): number {
+  return (new Date(utc(date)).getUTCDay() + 6) % 7;
+}
+
+function addDays(date: string, days: number): string {
+  return new Date(utc(date) + days * DAY_MS).toISOString().slice(0, 10);
+}
+
+/** The Monday of a date's week. */
+export function agendaWeekOf(date: string): string {
+  return addDays(date, -weekday(date));
+}
+
+/** Whether a value is a real Monday, which is how a week is named in an address. */
+export function isAgendaWeek(value: string | undefined): value is string {
+  if (value === undefined || !DATE.test(value) || Number.isNaN(utc(value))) return false;
+  return weekday(value) === 0 && addDays(value, 0) === value;
+}
+
+/**
+ * The earliest and latest Monday whose whole week `agendaWindowAllowed` answers:
+ * a week hanging over either edge would be a 400, so the stepper stops short.
+ */
+export function agendaWeekRange(today: string): { first: string; last: string } {
+  const months = agendaMonthRange(today);
+  const start = monthDays(months.first).from;
+  const end = monthDays(months.last).to;
+  return {
+    first: weekday(start) === 0 ? start : addDays(agendaWeekOf(start), 7),
+    last: addDays(agendaWeekOf(addDays(end, 1)), -7),
+  };
 }
 
 /** Whether `GET /app/agenda` answers this window. */

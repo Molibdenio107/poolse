@@ -25,7 +25,7 @@ Filed while building POOLSE-178 (05-11-2026): *"An older period left unpaid is i
 5. **A future occurrence is never owed.** *Pagamentos*' next three stay as they are.
 6. *Pagamentos* lists each older unpaid period under *Em dívida* by its own month, and the sentence says how many (*3 períodos em atraso*).
 7. **An occurrence's amount is the line's `payableCents`**, because a line's amount does not change once agreed.
-8. **Open:** a club that starts on Poolse in the middle of a line. A line starting 01-09 entered in November has no payments for September and October, which may have been paid before Poolse. Default if unanswered: an occurrence that began before the month of the line's `created_at` is not owed, so the first owed period is the one holding `created_at`, or `starts_on` if later.
+8. **A line owes from the month it was entered** (Rui, 06-11-2026). A line starting 01-09 entered in November has no payments for September and October, which may have been paid before Poolse, so an occurrence that began before the month of the line's `created_at` is not owed. The first owed period is the one holding `created_at`, or `starts_on` if later.
 
 ### Dev notes
 
@@ -50,6 +50,6 @@ Filed while building POOLSE-178 (05-11-2026): *"An older period left unpaid is i
 ### Acceptance criteria
 - [ ] Every unpaid occurrence up to the current one counts, through `feeBalance` alone.
 - [ ] The office's fee block, *Pagamentos* and the dashboard card read one figure.
-- [ ] Rule 8 answered and written into `docs/decisions.md`.
+- [ ] Rule 8 holds, including for a line entered mid-way.
 - [ ] `docs/features/students.md` and `docs/features/invoicing.md` updated.
 - [ ] QA 1–9 green.

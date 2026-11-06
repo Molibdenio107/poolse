@@ -1357,3 +1357,7 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-06** — **Custos offers *com IVA* to every club** (POOLSE-183, Rui): the ticket showed the switch only to a club that does not recover VAT, and no such setting exists. Sem IVA stays the default, and the ledger already holds both figures.
 
 - **2026-11-06** — **An older unpaid period stays owed, fixed before go-live, after POOLSE-183** (POOLSE-187, Rui, answering the question POOLSE-178 filed).
+
+- **2026-11-06** — **A fee line owes from the month it was entered, never before** (POOLSE-187 rule 8, Rui): a line starting in September entered in November may have been paid before Poolse, so earlier periods are not shown as debt.
+
+- **2026-11-06** — **The family's *Aulas* steps a week, not a month, and a closure is the strip's hatching alone** (Rui, **reverses** POOLSE-175's month stepper and closure bands): the strip showed seven days while its arrows moved a month, so most of a month could not be seen, and the bands repeated what the calendar already marks.

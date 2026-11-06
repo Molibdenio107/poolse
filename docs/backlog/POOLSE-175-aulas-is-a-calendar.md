@@ -4,6 +4,10 @@
 
 **Type:** Feature · **Area:** Mobile app / Family / Calendar · **Priority:** Medium (pilot) · **Depends on** [POOLSE-174](./POOLSE-174-inicio-is-the-next-lesson.md), [POOLSE-84](./POOLSE-84-closures-by-facility-and-tank.md), [POOLSE-116](./POOLSE-116-lesson-feedback-from-the-family-app.md)
 
+### Changed 06-11-2026 (Rui) — wins over what follows
+
+The arrows move a week, not a month, because the strip shows seven days: `?week=` is the Monday, the list below follows the week, and the reach stays six months ahead and three back (`agendaWeekRange`). `MonthStrip` is now `WeekStrip`. The closure bands are gone: rule 2's hatching and legend say it, and a lesson cancelled by a closure still says so on its row.
+
 ### PO — why this exists
 
 Rui, 05-11-2026: *"Then have a small calendar view to see the next classes for the next months, if the pool will close etc"* and, on the *Aulas* tab, *"'Aulas' should display something no? why it says 'nem aulas passadas nem atestados'?"*

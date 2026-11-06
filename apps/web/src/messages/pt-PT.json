@@ -101,14 +101,12 @@
       "title": "Agenda",
       "calendar": {
         "label": "Calendário de aulas",
-        "previous": "Mês anterior",
-        "next": "Mês seguinte",
+        "previous": "Semana anterior",
+        "next": "Semana seguinte",
         "lesson": "Aula",
         "planned": "Previsto",
-        "closedRange": "Encerrado de {from} a {to}",
-        "closedDay": "Encerrado a {date}",
         "notYet": "Ainda não há aulas marcadas — a secretaria ainda está a montar as turmas.",
-        "noneThisMonth": "Sem aulas neste mês.",
+        "noneThisWeek": "Sem aulas nesta semana.",
         "attendance": {
           "present": "Presente",
           "absent": "Faltou",

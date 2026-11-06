@@ -101,14 +101,12 @@
       "title": "Schedule",
       "calendar": {
         "label": "Lesson calendar",
-        "previous": "Previous month",
-        "next": "Next month",
+        "previous": "Previous week",
+        "next": "Next week",
         "lesson": "Lesson",
         "planned": "Planned",
-        "closedRange": "Closed from {from} to {to}",
-        "closedDay": "Closed on {date}",
         "notYet": "No lessons booked yet — the office is still setting up the classes.",
-        "noneThisMonth": "No lessons this month.",
+        "noneThisWeek": "No lessons this week.",
         "attendance": {
           "present": "Present",
           "absent": "Absent",
