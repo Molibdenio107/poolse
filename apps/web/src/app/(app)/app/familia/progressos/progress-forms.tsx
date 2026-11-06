@@ -1,15 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, X } from 'lucide-react';
 import { ConfirmButton } from '@/components/confirm-action';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextField } from '@/components/ui/field';
-import type { ProgressPool } from '@/lib/api';
+import type { ProgressLesson, ProgressPool } from '@/lib/api';
+import { formatDate } from '@/lib/date-format';
 import { useSavedAction } from '@/lib/saved';
 import type { FormState } from '../../../dashboard/actions';
-import { addTimeAction, removeTimeAction } from './progress.actions';
+import { addTimeAction, removeTimeAction, setFavouriteAction } from './progress.actions';
 
 const INITIAL: FormState = { ok: false };
 const OPEN =
@@ -21,13 +22,16 @@ export function AddTime({
   studentId,
   strokes,
   pools,
+  lessons,
 }: {
   studentId: string;
   strokes: string[];
   pools: ProgressPool[];
+  lessons: ProgressLesson[];
 }): React.ReactElement {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
+  const [lesson, setLesson] = useState('');
   const [state, submit, pending] = useSavedAction(async (previous: FormState, data: FormData) => {
     const answer = await addTimeAction(previous, data);
     if (answer.ok) setOpen(false);
@@ -50,6 +54,19 @@ export function AddTime({
       <Dialog open={open} onClose={() => setOpen(false)} title={t('app.records.addTime')} closeLabel={t('common.close')} placement="sheet">
         <form action={submit} className="flex flex-col gap-3">
           <input type="hidden" name="studentId" value={studentId} />
+          <SelectField
+            name="sessionId"
+            label={t('app.records.lesson')}
+            initial=""
+            onValueChange={setLesson}
+            options={[
+              { value: '', label: t('app.records.noLesson') },
+              ...lessons.map((one) => ({
+                value: one.id,
+                label: `${formatDate(one.day)} · ${one.time} · ${one.className}`,
+              })),
+            ]}
+          />
           <SelectField
             name="stroke"
             label={t('app.records.stroke')}
@@ -76,13 +93,49 @@ export function AddTime({
             </div>
             {error('time') !== undefined && <p className="text-sm text-danger">{error('time')}</p>}
           </fieldset>
-          <TextField name="swumOn" type="date" label={t('app.records.date')} required error={error('swumOn')} />
+          {/* A lesson brings its own day. */}
+          {lesson === '' && (
+            <TextField name="swumOn" type="date" label={t('app.records.date')} required error={error('swumOn')} />
+          )}
           <button type="submit" disabled={pending} className={SAVE}>
             {pending ? t('common.working') : t('app.records.save')}
           </button>
         </form>
       </Dialog>
     </>
+  );
+}
+
+/** Informative for the teacher: the same field the office sees. It saves on change. */
+export function FavouriteStroke({
+  studentId,
+  strokes,
+  favourite,
+}: {
+  studentId: string;
+  strokes: string[];
+  favourite: string | null;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [, action] = useSavedAction(setFavouriteAction, INITIAL);
+  const [, startSaving] = useTransition();
+  const save = (stroke: string): void => {
+    const data = new FormData();
+    data.set('studentId', studentId);
+    data.set('stroke', stroke);
+    startSaving(() => action(data));
+  };
+  return (
+    <SelectField
+      name="favourite"
+      label={t('app.records.favourite')}
+      initial={favourite ?? ''}
+      onValueChange={save}
+      options={[
+        { value: '', label: t('app.records.noFavourite') },
+        ...strokes.map((stroke) => ({ value: stroke, label: t(`progress.strokes.${stroke}`) })),
+      ]}
+    />
   );
 }
 

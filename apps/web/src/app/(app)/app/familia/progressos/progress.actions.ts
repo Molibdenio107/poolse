@@ -26,6 +26,7 @@ export async function addTimeAction(_previous: FormState, data: FormData): Promi
       stroke: text(data, 'stroke'),
       distanceM: text(data, 'distanceM'),
       poolId: text(data, 'poolId'),
+      sessionId: text(data, 'sessionId'),
       hours: text(data, 'hours'),
       minutes: text(data, 'minutes'),
       seconds: text(data, 'seconds'),
@@ -34,6 +35,16 @@ export async function addTimeAction(_previous: FormState, data: FormData): Promi
     });
   } catch (error) {
     return refused(error, { distance: 'distanceM', time: 'time', date: 'swumOn' });
+  }
+  revalidatePath(PAGE);
+  return { ok: true };
+}
+
+export async function setFavouriteAction(_previous: FormState, data: FormData): Promise<FormState> {
+  try {
+    await apiPost(`/app/progress/${encodeURIComponent(text(data, 'studentId'))}/favourite`, { stroke: text(data, 'stroke') });
+  } catch (error) {
+    return refused(error, {});
   }
   revalidatePath(PAGE);
   return { ok: true };

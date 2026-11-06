@@ -151,3 +151,38 @@ test('a family removes what it entered and nothing the office did', async () => 
     });
   });
 });
+
+test('a time names the lesson it was swum in, takes its day, and the favourite reaches the office', async () => {
+  await withScratchTenant(async (tenant) => {
+    const family = await seed(tenant);
+    const [group] = await tenant.sql<{ id: string }>(
+      `INSERT INTO class_group (organization_id, season_id, facility_id, name) VALUES ($1, $2, $3, 'Golfinhos') RETURNING id`,
+      [tenant.organizationId, tenant.seasonId, tenant.facilityId],
+    );
+    await tenant.sql(
+      `INSERT INTO enrollment (organization_id, class_group_id, student_id, status, joined_on)
+       VALUES ($1, $2, $3, 'active', club_today() - 30)`,
+      [tenant.organizationId, group!.id, family.child],
+    );
+    const [session] = await tenant.sql<{ id: string; day: string }>(
+      `INSERT INTO class_session (organization_id, class_group_id, starts_at, duration_minutes)
+       VALUES ($1, $2, now() - interval '3 days', 45)
+       RETURNING id, to_char(occurs_on, 'YYYY-MM-DD') AS day`,
+      [tenant.organizationId, group!.id],
+    );
+    const routes = new FamilyProgressController();
+    await asGuardian(tenant, family, async () => {
+      assert.ok((await routes.read(family.child)).lessons.some((one) => one.id === session!.id));
+      await routes.addTime(family.child, { ...TIME, swumOn: undefined, sessionId: session!.id });
+      await expectStatus(
+        () => routes.addTime(family.child, { ...TIME, sessionId: '00000000-0000-4000-8000-000000000000' }),
+        400,
+      );
+      await routes.favourite(family.child, { stroke: 'backstroke' });
+    });
+    const office = await actingAs(tenant, { roles: ['owner'] }, () => new RecordsController().read(family.child));
+    assert.equal(office.records[0]!.lessonName, 'Golfinhos');
+    assert.equal(office.records[0]!.swumOn, session!.day);
+    assert.equal(office.favouriteStroke, 'backstroke');
+  });
+});

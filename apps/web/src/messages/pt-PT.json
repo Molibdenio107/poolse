@@ -312,7 +312,6 @@
     },
     "records": {
       "bests": "Melhores tempos",
-      "entered": "Registado por si",
       "addTime": "Tempo",
       "save": "Guardar",
       "stroke": "Estilo",
@@ -342,7 +341,20 @@
       "seconds": "Segundos",
       "hundredths": "Centésimos",
       "integrations": "Integrações",
-      "soon": "Em breve"
+      "soon": "Em breve",
+      "sectionsLabel": "Secções de Progressos",
+      "section": {
+        "summary": "Resumo",
+        "times": "Registos",
+        "integrations": "Integrações"
+      },
+      "favourite": "Estilo preferido",
+      "noFavourite": "Sem preferência",
+      "allTimes": "Todos os tempos",
+      "lesson": "Aula",
+      "noLesson": "Fora das aulas",
+      "typedShort": "Indicada por si",
+      "official": "Oficial"
     },
     "tabs": {
       "label": "Separadores",

@@ -17,11 +17,13 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import {
   archiveOwnTime,
   courseOfLength,
+  listProgressLessons,
   listProgressPools,
   mayEnterProgress,
+  type ProgressLesson,
   type ProgressPool,
 } from './family-progress.repository.js';
-import { addRecord, STROKES, type Stroke } from './records.repository.js';
+import { addRecord, setFavouriteStroke, STROKES, type Stroke } from './records.repository.js';
 import { familyStudents } from './students.repository.js';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -74,12 +76,14 @@ export class FamilyProgressController {
   @Get()
   async read(
     @Param('studentId', ParseUUIDPipe) studentId: string,
-  ): Promise<{ canEnterTimes: boolean; pools: ProgressPool[] }> {
+  ): Promise<{ canEnterTimes: boolean; canEdit: boolean; pools: ProgressPool[]; lessons: ProgressLesson[] }> {
     const { organizationId, membershipId } = await requireMine(studentId);
     const canEnter = await mayEnterProgress(organizationId, studentId, membershipId);
     return {
       canEnterTimes: canEnter && moduleIsOn('competition'),
+      canEdit: canEnter,
       pools: await listProgressPools(organizationId),
+      lessons: await listProgressLessons(organizationId, studentId),
     };
   }
 
@@ -104,18 +108,39 @@ export class FamilyProgressController {
     const pool = poolId === '' ? null : (await listProgressPools(organizationId)).find((one) => one.id === poolId);
     if (pool === undefined) throw new BadRequestException({ code: 'pool', message: 'No such pool' });
 
+    // A lesson is read from this child's own list, and its day is the time's day.
+    const sessionId = typeof body['sessionId'] === 'string' ? body['sessionId'] : '';
+    const lesson = sessionId === '' ? null : (await listProgressLessons(organizationId, studentId)).find((one) => one.id === sessionId);
+    if (lesson === undefined) throw new BadRequestException({ code: 'lesson', message: 'No such lesson' });
+
     const id = await addRecord(organizationId, studentId, {
       stroke: stroke as Stroke,
       distanceM,
       course: courseOfLength(pool?.lengthM ?? null),
       timeMs: timeOf(body),
-      swumOn: pastDay(body['swumOn']),
+      swumOn: lesson?.day ?? pastDay(body['swumOn']),
       note: null,
       meet: null,
       selfReported: true,
+      classSessionId: lesson?.id ?? null,
     });
     if (id === null) throw new NotFoundException('No such student');
     return { id };
+  }
+
+  /** Declared by the family, informative for the teacher. An empty value clears it. */
+  @Post('favourite')
+  async favourite(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ saved: true }> {
+    const { organizationId } = await requireMayEnter(studentId);
+    const raw = body['stroke'];
+    if (raw !== '' && raw !== null && (typeof raw !== 'string' || !STROKES.includes(raw as Stroke))) {
+      throw new BadRequestException({ code: 'stroke', message: 'No such stroke' });
+    }
+    await setFavouriteStroke(organizationId, studentId, raw === '' || raw === null ? null : (raw as Stroke));
+    return { saved: true };
   }
 
   @Post('times/:recordId/archive')

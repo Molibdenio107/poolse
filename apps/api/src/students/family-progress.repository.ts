@@ -53,6 +53,44 @@ export function courseOfLength(lengthM: number | null): Course | null {
   return lengthM === 25 ? 'scm' : lengthM === 50 ? 'lcm' : null;
 }
 
+export interface ProgressLesson {
+  id: string;
+  /** The lesson's own day: a time swum in it takes this date. */
+  day: string;
+  time: string;
+  className: string;
+}
+
+/**
+ * The child's own lessons of the last 60 days, newest first: what a time can be
+ * filed under. Only turmas this child was in that day, and `class_group` is joined
+ * rather than left joined because a parceria has no students to pick from it.
+ */
+export async function listProgressLessons(organizationId: string, studentId: string): Promise<ProgressLesson[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<ProgressLesson>(
+      `SELECT cs.id, to_char(cs.occurs_on, 'YYYY-MM-DD') AS day,
+              to_char(cs.starts_at AT TIME ZONE f.timezone, 'HH24:MI') AS time,
+              cg.name AS "className"
+         FROM class_session cs
+         JOIN class_group cg ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
+         JOIN facility f ON f.id = cg.facility_id AND f.organization_id = cg.organization_id
+         JOIN enrollment e
+           ON e.class_group_id = cg.id AND e.organization_id = cg.organization_id
+          AND e.student_id = $2 AND e.status <> 'waiting'
+          AND e.joined_on <= cs.occurs_on AND (e.ended_on IS NULL OR e.ended_on >= cs.occurs_on)
+        WHERE cs.organization_id = $1
+          AND cs.status <> 'cancelled'
+          AND cs.starts_at <= now()
+          AND cs.occurs_on >= club_today() - 60
+        ORDER BY cs.starts_at DESC
+        LIMIT 30`,
+      [organizationId, studentId],
+    );
+    return rows;
+  });
+}
+
 /** A family takes back a time it typed, and nothing else. */
 export async function archiveOwnTime(
   organizationId: string,

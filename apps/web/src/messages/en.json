@@ -311,7 +311,6 @@
     },
     "records": {
       "bests": "Best times",
-      "entered": "Added by you",
       "addTime": "Time",
       "save": "Save",
       "stroke": "Stroke",
@@ -341,7 +340,20 @@
       "seconds": "Seconds",
       "hundredths": "Hundredths",
       "integrations": "Integrations",
-      "soon": "Coming soon"
+      "soon": "Coming soon",
+      "sectionsLabel": "Progress sections",
+      "section": {
+        "summary": "Summary",
+        "times": "Records",
+        "integrations": "Integrations"
+      },
+      "favourite": "Favourite stroke",
+      "noFavourite": "No preference",
+      "allTimes": "All times",
+      "lesson": "Lesson",
+      "noLesson": "Not in a lesson",
+      "typedShort": "Added by you",
+      "official": "Official"
     },
     "tabs": {
       "label": "Tabs",

@@ -2465,6 +2465,7 @@ export interface SwimRecord {
   official: boolean;
   /** Typed by the family: may be a best, never official. */
   selfReported: boolean;
+  lessonName: string | null;
   /** Best over this stroke, distance and course. */
   isPersonalBest: boolean;
 }
@@ -2476,9 +2477,18 @@ export interface ProgressPool {
   lengthM: number | null;
 }
 
+export interface ProgressLesson {
+  id: string;
+  day: string;
+  time: string;
+  className: string;
+}
+
 export interface FamilyProgress {
   canEnterTimes: boolean;
+  canEdit: boolean;
   pools: ProgressPool[];
+  lessons: ProgressLesson[];
 }
 
 export interface PersonalBest {
