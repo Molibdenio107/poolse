@@ -3,43 +3,13 @@ import { notFound } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { today } from '@/lib/dates';
 import { outcome } from '@/lib/load-failure';
-import { countryName } from '@/lib/countries';
+import { boletimFormValues, type BoletimPrint } from '@/lib/form-values';
 import { PageError } from '@/components/page-shell';
 import { PrintButton } from '@/components/print-button';
 import { AutoPrint } from '@/components/auto-print';
 import { BoletimSheet, placementStyle } from '@/components/boletim-sheet';
 import { fileUrl } from '@/lib/files';
 import { boletimValue, type BoletimPlacement } from '@poolse/rules';
-
-/** What `GET /students/:id/boletim` returns — POOLSE-134. */
-interface BoletimPrint {
-  clubName: string;
-  socioNumber: string | null;
-  socioSince: string | null;
-  isSocio: boolean;
-  name: string;
-  birthDate: string | null;
-  taxNumber: string | null;
-  contactEmail: string | null;
-  contactPhone: string | null;
-  addressLine: string | null;
-  locality: string | null;
-  postalCode: string | null;
-  parentOneName: string | null;
-  parentTwoName: string | null;
-  maritalStatus: string | null;
-  profession: string | null;
-  education: string | null;
-  birthplace: string | null;
-  nationality: string | null;
-  minor: boolean;
-  guardian: { name: string; phone: string | null; email: string | null; relationship: string | null } | null;
-  /** The club's own form (POOLSE-142), or null for Poolse's. */
-  template: { fileId: string; fields: BoletimPlacement[] } | null;
-  /** Present only when the club's form places it. */
-  idDocumentNumber: string | null;
-  snsNumber: string | null;
-}
 
 /**
  * The *boletim de sócio*, filled in on the club's own form — POOLSE-134,
@@ -95,28 +65,7 @@ async function ClubForm({
   const t = await getTranslations();
   const pt = await getTranslations({ locale: 'pt-PT' });
   const template = data.template;
-  const values = {
-    name: data.name,
-    parentOneName: data.parentOneName,
-    parentTwoName: data.parentTwoName,
-    birthDate: data.birthDate,
-    maritalStatus: data.maritalStatus === null ? null : pt(`students.identity.marital.${data.maritalStatus}`),
-    profession: data.profession,
-    education: data.education,
-    birthplace: data.birthplace,
-    nationality: data.nationality === null ? null : countryName(data.nationality, 'pt-PT'),
-    addressLine: data.addressLine,
-    locality: data.locality,
-    postalCode: data.postalCode,
-    phone: data.contactPhone,
-    email: data.contactEmail,
-    taxNumber: data.taxNumber,
-    idDocumentNumber: data.idDocumentNumber,
-    snsNumber: data.snsNumber,
-    socioNumber: data.socioNumber,
-    socioSince: data.socioSince,
-    guardian: data.guardian,
-  };
+  const values = boletimFormValues(data, pt);
   const day = today();
 
   return (

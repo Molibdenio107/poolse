@@ -47,11 +47,11 @@ export default async function FamilyDocuments({
 
   const printHref = (id: string, row: AppDocumentRow): string => {
     const print = row.print!;
-    if (print.path === 'boletim') return `/app/familia/documentos/${id}/boletim`;
+    if (print.path === 'boletim') return `/app/familia/documentos/${id}/boletim/pdf`;
     const params = new URLSearchParams();
     if (print.seasonId !== null) params.set('season', print.seasonId);
     if (print.minor) params.set('minor', '1');
-    return `/app/familia/documentos/${id}/fpn?${params.toString()}`;
+    return `/app/familia/documentos/${id}/fpn/pdf?${params.toString()}`;
   };
 
   const status = (row: AppDocumentRow): string => {
@@ -98,10 +98,12 @@ export default async function FamilyDocuments({
                 </span>
               );
               const download = row.print !== null && (
-                // A plain anchor, never prefetched: opening it reads, and may
-                // decrypt, the child's details, and the read is audited.
+                // A plain anchor to a real file (POOLSE-193), never prefetched:
+                // opening it reads, and may decrypt, the child's details, and the
+                // read is audited.
                 <a
                   href={printHref(one.id, row)}
+                  download
                   aria-label={t('app.documents.download', { kind })}
                   className={ICON}
                 >

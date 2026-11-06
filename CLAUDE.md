@@ -234,7 +234,7 @@ Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before tou
 - Form fields are controlled, never `defaultValue`.
 - A circle means something needs doing, and it clears when it is done
 - The menu's entries live in `lib/nav-entries.ts`
-- A document on paper is a route with print styles, never a PDF library
+- A document on paper is a route with print styles; the one PDF library is `lib/form-pdf.ts`, for a club's forms on the phone
 - A decision asks first
 - A question asked in the middle of the page uses `components/ui/dialog.tsx`.
 - A refusal that needs numbers carries them as structure, never as prose.

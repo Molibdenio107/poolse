@@ -290,3 +290,7 @@ The family's triangle tab is *Progressos*: each child's best times, read from `G
 ## The club's logo — 06-11-2026
 
 A tap on the logo grows it out of its place in the header, a circle alone on the scrim with no window around it, and a tap anywhere sends it back. With reduced motion it opens and closes at once.
+
+## A form on the phone is a file — POOLSE-193, slice A
+
+The download icon on *Documentos* gives a real PDF of the club's form (`…/boletim/pdf`, `…/fpn/pdf`), one page, Portuguese whoever downloads it, with nobody's name in its metadata. The API decides who may read it, leaves the SNS number off and audits the read, on the same routes the print pages use. `private, no-store`.

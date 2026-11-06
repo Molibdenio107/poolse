@@ -9,7 +9,8 @@ import { PrintButton } from '@/components/print-button';
 import { AutoPrint } from '@/components/auto-print';
 import { BoletimSheet, placementStyle } from '@/components/boletim-sheet';
 import { fileUrl } from '@/lib/files';
-import { boletimValue, type BoletimData, type BoletimPlacement } from '@poolse/rules';
+import { fpnFormValues } from '@/lib/form-values';
+import { boletimValue, type BoletimPlacement } from '@poolse/rules';
 
 /**
  * The FPN's *Anexo 2 — Declaração de Consentimento Informado*, filled in on the
@@ -76,39 +77,7 @@ async function ClubFpnForm({
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const pt = await getTranslations({ locale: 'pt-PT' });
-  const values: BoletimData = {
-    name: data.studentName,
-    parentOneName: null,
-    parentTwoName: null,
-    birthDate: null,
-    maritalStatus: null,
-    profession: null,
-    education: null,
-    birthplace: null,
-    nationality: null,
-    addressLine: data.addressLine,
-    locality: data.locality,
-    postalCode: data.postalCode,
-    phone: null,
-    email: null,
-    taxNumber: null,
-    idDocumentNumber: data.idDocumentNumber,
-    snsNumber: null,
-    socioNumber: null,
-    socioSince: null,
-    guardian: null,
-    fpn: {
-      signerName: data.signerName === '' ? null : data.signerName,
-      season,
-      association: data.association,
-      clubCode: data.clubCode,
-      place: data.place,
-      idDocumentType: data.idDocumentType === null ? null : pt(`documents.idDocument.types.${data.idDocumentType}`),
-      issuedOn: data.issuedOn,
-      validUntil: data.validUntil,
-      disciplines: data.disciplines,
-    },
-  };
+  const values = fpnFormValues(data, season, pt);
   const day = today();
 
   return (

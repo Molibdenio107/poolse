@@ -4,6 +4,14 @@
 
 **Type:** Feature + Bug · **Area:** Mobile app / Students / Documents · **Priority:** High (pilot) · **Depends on** [POOLSE-179](./POOLSE-179-documentos-in-the-family-app.md), [POOLSE-142](./POOLSE-142-club-boletim-template.md), [POOLSE-177](./POOLSE-177-app-profile-edits-never-reach-the-student-record.md), [POOLSE-190](./POOLSE-190-the-office-sees-what-a-student-sent.md) · **Build after** POOLSE-191 and POOLSE-192 (Rui, 06-11-2026)
 
+### As built (06-11-2026): slice A of 4
+
+- **`lib/form-pdf.ts`** builds the file with `pdf-lib`, in two route handlers, and `lib/form-values.ts` is now the one definition of a form's values, read by the print pages too.
+- **`pdf-lib` was last published in 2022.** It is MIT, has no native code and no network, and runs on Vercel unchanged, where `pdfkit` needs its font files bundled. Cheap to swap: only `form-pdf.ts` imports it.
+- **A name Helvetica cannot write prints `?` for that letter**, rather than failing the form.
+- **The family's print pages are now unlinked** (`[id]/boletim/page.tsx`, `[id]/fpn/page.tsx`, their layout). Left in place, as a proposal to remove.
+- Slices B (review and blocking), C (proposals) and D (the office's section) are not built, so the FPN form downloads today even with data missing.
+
 ### PO — why this exists
 
 Rui, 06-11-2026: *"on 'student' detail screen from desktop app, the club only needs to review the FPN declaration after signed by the student. On The mobile app, student needs to verify if all fields are correct, check the mandatory ones and then download to their phone to sign by either hand or with the chave movel digital. Then the student re-upload the signed fpn form and only then the club validates. We need to adapt this logic on mobile phone and check the downloads from mobile app are not working when trying to download boletim de socio etc."*
@@ -31,9 +39,8 @@ Chave Móvel Digital signs a PDF, so a print page or an image cannot carry the s
 11. **The office's FPN section** (Rui): the state of the form and *Por rever* come first. Printing and uploading a copy stay, folded, for someone who signs at the desk or has no app.
 12. **The boletim** gets the working PDF (rule 7's file) and nothing else. It stays download only, with no mandatory check.
 
-**Open:** which values are the person's to propose. Default: address, locality, postal code, NIF, filiação, ID number and validity. Modalidades and the club's association and code stay the office's.
-
-**Open:** how the review shows the ID number. Default: the last 4 digits only, and a proposal replaces the whole number.
+13. **What the person may propose** (Rui, 06-11-2026): address, locality, postal code, the ID document's type, number and dates, and the modalidades. The FPN form does not print the NIF or filiação. The club's association and code stay the office's.
+14. **The review shows the ID number in full** (Rui, 06-11-2026): the person can really check it, the PDF prints it anyway, and each read is audited.
 
 ### Dev notes
 
