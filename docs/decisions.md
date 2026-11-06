@@ -1389,3 +1389,7 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-06** — **The FPN form is signed from the phone** (POOLSE-193, Rui): review, complete, download, sign by hand or with Chave Móvel Digital, send back, and the office only reviews the signed copy. Mandatory data blocks the download, and a correction is a proposal the office accepts. The office's print and upload stay folded for the desk. The boletim stays download only. Order: 190, 191, 192, 193, then POOLSE-188.
 
 - **2026-11-06** — **A form on the phone is a real PDF** (POOLSE-193, Rui): an exception, for the app's forms only, to *a document on paper is a route with print styles, never a PDF library*, because a print page gives a phone no file and Chave Móvel Digital signs a PDF. The desktop keeps its print pages.
+
+- **2026-11-06** — **Classmates are shown, minors never by name** (POOLSE-194, Rui), **partly reversing** POOLSE-174's *who's going is a count, not a roll*: on Início and each enrolled lesson, a minor is *Um aluno* with no name or photo, an adult *Maria S.* with a photo that zooms, and adults cannot opt out. *Vou* is by name and *Não vou* a count. Anyone not proved adult counts as a minor. The instructor shows by first name and photo.
+
+- **2026-11-06** — **A lesson may carry a Desafio** (POOLSE-195, Rui): the instructor's short text, read below the plan in its own colour and answered *Consegui* or *Não consegui* inside the lesson feedback. Classmates see the results under POOLSE-194's rules. Order: 191, 192, 193, 194, 195, then POOLSE-188.
