@@ -147,7 +147,7 @@ export interface ProgressLesson {
 }
 
 /**
- * The child's own lessons of the last 60 days, newest first: what a time can be
+ * The child's own lessons of the last 30 days, newest first: what a time can be
  * filed under. Only turmas this child was in that day, and `class_group` is joined
  * rather than left joined because a parceria has no students to pick from it.
  */
@@ -167,7 +167,7 @@ export async function listProgressLessons(organizationId: string, studentId: str
         WHERE cs.organization_id = $1
           AND cs.status <> 'cancelled'
           AND cs.starts_at <= now()
-          AND cs.occurs_on >= club_today() - 60
+          AND cs.occurs_on >= club_today() - 30
         ORDER BY cs.starts_at DESC
         LIMIT 30`,
       [organizationId, studentId],

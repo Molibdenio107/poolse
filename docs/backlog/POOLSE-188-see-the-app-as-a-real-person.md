@@ -6,6 +6,10 @@
 
 **Security review before building.** Run `/poolse-security-review` on the design, then on the diff. This is the first path where one login reads through another person's eyes.
 
+### Design agreed (06-11-2026)
+
+A view is an `app_view` row (viewer, viewed, started, ended, expires, reason) and a cookie holding only its id, sent as a header and checked in `TenantMiddleware` against the row: the row decides, never the cookie. An owner holding only `owner` has no family, teaching or maintenance home, so the picker must offer the people of the club, not the reader's own roles. Reads use an allowlist of routes (rule 10), refused in the middleware, so a new route is closed by default. `apiFetch` sends the header, so the `(app)/dashboard` layout redirects to `/app` while a view is live.
+
 ### PO — why this exists
 
 Rui, 06-11-2026: *"when a owner enters a mobile app, an option to select which type of view the owner/admin should use when entering the app for the first time. The same rule should be apply for myself when giving support to the app."*
@@ -28,7 +32,9 @@ Rui, 06-11-2026: *"when a owner enters a mobile app, an option to select which t
 6. **Recorded.** Starting and leaving a view writes the audit log: who viewed whom, when, with a reason for support. Each read in a view is logged as a read of that person, as `file.read` already is for a sealed file.
 7. **Who may be viewed.** Inside the reader's own club only. An owner may view anybody except where a reader may not read today. An Admin may not view the Owner. Support needs a live grant, and a view ends the moment the grant does.
 8. **Health and identity stay refused.** A sealed file, a medical note, an ID document and a staff member's pay are never opened through a view, even by a role that could open them in the backoffice.
-9. **Open:** whether the person viewed is told. Default: not notified, and it shows in the club's Atividade, which the Owner reads.
+9. **The person viewed is not told** (Rui, 06-11-2026). An owner's or admin's view shows in Atividade. **A support view is seen by the Owner only**, in Atividade, because the Owner opened that access.
+10. **What a view opens is a list, and everything else is refused** (Rui, 06-11-2026): the person's home, lessons, payments, documents list and progress. Medical certificates, stored files, filled forms and every other route answer 403 `viewing_as`, so a new route is closed until somebody adds it.
+11. **A view ends after 1 hour.** While one is open, the backoffice sends the reader back to the app until they press *Sair* (Rui, 06-11-2026).
 
 ### Dev notes
 
@@ -55,6 +61,6 @@ Rui, 06-11-2026: *"when a owner enters a mobile app, an option to select which t
 - [ ] The picker on first entry, remembered, changeable on *Perfil*.
 - [ ] Read-only enforced by the server, with the banner on every screen.
 - [ ] Audited, and bounded by the support grant.
-- [ ] Rule 9 answered.
+- [ ] Rules 9 to 11 hold.
 - [ ] A security review of the design and of the diff.
 - [ ] QA 1–9 green, with a role-probe line.
