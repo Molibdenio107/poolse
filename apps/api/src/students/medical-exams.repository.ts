@@ -1,6 +1,7 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { storeFile } from '../files/files.repository.js';
+import { closeScheduleIn } from './medical-exam-schedule.repository.js';
 
 /**
  * The exame médico — POOLSE-133 (Rui, 30-10-2026).
@@ -116,6 +117,8 @@ export async function insertExamIn(
     entityId: studentId,
     data: { examId: id },
   });
+  // POOLSE-192: here, because both ways of recording an exam come through here.
+  await closeScheduleIn(tx, studentId, id);
   return id;
 }
 

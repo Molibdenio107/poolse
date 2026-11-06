@@ -1,4 +1,4 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { whatsappUrl } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
 import { insertAvisoIn } from './avisos.repository.js';
@@ -13,7 +13,8 @@ import { insertMessageIn, NoRecipientsError, type MessageTarget } from './messag
  * row carries no address and never says delivered.
  *
  * `audience = 'student'` is on neither general list: the student's *Mensagens* tab
- * is its only reader.
+ * is its only reader. A `health` one is a medical exam's reminder (POOLSE-192):
+ * the office's alone, so an instructor's list leaves it out.
  */
 
 export interface StudentMessageRecipient {
@@ -110,7 +111,7 @@ export async function listStudentMessages(
                   AND mr.delivered_at IS NOT NULL) AS delivered_count
          FROM message m
         WHERE m.student_id = $1 AND m.audience = 'student' AND m.archived_at IS NULL
-          AND ($2::uuid IS NULL OR m.sent_by_membership_id = $2)
+          AND ($2::uuid IS NULL OR (m.sent_by_membership_id = $2 AND NOT m.health))
         ORDER BY m.sent_at DESC, m.id
         LIMIT ${LIST_LIMIT}`,
       [studentId, sentBy],
@@ -155,14 +156,46 @@ interface Words {
   body: string;
 }
 
+export interface SendOptions {
+  /** The aviso's last day, or null for none. */
+  shownUntil: string | null;
+  health?: boolean;
+  /** Told the aviso's id, inside the transaction. */
+  onAviso?: (tx: Tx, avisoId: string) => Promise<void>;
+}
+
+async function raiseAvisoIn(
+  tx: Tx,
+  organizationId: string,
+  sentBy: string,
+  studentId: string,
+  words: Words,
+  today: string,
+  options: SendOptions,
+): Promise<void> {
+  if (options.shownUntil === null) return;
+  const { id } = await insertAvisoIn(
+    tx,
+    organizationId,
+    sentBy,
+    target(studentId),
+    words.subject,
+    words.body,
+    today,
+    options.shownUntil,
+    options.health === true,
+  );
+  await options.onAviso?.(tx, id);
+}
+
 /** Throws `NoRecipientsError` with no address; the aviso shares the transaction. */
 export async function sendStudentEmail(
   organizationId: string,
   sentBy: string,
   studentId: string,
   words: Words,
-  shownUntil: string | null,
   today: string,
+  options: SendOptions,
 ): Promise<{ id: string }> {
   return withOrg(organizationId, async (tx) => {
     const { id } = await insertMessageIn(
@@ -176,10 +209,9 @@ export async function sendStudentEmail(
       words.body,
       { audience: 'student', targetId: studentId },
       studentId,
+      options.health === true,
     );
-    if (shownUntil !== null) {
-      await insertAvisoIn(tx, organizationId, sentBy, target(studentId), words.subject, words.body, today, shownUntil);
-    }
+    await raiseAvisoIn(tx, organizationId, sentBy, studentId, words, today, options);
     return { id };
   });
 }
@@ -193,8 +225,8 @@ export async function recordStudentWhatsApp(
   sentBy: string,
   studentId: string,
   words: Words,
-  shownUntil: string | null,
   today: string,
+  options: SendOptions,
 ): Promise<{ id: string; links: { name: string; url: string }[] }> {
   const text = `${words.subject}\n\n${words.body}`;
   const people = (await readRecipients(organizationId, studentId)).flatMap((row) => {
@@ -206,11 +238,11 @@ export async function recordStudentWhatsApp(
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string; student_name: string }>(
       `INSERT INTO message (organization_id, audience, student_id, subject, body,
-                            sent_by_membership_id, address_count, channel)
-       SELECT $1, 'student', s.id, $3, $4, $5, 0, 'whatsapp'
+                            sent_by_membership_id, address_count, channel, health)
+       SELECT $1, 'student', s.id, $3, $4, $5, 0, 'whatsapp', $6
          FROM student s WHERE s.id = $2 AND s.archived_at IS NULL
        RETURNING id, (SELECT btrim(first_name || ' ' || last_name) FROM student WHERE id = $2) AS student_name`,
-      [organizationId, studentId, words.subject, words.body, sentBy],
+      [organizationId, studentId, words.subject, words.body, sentBy, options.health === true],
     );
     const row = rows[0];
     if (row === undefined) throw new NoRecipientsError();
@@ -229,9 +261,7 @@ export async function recordStudentWhatsApp(
       entityId: row.id,
       data: { studentId, people: people.length },
     });
-    if (shownUntil !== null) {
-      await insertAvisoIn(tx, organizationId, sentBy, target(studentId), words.subject, words.body, today, shownUntil);
-    }
+    await raiseAvisoIn(tx, organizationId, sentBy, studentId, words, today, options);
     return { id: row.id, links: people.map((person) => ({ name: person.name, url: person.url })) };
   });
 }

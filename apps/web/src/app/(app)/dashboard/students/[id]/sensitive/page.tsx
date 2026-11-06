@@ -10,6 +10,8 @@ import {
 import { DetailPage } from '@/components/detail-page';
 import { MedicalLeavePanel } from './medical-leave';
 import { ExamPanel } from './exam-panel';
+import { ExamSchedule, type ExamScheduleData } from './exam-schedule';
+import { today as clubDay } from '@/lib/dates';
 import type { StudentMedicalExams } from '@/lib/medical-exams';
 import { storageConfigured } from '@/lib/storage-status';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -106,6 +108,22 @@ export default async function SensitivePage({
     exams = null;
   }
 
+  // A scheduled exam — POOLSE-192. Owner and admin; a failure hides the section.
+  const scheduling = loaded.canManage
+    ? await apiFetch<ExamScheduleData>(`/students/${id}/medical-exam-schedule`).catch(() => null)
+    : null;
+  // The reminder is the club's message, so it is written in the club's language.
+  const club = await getTranslations({ locale: scheduling?.locale === 'en' ? 'en' : 'pt-PT' });
+  const due = scheduling?.schedule ?? null;
+  const reminderBody =
+    due === null
+      ? ''
+      : [
+          club(`examSchedule.reminder.${due.kind}`, { date: formatDate(due.dueOn) }),
+          ...(due.dueTime === null ? [] : [club('examSchedule.reminder.time', { time: due.dueTime })]),
+          ...(due.place === null ? [] : [club('examSchedule.reminder.place', { place: due.place })]),
+        ].join('\n');
+
   return (
     <DetailPage
       // The full legal name — a detail page, not a list (POOLSE-32 criterion 3).
@@ -146,6 +164,15 @@ export default async function SensitivePage({
                   exams={exams}
                   canManage={loaded.canManage}
                   storageReady={storageReady}
+                />
+              )}
+              {scheduling !== null && (
+                <ExamSchedule
+                  studentId={id}
+                  data={scheduling}
+                  today={clubDay()}
+                  reminderSubject={club('examSchedule.reminder.subject')}
+                  reminderBody={reminderBody}
                 />
               )}
             </section>

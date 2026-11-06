@@ -4,6 +4,15 @@
 
 **Type:** Feature · **Area:** Students · **Priority:** High (pilot) · **Depends on** [POOLSE-191](./POOLSE-191-a-message-to-one-student.md), [POOLSE-133](./POOLSE-133-exame-medico.md)
 
+### As built (06-11-2026)
+
+- **Migration `1794653700000_medical-exam-schedule`.** The table, `message.health`, and `apply_retention()`.
+- **The panel sits below *Registar exame*,** on the *Exame médico* tab of *Saúde e consentimento*.
+- **A reminder after the aviso's last day raises no aviso**, because the window would be backwards. The ticket did not say.
+- **With the messages module off,** scheduling works and the panel says a reminder cannot be sent.
+- **The text is written in the club's language** whatever the reader's, and it is editable.
+- Walked in a browser in both themes: schedule, email, WhatsApp link, cancel. Email was off in dev, and the aviso in the family app is proved by tests only.
+
 ### PO — why this exists
 
 Rui, 06-11-2026: *"for 'medical exam' - from 'health and consent' add another section to schedule a medical exam with the necessary inputs, to when where etc and then a send message to that student as a reminder to do it. For that specific student it will display as an 'aviso' on the mobile app, but still receive the message or email."*

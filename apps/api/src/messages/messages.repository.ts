@@ -335,6 +335,8 @@ export async function insertMessageIn(
   body: string,
   audit: { audience: MessageAudience; targetId: string | null },
   studentId: string | null = null,
+  /** POOLSE-192: a medical exam's reminder. */
+  health = false,
 ): Promise<{ id: string; addressCount: number }> {
   {
     const { rows } = await tx.query<{ id: string | null; address_count: number }>(
@@ -345,8 +347,8 @@ export async function insertMessageIn(
             m AS (
               INSERT INTO message (organization_id, audience, class_group_id, level_id,
                                    facility_id, closure_id, class_session_id, subject, body,
-                                   sent_by_membership_id, address_count, sport_id, student_id)
-              SELECT $1, $2::message_audience, $11, $4, $5, $6, $12, $8, $9, $10, n.address_count, $7, $13::uuid
+                                   sent_by_membership_id, address_count, sport_id, student_id, health)
+              SELECT $1, $2::message_audience, $11, $4, $5, $6, $12, $8, $9, $10, n.address_count, $7, $13::uuid, $14::boolean
                 FROM n
                WHERE n.address_count > 0
               RETURNING id, address_count
@@ -377,7 +379,7 @@ export async function insertMessageIn(
         -- saying so costs nothing.
         CROSS JOIN (SELECT count(*) FROM ins) AS written
         CROSS JOIN (SELECT count(*) FROM tok) AS tokens`,
-      [organizationId, ...recipientParams, subject, body, sentByMembershipId, rowClassGroupId, rowSessionId, studentId],
+      [organizationId, ...recipientParams, subject, body, sentByMembershipId, rowClassGroupId, rowSessionId, studentId, health],
     );
 
     const row = rows[0]!;

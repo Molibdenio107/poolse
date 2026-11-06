@@ -92,6 +92,7 @@ import { AttentionController } from '../attention/attention.controller.js';
 import { ShellController } from '../shell/shell.controller.js';
 import { AppAvisosController, AvisosController } from '../messages/avisos.controller.js';
 import { StudentMessagesController } from '../messages/student-messages.controller.js';
+import { MedicalExamScheduleController } from '../students/medical-exam-schedule.controller.js';
 import { StaffNotesController } from '../staff-notes/staff-notes.controller.js';
 
 /**
@@ -1655,6 +1656,20 @@ test('POOLSE-157 rule 7: a guardian and a student are refused every staff screen
     await refused(`POST staff/:id/reinvite as ${label}`, 403, () =>
       new StaffController().move(fixture.instructorId, { email: 'x@example.com' }),
     );
+  });
+});
+
+test('POOLSE-192: a scheduled exam — a guardian and a student reach none of it', async () => {
+  await asEach(async ({ label }) => {
+    const schedule = new MedicalExamScheduleController();
+    await refused(`GET medical-exam-schedule as ${label}`, 403, () => schedule.read(NO_SUCH_ID));
+    await refused(`POST medical-exam-schedule as ${label}`, 403, () =>
+      schedule.create(NO_SUCH_ID, { kind: 'deadline', dueOn: '2099-01-01' }),
+    );
+    await refused(`POST remind as ${label}`, 403, () =>
+      schedule.remind(NO_SUCH_ID, NO_SUCH_ID, { channel: 'email', subject: 'a', body: 'b' }),
+    );
+    await refused(`POST cancel as ${label}`, 403, () => schedule.cancel(NO_SUCH_ID, NO_SUCH_ID));
   });
 });
 

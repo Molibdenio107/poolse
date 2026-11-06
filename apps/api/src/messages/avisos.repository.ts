@@ -74,6 +74,8 @@ export async function insertAvisoIn(
   body: string,
   shownFrom: string,
   shownUntil: string,
+  /** POOLSE-192: a medical exam's aviso. */
+  health = false,
 ): Promise<{ id: string; studentCount: number }> {
   {
     const params = targetParams(target);
@@ -89,9 +91,9 @@ export async function insertAvisoIn(
             m AS (
               INSERT INTO message (organization_id, audience, class_group_id, level_id, facility_id,
                                    sport_id, subject, body, sent_by_membership_id, address_count,
-                                   channel, shown_from, shown_until, student_id)
+                                   channel, shown_from, shown_until, student_id, health)
               SELECT $1, $2::message_audience, $3, $4, $5, $7, $8, $9, $10, 0,
-                     'app', $11::date, $12::date, $13::uuid
+                     'app', $11::date, $12::date, $13::uuid, $14::boolean
                 FROM n
                WHERE n.student_count > 0
               RETURNING id
@@ -107,7 +109,7 @@ export async function insertAvisoIn(
        SELECT m.id, n.student_count
          FROM n LEFT JOIN m ON true
         CROSS JOIN (SELECT count(*) FROM ins) AS written`,
-      [organizationId, ...params, subject, body, sentByMembershipId, shownFrom, shownUntil, studentId],
+      [organizationId, ...params, subject, body, sentByMembershipId, shownFrom, shownUntil, studentId, health],
     );
     const row = rows[0]!;
     if (row.id === null) throw new NoRecipientsError();

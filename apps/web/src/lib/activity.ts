@@ -38,6 +38,8 @@ export const LABELLED_ACTIONS: ReadonlySet<string> = new Set([
   'student.updated',
   'student.identity_backfilled',
   'student.document_printed',
+  'student.medical_exam_scheduled',
+  'student.medical_exam_schedule_cancelled',
   'student.filled',
   'student.archived',
   'student.restored',

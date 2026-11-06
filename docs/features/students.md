@@ -734,3 +734,16 @@ Reading through costs the Alunos list its sort index, about 14 ms on 400 student
 ## Older unpaid periods — POOLSE-187
 
 `balance` counts every unpaid occurrence of a line, not only the current one, from the period holding the line's `created_at` or its start if later, because an earlier month may have been paid before Poolse. A payment or an external invoice settles one. An ended line owes up to its end, and stays among the running lines so the office can settle it. A late charge stays one per kind of charge.
+
+## Scheduling a medical exam — POOLSE-192 (6 November 2026)
+
+**On *Saúde e consentimento* → *Exame médico*, owner and admin only.** *Marcado para* (the club booked it) or *Fazer até* (the student books it): a date, and optionally a time (only when booked), a place and a note that stays on the record. One open per student. A change is a cancel and a new one, so a reminder sent never quietly means another date.
+
+- **Enviar lembrete** is pressed by a person, by email or WhatsApp, with the text ready in the club's language and editable. It is a POOLSE-191 message marked `health`, on the student's *Mensagens* tab for the office and never for an instructor.
+- **The first reminder raises an aviso**, through the day after the date. A resend raises no second one, and after that day none is raised.
+- **It closes itself:** an exam recorded by the office, or a family's accepted, closes the schedule and ends the aviso in `insertExamIn`.
+- **After the date,** the panel says *Por registar* until an exam is recorded or it is cancelled. Nothing else reads it: no gate, and no circle.
+- **Cancelling** asks first and ends the aviso. Whoever received the reminder is not told.
+- **Retention:** the schedule and the words of its reminders go with the student's health data, a year after leaving.
+
+Routes: `GET` and `POST /students/:id/medical-exam-schedule`, `POST …/:scheduleId/remind` and `…/cancel`.

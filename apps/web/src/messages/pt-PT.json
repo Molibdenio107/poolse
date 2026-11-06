@@ -424,6 +424,54 @@
       "tooLongForWhatsapp": "Demasiado longa para o WhatsApp: use até 2000 caracteres, ou envie por email."
     }
   },
+  "examSchedule": {
+    "title": "Agendar exame médico",
+    "kindLabel": "Tipo",
+    "kind": {
+      "appointment": "Marcado para",
+      "deadline": "Fazer até"
+    },
+    "date": "Data",
+    "time": "Hora",
+    "place": "Local",
+    "note": "Nota",
+    "noteHint": "Fica no registo e não vai no lembrete.",
+    "save": "Agendar",
+    "saved": "Exame agendado.",
+    "state": {
+      "appointment": "Exame marcado para {date}",
+      "appointmentAt": "Exame marcado para {date} às {time}",
+      "deadline": "Exame a fazer até {date}"
+    },
+    "placeLine": "Local: {place}",
+    "overdue": "Por registar: a data passou e não há exame registado.",
+    "avisoUntil": "Aviso na app até {date}.",
+    "reminded": "Lembrete enviado. O aviso já não está na app.",
+    "notReminded": "Ainda sem lembrete enviado.",
+    "cancel": "Cancelar agendamento",
+    "cancelTitle": "Cancelar este agendamento?",
+    "cancelMessage": "O aviso sai da app, e pode agendar de novo. Quem já recebeu o lembrete não é avisado.",
+    "cancelled": "Agendamento cancelado.",
+    "messagesOff": "O módulo de mensagens está desligado: não é possível enviar lembrete.",
+    "reminderTitle": "Lembrete",
+    "firstReminder": "O primeiro lembrete também fica como aviso na app, até ao dia seguinte à data.",
+    "reminder": {
+      "subject": "Exame médico",
+      "appointment": "Tem exame médico marcado para {date}.",
+      "deadline": "O exame médico deve ser feito até {date}.",
+      "time": "Hora: {time}",
+      "place": "Local: {place}"
+    },
+    "error": {
+      "kind": "Escolha o tipo.",
+      "date": "Indique a data.",
+      "past": "A data já passou.",
+      "time": "Indique uma hora válida.",
+      "tooLong": "Texto demasiado longo.",
+      "open": "Já há um exame agendado para este aluno.",
+      "failed": "Não foi possível guardar."
+    }
+  },
   "birthDateConfirm": {
     "pending": "Data de nascimento por confirmar",
     "hint": "Foi indicada pela própria pessoa na aplicação. Confira-a com o documento de identificação.",
@@ -6342,6 +6390,8 @@
         "updated": "Ficha alterada",
         "identity_backfilled": "Dados acertados com a conta do aluno",
         "document_printed": "Formulário impresso pela família",
+        "medical_exam_scheduled": "Exame médico agendado",
+        "medical_exam_schedule_cancelled": "Agendamento de exame médico cancelado",
         "filled": "Ficha completada por importação",
         "archived": "Aluno arquivado",
         "restored": "Aluno restaurado",

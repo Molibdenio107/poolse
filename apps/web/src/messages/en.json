@@ -423,6 +423,54 @@
       "tooLongForWhatsapp": "Too long for WhatsApp: use up to 2000 characters, or send it by email."
     }
   },
+  "examSchedule": {
+    "title": "Schedule a medical exam",
+    "kindLabel": "Type",
+    "kind": {
+      "appointment": "Booked for",
+      "deadline": "To do by"
+    },
+    "date": "Date",
+    "time": "Time",
+    "place": "Place",
+    "note": "Note",
+    "noteHint": "Stays on the record and is not in the reminder.",
+    "save": "Schedule",
+    "saved": "Exam scheduled.",
+    "state": {
+      "appointment": "Exam booked for {date}",
+      "appointmentAt": "Exam booked for {date} at {time}",
+      "deadline": "Exam to do by {date}"
+    },
+    "placeLine": "Place: {place}",
+    "overdue": "To record: the date has passed and no exam is recorded.",
+    "avisoUntil": "App notice until {date}.",
+    "reminded": "Reminder sent. The notice is no longer in the app.",
+    "notReminded": "No reminder sent yet.",
+    "cancel": "Cancel scheduling",
+    "cancelTitle": "Cancel this schedule?",
+    "cancelMessage": "The notice leaves the app, and you can schedule again. Whoever received the reminder is not told.",
+    "cancelled": "Schedule cancelled.",
+    "messagesOff": "The messages module is off: a reminder cannot be sent.",
+    "reminderTitle": "Reminder",
+    "firstReminder": "The first reminder also stays as a notice in the app, until the day after the date.",
+    "reminder": {
+      "subject": "Medical exam",
+      "appointment": "You have a medical exam booked for {date}.",
+      "deadline": "The medical exam must be done by {date}.",
+      "time": "Time: {time}",
+      "place": "Place: {place}"
+    },
+    "error": {
+      "kind": "Choose the type.",
+      "date": "Enter the date.",
+      "past": "The date has passed.",
+      "time": "Enter a valid time.",
+      "tooLong": "Text too long.",
+      "open": "An exam is already scheduled for this student.",
+      "failed": "Could not be saved."
+    }
+  },
   "birthDateConfirm": {
     "pending": "Date of birth to confirm",
     "hint": "The person gave it themselves in the app. Check it against their ID document.",
@@ -6340,6 +6388,8 @@
         "updated": "Record changed",
         "identity_backfilled": "Details aligned with the student’s account",
         "document_printed": "Form printed by the family",
+        "medical_exam_scheduled": "Medical exam scheduled",
+        "medical_exam_schedule_cancelled": "Medical exam schedule cancelled",
         "filled": "Record completed by an import",
         "archived": "Student archived",
         "restored": "Student restored",

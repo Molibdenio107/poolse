@@ -64,6 +64,8 @@ const TENANT_TABLES = [
    */
   'audit_log',
   // POOLSE-84. A recipient may name a lead or a partner, so it goes before both.
+  // Before `message` and `medical_exam`, which it points at: POOLSE-192.
+  'medical_exam_schedule',
   'message_recipient',
   // POOLSE-69. A lead names a student, a session and a deciding membership.
   'lead',

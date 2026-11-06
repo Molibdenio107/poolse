@@ -92,10 +92,10 @@ export class StudentMessagesController {
 
     try {
       if (channel === 'whatsapp') {
-        const { id, links } = await recordStudentWhatsApp(organizationId, membershipId, studentId, words, shownUntil, today);
+        const { id, links } = await recordStudentWhatsApp(organizationId, membershipId, studentId, words, today, { shownUntil });
         return { id, links, emailConfigured: emailIsConfigured() };
       }
-      const { id } = await sendStudentEmail(organizationId, membershipId, studentId, words, shownUntil, today);
+      const { id } = await sendStudentEmail(organizationId, membershipId, studentId, words, today, { shownUntil });
       void deliverMessage(organizationId, id);
       return { id, emailConfigured: emailIsConfigured() };
     } catch (error) {

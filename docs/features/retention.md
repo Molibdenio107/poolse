@@ -55,3 +55,5 @@ notice can quote this sentence.
 
 Staff records, incident reports about visitors or staff, the words of a message body, files in
 storage (student photos are not switched on), and invoices past ten years.
+
+**A scheduled medical exam** (POOLSE-192) is health data: `apply_retention()` deletes it with the rest, and replaces the words of its reminders, whose rows stay. A student's other personal messages lose their words with the identity (POOLSE-191).
