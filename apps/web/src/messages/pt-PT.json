@@ -310,7 +310,9 @@
         "too_many": "Já tem 10 pedidos à espera de resposta. Aguarde que o clube responda antes de enviar mais."
       }
     },
+    "clubLogo": "Ver o logótipo de {name}",
     "records": {
+      "more": "Ver mais ({shown} de {total})",
       "bests": "Melhores tempos",
       "addTime": "Tempo",
       "save": "Guardar",
@@ -319,7 +321,6 @@
       "pool": "Piscina",
       "time": "Tempo",
       "date": "Data",
-      "typedOn": "{date} · indicada por si",
       "remove": "Remover",
       "removeTitle": "Remover {name}?",
       "removeMessage": "Sai dos seus progressos e não volta.",
@@ -353,7 +354,6 @@
       "allTimes": "Todos os tempos",
       "lesson": "Aula",
       "noLesson": "Fora das aulas",
-      "typedShort": "Indicada por si",
       "official": "Oficial"
     },
     "tabs": {

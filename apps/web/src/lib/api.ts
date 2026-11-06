@@ -227,13 +227,13 @@ export async function apiDelete<T>(
  * Next server, as every importer reads its file, and the API judges what it is
  * from its first bytes, never from a name or a browser's claim.
  */
-export async function apiUpload<T>(path: string, bytes: ArrayBuffer): Promise<T> {
+export async function apiUpload<T>(path: string, bytes: ArrayBuffer, method: 'POST' | 'PUT' = 'POST'): Promise<T> {
   const { getToken } = await auth();
   const token = await getToken();
   if (!token) throw new ApiError(401, 'No active session');
 
   const response = await fetch(`${baseUrl()}${path}`, {
-    method: 'POST',
+    method,
     headers: {
       authorization: `Bearer ${token}`,
       accept: 'application/json',
@@ -2484,11 +2484,32 @@ export interface ProgressLesson {
   className: string;
 }
 
+export interface ProgressBest {
+  stroke: string;
+  distanceM: number;
+  timeMs: number;
+  swumOn: string;
+}
+
+export interface ProgressTime extends ProgressBest {
+  id: string;
+  lessonName: string | null;
+  meetName: string | null;
+  official: boolean;
+  selfReported: boolean;
+}
+
 export interface FamilyProgress {
   canEnterTimes: boolean;
   canEdit: boolean;
   pools: ProgressPool[];
   lessons: ProgressLesson[];
+  strokes: string[];
+  bests: ProgressBest[];
+  totalDistanceM: number;
+  timesTotal: number;
+  favouriteStroke: string | null;
+  times: ProgressTime[];
 }
 
 export interface PersonalBest {

@@ -309,7 +309,9 @@
         "too_many": "You already have 10 requests awaiting a reply. Wait for the club to answer before sending more."
       }
     },
+    "clubLogo": "See the logo of {name}",
     "records": {
+      "more": "Show more ({shown} of {total})",
       "bests": "Best times",
       "addTime": "Time",
       "save": "Save",
@@ -318,7 +320,6 @@
       "pool": "Pool",
       "time": "Time",
       "date": "Date",
-      "typedOn": "{date} · added by you",
       "remove": "Remove",
       "removeTitle": "Remove {name}?",
       "removeMessage": "It leaves your progress and does not come back.",
@@ -352,7 +353,6 @@
       "allTimes": "All times",
       "lesson": "Lesson",
       "noLesson": "Not in a lesson",
-      "typedShort": "Added by you",
       "official": "Official"
     },
     "tabs": {

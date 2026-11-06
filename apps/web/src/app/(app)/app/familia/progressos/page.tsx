@@ -1,13 +1,14 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { Medal } from 'lucide-react';
 import { formatSwimTime } from '@poolse/rules';
-import { apiFetch, type FamilyProgress, type Progression } from '@/lib/api';
+import { apiFetch, type FamilyProgress } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { outcome } from '@/lib/load-failure';
 import { PageError } from '@/components/page-shell';
 import { pickSection, SectionPills } from '@/components/section-pills';
 import { ChildFilter } from '../child-filter';
-import { AddTime, FavouriteStroke, RemoveTime } from './progress-forms';
+import { AddTime, FavouriteStroke } from './progress-forms';
+import { TimesList } from './times-list';
 
 /** Coming after go-live: named here so a family knows, and nothing behind them yet. */
 const INTEGRATIONS = ['Apple Health', 'Garmin', 'Fitbit'];
@@ -49,8 +50,7 @@ export default async function FamilyProgressPage({
       : await Promise.all(
           shown.map(async (one) => ({
             ...one,
-            times: await outcome(apiFetch<Progression>(`/students/${one.id}/progression`)),
-            entered: await outcome(apiFetch<FamilyProgress>(`/app/progress/${one.id}`)),
+            progress: await outcome(apiFetch<FamilyProgress>(`/app/progress/${one.id}`)),
           })),
         );
 
@@ -77,10 +77,8 @@ export default async function FamilyProgressPage({
       )}
 
       {rows.map((one) => {
-        const progress = one.times.state === 'ok' ? one.times.data : null;
+        const progress = one.progress.state === 'ok' ? one.progress.data : null;
         const bests = progress?.bests ?? [];
-        const records = progress?.records ?? [];
-        const entered = one.entered.state === 'ok' ? one.entered.data : null;
         return (
           <section key={one.id} className="flex flex-col gap-3">
             {several && <h2 className="font-bold">{one.name}</h2>}
@@ -94,7 +92,7 @@ export default async function FamilyProgressPage({
                   </span>
                 </div>
 
-                {entered?.canEdit === true && progress !== null && (
+                {progress?.canEdit === true && (
                   <div className="rounded bg-surface p-4 shadow-card">
                     <FavouriteStroke studentId={one.id} strokes={progress.strokes} favourite={progress.favouriteStroke} />
                   </div>
@@ -111,7 +109,7 @@ export default async function FamilyProgressPage({
                     <ul className="flex flex-col divide-y divide-border">
                       {bests.map((best) => (
                         <li
-                          key={`${best.stroke}-${best.distanceM}-${best.course ?? 'none'}`}
+                          key={`${best.stroke}-${best.distanceM}`}
                           className="flex items-baseline justify-between gap-3 py-2"
                         >
                           <span className="flex min-w-0 flex-col">
@@ -119,9 +117,7 @@ export default async function FamilyProgressPage({
                               {t('app.records.event', { distance: best.distanceM, stroke: t(`progress.strokes.${best.stroke}`) })}
                             </span>
                             <span className="text-sm text-foreground-muted">
-                              {best.selfReported
-                                ? t('app.records.typedOn', { date: formatDate(best.swumOn) })
-                                : formatDate(best.swumOn)}
+                              {formatDate(best.swumOn)}
                             </span>
                           </span>
                           <span className="shrink-0 font-semibold tabular-nums">{formatSwimTime(best.timeMs)}</span>
@@ -133,53 +129,26 @@ export default async function FamilyProgressPage({
               </>
             )}
 
-            {section === 'times' && (
+            {section === 'times' && progress !== null && (
               <>
-                {entered?.canEnterTimes === true && (
+                {progress.canEnterTimes && (
                   <AddTime
                     studentId={one.id}
-                    strokes={progress?.strokes ?? []}
-                    pools={entered.pools}
-                    lessons={entered.lessons}
+                    strokes={progress.strokes}
+                    pools={progress.pools}
+                    lessons={progress.lessons}
                   />
                 )}
                 <div className="flex flex-col gap-1 rounded bg-surface p-4 shadow-card">
                   <h3 className="text-sm font-bold">{t('app.records.allTimes')}</h3>
-                  {records.length === 0 ? (
-                    <p className="flex items-center gap-2 text-foreground-muted">
-                      <Medal className="size-4" aria-hidden />
-                      {t('app.records.none')}
-                    </p>
-                  ) : (
-                    <ul className="flex flex-col divide-y divide-border">
-                      {records.map((record) => {
-                        const line = t('app.records.event', {
-                          distance: record.distanceM,
-                          stroke: t(`progress.strokes.${record.stroke}`),
-                        });
-                        const details = [
-                          formatDate(record.swumOn),
-                          record.lessonName,
-                          record.meetName,
-                          record.official ? t('app.records.official') : null,
-                          record.selfReported ? t('app.records.typedShort') : null,
-                        ].filter((part) => part !== null);
-                        return (
-                          <li key={record.id} className="flex items-center justify-between gap-3 py-1">
-                            <span className="flex min-w-0 flex-col">
-                              <span className="font-medium">
-                                {line} · {formatSwimTime(record.timeMs)}
-                              </span>
-                              <span className="text-sm text-foreground-muted">{details.join(' · ')}</span>
-                            </span>
-                            {record.selfReported && entered?.canEnterTimes === true && (
-                              <RemoveTime studentId={one.id} entry={record.id} name={line} />
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
+                  {/* Keyed on the total: adding or removing one starts the list again. */}
+                  <TimesList
+                    key={`${one.id}-${progress.timesTotal}`}
+                    studentId={one.id}
+                    first={progress.times}
+                    total={progress.timesTotal}
+                    canRemove={progress.canEnterTimes}
+                  />
                 </div>
               </>
             )}

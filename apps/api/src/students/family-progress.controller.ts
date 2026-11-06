@@ -8,6 +8,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import { clubToday } from '../common/club-day.js';
 import { CoreRoute, moduleIsOn } from '../tenant/modules.js';
@@ -19,9 +20,13 @@ import {
   courseOfLength,
   listProgressLessons,
   listProgressPools,
+  listProgressTimes,
   mayEnterProgress,
+  progressSummary,
+  type ProgressBest,
   type ProgressLesson,
   type ProgressPool,
+  type ProgressTime,
 } from './family-progress.repository.js';
 import { addRecord, setFavouriteStroke, STROKES, type Stroke } from './records.repository.js';
 import { familyStudents } from './students.repository.js';
@@ -76,7 +81,18 @@ export class FamilyProgressController {
   @Get()
   async read(
     @Param('studentId', ParseUUIDPipe) studentId: string,
-  ): Promise<{ canEnterTimes: boolean; canEdit: boolean; pools: ProgressPool[]; lessons: ProgressLesson[] }> {
+  ): Promise<{
+    canEnterTimes: boolean;
+    canEdit: boolean;
+    pools: ProgressPool[];
+    lessons: ProgressLesson[];
+    strokes: readonly string[];
+    bests: ProgressBest[];
+    totalDistanceM: number;
+    timesTotal: number;
+    favouriteStroke: string | null;
+    times: ProgressTime[];
+  }> {
     const { organizationId, membershipId } = await requireMine(studentId);
     const canEnter = await mayEnterProgress(organizationId, studentId, membershipId);
     return {
@@ -84,7 +100,22 @@ export class FamilyProgressController {
       canEdit: canEnter,
       pools: await listProgressPools(organizationId),
       lessons: await listProgressLessons(organizationId, studentId),
+      strokes: STROKES,
+      ...(await progressSummary(organizationId, studentId)),
+      times: await listProgressTimes(organizationId, studentId, 0),
     };
+  }
+
+  /** The next page of times, as a phone scrolls. */
+  @Get('times')
+  async times(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Query('offset') offset?: string,
+  ): Promise<{ times: ProgressTime[] }> {
+    const { organizationId } = await requireMine(studentId);
+    const from = Number(offset ?? 0);
+    if (!Number.isInteger(from) || from < 0) throw new BadRequestException('offset is a whole number');
+    return { times: await listProgressTimes(organizationId, studentId, from) };
   }
 
   /** A time the family typed: marked, never official, and it names no meet. */

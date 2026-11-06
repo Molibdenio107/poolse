@@ -33,7 +33,8 @@ export async function uploadFileAction(_previous: FormState, formData: FormData)
   // Your own photograph goes to Clerk, through the API, in one step (28-10-2026).
   if (target === 'own-photo') {
     try {
-      await apiUpload('/me/photo', await file.arrayBuffer());
+      // The route is a PUT: a POST here answered 404, so no photo ever saved.
+      await apiUpload('/me/photo', await file.arrayBuffer(), 'PUT');
     } catch (error) {
       return refusal(error);
     }

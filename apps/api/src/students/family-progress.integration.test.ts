@@ -186,3 +186,40 @@ test('a time names the lesson it was swum in, takes its day, and the favourite r
     assert.equal(office.favouriteStroke, 'backstroke');
   });
 });
+
+test('bests are one line per stroke and distance, and a long history comes a page at a time', async () => {
+  await withScratchTenant(async (tenant) => {
+    const family = await seed(tenant);
+    const [pool] = await tenant.sql<{ id: string }>(
+      `INSERT INTO pool (organization_id, facility_id, name, kind, length_m)
+       VALUES ($1, $2, 'Grande', 'indoor', 50) RETURNING id`,
+      [tenant.organizationId, tenant.facilityId],
+    );
+    const routes = new FamilyProgressController();
+    await asGuardian(tenant, family, async () => {
+      for (let n = 0; n < 24; n += 1) {
+        await routes.addTime(family.child, { ...TIME, seconds: String(30 + n) });
+      }
+      // The same event in another pool: still one line, the faster of the two.
+      await routes.addTime(family.child, { ...TIME, seconds: '29', poolId: pool!.id });
+      await routes.addTime(family.child, { ...TIME, stroke: 'backstroke', seconds: '40' });
+
+      const read = await routes.read(family.child);
+      assert.equal(read.timesTotal, 26);
+      assert.equal(read.times.length, 20);
+      assert.equal(read.totalDistanceM, 1300);
+      assert.deepEqual(
+        read.bests.map((best) => [best.stroke, best.distanceM, best.timeMs]),
+        [
+          ['freestyle', 50, 29_500],
+          ['backstroke', 50, 40_500],
+        ],
+      );
+      const next = await routes.times(family.child, '20');
+      assert.equal(next.times.length, 6);
+      assert.equal(new Set([...read.times, ...next.times].map((one) => one.id)).size, 26);
+      await expectStatus(() => routes.times(family.stranger), 404);
+      await expectStatus(() => routes.times(family.child, '-1'), 400);
+    });
+  });
+});

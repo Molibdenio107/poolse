@@ -53,6 +53,91 @@ export function courseOfLength(lengthM: number | null): Course | null {
   return lengthM === 25 ? 'scm' : lengthM === 50 ? 'lcm' : null;
 }
 
+export interface ProgressBest {
+  stroke: string;
+  distanceM: number;
+  timeMs: number;
+  swumOn: string;
+}
+
+export interface ProgressTime {
+  id: string;
+  stroke: string;
+  distanceM: number;
+  timeMs: number;
+  swumOn: string;
+  lessonName: string | null;
+  meetName: string | null;
+  official: boolean;
+  selfReported: boolean;
+}
+
+/** How many times one read carries: a phone asks for the next ones as it scrolls. */
+export const TIMES_PAGE = 20;
+
+// A result whose meet was archived leaves with it, as the progression read has it.
+const LIVE_RECORD = `r.organization_id = $1 AND r.student_id = $2 AND r.archived_at IS NULL
+  AND (r.meet_id IS NULL OR sm.archived_at IS NULL)`;
+const WITH_MEET = `LEFT JOIN swim_meet sm ON sm.id = r.meet_id AND sm.organization_id = r.organization_id`;
+
+/**
+ * The tab's first screen, in one read whatever the history's length: the fastest
+ * swim per stroke and distance (Rui, 06-11-2026: one line each, so 25 m and 50 m
+ * pools fold together here, unlike the office's bests), and the sum of the distances.
+ */
+export async function progressSummary(
+  organizationId: string,
+  studentId: string,
+): Promise<{ bests: ProgressBest[]; totalDistanceM: number; timesTotal: number; favouriteStroke: string | null }> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows: bests } = await tx.query<ProgressBest>(
+      `SELECT DISTINCT ON (r.stroke, r.distance_m)
+              r.stroke::text AS stroke, r.distance_m AS "distanceM", r.time_ms AS "timeMs",
+              to_char(r.swum_on, 'YYYY-MM-DD') AS "swumOn"
+         FROM student_record r
+         ${WITH_MEET}
+        WHERE ${LIVE_RECORD}
+        ORDER BY r.stroke, r.distance_m, r.time_ms, r.swum_on`,
+      [organizationId, studentId],
+    );
+    const { rows: totals } = await tx.query<{ metres: string; times: number; favourite: string | null }>(
+      `SELECT coalesce(sum(r.distance_m), 0)::text AS metres, count(r.id)::int AS times,
+              (SELECT favourite_stroke::text FROM student WHERE organization_id = $1 AND id = $2) AS favourite
+         FROM student_record r
+         ${WITH_MEET}
+        WHERE ${LIVE_RECORD}`,
+      [organizationId, studentId],
+    );
+    return {
+      bests,
+      totalDistanceM: Number(totals[0]?.metres ?? 0),
+      timesTotal: totals[0]?.times ?? 0,
+      favouriteStroke: totals[0]?.favourite ?? null,
+    };
+  });
+}
+
+/** One page of every time, newest first. */
+export async function listProgressTimes(organizationId: string, studentId: string, offset: number): Promise<ProgressTime[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<ProgressTime>(
+      `SELECT r.id, r.stroke::text AS stroke, r.distance_m AS "distanceM", r.time_ms AS "timeMs",
+              to_char(r.swum_on, 'YYYY-MM-DD') AS "swumOn",
+              lg.name AS "lessonName", sm.name AS "meetName",
+              coalesce(sm.official, false) AS official, r.self_reported AS "selfReported"
+         FROM student_record r
+         ${WITH_MEET}
+         LEFT JOIN class_session ls ON ls.id = r.class_session_id AND ls.organization_id = r.organization_id
+         LEFT JOIN class_group lg ON lg.id = ls.class_group_id AND lg.organization_id = ls.organization_id
+        WHERE ${LIVE_RECORD}
+        ORDER BY r.swum_on DESC, r.recorded_at DESC
+        LIMIT ${TIMES_PAGE} OFFSET $3`,
+      [organizationId, studentId, offset],
+    );
+    return rows;
+  });
+}
+
 export interface ProgressLesson {
   id: string;
   /** The lesson's own day: a time swum in it takes this date. */

@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { ApiError, apiPost } from '@/lib/api';
+import { ApiError, apiFetch, apiPost, type ProgressTime } from '@/lib/api';
 import type { FormState } from '../../../dashboard/actions';
 
 const PAGE = '/app/familia/progressos';
@@ -48,6 +48,18 @@ export async function setFavouriteAction(_previous: FormState, data: FormData): 
   }
   revalidatePath(PAGE);
   return { ok: true };
+}
+
+/** The next page, for the list's own scrolling. A failure reads as nothing more. */
+export async function moreTimesAction(studentId: string, offset: number): Promise<ProgressTime[]> {
+  try {
+    const { times } = await apiFetch<{ times: ProgressTime[] }>(
+      `/app/progress/${encodeURIComponent(studentId)}/times?offset=${offset}`,
+    );
+    return times;
+  } catch {
+    return [];
+  }
 }
 
 export async function removeTimeAction(_previous: FormState, data: FormData): Promise<FormState> {

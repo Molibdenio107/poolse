@@ -561,6 +561,7 @@ test('POST skills/mark: refused for non-staff and for an instructor outside the 
   await as(fixture.unlinkedGuardianId, ['guardian'], async () => {
     // A family's own progress: a stranger's child is a 404, and the office's read refuses.
     await refused('GET app/progress/:id', 404, () => new FamilyProgressController().read(fixture.aliceId));
+    await refused('GET app/progress/:id/times', 404, () => new FamilyProgressController().times(fixture.aliceId));
     await refused('POST app/progress/:id/times', 404, () => new FamilyProgressController().addTime(fixture.aliceId, {}));
     await refused('POST app/progress/:id/favourite', 404, () => new FamilyProgressController().favourite(fixture.aliceId, {}));
     await refused('POST app/progress/:id/times/:r/archive', 404, () => new FamilyProgressController().archiveTime(fixture.aliceId, NO_SUCH_ID));
