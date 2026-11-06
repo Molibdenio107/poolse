@@ -3,6 +3,7 @@ import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { setStudentLevelIn } from './students.repository.js';
 import { nameOrder, shortName } from '../people/names.js';
+import { PHOTO_KEY } from './students.repository.js';
 import { windowed, TOTAL_COUNT, type PageQuery, type Paginated } from '../common/pagination.js';
 
 /**
@@ -43,6 +44,8 @@ export interface TransferProposal {
   id: string;
   studentId: string;
   studentName: string;
+  /** Null unless the photo consent stands: `PHOTO_KEY`. */
+  photoFileId: string | null;
   fromLevelName: string;
   toLevelName: string;
   generatedAt: string;
@@ -87,6 +90,7 @@ export async function listProposals(
         id: string;
         student_id: string;
         student_name: string;
+        photo_file_id: string | null;
         from_level_name: string;
         to_level_name: string;
         generated_at: Date;
@@ -99,6 +103,7 @@ export async function listProposals(
                 p.id,
                 p.student_id,
                 ${shortName('s')} AS student_name,
+                ${PHOTO_KEY} AS photo_file_id,
                 fl.name AS from_level_name,
                 tl.name AS to_level_name,
                 p.generated_at,
@@ -159,6 +164,7 @@ export async function listProposals(
       id: row.id,
       studentId: row.student_id,
       studentName: row.student_name,
+      photoFileId: row.photo_file_id,
       fromLevelName: row.from_level_name,
       toLevelName: row.to_level_name,
       generatedAt: row.generated_at.toISOString(),

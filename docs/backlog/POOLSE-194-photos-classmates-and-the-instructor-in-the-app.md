@@ -10,7 +10,8 @@
 - **The hidden students are one line** (*Mais 13 alunos · 4 vão*), not a row each: thirteen *Um aluno* rows pushed the rest of *Início* off the phone. It says *Um aluno* for one.
 - **Listed by name:** the reader's own and adults, each *Vou* or *Inscrito*. Rule 9 asked for who answered *Vou*; Rui's first message also asked for who is *inscrito*.
 - **On *Início*, past four people the rest fold behind *Ver todos*** (Rui, 06-11-2026).
-- **Not built:** the backoffice sweep of rule 1, and the privacy notice item on the go-live checklist.
+- **The backoffice sweep:** the guardians list and the advancement cards were the two screens naming a student with no avatar. A text mention, such as a message's recipient or a dropdown option, stays text.
+- **Not built:** the privacy notice, which is a go-live item in `docs/deploy.md`.
 
 ### PO — why this exists
 

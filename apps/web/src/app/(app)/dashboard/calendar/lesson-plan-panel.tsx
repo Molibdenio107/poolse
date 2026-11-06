@@ -1,6 +1,7 @@
 'use client';
 
 import { startTransition, useActionState, useEffect, useRef, useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { Copy, Plus } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
@@ -88,7 +89,8 @@ export function LessonPlanPanel({
   const t = useTranslations();
 
   const [loaded, load] = useActionState(readLessonPlanAction, EMPTY);
-  const [saved, save, saving] = useActionState(saveLessonPlanAction, EMPTY);
+  // `useSavedAction`, so a save says so: this panel was the one that did not.
+  const [saved, save, saving] = useSavedAction(saveLessonPlanAction, EMPTY);
 
   /*
    * The text being edited, controlled — CLAUDE.md's rule, and it bites harder
@@ -126,7 +128,8 @@ export function LessonPlanPanel({
   }, [plan, planFor, sessionId]);
 
   const canEdit = plan?.canEdit === true;
-  const failure = saved.errorKey ?? loaded.errorKey;
+  // A failed save is the toast's to say, once; only a failed read shows here.
+  const failure = loaded.errorKey;
 
   const append = (line: string): void =>
     setBody((was) => (was.trim() === '' ? line : `${was.replace(/\s+$/, '')}\n${line}`));
@@ -272,7 +275,7 @@ export function LessonPlanPanel({
                     rows={2}
                     maxLength={200}
                     placeholder={t('calendar.plan.challengeHint')}
-                    className={cn(CONTROL_LINE, 'h-auto resize-none py-2 leading-relaxed')}
+                    className={cn(CONTROL_LINE, 'h-auto min-h-16 resize-none py-2 leading-relaxed')}
                   />
                 </div>
               )}

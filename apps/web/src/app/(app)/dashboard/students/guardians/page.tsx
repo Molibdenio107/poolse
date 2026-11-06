@@ -1,3 +1,5 @@
+import { PersonAvatar } from '@/components/person-avatar';
+import { photoUrlFor } from '@/lib/photo';
 import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { redirect } from 'next/navigation';
@@ -176,7 +178,8 @@ export default async function GuardiansPage({
                     */
                     <ul className="flex flex-col gap-1 pl-4 text-sm">
                       {guardian.students.map((student) => (
-                        <li key={student.id}>
+                        <li key={student.id} className="flex items-center gap-2">
+                          <PersonAvatar id={student.id} name={student.name} photoUrl={photoUrlFor(student.photoFileId ?? null)} size="sm" />
                           <FromLink
                             href={`/dashboard/students/${student.id}`}
                             className="rounded text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"

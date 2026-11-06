@@ -1,5 +1,7 @@
 'use client';
 
+import { PersonAvatar } from '@/components/person-avatar';
+import { photoUrlFor } from '@/lib/photo';
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { FromLink } from '@/components/from-link';
@@ -87,12 +89,15 @@ export function ProposalCard({
   return (
     <li className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <FromLink
+        <span className="flex items-center gap-2">
+          <PersonAvatar id={proposal.studentId} name={proposal.studentName} photoUrl={photoUrlFor(proposal.photoFileId ?? null)} size="sm" />
+          <FromLink
           href={`/dashboard/students/${proposal.studentId}`}
           className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {proposal.studentName}
-        </FromLink>
+          </FromLink>
+        </span>
         <span className="text-sm text-foreground-muted">
           {t('advancement.fromTo', {
             from: proposal.fromLevelName,

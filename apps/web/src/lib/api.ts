@@ -3264,7 +3264,7 @@ export interface GuardianRow {
    */
   studentId: string | null;
   /** Their children, already abbreviated and filed by surname by the server. */
-  students: { id: string; name: string; relationship: string | null }[];
+  students: { id: string; name: string; relationship: string | null; photoFileId?: string | null }[];
 }
 
 /**
@@ -3341,6 +3341,7 @@ export interface TransferCandidate {
  * signal for next season rather than a task anybody clears.
  */
 export interface TransferProposal {
+  photoFileId?: string | null;
   id: string;
   studentId: string;
   studentName: string;

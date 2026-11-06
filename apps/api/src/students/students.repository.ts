@@ -319,7 +319,7 @@ const PHOTO_CONSENT = `
        AND c.withdrawn_at IS NULL
   )`;
 
-const PHOTO_KEY = `CASE WHEN ${PHOTO_CONSENT} THEN s.photo_file_id ELSE NULL END`;
+export const PHOTO_KEY = `CASE WHEN ${PHOTO_CONSENT} THEN s.photo_file_id ELSE NULL END`;
 
 /**
  * Every encarregado de educação of the student aliased `s`, primary first.
@@ -2548,7 +2548,7 @@ export interface GuardianRow {
    * a guess. Null is the normal answer — most encarregados do not swim.
    */
   studentId: string | null;
-  students: { id: string; name: string; relationship: string | null }[];
+  students: { id: string; name: string; relationship: string | null; photoFileId: string | null }[];
 }
 
 export async function listGuardians(
@@ -2609,7 +2609,8 @@ export async function listGuardians(
                         jsonb_build_object(
                           'id', s.id,
                           'name', ${shortName('s')},
-                          'relationship', gl.relationship
+                          'relationship', gl.relationship,
+                          'photoFileId', ${PHOTO_KEY}
                         )
                         ORDER BY ${nameOrder('s')}
                       )
