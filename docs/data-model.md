@@ -4489,3 +4489,7 @@ Migration `1794653300000_student-birth-date-declared`.
 - **`student_birth_date_fill`**, **`membership_birth_date_fill`** and **`app_user_birth_date_fill`** fill a blank date from the login, unless a live guardian exists. **`student_birth_date_state`** clears both states when the date changes.
 - **`student_is_adult_path()`** refuses a declared date. `student_person` carries both columns and still reads a declared record through.
 - Asserted in `test/student-birth-date.sql`.
+
+### What a family records (06-11-2026)
+
+`student_record.self_reported` marks a time typed in the app: it may be a personal best, never names a meet (by CHECK), and never reaches `qualifying_attempts()`.

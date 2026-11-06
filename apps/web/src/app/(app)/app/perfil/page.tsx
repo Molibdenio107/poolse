@@ -97,17 +97,6 @@ export default async function AppProfilePage({
         <EditProfile me={me} photo={<IdPhoto url={me.user.avatarUrl} name={fullName} target="own-photo" />} />
       </section>
 
-      <Link
-        href={home === undefined ? '/app/perfil/definicoes' : `/app/perfil/definicoes?home=${home}`}
-        className={`${row} rounded bg-surface px-4 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
-      >
-        <span className="flex items-center gap-3">
-          <Settings className="size-5 text-primary" aria-hidden />
-          {t('app.profile.settings')}
-        </span>
-        <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
-        <LinkBusy />
-      </Link>
 
       {hats.homes.includes('family') && (
         <Link
@@ -136,6 +125,18 @@ export default async function AppProfilePage({
           <LinkBusy />
         </Link>
       )}
+
+      <Link
+        href={home === undefined ? '/app/perfil/definicoes' : `/app/perfil/definicoes?home=${home}`}
+        className={`${row} rounded bg-surface px-4 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+      >
+        <span className="flex items-center gap-3">
+          <Settings className="size-5 text-primary" aria-hidden />
+          {t('app.profile.settings')}
+        </span>
+        <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
+        <LinkBusy />
+      </Link>
 
       {(hats.homes.length > 1 || hats.staff) && (
         <section className="flex flex-col gap-2">

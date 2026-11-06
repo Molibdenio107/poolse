@@ -1,5 +1,6 @@
 'use client';
 
+import { ClubLogo } from './club-logo';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -95,8 +96,7 @@ export function AppFrame({
  */
 function ClubCorner({ name, logoFileId }: { name: string; logoFileId: string | null }): React.ReactElement {
   if (logoFileId !== null) {
-    // eslint-disable-next-line @next/next/no-img-element -- a served file, not a static asset
-    return <img src={`/files/${logoFileId}`} alt={name} className="size-8 shrink-0 rounded-full object-cover" />;
+    return <ClubLogo name={name} fileId={logoFileId} />;
   }
   const initials = name
     .split(/\s+/)

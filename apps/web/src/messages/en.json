@@ -309,10 +309,51 @@
         "too_many": "You already have 10 requests awaiting a reply. Wait for the club to answer before sending more."
       }
     },
+    "clubLogo": "See the logo of {name}",
     "records": {
-      "none": "No records yet.",
-      "failed": "The records could not be loaded.",
-      "event": "{distance} m {stroke}"
+      "more": "Show more ({shown} of {total})",
+      "bests": "Best times",
+      "addTime": "Time",
+      "save": "Save",
+      "stroke": "Stroke",
+      "distance": "Distance (m)",
+      "pool": "Pool",
+      "time": "Time",
+      "date": "Date",
+      "remove": "Remove",
+      "removeTitle": "Remove {name}?",
+      "removeMessage": "It leaves your progress and does not come back.",
+      "guardianAnswers": "A guardian records this.",
+      "saveFailed": "It could not be saved. Try again.",
+      "invalid": {
+        "distanceM": "Give the metres.",
+        "time": "Give the time.",
+        "swumOn": "Give a date, not in the future."
+      },
+      "none": "No times yet.",
+      "failed": "Progress could not be loaded.",
+      "event": "{distance} m {stroke}",
+      "totalDistance": "Distance swum",
+      "metres": "{value} m",
+      "noPool": "Not given",
+      "hours": "Hours",
+      "minutes": "Minutes",
+      "seconds": "Seconds",
+      "hundredths": "Hundredths",
+      "integrations": "Integrations",
+      "soon": "Coming soon",
+      "sectionsLabel": "Progress sections",
+      "section": {
+        "summary": "Summary",
+        "times": "Records",
+        "integrations": "Integrations"
+      },
+      "favourite": "Favourite stroke",
+      "noFavourite": "No preference",
+      "allTimes": "All times",
+      "lesson": "Lesson",
+      "noLesson": "Not in a lesson",
+      "official": "Official"
     },
     "tabs": {
       "label": "Tabs",
@@ -2698,6 +2739,7 @@
     "title": "Progression",
     "open": "Times and progression",
     "stroke": "Stroke",
+    "selfReported": "Added by the student",
     "strokes": {
       "freestyle": "Freestyle",
       "backstroke": "Backstroke",

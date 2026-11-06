@@ -430,3 +430,43 @@ test.describe('as the owner', () => {
     await expect(page).toHaveURL(/\/dashboard$/);
   });
 });
+
+test.describe('Progressos, as a guardian', () => {
+  test.use({ storageState: GUARDIAN_SESSION });
+
+  test('a typed time lands in Registos, and comes off after asking', async ({ page }) => {
+    await visit(page, '/app/familia/progressos');
+    await expect(page.getByRole('heading', { level: 1, name: /^(progressos|progress)$/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^(integrações|integrations)$/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^(medida|measure)$/i })).toHaveCount(0);
+    const card = page.locator('section').filter({ hasText: /distância nadada|distance swum/i }).first();
+    const metres = async (): Promise<number> =>
+      Number((await card.locator('span.text-xl').first().innerText()).replace(/\D/g, ''));
+    const before = await metres();
+    const distance = 1000 + (Date.now() % 5000);
+
+    await visit(page, '/app/familia/progressos?section=times');
+    await page.getByRole('button', { name: /^(tempo|time)$/i }).first().click();
+    const sheet = page.getByRole('dialog');
+    await sheet.getByLabel(/distância|distance/i).fill(String(distance));
+    await sheet.getByLabel(/^(data|date)/i).fill('2026-10-01');
+    await sheet.getByRole('button', { name: /^(guardar|save)$/i }).click();
+    // No time typed: refused, and what was typed stays.
+    await expect(sheet.getByText(/indique o tempo|give the time/i)).toBeVisible();
+    await expect(sheet.getByLabel(/distância|distance/i)).toHaveValue(String(distance));
+
+    await sheet.getByLabel(/^(segundos|seconds)$/i).fill('32');
+    await sheet.getByRole('button', { name: /^(guardar|save)$/i }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    const row = page.getByRole('listitem').filter({ hasText: `${distance} m` });
+    await expect(row).toBeVisible();
+
+    // Cleans up its own row.
+    await row.getByRole('button').click();
+    await page.getByRole('dialog').getByRole('button', { name: /^(remover|remove)$/i }).click();
+    await expect(page.getByRole('listitem').filter({ hasText: `${distance} m` })).toHaveCount(0);
+    await visit(page, '/app/familia/progressos');
+    await expect.poll(metres).toBe(before);
+    await noSidewaysScroll(page);
+  });
+});

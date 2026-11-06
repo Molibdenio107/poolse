@@ -1373,3 +1373,9 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-06** — **The family's triangle tab is Progressos, and Pagamentos is a row on Perfil** (Rui): payments are looked at rarely, and a swimmer's times are what the app is for. Health integrations come to that tab after go-live. *Últimas aulas* moved to *Início*.
 
 - **2026-11-06** — ***Faturado* means a document exists** (Rui): a typed cost or purchase with no document number counts as *Estimado*, **changing** POOLSE-182's default. A policy's premium stays invoiced, because the policy is the document.
+
+- **2026-11-06** — **A family records its own times, and they are never official** (Rui): a guardian, or a student who answers for themselves, adds them. A typed time may be a personal best, never for the FPN. Distance swum is added up from the times; weight and height were built and removed the same day, before merging, so no health data is stored here.
+
+- **2026-11-06** — **Progressos has three sections** (Rui): *Resumo* shows only the best per stroke, *Registos* every time, and *Integrações* what comes later. A time may name one of the child's lessons of the last 30 days, and the family sets the favourite stroke, the same field teachers read.
+
+- **2026-11-06** — **What a view of the app may do** (POOLSE-188, Rui): an allowlist of the person's home, lessons, payments, documents list and progress; 1 hour at most; the person is not told; a support view is seen by the Owner only. Distance swum counts every time on the record, the office's included.

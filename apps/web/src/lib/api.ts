@@ -227,13 +227,13 @@ export async function apiDelete<T>(
  * Next server, as every importer reads its file, and the API judges what it is
  * from its first bytes, never from a name or a browser's claim.
  */
-export async function apiUpload<T>(path: string, bytes: ArrayBuffer): Promise<T> {
+export async function apiUpload<T>(path: string, bytes: ArrayBuffer, method: 'POST' | 'PUT' = 'POST'): Promise<T> {
   const { getToken } = await auth();
   const token = await getToken();
   if (!token) throw new ApiError(401, 'No active session');
 
   const response = await fetch(`${baseUrl()}${path}`, {
-    method: 'POST',
+    method,
     headers: {
       authorization: `Bearer ${token}`,
       accept: 'application/json',
@@ -2463,8 +2463,53 @@ export interface SwimRecord {
   meetName: string | null;
   /** Swum at an official meet. */
   official: boolean;
+  /** Typed by the family: may be a best, never official. */
+  selfReported: boolean;
+  lessonName: string | null;
   /** Best over this stroke, distance and course. */
   isPersonalBest: boolean;
+}
+
+export interface ProgressPool {
+  id: string;
+  name: string;
+  facilityName: string;
+  lengthM: number | null;
+}
+
+export interface ProgressLesson {
+  id: string;
+  day: string;
+  time: string;
+  className: string;
+}
+
+export interface ProgressBest {
+  stroke: string;
+  distanceM: number;
+  timeMs: number;
+  swumOn: string;
+}
+
+export interface ProgressTime extends ProgressBest {
+  id: string;
+  lessonName: string | null;
+  meetName: string | null;
+  official: boolean;
+  selfReported: boolean;
+}
+
+export interface FamilyProgress {
+  canEnterTimes: boolean;
+  canEdit: boolean;
+  pools: ProgressPool[];
+  lessons: ProgressLesson[];
+  strokes: string[];
+  bests: ProgressBest[];
+  totalDistanceM: number;
+  timesTotal: number;
+  favouriteStroke: string | null;
+  times: ProgressTime[];
 }
 
 export interface PersonalBest {
@@ -2474,6 +2519,7 @@ export interface PersonalBest {
   timeMs: number;
   swumOn: string;
   official: boolean;
+  selfReported: boolean;
   /** The best at an official meet, where that is a different swim. */
   officialBest: { timeMs: number; swumOn: string; meetName: string } | null;
 }
@@ -2710,6 +2756,7 @@ export interface Progression {
   organizationId: string;
   records: SwimRecord[];
   bests: PersonalBest[];
+  totalDistanceM: number;
   /** Fastest, not "best" — see the note on fastestStroke in the API. */
   fastestStroke: Stroke | null;
   /** Declared by a person, never derived. */

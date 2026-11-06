@@ -250,6 +250,7 @@ Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before tou
 - A page that fails unexpectedly lands in `dashboard/error.tsx`
 - A message in the family app on a phone is a solid full-width bar above the tab bar (`.toast-card`); the backoffice keeps its quiet toast (Rui, 06-11-2026).
 - A typed cost or purchase is *Faturado* only with a document number; without one it is *Estimado* (Rui, 06-11-2026).
+- A time a family types is `self_reported`: it may be a best, never official or for mínimos. Distance swum is added up from the times, never typed (Rui, 06-11-2026).
 - The family app says the least it can (Rui, 06-11-2026): short labels, *Voltar* with the destination for screen readers only, icons with names for a screen reader, no sentence that repeats a control.
 - The family app is soft on a phone
 

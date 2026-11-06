@@ -241,6 +241,9 @@ export default async function ProgressPage({
                         <span className="flex flex-col items-end gap-0.5">
                           <span className="flex items-baseline gap-3">
                             <span className="font-mono text-lg">{formatTime(best.timeMs)}</span>
+                            {best.selfReported && (
+                              <span className="text-sm text-foreground-muted">{t('progress.selfReported')}</span>
+                            )}
                             {best.official && (
                               <span className="rounded border border-primary/40 px-2 text-sm text-primary">
                                 {t('progress.official')}
@@ -337,6 +340,9 @@ export default async function ProgressPage({
                           <span className="ml-2 rounded bg-success/15 px-2 py-0.5 text-sm text-success">
                             {t('progress.personalBest')}
                           </span>
+                        )}
+                        {record.selfReported && (
+                          <span className="text-sm text-foreground-muted">{t('progress.selfReported')}</span>
                         )}
                         {record.official && (
                           <span className="ml-2 rounded border border-primary/40 px-2 text-sm text-primary">

@@ -310,10 +310,51 @@
         "too_many": "Já tem 10 pedidos à espera de resposta. Aguarde que o clube responda antes de enviar mais."
       }
     },
+    "clubLogo": "Ver o logótipo de {name}",
     "records": {
-      "none": "Ainda sem marcas.",
-      "failed": "Não foi possível carregar as marcas.",
-      "event": "{distance} m {stroke}"
+      "more": "Ver mais ({shown} de {total})",
+      "bests": "Melhores tempos",
+      "addTime": "Tempo",
+      "save": "Guardar",
+      "stroke": "Estilo",
+      "distance": "Distância (m)",
+      "pool": "Piscina",
+      "time": "Tempo",
+      "date": "Data",
+      "remove": "Remover",
+      "removeTitle": "Remover {name}?",
+      "removeMessage": "Sai dos seus progressos e não volta.",
+      "guardianAnswers": "Regista o encarregado de educação.",
+      "saveFailed": "Não foi possível guardar. Tente de novo.",
+      "invalid": {
+        "distanceM": "Indique os metros.",
+        "time": "Indique o tempo.",
+        "swumOn": "Indique uma data, não futura."
+      },
+      "none": "Ainda sem tempos.",
+      "failed": "Não foi possível carregar os progressos.",
+      "event": "{distance} m {stroke}",
+      "totalDistance": "Distância nadada",
+      "metres": "{value} m",
+      "noPool": "Não indicada",
+      "hours": "Horas",
+      "minutes": "Minutos",
+      "seconds": "Segundos",
+      "hundredths": "Centésimos",
+      "integrations": "Integrações",
+      "soon": "Em breve",
+      "sectionsLabel": "Secções de Progressos",
+      "section": {
+        "summary": "Resumo",
+        "times": "Registos",
+        "integrations": "Integrações"
+      },
+      "favourite": "Estilo preferido",
+      "noFavourite": "Sem preferência",
+      "allTimes": "Todos os tempos",
+      "lesson": "Aula",
+      "noLesson": "Fora das aulas",
+      "official": "Oficial"
     },
     "tabs": {
       "label": "Separadores",
@@ -2700,6 +2741,7 @@
     "title": "Progressão",
     "open": "Marcas e progressão",
     "stroke": "Estilo",
+    "selfReported": "Indicada pelo aluno",
     "strokes": {
       "freestyle": "Livre",
       "backstroke": "Costas",
