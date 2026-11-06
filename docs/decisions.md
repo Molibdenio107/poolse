@@ -1379,3 +1379,13 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-06** — **Progressos has three sections** (Rui): *Resumo* shows only the best per stroke, *Registos* every time, and *Integrações* what comes later. A time may name one of the child's lessons of the last 30 days, and the family sets the favourite stroke, the same field teachers read.
 
 - **2026-11-06** — **What a view of the app may do** (POOLSE-188, Rui): an allowlist of the person's home, lessons, payments, documents list and progress; 1 hour at most; the person is not told; a support view is seen by the Owner only. Distance swum counts every time on the record, the office's included.
+
+- **2026-11-06** — **What needs review raises the circle** (POOLSE-190, Rui): all five kinds a family or student sends, and a declared date of birth; the list is never re-ordered. A sent-by label comes from who sent it, never from age, and *Confirm the date* opens the ID.
+
+- **2026-11-06** — **WhatsApp is opened, not sent** (POOLSE-191, Rui): a message to one student opens WhatsApp with the text ready and a person presses send, so Poolse records *aberto*, never delivered; the Business API stays out for its cost. It goes to guardians else the student, an aviso is a tick, and instructors may write to their own students. It ignores the opt-out, being addressed to one person.
+
+- **2026-11-06** — **A medical exam can be scheduled** (POOLSE-192, Rui): *marcado para* or *fazer até*; a reminder is pressed by a person and always raises an aviso, which ends when the exam is recorded or the day after its date. It is health data: office only, out of general lists, erased by retention. Order then: 190, 191, 192, then POOLSE-188.
+
+- **2026-11-06** — **The FPN form is signed from the phone** (POOLSE-193, Rui): review, complete, download, sign by hand or with Chave Móvel Digital, send back, and the office only reviews the signed copy. Mandatory data blocks the download, and a correction is a proposal the office accepts. The office's print and upload stay folded for the desk. The boletim stays download only. Order: 190, 191, 192, 193, then POOLSE-188.
+
+- **2026-11-06** — **A form on the phone is a real PDF** (POOLSE-193, Rui): an exception, for the app's forms only, to *a document on paper is a route with print styles, never a PDF library*, because a print page gives a phone no file and Chave Móvel Digital signs a PDF. The desktop keeps its print pages.

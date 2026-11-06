@@ -211,6 +211,10 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-187](./POOLSE-187-an-older-unpaid-period-stays-owed.md) | **Built 06-11-2026.** An older unpaid period stays owed: *Em dívida* counts every unpaid occurrence through `feeBalance`, from POOLSE-178's filed question. Built after 183 | Finance / Students / Mobile app | High (pre go-live) | POOLSE-42, 178, 183 | 0 |
 | [POOLSE-188](./POOLSE-188-see-the-app-as-a-real-person.md) | An owner, an admin or support picks a view on the app and sees a real person's app, read-only and audited | Mobile app / Support | Medium (pilot) | 90, 79, 136 | 0 |
 | [POOLSE-189](./POOLSE-189-record-the-costs-that-have-no-screen.md) | **Built 06-11-2026.** Screens to record water, fixed costs, maintenance services and premiums, so *Custos* is complete | Finance / Maintenance | Medium (pilot) | 182, 183 | 0 |
+| [POOLSE-190](./POOLSE-190-the-office-sees-what-a-student-sent.md) | **Built 06-11-2026.** The office sees at a glance that a student sent something, and the labels name who sent it | Students | High (pilot) | 120, 179, 186 | 0 |
+| [POOLSE-191](./POOLSE-191-a-message-to-one-student.md) | The office writes to one student from their page, by email or WhatsApp, and it stays on the record | Students / Messages | High (pilot) | 67, 166 | 0 |
+| [POOLSE-192](./POOLSE-192-schedule-a-medical-exam.md) | The office schedules a student's medical exam and reminds them of it, by message and in the app | Students | High (pilot) | 191, 133 | 0 |
+| [POOLSE-193](./POOLSE-193-the-student-signs-the-fpn-form-from-the-phone.md) | The student checks the FPN form on the phone, downloads a real PDF, signs it and sends it back, and the club only reviews the signed copy | Mobile app / Students / Documents | High (pilot) | 179, 142, 177, 190 | 2 |
 
 ## To discuss — raised 01-11-2026, parked until after the pilot has used the app
 
