@@ -1353,3 +1353,7 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-05** — **`guardian_link.can_view_progress` is ignored, so guardians see progress by default** (POOLSE-185, Rui). The column defaults to false and nothing reads it; honouring it would hide progress from every family until the office ticked each one.
 
 - **2026-11-05** — **A date a person gave fills a blank club date, and is declared until the office confirms it** (POOLSE-186, Rui). It counts for answering and sending at once. It stays out of `student_is_adult_path()`, so a typed date still never decides who signs consent. Confirming is a warning, never a gate. Required on the desktop form only: an import or an invitation must not fail over a blank cell.
+
+- **2026-11-06** — **Custos offers *com IVA* to every club** (POOLSE-183, Rui): the ticket showed the switch only to a club that does not recover VAT, and no such setting exists. Sem IVA stays the default, and the ledger already holds both figures.
+
+- **2026-11-06** — **An older unpaid period stays owed, fixed before go-live, after POOLSE-183** (POOLSE-187, Rui, answering the question POOLSE-178 filed).

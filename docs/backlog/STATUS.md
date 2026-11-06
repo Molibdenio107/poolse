@@ -109,3 +109,10 @@ Legend: ✅ docs or commit say built · ◐ partly · ❔ verify on screen (no c
 - Brazilian forms: none (the only hits are `{time}` placeholders and *toda a gente*).
 - English left in pt-PT: none (`advancement.fromTo` is a symbol-only string).
 - `new Intl.DateTimeFormat` outside `date-format.ts`: 7 call sites, all month/weekday *names* (allowed).
+
+## Since this sweep (06-11-2026)
+
+- **151–171** (testing week, main 2c9baf66), bar 155, 160, 161 parked: built. Their acceptance boxes are unticked; 152 and 157, the two pre-go-live security tickets, were checked in the code and the role probe on 06-11-2026. The rest are confirmed by walking `TEST-PLAN.md`.
+- **172, 174–182, 186**: built, on `feat/poolse-186-birth-date`.
+- **183, 184, 185**: not built. 183 is next.
+- **187** (older unpaid periods stay owed): not built, pre go-live, after 183.

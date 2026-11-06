@@ -142,6 +142,10 @@ Delete any old `*_AI_ENABLED` flags: nothing reads them (POOLSE-137).
 5. [ ] `/admin` → the throwaway club archived. Production keeps no test data.
 6. [ ] The API refused to start with a wrong role, if anything was mistyped: `assertRlsApplies` and
       `assertPlatformRoleIsNarrow` are the proof the database login is right.
+7. [ ] The ID re-seal, **dry run only**: `node --env-file=<production env> apps/api/dist/files/reseal-student-id-documents.js`
+      must report `0 plaintext ID photograph(s)`. Production has only ever held sealed ID photos, so a
+      non-zero count means something is wrong: stop and ask, and do not pass `--apply`, which deletes
+      objects for good. Then delete the *Still open* line in `security.md`.
 
 ## 7. Backups — before the pilot club enters a single child
 

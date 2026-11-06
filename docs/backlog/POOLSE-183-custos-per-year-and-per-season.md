@@ -24,7 +24,7 @@ Energia shows kWh and one meter's euros; Salários shows a monthly figure; nothi
 4. **Averages**, per window, each with its denominator in words: *por mês* (total ÷ months in window, partial months counted by days); *por hora de aula* (total ÷ taught hours in the window, from POOLSE-28's denominator); *por aluno-mês* (total ÷ Σ active enrolments per month); *por m³* for the pool kinds only. A missing denominator shows a sentence, not a zero (the POOLSE-28 rule).
 5. **Comparison**: the previous window of the same ruler beside each tile, as a difference and a percentage; absent when the previous window has fewer than 6 months of data, said in words.
 6. **The month table** below: one row per month, one column per kind, basis marked (an estimated cell in italics with a tooltip that explains and a legend that informs), CSV export.
-7. **Tax view**: amounts without VAT by default; a switch *com IVA* when the club's tax setting says it does not recover VAT (POOLSE-104's tax panel).
+7. **Tax view**: amounts without VAT by default; a switch *com IVA* for every club (Rui, 06-11-2026). No VAT-recovery setting exists, and none is added.
 8. **Nothing on this page is editable.** Each kind links to where it is recorded (Energia, Salários, the request, the policy).
 
 ### Dev notes

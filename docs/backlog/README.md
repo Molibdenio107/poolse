@@ -1,6 +1,6 @@
 # Poolse backlog
 
-71 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
+One file per ticket. Every ticket carries four views of the same work — **PO** (why it
 exists, what is out of scope), **BA** (rules, data, edge cases), **Dev** (schema, API, what gets got
 wrong) and **QA** (numbered Given/When/Then scenarios) — followed by the original acceptance
 criteria, which are the contract.
@@ -206,8 +206,9 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-182](./POOLSE-182-cost-ledger-and-month-allocation.md) | **Built 05-11-2026 (API and schema; the screen is 183).** One cost ledger: a cost is an amount with a period spread by day into `cost_month`; energy, tariffs and salaries read through; maintenance invoices, materials, premium and fixed costs recorded; facts and estimates distinct | Finance / Energy / Maintenance / Data model | Medium (pilot) | POOLSE-28, 106, 128, 58, 154 | 0 |
 | [POOLSE-183](./POOLSE-183-custos-per-year-and-per-season.md) | *Custos* under Faturação: one chart with civil-year and época rulers, tiles per kind, faturado / estimado / total, averages per month, lesson hour, aluno-mês and m³ | Finance / Dashboards | Medium (pilot) | POOLSE-182, 28, 66 | 0 |
 | [POOLSE-184](./POOLSE-184-cost-suggestions-as-rules.md) | Sugestões on Custos as rules with evidence — six comparisons the ledger can prove, silence otherwise, no verdicts; first reader of `heating_degree_days` | Finance / Dashboards / AI | Low (post go-live) | POOLSE-183, 28, 5.4b | 0 |
-| [POOLSE-185](./POOLSE-185-progresso-skills-as-stickers-attendance-as-stamps.md) | A child sees their progress in the app: skills as stickers and attendance as stamps, on *Aulas*, split out of POOLSE-173 | Mobile app | Medium | 173, 175, 20, 13 | 1 |
-| [POOLSE-186](./POOLSE-186-a-declared-date-of-birth.md) | **Built 05-11-2026.** A date of birth a person gave reaches the club's record, and the office confirms it | Students / Mobile app | High (pilot) | POOLSE-177, POOLSE-179 |
+| [POOLSE-185](./POOLSE-185-progresso-skills-as-stickers-attendance-as-stamps.md) | A child sees their progress in the app: skills as stickers and attendance as stamps, on *Aulas*, split out of POOLSE-173 | Mobile app | Medium | 173, 175, 20, 13 | 0 |
+| [POOLSE-186](./POOLSE-186-a-declared-date-of-birth.md) | **Built 05-11-2026.** A date of birth a person gave reaches the club's record, and the office confirms it | Students / Mobile app | High (pilot) | POOLSE-177, POOLSE-179 | 0 |
+| [POOLSE-187](./POOLSE-187-an-older-unpaid-period-stays-owed.md) | An older unpaid period stays owed: *Em dívida* counts every unpaid occurrence through `feeBalance`, from POOLSE-178's filed question. Built after 183 | Finance / Students / Mobile app | High (pre go-live) | POOLSE-42, 178, 183 | 1 |
 
 ## To discuss — raised 01-11-2026, parked until after the pilot has used the app
 

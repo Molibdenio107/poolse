@@ -10,7 +10,7 @@
 - **`TabbedHat` is every hat.** `isHat()` in `app-hats.ts` validates `?home=` for `tabFor`, *Perfil* and *Definições*, which accepted only `family | teaching` before.
 - ***Registar*** reads `/app/maintenance`, the same endpoint as *Hoje*. Its sheets reuse `OneTap`, with no new action. *Reportar* opened with `?from=registar` goes back to *Registar*. That is a fixed token, never a path, so it can't be used as an open redirect.
 - **Hoje's list is unchanged**, but the page now wears the tab screens' type scale (`data-shell="tabs"`), so the title and section sizes follow the other homes.
-- **e2e:** there is no maintenance storage state in `e2e/.auth`, so QA 1–3 are manual until a fixture exists. `app-hats.test.ts` covers the tabs.
+- **e2e:** `e2e/phone-maintenance.spec.ts`, on the maintenance login added the same day (`e2e/.auth/maintenance.json`). `app-hats.test.ts` covers the tabs.
 
 ### PO — why this exists
 
