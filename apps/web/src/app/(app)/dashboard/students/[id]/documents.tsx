@@ -211,12 +211,56 @@ export function FpnSection({
         )}
       </section>
 
-      <DisciplinesForm studentId={studentId} disciplines={documents.disciplines} />
-
-      <FpnClubForm studentId={studentId} club={documents.club} />
-
       {seasons.length > 0 && (
         <section className={CARD}>
+          <h3 className={HEADING}>{t('documents.fpn.signedTitle')}</h3>
+          {filedSeasons.length === 0 ? (
+            <p className="text-sm text-foreground-muted">{t('documents.fpn.noneFiled')}</p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {filedSeasons.map((id) => (
+                <li key={id ?? 'none'} className="flex flex-col gap-1">
+                  <span className="font-medium">{t('documents.fpn.seasonHeading', { season: seasonName(id) })}</span>
+                  <ul className="flex flex-col divide-y divide-border">
+                    {mine
+                      .filter((copy) => copy.seasonId === id)
+                      .map((copy) => (
+                        <li
+                          key={copy.id}
+                          className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-1.5 text-sm"
+                        >
+                          <span>
+                            {t('documents.fpn.filedLine', {
+                              date: formatDate(copy.filedAt),
+                              name: copy.filedByName ?? t('documents.fpn.someone'),
+                            })}
+                            {' · '}
+                            <span className="text-foreground-muted">
+                              {copy.replacedAt === null
+                                ? t('documents.fpn.current')
+                                : t('documents.fpn.replaced', { date: formatDate(copy.replacedAt) })}
+                            </span>
+                          </span>
+                          <DocumentLink fileId={copy.fileId} quiet />
+                        </li>
+                      ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+      {/*
+        POOLSE-193: the signed copy comes from the app, so the office reads it above.
+        Printing and uploading stay for someone who signs at the desk or has no app.
+      */}
+      {seasons.length > 0 && (
+        <details className={CARD}>
+          <summary className="cursor-pointer font-medium text-primary">{t('documents.fpn.desk')}</summary>
+          <div className="mt-3 flex flex-col gap-4">
+            
+        <div className="flex flex-col gap-3">
           <h3 className={HEADING}>{t('documents.fpn.printTitle')}</h3>
           {documents.missing.length === 0 ? (
             <p className="text-sm text-foreground-muted">{t('documents.fpn.nothingMissing')}</p>
@@ -259,56 +303,24 @@ export function FpnSection({
           ) : (
             <NoClubForm kind={minor ? 'fpn_declaration_minor' : 'fpn_declaration'} siteId={documents.templateSiteId} />
           )}
-        </section>
+        </div>
+            <div className="flex flex-col gap-2">
+              <FileUpload
+                key={seasonId}
+                target={`student-document:${studentId}:${kind}:${seasonId}`}
+                label={t('documents.fpn.upload', { season: seasonName(seasonId) })}
+                hint={t('files.documentHint')}
+                unavailable={storageReady ? null : t('files.notConfigured')}
+              />
+            </div>
+          </div>
+        </details>
       )}
 
-      {seasons.length > 0 && (
-        <section className={CARD}>
-          <h3 className={HEADING}>{t('documents.fpn.signedTitle')}</h3>
-          <FileUpload
-            key={seasonId}
-            target={`student-document:${studentId}:${kind}:${seasonId}`}
-            label={t('documents.fpn.upload', { season: seasonName(seasonId) })}
-            hint={t('files.documentHint')}
-            unavailable={storageReady ? null : t('files.notConfigured')}
-          />
-          {filedSeasons.length === 0 ? (
-            <p className="text-sm text-foreground-muted">{t('documents.fpn.noneFiled')}</p>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {filedSeasons.map((id) => (
-                <li key={id ?? 'none'} className="flex flex-col gap-1">
-                  <span className="font-medium">{t('documents.fpn.seasonHeading', { season: seasonName(id) })}</span>
-                  <ul className="flex flex-col divide-y divide-border">
-                    {mine
-                      .filter((copy) => copy.seasonId === id)
-                      .map((copy) => (
-                        <li
-                          key={copy.id}
-                          className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-1.5 text-sm"
-                        >
-                          <span>
-                            {t('documents.fpn.filedLine', {
-                              date: formatDate(copy.filedAt),
-                              name: copy.filedByName ?? t('documents.fpn.someone'),
-                            })}
-                            {' · '}
-                            <span className="text-foreground-muted">
-                              {copy.replacedAt === null
-                                ? t('documents.fpn.current')
-                                : t('documents.fpn.replaced', { date: formatDate(copy.replacedAt) })}
-                            </span>
-                          </span>
-                          <DocumentLink fileId={copy.fileId} quiet />
-                        </li>
-                      ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
+      <DisciplinesForm studentId={studentId} disciplines={documents.disciplines} />
+
+      <FpnClubForm studentId={studentId} club={documents.club} />
+
     </div>
   );
 }

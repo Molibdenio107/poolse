@@ -90,7 +90,7 @@
         "saved": "Details saved.",
         "failed": "Could not be saved.",
         "locked": "A signed declaration is waiting for the club.",
-        "numberHint": "Left blank, the number on file stays.",
+        "numberHint": "For a Cartão de Cidadão the 8 digits are enough; the rest is optional.",
         "none": "Choose…",
         "club": "The club still has to fill in: {fields}.",
         "download": "Download to sign",
@@ -6876,7 +6876,7 @@
       "birthDateIsTheirs": "This person sets their date of birth in their own profile.",
       "typeRequired": "Choose the document type.",
       "numberRequired": "Enter the document number.",
-      "ccInvalid": "This Cartão de Cidadão number is not valid. Check the 12 characters, for example 12345678 9 ZZ1.",
+      "ccInvalid": "This Cartão de Cidadão number is not valid. The 8 digits are enough, for example 12345678. The rest is optional, but if you write it, it must be complete.",
       "numberInvalid": "Use only letters, digits and hyphens (3 to 30 characters)."
     },
     "photo": {
@@ -7207,9 +7207,9 @@
       "tooLong": "Too long.",
       "type": "Unknown document type.",
       "typeRequired": "Choose the document type.",
-      "cc": "Not a valid Cartão de Cidadão number. Write it as the card prints it under “N.º Documento”: 8 digits, the check digit, two letters and a digit (e.g. 12345678 9 ZZ1).",
+      "cc": "Not a valid Cartão de Cidadão number. The 8 digits are enough. The rest is optional, but if you write it, it must be complete, as the card prints it.",
       "order": "The expiry date cannot be before the issue date.",
-      "ccStored": "The number on file is not a whole Cartão de Cidadão number. Write it as the card prints it under “N.º Documento” (e.g. 12345678 9 ZZ1)."
+      "ccStored": "The number on file is not a valid Cartão de Cidadão number. Write the 8 digits or the whole number, as the card prints it."
     },
     "toast": {
       "filed": "Signed document filed."
@@ -7245,6 +7245,7 @@
       "seasonUnknown": "Unnamed season",
       "stateMissing": "Season {season}: not filed yet.",
       "stateFiled": "Season {season}: signed, filed on {date}.",
+      "desk": "At the desk: print or upload a copy",
       "printTitle": "Print",
       "nothingMissing": "The record holds everything the declaration asks for.",
       "missingIntro": "Missing from the record (printed blank, to fill in by hand):",

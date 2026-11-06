@@ -186,7 +186,7 @@ test('01-11-2026 — a number typed on Geral is information; choosing Cartão de
     const id = student!.id;
 
     // Geral sends the number with no type: kept as typed, unchecked.
-    await asAdmin(() => routes.save(id, { idDocumentType: '', idDocumentNumber: '13818775' }));
+    await asAdmin(() => routes.save(id, { idDocumentType: '', idDocumentNumber: '138187' }));
     const informative = await asAdmin(() => routes.read(id));
     assert.equal(informative.idDocument.hasNumber, true);
     assert.equal(informative.idDocument.type, null);
@@ -199,8 +199,9 @@ test('01-11-2026 — a number typed on Geral is information; choosing Cartão de
     assert.equal(refused?.getResponse?.().fields?.['idDocumentNumber'], 'documents.error.ccStored');
     assert.equal((await asAdmin(() => routes.read(id))).idDocument.type, null, 'nothing changed');
 
-    // Typed with the type chosen, an 8-digit number is not a card number.
-    await asAdmin(() => expectStatus(() => routes.save(id, { idDocumentType: 'cc', idDocumentNumber: '13818775' }), 400));
+    // Typed with the type chosen, the 8 digits are enough (Rui, 06-11-2026); fewer are not.
+    await asAdmin(() => expectStatus(() => routes.save(id, { idDocumentType: 'cc', idDocumentNumber: '1381877' }), 400));
+    await asAdmin(() => routes.save(id, { idDocumentType: 'cc', idDocumentNumber: '13818775' }));
     // The whole card number passes, and the type sticks.
     await asAdmin(() => routes.save(id, { idDocumentType: 'cc', idDocumentNumber: CC }));
     assert.equal((await asAdmin(() => routes.read(id))).idDocument.type, 'cc');

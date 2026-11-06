@@ -32,9 +32,14 @@ export function normalizeCcNumber(raw: string): string {
  * when that passes 9), letters count A=10 … Z=35, and the sum is a multiple of
  * ten. Whitespace and dashes are tolerated because people copy the number the
  * way it is printed.
+ *
+ * **Only the 8 digits are needed** (Rui, 06-11-2026): the rest is optional, so the
+ * civil number alone is valid, with or without its check digit. Written whole, it
+ * must be right, because a typo in the full number is still a typo.
  */
 export function isValidCcNumber(raw: string): boolean {
   const value = normalizeCcNumber(raw);
+  if (/^\d{8,9}$/.test(value)) return true;
   if (!/^\d{9}[A-Z0-9]{2}\d$/.test(value)) return false;
 
   let sum = 0;

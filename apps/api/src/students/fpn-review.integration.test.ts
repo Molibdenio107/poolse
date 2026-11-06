@@ -2,6 +2,7 @@ import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { AppController } from '../app/app.controller.js';
 import { StudentDocumentsController } from './documents.controller.js';
+import { getObjectBytes } from '../files/storage.js';
 import { completeFpnForm } from '../test/fpn-fixture.js';
 import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant, type ScratchTenant } from '../test/harness.js';
 
@@ -197,5 +198,22 @@ test('a minor’s own login, another family and the office’s roles cannot use 
     await actingAs(tenant, { roles: ['instructor'] }, () =>
       expectStatus(() => new AppController().saveFpnDetails(child, body), 403),
     );
+  });
+});
+
+test('a signed PDF is stored byte for byte, or its signature breaks (QA 10)', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { child, guardian } = await seed(tenant);
+    await completeFpnForm(tenant, child);
+    // What a signing app leaves behind: bytes after the end of the file.
+    const signed = Buffer.concat([PDF, Buffer.from('%signature /ByteRange [0 1 2 3]\n%%EOF\n')]);
+    await actingAs(tenant, { membershipId: guardian, roles: ['guardian'] }, () =>
+      new AppController().sendDocument('fpn_declaration', child, 'assinada.pdf', undefined, signed),
+    );
+    const [file] = await tenant.sql<{ storage_key: string }>(
+      `SELECT f.storage_key FROM family_submission s JOIN stored_file f ON f.id = s.file_id WHERE s.student_id = $1`,
+      [child],
+    );
+    assert.equal(Buffer.compare(await getObjectBytes(file!.storage_key), signed), 0);
   });
 });

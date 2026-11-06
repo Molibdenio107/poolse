@@ -1399,3 +1399,5 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-06** — **The person edits the FPN form's details directly** (POOLSE-193, Rui), **reversing** the same day's *a correction is a proposal the office accepts*, and POOLSE-177 and -179 for these fields: address, locality, postal code, the ID document and the modalidades, by a live encarregado or the adult student. The signed form is what the office reviews. Changes are named in the log and never valued, and the details lock while a signed copy waits.
 
 - **2026-11-06** — **The app's menu bar is on every screen** (Rui), **reversing** POOLSE-136's *a screen deeper in has no tabs*: it lights the tab that leads there, and a Save bar sits above it.
+
+- **2026-11-06** — **A Cartão de Cidadão needs only its 8 digits** (Rui): the rest is optional, for students and staff alike, through the one `isValidCcNumber`. Written whole, it must still pass its check.

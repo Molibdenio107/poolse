@@ -91,7 +91,7 @@
         "saved": "Dados guardados.",
         "failed": "Não foi possível guardar.",
         "locked": "Há uma declaração assinada a aguardar o clube.",
-        "numberHint": "Se ficar em branco, mantém-se o número registado.",
+        "numberHint": "No Cartão de Cidadão bastam os 8 algarismos; o resto é opcional.",
         "none": "Escolher…",
         "club": "O clube ainda tem de preencher: {fields}.",
         "download": "Descarregar para assinar",
@@ -6878,7 +6878,7 @@
       "birthDateIsTheirs": "Esta pessoa indica a data de nascimento no próprio perfil.",
       "typeRequired": "Escolha o tipo de documento.",
       "numberRequired": "Indique o número do documento.",
-      "ccInvalid": "Este número de Cartão de Cidadão não é válido. Confira os 12 caracteres, por exemplo 12345678 9 ZZ1.",
+      "ccInvalid": "Este número de Cartão de Cidadão não é válido. Bastam os 8 algarismos, por exemplo 12345678. O resto é opcional, mas, se o escrever, tem de estar completo.",
       "numberInvalid": "Use só letras, números e hífenes (3 a 30 caracteres)."
     },
     "photo": {
@@ -7209,9 +7209,9 @@
       "tooLong": "Demasiado longo.",
       "type": "Tipo de documento desconhecido.",
       "typeRequired": "Escolha o tipo de documento.",
-      "cc": "Não é um número de Cartão de Cidadão válido. Escreva-o como aparece no cartão em «N.º Documento»: 8 algarismos, o algarismo de controlo, duas letras e um algarismo (ex.: 12345678 9 ZZ1).",
+      "cc": "Não é um número de Cartão de Cidadão válido. Bastam os 8 algarismos. O resto é opcional, mas, se o escrever, tem de estar completo, como aparece no cartão.",
       "order": "A validade não pode ser anterior à data de emissão.",
-      "ccStored": "O número registado não é um número de Cartão de Cidadão completo. Escreva-o como aparece no cartão em «N.º Documento» (ex.: 12345678 9 ZZ1)."
+      "ccStored": "O número registado não é um número de Cartão de Cidadão válido. Escreva os 8 algarismos ou o número completo, como aparece no cartão."
     },
     "toast": {
       "filed": "Documento assinado arquivado."
@@ -7247,6 +7247,7 @@
       "seasonUnknown": "Época sem nome",
       "stateMissing": "Época {season}: por arquivar.",
       "stateFiled": "Época {season}: assinada, arquivada a {date}.",
+      "desk": "No balcão: imprimir ou carregar uma cópia",
       "printTitle": "Imprimir",
       "nothingMissing": "A ficha tem tudo o que a declaração pede.",
       "missingIntro": "Falta na ficha (sai em branco, para preencher à mão):",

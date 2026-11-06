@@ -11,7 +11,7 @@
 - **A name Helvetica cannot write prints `?` for that letter**, rather than failing the form.
 - **The family's print pages are now unlinked** (`[id]/boletim/page.tsx`, `[id]/fpn/page.tsx`, their layout). Left in place, as a proposal to remove.
 - **Slice B built the same night:** the review page, `GET /app/documents/fpn`, and `form_incomplete` on the form and on the sending. A minor's own login no longer takes the FPN form at all, which the old print allowed. Test fixtures complete the form with `completeFpnForm` (`test/fpn-fixture.ts`).
-- **Slice C is direct editing** (Rui): no table, `PATCH /app/documents/fpn`. Slice D, the office's section, is not built.
+- **Slice C is direct editing** (Rui): no table, `PATCH /app/documents/fpn`. **Slice D:** the office's FPN section reads the state and the signed copies first, and printing and uploading sit in a fold.
 
 ### PO — why this exists
 

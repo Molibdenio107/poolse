@@ -27,8 +27,13 @@ test('a wrong check digit, a wrong length or a letter in the wrong place is refu
   const wrong = `${valid.slice(0, 11)}${(Number(valid[11]) + 1) % 10}`;
   assert.equal(isValidCcNumber(wrong), false, 'check digit off by one');
   assert.equal(isValidCcNumber(valid.slice(0, 11)), false, 'one character short');
+  assert.equal(isValidCcNumber('1234567'), false, 'seven digits');
+  assert.equal(isValidCcNumber('1234567890'), false, 'ten digits');
   assert.equal(isValidCcNumber('A23456789ZZ1'), false, 'a letter in the civil number');
   assert.equal(isValidCcNumber(''), false);
+  // Only the 8 digits are needed; the rest is optional (Rui, 06-11-2026).
+  assert.equal(isValidCcNumber('12345678'), true);
+  assert.equal(isValidCcNumber('12345678 9'), true);
 });
 
 test('exactly one check digit fits each number', () => {
