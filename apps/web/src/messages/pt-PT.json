@@ -44,6 +44,8 @@
     },
     "fees": {
       "overdue": "Em dívida",
+      "overdueCount": "{count, plural, one {# período em atraso} other {# períodos em atraso}}",
+      "overdueCount": "{count, plural, one {# período em atraso} other {# períodos em atraso}}",
       "upcoming": "Próximos pagamentos",
       "paid": "Pagos",
       "nothing": "Nada",
@@ -1949,6 +1951,8 @@
     "penaltyMensalidadeApplied": "Multa por mensalidade em atraso: {amount}",
     "penaltyQuotaApplied": "Multa por quota em atraso: {amount}",
     "dueBy": "Pagar até {date}",
+    "olderUnpaid": "{count, plural, one {# período anterior por pagar} other {# períodos anteriores por pagar}}",
+    "olderUnpaid": "{count, plural, one {# período anterior por pagar} other {# períodos anteriores por pagar}}",
     "overdueSince": "Em atraso desde {date}",
     "overduePayment": "Pagamento em atraso",
     "showOverdueOnly": "Só quem tem pagamento em atraso",

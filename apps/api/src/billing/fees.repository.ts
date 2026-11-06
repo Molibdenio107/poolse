@@ -212,6 +212,12 @@ export interface StudentFeeLine {
   /** Past its due date and unsettled. What the list column and the penalty read. */
   isOverdue: boolean;
   /**
+   * Occurrences before the current one still unpaid, oldest first — POOLSE-187.
+   * From the period holding the line's `created_at`, never earlier: a line entered
+   * in November cannot say whether September was paid before Poolse.
+   */
+  olderUnpaid: { periodStart: string; dueOn: string; isOverdue: boolean }[];
+  /**
    * What the plan costs *today*, when that differs from the snapshot — AC5.
    *
    * Null when they agree, so the interface has nothing to decide: a value here
@@ -967,6 +973,7 @@ async function readStudentFees(
       paid_periods: string[];
       external_charges: { id: string; occurrenceOn: string; reference: string }[] | null;
       is_overdue: boolean;
+      older_unpaid: { periodStart: string; dueOn: string; isOverdue: boolean }[] | null;
       plan_amount_cents_now: number | null;
       band_changed: boolean;
     }>(
@@ -1007,6 +1014,7 @@ async function readStudentFees(
                AND ext_now.id IS NULL
                AND cur.period_start IS NOT NULL
                AND fee_due_on(cur.period_start, f.payment_due_day) < club_today()) AS is_overdue,
+              older.periods AS older_unpaid,
               -- Only when it differs. Null is "no marker", decided here so the
               -- interface has no rule of its own to get wrong — AC5.
               --
@@ -1065,6 +1073,42 @@ async function readStudentFees(
             WHERE x.student_fee_id = sf.id AND x.organization_id = sf.organization_id
               AND x.archived_at IS NULL
          ) ext_all ON true
+         /*
+          * The occurrences before the current one still unpaid — POOLSE-187.
+          *
+          * The start plus n periods, which is how current_period_start counts,
+          * so a line begun on the 31st walks the same days. A line charged once
+          * has no fp row and yields nothing. Rule 8: a period ending before the
+          * line was entered is not owed.
+          */
+         LEFT JOIN LATERAL (
+           SELECT json_agg(json_build_object(
+                    'periodStart', to_char(o.period_start, 'YYYY-MM-DD'),
+                    'dueOn', to_char(fee_due_on(o.period_start, f.payment_due_day), 'YYYY-MM-DD'),
+                    'isOverdue', fee_due_on(o.period_start, f.payment_due_day) < club_today())
+                    ORDER BY o.period_start) AS periods
+             FROM generate_series(
+                    0,
+                    ((extract(YEAR FROM age(coalesce(sf.ends_on, club_today()), sf.starts_on)) * 12
+                      + extract(MONTH FROM age(coalesce(sf.ends_on, club_today()), sf.starts_on)))::int
+                     / coalesce(fp.months, 1))) AS n
+            CROSS JOIN LATERAL (
+              SELECT (sf.starts_on + (n * fp.months) * interval '1 month')::date AS period_start
+            ) o
+            WHERE fp.id IS NOT NULL
+              AND sf.starts_on <= club_today()
+              AND (cur.period_start IS NULL OR o.period_start < cur.period_start)
+              AND (sf.ends_on IS NULL OR o.period_start <= sf.ends_on)
+              AND (o.period_start + fp.months * interval '1 month')::date
+                  > (sf.created_at AT TIME ZONE 'Europe/Lisbon')::date
+              AND NOT EXISTS (
+                SELECT 1 FROM student_fee_payment done
+                 WHERE done.student_fee_id = sf.id AND done.period_start = o.period_start)
+              AND NOT EXISTS (
+                SELECT 1 FROM student_fee_external_charge x
+                 WHERE x.student_fee_id = sf.id AND x.organization_id = sf.organization_id
+                   AND x.occurrence_on = o.period_start AND x.archived_at IS NULL)
+         ) older ON true
          /*
           * Every period this line has been settled for — round 5, ticket 10.0.
           *
@@ -1461,6 +1505,7 @@ async function readStudentFees(
         paidPeriods: row.paid_periods,
         externalCharges: row.external_charges ?? [],
         isOverdue: row.is_overdue,
+        olderUnpaid: row.older_unpaid ?? [],
         planAmountCentsNow: row.plan_amount_cents_now,
         bandChanged: row.band_changed,
       })),

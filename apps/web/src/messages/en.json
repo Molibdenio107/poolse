@@ -44,6 +44,7 @@
     },
     "fees": {
       "overdue": "Overdue",
+      "overdueCount": "{count, plural, one {# period overdue} other {# periods overdue}}",
       "upcoming": "Next payments",
       "paid": "Paid",
       "nothing": "Nothing",
@@ -1949,6 +1950,7 @@
     "penaltyMensalidadeApplied": "Late monthly fee penalty: {amount}",
     "penaltyQuotaApplied": "Late subscription penalty: {amount}",
     "dueBy": "Due by {date}",
+    "olderUnpaid": "{count, plural, one {# earlier period unpaid} other {# earlier periods unpaid}}",
     "overdueSince": "Overdue since {date}",
     "overduePayment": "Payment overdue",
     "showOverdueOnly": "Only students with an overdue payment",

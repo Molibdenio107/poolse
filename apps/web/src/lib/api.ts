@@ -2187,6 +2187,8 @@ export interface StudentFeeLine {
   /** Occurrences invoiced outside Poolse, newest first — POOLSE-163. */
   externalCharges: { id: string; occurrenceOn: string; reference: string }[];
   isOverdue: boolean;
+  /** Older occurrences still unpaid, oldest first — POOLSE-187. */
+  olderUnpaid: { periodStart: string; dueOn: string; isOverdue: boolean }[];
   /** Set only when the plan has moved on — that is the marker, and the whole rule. */
   planAmountCentsNow: number | null;
   /**

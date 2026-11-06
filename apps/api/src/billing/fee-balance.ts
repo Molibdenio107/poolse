@@ -10,6 +10,10 @@
  * penalty sits on what is still to pay, never on what is paid** — one per kind
  * of charge however many lines are late, added here rather than written as a
  * charge (round 5).
+ *
+ * **Every unpaid occurrence counts, not only the current one** (POOLSE-187): an
+ * October left unpaid does not leave the total when November starts. A line owes
+ * from the month it was entered, because earlier ones may be paid before Poolse.
  */
 export interface FeeBalance {
   /** Every running line's payable amount this period. */
@@ -31,6 +35,8 @@ export interface BalanceLine {
   dueOn: string | null;
   /** The period being charged now; null once the line has run out. */
   currentPeriodStart: string | null;
+  /** Older occurrences still unpaid, ended lines included. */
+  olderUnpaid?: readonly { dueOn: string | null; isOverdue: boolean }[];
 }
 
 /**
@@ -47,16 +53,21 @@ export function feeBalance(lines: readonly BalanceLine[], penaltyCents: number):
   const sum = (some: readonly BalanceLine[]): number =>
     some.reduce((total, line) => total + line.payableCents, 0);
 
-  const dues = unpaid
+  const older = lines.flatMap((line) =>
+    (line.olderUnpaid ?? []).map((one) => ({ ...one, payableCents: line.payableCents })),
+  );
+  const olderCents = sum(older as unknown as readonly BalanceLine[]);
+
+  const dues = [...unpaid, ...older]
     .map((line) => line.dueOn)
     .filter((due): due is string => due !== null)
     .sort();
 
   return {
-    totalCents: sum(live),
+    totalCents: sum(live) + olderCents,
     paidCents: sum(live.filter((line) => line.isPaid)),
-    outstandingCents: Math.max(0, sum(unpaid) + penaltyCents),
-    overdueCount: unpaid.filter((line) => line.isOverdue).length,
+    outstandingCents: Math.max(0, sum(unpaid) + olderCents + penaltyCents),
+    overdueCount: [...unpaid, ...older].filter((line) => line.isOverdue).length,
     nextDueOn: dues[0] ?? null,
   };
 }

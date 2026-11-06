@@ -257,3 +257,5 @@ paged in the browser so the selection spans the whole run. **Nothing is ticked u
 it** — this reverses "every draft selected by default" — and *Selecionar todos (n)* ticks every
 family on every page (*Limpar seleção* undoes it). The selection's count and total and *Emitir n
 documentos* sit at the top of the card. Every family ticked goes to the API as the whole run.
+
+*Em dívida* in the family app and a student's fee block count older unpaid periods (POOLSE-187, `docs/features/students.md`). Faturação's *Em dívida* stays document-based. The monthly run is unchanged.

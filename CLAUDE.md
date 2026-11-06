@@ -189,6 +189,7 @@ Read [`docs/conventions/money.md`](docs/conventions/money.md) before touching an
 - A document's state is `total − paid` and never a column.
 - Where families pay is one account per club, and an IBAN change is told to every owner.
 - A fee line with no `fee_period_id` is charged once
+- A fee line owes every unpaid period from the month it was entered, not only the current one (`olderUnpaid`, POOLSE-187).
 - An Admin sees every staff member's pay except the Owner's, and the card says so.
 - A free-swim sale is an invoice line, and who is in the water is `pool_occupancy()`.
 - A cost is an amount with a period, and a window is a sum of `cost_month`.

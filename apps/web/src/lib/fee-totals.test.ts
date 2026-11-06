@@ -5,11 +5,16 @@ import type { StudentFees } from './api.ts';
 
 test('lines split into running and ended, and the totals come from the API', () => {
   const fees = {
-    lines: [{ endsOn: null }, { endsOn: '2026-06-30' }],
+    lines: [
+      { endsOn: null, olderUnpaid: [] },
+      { endsOn: '2026-06-30', olderUnpaid: [] },
+      // POOLSE-187: an ended line that still owes stays where it can be settled.
+      { endsOn: '2026-06-30', olderUnpaid: [{ periodStart: '2026-05-01' }] },
+    ],
     balance: { totalCents: 5500, paidCents: 3500, outstandingCents: 2500, overdueCount: 1, nextDueOn: null },
   } as unknown as StudentFees;
   const totals = feeTotals(fees);
-  assert.equal(totals.live.length, 1);
+  assert.equal(totals.live.length, 2);
   assert.equal(totals.ended.length, 1);
   assert.deepEqual([totals.grandTotal, totals.paidTotal, totals.outstanding], [5500, 3500, 2500]);
 });

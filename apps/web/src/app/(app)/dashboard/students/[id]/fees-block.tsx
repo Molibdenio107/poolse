@@ -846,12 +846,13 @@ function FeeRow({
    */
   const periodChoices = [
     ...new Set(
-      [line.currentPeriodStart, ...line.paidPeriods].filter(
+      // POOLSE-187: what is still owed comes right after the current period.
+      [line.currentPeriodStart, ...line.olderUnpaid.map((one) => one.periodStart).reverse(), ...line.paidPeriods].filter(
         (value): value is string => value !== null,
       ),
     ),
   ];
-  const [period, setPeriod] = useState<string | null>(line.currentPeriodStart);
+  const [period, setPeriod] = useState<string | null>(line.currentPeriodStart ?? periodChoices[0] ?? null);
   const onCurrent = period === line.currentPeriodStart;
   // A past period is settled exactly when it is in the history.
   const showingPaid = onCurrent ? line.isPaid : period !== null && line.paidPeriods.includes(period);
@@ -861,6 +862,11 @@ function FeeRow({
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <span className="flex min-w-0 flex-col">
           <span className="font-medium">{lineLabel(line, t)}</span>
+          {line.olderUnpaid.length > 0 && (
+            <span className="block text-sm font-medium text-warning">
+              {t('fees.olderUnpaid', { count: line.olderUnpaid.length })}
+            </span>
+          )}
           <span className="text-sm text-foreground-muted">
             {line.classGroupName !== null && `${line.classGroupName} · `}
             {line.periodName}

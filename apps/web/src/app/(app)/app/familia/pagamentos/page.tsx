@@ -94,6 +94,9 @@ export default async function FamilyPayments({
           <div className="flex flex-col gap-1">
             {/* Red is a debt, not a heading: with nothing overdue it stays plain. */}
             <h3 className={`text-sm font-bold ${one.overdue.length > 0 ? 'text-danger' : ''}`}>{t('app.fees.overdue')}</h3>
+            {one.overdue.length > 1 && (
+              <p className="text-sm text-foreground-muted">{t('app.fees.overdueCount', { count: one.overdue.length })}</p>
+            )}
             {charges(one.overdue)}
             {one.penaltyCents > 0 && (
               <p className="flex items-center justify-between gap-3 text-sm">

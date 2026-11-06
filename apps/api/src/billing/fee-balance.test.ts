@@ -56,3 +56,17 @@ test('an ended line still owing the period it ended in counts until it is paid â
   const paid = feeBalance([{ ...owing, isPaid: true, isOverdue: false }], 0);
   assert.equal(paid.totalCents, 0, 'once paid, an ended line is history');
 });
+
+test('187 â€” an older unpaid period is owed, and an ended line keeps owing it', () => {
+  const older = [{ dueOn: '2026-08-08', isOverdue: true }, { dueOn: '2026-09-08', isOverdue: true }];
+  const running = feeBalance([{ ...line(2000, false, { dueOn: '2026-10-08' }), olderUnpaid: older }], 0);
+  assert.equal(running.outstandingCents, 6000);
+  assert.equal(running.overdueCount, 2);
+  assert.equal(running.nextDueOn, '2026-08-08');
+
+  const ended = feeBalance(
+    [{ ...line(2000, false, { endsOn: '2026-09-30', currentPeriodStart: null }), olderUnpaid: older }],
+    0,
+  );
+  assert.equal(ended.outstandingCents, 4000);
+});

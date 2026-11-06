@@ -52,6 +52,11 @@ export function FamilyFees({ fees }: { fees: StudentFees }): React.ReactElement 
                       .filter(Boolean)
                       .join(' · ')}
                   </span>
+                  {line.olderUnpaid.length > 0 && (
+                    <span className="text-sm font-medium text-warning">
+                      {t('fees.olderUnpaid', { count: line.olderUnpaid.length })}
+                    </span>
+                  )}
                 </span>
                 <span className="flex flex-col items-end gap-0.5">
                   <span className="tabular-nums">{formatCents(locale, line.payableCents)}</span>
