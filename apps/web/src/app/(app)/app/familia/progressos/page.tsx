@@ -1,18 +1,21 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
-import { Medal } from 'lucide-react';
+import { Medal, Plug } from 'lucide-react';
 import { formatSwimTime } from '@poolse/rules';
 import { apiFetch, type FamilyProgress, type Progression } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { outcome } from '@/lib/load-failure';
 import { PageError } from '@/components/page-shell';
 import { ChildFilter } from '../child-filter';
-import { AddMeasure, AddTime, RemoveEntry } from './progress-forms';
+import { AddTime, RemoveTime } from './progress-forms';
+
+/** Coming after go-live: named here so a family knows, and nothing behind them yet. */
+const INTEGRATIONS = ['Apple Health', 'Garmin', 'Fitbit'];
 
 /**
- * *Progressos* — the triangle tab (Rui, 06-11-2026). Each child's best times, then
- * what the family recorded: a time it typed, weight, height, distance swum. A typed
- * time is marked and is never official. Who may add is `family_may_answer()`, which
- * the API decides. Health integrations come here after go-live.
+ * *Progressos* — the triangle tab (Rui, 06-11-2026). The distance swum, added up
+ * from every time on the record and never typed; each child's best times; the
+ * times the family typed, which are marked and never official. Who may add is
+ * `family_may_answer()`, which the API decides.
  */
 export default async function FamilyProgressPage({
   searchParams,
@@ -37,13 +40,6 @@ export default async function FamilyProgressPage({
     })),
   );
 
-  const measureText = (kind: string, value: number, unit: string): string =>
-    t('app.records.measureLine', {
-      kind: t(`app.records.kind.${kind}`),
-      value: format.number(value, { maximumFractionDigits: 2 }),
-      unit,
-    });
-
   return (
     <>
       <h1>{t('app.tabs.familia.progressos')}</h1>
@@ -54,16 +50,19 @@ export default async function FamilyProgressPage({
         const bests = progress?.bests ?? [];
         const typed = (progress?.records ?? []).filter((record) => record.selfReported);
         const entered = one.entered.state === 'ok' ? one.entered.data : null;
-        const measures = entered?.measures ?? [];
         return (
           <section key={one.id} className="flex flex-col gap-3">
             {several && <h2 className="font-bold">{one.name}</h2>}
 
-            {entered?.canEnter === true && (
-              <div className="flex gap-2">
-                {entered.canEnterTimes && <AddTime studentId={one.id} strokes={progress?.strokes ?? []} />}
-                <AddMeasure studentId={one.id} />
-              </div>
+            <div className="flex items-baseline justify-between gap-3 rounded bg-surface p-4 shadow-card">
+              <span className="text-sm font-bold">{t('app.records.totalDistance')}</span>
+              <span className="text-xl font-semibold tabular-nums">
+                {t('app.records.metres', { value: format.number(progress?.totalDistanceM ?? 0) })}
+              </span>
+            </div>
+
+            {entered?.canEnterTimes === true && (
+              <AddTime studentId={one.id} strokes={progress?.strokes ?? []} pools={entered.pools} />
             )}
 
             <div className="flex flex-col gap-1 rounded bg-surface p-4 shadow-card">
@@ -97,24 +96,10 @@ export default async function FamilyProgressPage({
               )}
             </div>
 
-            {(typed.length > 0 || measures.length > 0) && (
+            {typed.length > 0 && (
               <div className="flex flex-col gap-1 rounded bg-surface p-4 shadow-card">
                 <h3 className="text-sm font-bold">{t('app.records.entered')}</h3>
                 <ul className="flex flex-col divide-y divide-border">
-                  {measures.map((measure) => {
-                    const line = measureText(measure.kind, measure.value, measure.unit);
-                    return (
-                      <li key={measure.id} className="flex items-center justify-between gap-3 py-1">
-                        <span className="flex min-w-0 flex-col">
-                          <span className="font-medium">{line}</span>
-                          <span className="text-sm text-foreground-muted">{formatDate(measure.measuredOn)}</span>
-                        </span>
-                        {measure.mine && entered?.canEnter === true && (
-                          <RemoveEntry studentId={one.id} entry={measure.id} what="measures" name={line} />
-                        )}
-                      </li>
-                    );
-                  })}
                   {typed.map((record) => {
                     const line = t('app.records.event', {
                       distance: record.distanceM,
@@ -128,8 +113,8 @@ export default async function FamilyProgressPage({
                           </span>
                           <span className="text-sm text-foreground-muted">{formatDate(record.swumOn)}</span>
                         </span>
-                        {entered?.canEnter === true && (
-                          <RemoveEntry studentId={one.id} entry={record.id} what="times" name={line} />
+                        {entered?.canEnterTimes === true && (
+                          <RemoveTime studentId={one.id} entry={record.id} name={line} />
                         )}
                       </li>
                     );
@@ -140,6 +125,21 @@ export default async function FamilyProgressPage({
           </section>
         );
       })}
+
+      <section className="flex flex-col gap-1 rounded bg-surface p-4 shadow-card">
+        <h2 className="flex items-center gap-2 text-sm font-bold">
+          <Plug className="size-4" aria-hidden />
+          {t('app.records.integrations')}
+        </h2>
+        <ul className="flex flex-col divide-y divide-border">
+          {INTEGRATIONS.map((name) => (
+            <li key={name} className="flex items-center justify-between gap-3 py-2">
+              <span>{name}</span>
+              <span className="text-sm text-foreground-muted">{t('app.records.soon')}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
     </>
   );
 }

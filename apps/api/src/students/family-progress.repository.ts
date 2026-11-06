@@ -1,27 +1,19 @@
 import { withOrg } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import type { Course } from './records.repository.js';
 
 /**
  * What a family records on *Progressos* (Rui, 06-11-2026): its own swim times,
- * marked `self_reported`, and weight, height and distance swum. Who may write is
- * `family_may_answer()`, the rule *Vem à aula?* reads. A family removes only what
- * it entered; the office removes a time through its own route.
- *
- * Weight and height are health data, so the audit names the kind and never the
- * value, and only the office and the family read them.
+ * marked `self_reported`. Who may write is `family_may_answer()`, the rule
+ * *Vem à aula?* reads. A family removes only what it entered.
  */
 
-export const MEASURE_UNITS = { weight: 'kg', height: 'cm', distance_swum: 'm' } as const;
-export type MeasureKind = keyof typeof MEASURE_UNITS;
-
-export interface StudentMeasure {
+export interface ProgressPool {
   id: string;
-  kind: MeasureKind;
-  value: number;
-  unit: string;
-  measuredOn: string;
-  /** This reader entered it, so this reader may remove it. */
-  mine: boolean;
+  name: string;
+  facilityName: string;
+  /** Null where the club has not set it. */
+  lengthM: number | null;
 }
 
 export async function mayEnterProgress(
@@ -38,78 +30,27 @@ export async function mayEnterProgress(
   });
 }
 
-export async function listMeasures(
-  organizationId: string,
-  studentId: string,
-  membershipId: string,
-): Promise<StudentMeasure[]> {
+/** Every live tank, by site, with its length: what a time was swum in. */
+export async function listProgressPools(organizationId: string): Promise<ProgressPool[]> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{
-      id: string;
-      kind: MeasureKind;
-      value: string;
-      unit: string;
-      measured_on: string;
-      mine: boolean;
-    }>(
-      `SELECT id, kind::text AS kind, value::text, unit, to_char(measured_on, 'YYYY-MM-DD') AS measured_on,
-              entered_by_membership_id = $3 AS mine
-         FROM student_measure
-        WHERE organization_id = $1 AND student_id = $2 AND archived_at IS NULL
-        ORDER BY measured_on DESC, created_at DESC
-        LIMIT 100`,
-      [organizationId, studentId, membershipId],
+    const { rows } = await tx.query<ProgressPool>(
+      `SELECT p.id, p.name, f.name AS "facilityName", p.length_m::float8 AS "lengthM"
+         FROM pool p
+         JOIN facility f ON f.id = p.facility_id AND f.organization_id = p.organization_id
+        WHERE p.organization_id = $1 AND p.archived_at IS NULL AND f.archived_at IS NULL
+        ORDER BY f.name, p.name`,
+      [organizationId],
     );
-    return rows.map((row) => ({
-      id: row.id,
-      kind: row.kind,
-      value: Number(row.value),
-      unit: row.unit,
-      measuredOn: row.measured_on,
-      mine: row.mine,
-    }));
+    return rows;
   });
 }
 
-export async function addMeasure(
-  organizationId: string,
-  studentId: string,
-  membershipId: string,
-  input: { kind: MeasureKind; value: number; measuredOn: string },
-): Promise<string> {
-  return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ id: string }>(
-      `INSERT INTO student_measure (organization_id, student_id, kind, value, unit, measured_on, entered_by_membership_id)
-       VALUES ($1, $2, $3::student_measure_kind, $4, $5, $6::date, $7)
-       RETURNING id`,
-      [organizationId, studentId, input.kind, input.value, MEASURE_UNITS[input.kind], input.measuredOn, membershipId],
-    );
-    await recordAudit(tx, {
-      action: 'student_measure.created',
-      entityType: 'student',
-      entityId: studentId,
-      data: { kind: input.kind },
-    });
-    return rows[0]!.id;
-  });
-}
-
-/** `onlyBy` limits it to what that person entered: a family's own, never the office's. */
-export async function archiveMeasure(
-  organizationId: string,
-  studentId: string,
-  measureId: string,
-  onlyBy: string | null,
-): Promise<boolean> {
-  return withOrg(organizationId, async (tx) => {
-    const { rowCount } = await tx.query(
-      `UPDATE student_measure SET archived_at = now()
-        WHERE organization_id = $1 AND student_id = $2 AND id = $3 AND archived_at IS NULL
-          AND ($4::uuid IS NULL OR entered_by_membership_id = $4)`,
-      [organizationId, studentId, measureId, onlyBy],
-    );
-    return (rowCount ?? 0) > 0;
-  });
+/**
+ * The course a tank's length gives. Null for any other length: a best is per 25 m
+ * or 50 m, and a 33 m pool is neither, so nobody guesses (POOLSE-81).
+ */
+export function courseOfLength(lengthM: number | null): Course | null {
+  return lengthM === 25 ? 'scm' : lengthM === 50 ? 'lcm' : null;
 }
 
 /** A family takes back a time it typed, and nothing else. */

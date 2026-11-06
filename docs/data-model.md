@@ -4493,5 +4493,3 @@ Migration `1794653300000_student-birth-date-declared`.
 ### What a family records (06-11-2026)
 
 `student_record.self_reported` marks a time typed in the app: it may be a personal best, never names a meet (by CHECK), and never reaches `qualifying_attempts()`.
-
-`student_measure` holds weight (kg), height (cm) and distance swum (m), one row per measurement, `value numeric(10,3)` beside its `unit`, held together by CHECK. The app login has SELECT, INSERT and `UPDATE (archived_at)`. The rows are deleted when the student's `health_erased_at` is set.

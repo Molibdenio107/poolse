@@ -1374,4 +1374,4 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 
 - **2026-11-06** — ***Faturado* means a document exists** (Rui): a typed cost or purchase with no document number counts as *Estimado*, **changing** POOLSE-182's default. A policy's premium stays invoiced, because the policy is the document.
 
-- **2026-11-06** — **A family records its own progress, and it is never official** (Rui): a guardian, or a student who answers for themselves, adds times, weight, height and distance. A typed time may be a personal best, never for the FPN. Weight and height are read by the office, not instructors, a stricter default than Rui asked for because they are a child's health data.
+- **2026-11-06** — **A family records its own times, and they are never official** (Rui): a guardian, or a student who answers for themselves, adds them. A typed time may be a personal best, never for the FPN. Distance swum is added up from the times; weight and height were built and removed the same day, before merging, so no health data is stored here.

@@ -69,6 +69,8 @@ export interface MeetChoice {
 export interface Progression {
   records: SwimRecord[];
   bests: PersonalBest[];
+  /** Every time's distance added up, typed or not. Never typed itself. */
+  totalDistanceM: number;
   /**
    * The stroke this student swims fastest, over the distance they have raced
    * most often. Read the note on `fastestStroke` below before using it for
@@ -186,6 +188,7 @@ export async function progressionFor(
     return {
       records,
       bests: personalBests,
+      totalDistanceM: records.reduce((sum, record) => sum + record.distanceM, 0),
       fastestStroke: fastestStroke(personalBests),
       favouriteStroke: student.rows[0].favourite_stroke,
       defaultCourse,

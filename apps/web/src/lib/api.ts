@@ -2469,19 +2469,16 @@ export interface SwimRecord {
   isPersonalBest: boolean;
 }
 
-export interface StudentMeasure {
+export interface ProgressPool {
   id: string;
-  kind: 'weight' | 'height' | 'distance_swum';
-  value: number;
-  unit: string;
-  measuredOn: string;
-  mine: boolean;
+  name: string;
+  facilityName: string;
+  lengthM: number | null;
 }
 
 export interface FamilyProgress {
-  measures: StudentMeasure[];
-  canEnter: boolean;
   canEnterTimes: boolean;
+  pools: ProgressPool[];
 }
 
 export interface PersonalBest {
@@ -2728,6 +2725,7 @@ export interface Progression {
   organizationId: string;
   records: SwimRecord[];
   bests: PersonalBest[];
+  totalDistanceM: number;
   /** Fastest, not "best" — see the note on fastestStroke in the API. */
   fastestStroke: Stroke | null;
   /** Declared by a person, never derived. */

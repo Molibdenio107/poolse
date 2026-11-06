@@ -9,23 +9,19 @@ import {
   ParseUUIDPipe,
   Post,
 } from '@nestjs/common';
-import { parseSwimTime } from '@poolse/rules';
 import { clubToday } from '../common/club-day.js';
 import { CoreRoute, moduleIsOn } from '../tenant/modules.js';
 import { requireRole } from '../tenant/roles.js';
 import { requireCompetition } from '../tenant/sport-scope.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import {
-  addMeasure,
-  archiveMeasure,
   archiveOwnTime,
-  listMeasures,
+  courseOfLength,
+  listProgressPools,
   mayEnterProgress,
-  MEASURE_UNITS,
-  type MeasureKind,
-  type StudentMeasure,
+  type ProgressPool,
 } from './family-progress.repository.js';
-import { addRecord, COURSES, STROKES, type Course, type Stroke } from './records.repository.js';
+import { addRecord, STROKES, type Stroke } from './records.repository.js';
 import { familyStudents } from './students.repository.js';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -36,6 +32,21 @@ function pastDay(value: unknown): string {
     throw new BadRequestException({ code: 'date', message: 'A date, not in the future' });
   }
   return value;
+}
+
+/** Hours, minutes, seconds and hundredths, each typed in its own box. An empty box is 0. */
+function timeOf(body: Record<string, unknown>): number {
+  const part = (name: string, max: number): number => {
+    const raw = String(body[name] ?? '').trim();
+    const value = raw === '' ? 0 : Number(raw);
+    if (!Number.isInteger(value) || value < 0 || value > max) {
+      throw new BadRequestException({ code: 'time', message: `${name} is a whole number up to ${max}` });
+    }
+    return value;
+  };
+  const ms = part('hours', 23) * 3_600_000 + part('minutes', 59) * 60_000 + part('seconds', 59) * 1000 + part('hundredths', 99) * 10;
+  if (ms <= 100) throw new BadRequestException({ code: 'time', message: 'A swim time' });
+  return ms;
 }
 
 /** Another family's child is a 404, before anything about it is read. */
@@ -56,20 +67,19 @@ async function requireMayEnter(studentId: string): Promise<{ organizationId: str
   return who;
 }
 
-/** *Progressos* in the app — the family's half. The server decides every write. */
+/** *Progressos* in the app. The server decides every write. */
 @CoreRoute()
 @Controller('app/progress/:studentId')
 export class FamilyProgressController {
   @Get()
   async read(
     @Param('studentId', ParseUUIDPipe) studentId: string,
-  ): Promise<{ measures: StudentMeasure[]; canEnter: boolean; canEnterTimes: boolean }> {
+  ): Promise<{ canEnterTimes: boolean; pools: ProgressPool[] }> {
     const { organizationId, membershipId } = await requireMine(studentId);
     const canEnter = await mayEnterProgress(organizationId, studentId, membershipId);
     return {
-      measures: await listMeasures(organizationId, studentId, membershipId),
-      canEnter,
       canEnterTimes: canEnter && moduleIsOn('competition'),
+      pools: await listProgressPools(organizationId),
     };
   }
 
@@ -89,19 +99,16 @@ export class FamilyProgressController {
     if (!Number.isInteger(distanceM) || distanceM <= 0 || distanceM > 10_000) {
       throw new BadRequestException({ code: 'distance', message: 'Whole metres, up to 10000' });
     }
-    const rawCourse = typeof body['course'] === 'string' ? body['course'] : '';
-    if (rawCourse !== '' && !COURSES.includes(rawCourse as Course)) {
-      throw new BadRequestException({ code: 'course', message: 'No such pool length' });
-    }
-    const timeMs = typeof body['time'] === 'string' ? parseSwimTime(body['time']) : null;
-    if (typeof timeMs !== 'number' || timeMs <= 0) {
-      throw new BadRequestException({ code: 'time', message: 'A swim time' });
-    }
+    // The pool is read from this club's own list, so a course cannot be claimed.
+    const poolId = typeof body['poolId'] === 'string' ? body['poolId'] : '';
+    const pool = poolId === '' ? null : (await listProgressPools(organizationId)).find((one) => one.id === poolId);
+    if (pool === undefined) throw new BadRequestException({ code: 'pool', message: 'No such pool' });
+
     const id = await addRecord(organizationId, studentId, {
       stroke: stroke as Stroke,
       distanceM,
-      course: rawCourse === '' ? null : (rawCourse as Course),
-      timeMs,
+      course: courseOfLength(pool?.lengthM ?? null),
+      timeMs: timeOf(body),
       swumOn: pastDay(body['swumOn']),
       note: null,
       meet: null,
@@ -119,65 +126,6 @@ export class FamilyProgressController {
     const { organizationId, membershipId } = await requireMayEnter(studentId);
     if (!(await archiveOwnTime(organizationId, studentId, recordId, membershipId))) {
       throw new NotFoundException('No such time of yours');
-    }
-    return { archived: true };
-  }
-
-  @Post('measures')
-  async addMeasure(
-    @Param('studentId', ParseUUIDPipe) studentId: string,
-    @Body() body: Record<string, unknown>,
-  ): Promise<{ id: string }> {
-    const { organizationId, membershipId } = await requireMayEnter(studentId);
-    const kind = body['kind'];
-    if (typeof kind !== 'string' || !(kind in MEASURE_UNITS)) {
-      throw new BadRequestException({ code: 'kind', message: 'No such measure' });
-    }
-    const value = Number(String(body['value'] ?? '').replace(',', '.'));
-    const ceiling = kind === 'weight' ? 400 : kind === 'height' ? 260 : 1_000_000;
-    if (!Number.isFinite(value) || value <= 0 || value > ceiling) {
-      throw new BadRequestException({ code: 'value', message: 'A value in range' });
-    }
-    const id = await addMeasure(organizationId, studentId, membershipId, {
-      kind: kind as MeasureKind,
-      value,
-      measuredOn: pastDay(body['measuredOn']),
-    });
-    return { id };
-  }
-
-  @Post('measures/:measureId/archive')
-  async archiveMeasure(
-    @Param('studentId', ParseUUIDPipe) studentId: string,
-    @Param('measureId', ParseUUIDPipe) measureId: string,
-  ): Promise<{ archived: true }> {
-    const { organizationId, membershipId } = await requireMayEnter(studentId);
-    if (!(await archiveMeasure(organizationId, studentId, measureId, membershipId))) {
-      throw new NotFoundException('No such measure of yours');
-    }
-    return { archived: true };
-  }
-}
-
-/** The office's half: weight and height are the office's to read, never an instructor's. */
-@CoreRoute()
-@Controller('students/:studentId/measures')
-export class StudentMeasuresController {
-  @Get()
-  async list(@Param('studentId', ParseUUIDPipe) studentId: string): Promise<{ measures: StudentMeasure[] }> {
-    requireRole('owner', 'admin');
-    const { organizationId, membershipId } = currentTenant();
-    return { measures: await listMeasures(organizationId, studentId, membershipId) };
-  }
-
-  @Post(':measureId/archive')
-  async archive(
-    @Param('studentId', ParseUUIDPipe) studentId: string,
-    @Param('measureId', ParseUUIDPipe) measureId: string,
-  ): Promise<{ archived: true }> {
-    requireRole('owner', 'admin');
-    if (!(await archiveMeasure(currentTenant().organizationId, studentId, measureId, null))) {
-      throw new NotFoundException('No such measure');
     }
     return { archived: true };
   }
