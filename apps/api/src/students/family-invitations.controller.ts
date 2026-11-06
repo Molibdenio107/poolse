@@ -261,7 +261,7 @@ export class FamilyInvitationsBulkController {
       const digits = phoneKey(phone);
       const { rows: existing } = await tx.query<{ id: string | null; name: string }>(
         `SELECT s.id, s.first_name || ' ' || s.last_name AS name
-           FROM student s
+           FROM student_person s
           WHERE s.archived_at IS NULL
             AND (($1::citext IS NOT NULL AND (s.contact_email = $1::citext
                                               OR person_email(s.membership_id) = $1::citext))

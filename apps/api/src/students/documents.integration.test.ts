@@ -110,10 +110,18 @@ test('POOLSE-132 — documents, print data and filed copies', async () => {
     }
     // The ID document's photograph is filed with no season (30-10-2026); a
     // season on it is refused.
-    await asAdmin(() =>
-      expectStatus(() => routes.file(id, { kind: 'id_document', seasonId: season!.id, fileId: files[0]!.id }), 400),
+    // POOLSE-179: on a sealed `student_id_document` file of its own — a plain
+    // file, or one already filed, is refused.
+    const [sealed] = await tenant.sql<{ id: string }>(
+      `INSERT INTO stored_file (organization_id, purpose, storage_key, content_type, byte_size, original_name, uploaded_by, wrapped_key)
+       VALUES ($1::uuid, 'student_id_document', $1::text || '/test/cc.sealed', 'image/jpeg', 10, 'cc.jpg', $2, 'v1.a.b.c') RETURNING id`,
+      [org, admin],
     );
-    await asAdmin(() => routes.file(id, { kind: 'id_document', fileId: files[0]!.id }));
+    await asAdmin(() =>
+      expectStatus(() => routes.file(id, { kind: 'id_document', seasonId: season!.id, fileId: sealed!.id }), 400),
+    );
+    await asAdmin(() => expectStatus(() => routes.file(id, { kind: 'id_document', fileId: files[0]!.id }), 400));
+    await asAdmin(() => routes.file(id, { kind: 'id_document', fileId: sealed!.id }));
     const photo = (await asAdmin(() => routes.read(id))).copies.filter((c) => c.kind === 'id_document');
     assert.equal(photo.length, 1);
     assert.equal(photo[0]!.seasonId, null);

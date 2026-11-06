@@ -16,21 +16,26 @@ import { NOTHING, readAttention, type Attention } from './attention.repository.j
 @Controller('attention')
 export class AttentionController {
   @Get()
-  async read(): Promise<Attention> {
-    requireRole('owner', 'admin', 'instructor', 'maintenance', 'student', 'guardian');
-    const { organizationId, membershipId, support } = currentTenant();
-    const office = hasRole('owner', 'admin');
-    const upkeep = office || hasRole('maintenance');
-    const scope = {
-      leads: office,
-      water: upkeep && moduleIsOn('water_quality'),
-      maintenance: upkeep && moduleIsOn('maintenance'),
-      families: office ? ('all' as const) : hasRole('instructor') ? ('mine' as const) : null,
-      membershipId,
-    };
-    if (!scope.leads && !scope.water && !scope.maintenance && scope.families === null) return NOTHING;
-    // A support session sees the club as an admin would, but is nobody's teacher.
-    if (support === true && scope.families === 'mine') scope.families = null;
-    return readAttention(organizationId, scope);
+  read(): Promise<Attention> {
+    return attentionForReader();
   }
+}
+
+/** The route's whole answer, shared with `GET /shell` — POOLSE-172. */
+export async function attentionForReader(): Promise<Attention> {
+  requireRole('owner', 'admin', 'instructor', 'maintenance', 'student', 'guardian');
+  const { organizationId, membershipId, support } = currentTenant();
+  const office = hasRole('owner', 'admin');
+  const upkeep = office || hasRole('maintenance');
+  const scope = {
+    leads: office,
+    water: upkeep && moduleIsOn('water_quality'),
+    maintenance: upkeep && moduleIsOn('maintenance'),
+    families: office ? ('all' as const) : hasRole('instructor') ? ('mine' as const) : null,
+    membershipId,
+  };
+  if (!scope.leads && !scope.water && !scope.maintenance && scope.families === null) return NOTHING;
+  // A support session sees the club as an admin would, but is nobody's teacher.
+  if (support === true && scope.families === 'mine') scope.families = null;
+  return readAttention(organizationId, scope);
 }

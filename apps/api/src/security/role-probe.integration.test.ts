@@ -36,6 +36,7 @@ import { QualificationsController } from '../staff/qualifications.controller.js'
 import { FilesController } from '../files/files.controller.js';
 import { SensitiveController } from '../sensitive/sensitive.controller.js';
 import { InventoryController } from '../inventory/inventory.controller.js';
+import { CostsController } from '../costs/costs.controller.js';
 import { InvitationsController } from '../invitations/invitations.controller.js';
 import {
   FamilyInvitationsBulkController,
@@ -87,6 +88,7 @@ import { FeedbackController } from '../feedback/feedback.controller.js';
 import { NoticesController } from '../notices/notices.controller.js';
 import { PushController } from '../push/push.controller.js';
 import { AttentionController } from '../attention/attention.controller.js';
+import { ShellController } from '../shell/shell.controller.js';
 import { AppAvisosController, AvisosController } from '../messages/avisos.controller.js';
 import { StaffNotesController } from '../staff-notes/staff-notes.controller.js';
 
@@ -368,6 +370,9 @@ test('people, register and guardian lists refuse a guardian and a student (403)'
       new PeopleDedupController().duplicate(ADMIN_NIF),
     );
     await refused('GET students', 403, () => new StudentsController().list());
+    await refused('POST students/:id/birth-date/confirm', 403, () =>
+      new StudentsController().confirmBirthDate(NO_SUCH_ID, {}),
+    );
     await refused('GET guardians', 403, () => new GuardiansController().list());
     await refused('GET people-search/:marta/students', 403, () =>
       new PeopleSearchController().students(fixture.martaId),
@@ -625,6 +630,15 @@ test('operational reads refuse non-staff (403)', async () => {
     await refused('GET spaces', 403, () => new SpacesController().list(fac));
     await refused('GET spaces/:id', 403, () => new SpacesController().detail(NO_SUCH_ID));
     await refused('GET inventory', 403, () => new InventoryController().list(fac));
+    // POOLSE-182: the ledger is the office's; recording is staff's.
+    await refused('GET costs/months', 403, () => new CostsController().months('2026-01-01', '2026-12-31'));
+    await refused('GET costs/window', 403, () => new CostsController().window('2026-01-01', '2026-12-31'));
+    await refused('POST costs/purchases', 403, () =>
+      new CostsController().purchase({ inventoryItemId: NO_SUCH_ID, quantity: 1, amountCents: 1, boughtOn: '2026-01-01' }),
+    );
+    await refused('POST costs/maintenance-service', 403, () =>
+      new CostsController().service({ maintenanceRequestId: NO_SUCH_ID, amountCents: 1, performedOn: '2026-01-01' }),
+    );
     await refused('GET inventory/export', 403, () => new InventoryController().exportAll(fac));
     await refused('GET inventory/lost-and-found', 403, () =>
       new InventoryController().lostAndFound(fac),
@@ -958,10 +972,11 @@ test('student documents and FPN settings refuse a guardian and a student (403)',
     await refused('POST students/:id/documents/copies', 403, () =>
       docs.file(fixture.aliceId, { kind: 'socio_form', fileId: NO_SUCH_ID }),
     );
-    await refused('GET students/:id/documents/fpn', 403, () => docs.print(fixture.aliceId, undefined, undefined));
+    // POOLSE-179: a filled form answers the child's own family, so a stranger gets a family's 404.
+    await refused('GET students/:id/documents/fpn', 404, () => docs.print(fixture.aliceId, undefined, undefined));
     await refused('GET students/:id/documents/id-document', 403, () => docs.idDocument(fixture.aliceId));
     await refused('PATCH fpn-settings', 403, () => new FpnSettingsController().save({ association: 'X' }));
-    await refused('GET students/:id/boletim', 403, () => new BoletimController().print(fixture.aliceId));
+    await refused('GET students/:id/boletim', 404, () => new BoletimController().print(fixture.aliceId));
     // POOLSE-142 — the club's own boletim template.
     const template = new DocumentTemplatesController();
     await refused('GET settings/document-templates/:kind', 403, () => template.read('socio_form'));
@@ -1268,6 +1283,7 @@ test("app mode: a family reads its own agenda and lessons, and nobody else's (PO
     assert.deepEqual((await new AppController().medicalLeave()).leaves, []);
     await refused('GET app/lessons/:id as a stranger', 404, () => new AppController().lesson(fixture.sessionId));
     await refused('GET app/lessons/not-a-uuid', 404, () => new AppController().lesson('not-a-uuid'));
+    await refused('GET app/fees for a stranger', 404, () => new AppController().fees(fixture.aliceId));
     // POOLSE-121: nobody to ask for but a new child, and never somebody else's.
     assert.deepEqual((await new AppController().enrolmentOptions()).people, []);
     await refused('POST app/enrolment-requests for a stranger', 404, () =>
@@ -1423,6 +1439,22 @@ test('GET attention answers a guardian and a student with an empty map', async (
     assert.deepEqual(
       await new AttentionController().read(),
       { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {} },
+      who.label,
+    );
+  });
+});
+
+test('GET shell gives a guardian and a student the logo and nothing that is not theirs — POOLSE-172', async () => {
+  await asEach(async (who) => {
+    assert.deepEqual(
+      await new ShellController().read(),
+      {
+        logoFileId: null,
+        attention: { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {} },
+        meetInboxPending: null,
+        subscriptionAlert: null,
+        supportStatus: null,
+      },
       who.label,
     );
   });

@@ -253,6 +253,11 @@ const PAIRS = [
       ['foreground-muted', `${ground}+sport-${sport}@0.14`, 4.5, `muted text on the ${sport} wash over the ${ground}`],
     ]),
   ),
+  // POOLSE-180: a chosen attendance state's word at 11px is body text, so 4.5:1
+  // on its own wash (`selectedTone`: the state's colour at /15 over the card).
+  ['primary-ink', 'surface+primary@0.15', 4.5, 'register: Presente, chosen'],
+  ['warning-ink', 'surface+warning@0.15', 4.5, 'register: Falta justificada, chosen'],
+  ['danger-ink', 'surface+danger@0.15', 4.5, 'register: Faltou, chosen'],
 ];
 
 const css = await readFile(CSS, 'utf8');

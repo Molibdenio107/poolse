@@ -11,7 +11,6 @@ import {
   type SupportActivity,
   type SupportGrant,
   type SupportRequest,
-  type SupportStatus,
   type TenantSupport,
 } from '@/lib/api';
 import { describeFailure } from '@/lib/form-failure';
@@ -45,15 +44,6 @@ export async function loadSupportAccess(): Promise<
       activity: activity.activity,
     })),
   );
-}
-
-/** For the shell's strip. Null when it cannot be read — the strip is a courtesy. */
-export async function loadSupportStatus(): Promise<SupportStatus | null> {
-  try {
-    return await apiFetch<SupportStatus>('/support-grants/status');
-  } catch {
-    return null;
-  }
 }
 
 function refreshProfile(): void {

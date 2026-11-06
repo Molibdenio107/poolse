@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ArrowLeft, CalendarCheck, NotebookPen } from 'lucide-react';
+import { ArrowLeft, CalendarCheck, NotebookPen, Users } from 'lucide-react';
 import { ApiError, apiFetch, type AppLesson } from '@/lib/api';
 import type { LessonPlan } from '../../../../dashboard/calendar/lesson-plan.actions';
 import { describeLoad } from '@/lib/load-failure';
@@ -70,6 +70,26 @@ export default async function FamilyLesson({
         </p>
       )}
 
+      {/* A count and never a roll (POOLSE-174, rule 6): no other child's name reaches a family. */}
+      {lesson.count.enrolled !== null && (
+        <p className="flex items-center gap-1.5 text-sm text-foreground-muted">
+          <Users className="size-4 shrink-0" aria-hidden />
+          {t('app.family.hero.count', { enrolled: lesson.count.enrolled, notComing: lesson.count.notComing })}
+        </p>
+      )}
+
+      <section className="flex flex-col gap-2 rounded-lg bg-surface p-3 shadow-card">
+        <h2 className="flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+          <NotebookPen className="size-4" aria-hidden />
+          {t('app.family.planTitle')}
+        </h2>
+        {plan !== null && plan.body.trim() !== '' ? (
+          <p className="whitespace-pre-wrap">{plan.body}</p>
+        ) : (
+          <p className="text-sm text-foreground-muted">{t('app.family.noPlan')}</p>
+        )}
+      </section>
+
       {/*
         Vou / Não vou — POOLSE-90 slice 2: one per child, only while the lesson
         still takes an answer. A notice to the club, never a register mark.
@@ -92,7 +112,7 @@ export default async function FamilyLesson({
               ) : (
                 <p className="text-sm text-foreground-muted">
                   {entry.going === null
-                    ? t('app.notice.guardianAnswers')
+                    ? t(entry.needsBirthDate ? 'app.notice.needsBirthDate' : 'app.notice.guardianAnswers')
                     : entry.going
                       ? t('app.notice.saidGoing')
                       : t('app.notice.saidNotGoing')}
@@ -101,18 +121,6 @@ export default async function FamilyLesson({
             </section>
           );
         })}
-
-      <section className="flex flex-col gap-2 rounded-lg bg-surface p-3 shadow-card">
-        <h2 className="flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-          <NotebookPen className="size-4" aria-hidden />
-          {t('app.family.planTitle')}
-        </h2>
-        {plan !== null && plan.body.trim() !== '' ? (
-          <p className="whitespace-pre-wrap">{plan.body}</p>
-        ) : (
-          <p className="text-sm text-foreground-muted">{t('app.family.noPlan')}</p>
-        )}
-      </section>
 
       {/*
         How it went — only once there is something to say it about. A coming

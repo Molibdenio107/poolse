@@ -277,7 +277,7 @@ export async function findRegister(
                 LIMIT 1
              )) AS exam_state
         FROM roll
-        JOIN student s ON s.id = roll.student_id
+        JOIN student_person s ON s.id = roll.student_id
         LEFT JOIN attendance a
                ON a.student_id = s.id AND a.class_session_id = $1
        WHERE s.archived_at IS NULL

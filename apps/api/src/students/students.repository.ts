@@ -230,6 +230,8 @@ export interface Student {
    * point away from her.
    */
   isAdultStudent: boolean;
+  /** POOLSE-177: a linked adult, whose name and email are their own account's. */
+  identityFromLogin: boolean;
   isGuardian: boolean;
   /**
    * The sports of the student's active turmas, by each turma's recinto
@@ -341,7 +343,7 @@ const GUARDIANS = `(
                'shortName',    ${personShortName('gl.guardian_membership_id')},
                'email',        person_email(gl.guardian_membership_id)::text,
                'relationship', gl.relationship,
-               'phone',        m.phone,
+               'phone',        person_phone(gl.guardian_membership_id),
                'taxNumber',    m.tax_number,
                'address',      m.address,
                'isPrimary',    gl.is_primary,
@@ -488,7 +490,7 @@ export async function countOutsideRange(
     const { rows } = await tx.query<{ outside: string }>(
       `
       SELECT count(*) AS outside
-        FROM student s
+        FROM student_person s
        WHERE s.level_id = $1
          AND s.archived_at IS NULL
          AND s.birth_date IS NOT NULL
@@ -984,6 +986,7 @@ export async function listStudents(
       photo_file_id: string | null;
       photo_consent: boolean;
       is_adult_student: boolean;
+      identity_from_login: boolean;
       is_guardian: boolean;
     }>(
       `
@@ -992,6 +995,7 @@ export async function listStudents(
              s.first_name,
              s.last_name,
              ${displayName('s')} AS display_name,
+             s.identity_from_login,
              ${shortName('s')} AS short_name,
              s.birth_date,
              CASE WHEN s.birth_date IS NULL THEN NULL
@@ -1017,7 +1021,7 @@ export async function listStudents(
              ${INSURANCE_STATE} AS insurance_state,
              fam.last_seen AS family_last_seen_at,
              fam.has_login AS family_has_login
-        FROM student s
+        FROM student_person s
         -- The family's logins (POOLSE-164).
         LEFT JOIN LATERAL ${FAMILY_LOGINS} fam ON true
         -- The level this list reads: a sport's own, on a sport's register (POOLSE-148).
@@ -1144,6 +1148,7 @@ export async function exportStudents(
       `
       SELECT s.id, s.first_name, s.last_name,
              ${displayName('s')} AS display_name,
+             s.identity_from_login,
              ${shortName('s')} AS short_name,
              s.birth_date,
              CASE WHEN s.birth_date IS NULL THEN NULL
@@ -1162,7 +1167,7 @@ export async function exportStudents(
              -- The table's columns, in the file too (POOLSE-164).
              ${STUDENT_TURMAS} AS turmas,
              ${INSURANCE_STATE} AS insurance_state
-        FROM student s
+        FROM student_person s
         LEFT JOIN student_level l
                ON l.id = s.level_id AND l.organization_id = s.organization_id
        WHERE s.archived_at IS NULL
@@ -1251,6 +1256,7 @@ export async function findStudent(
       `
       SELECT s.id, s.first_name, s.last_name,
              ${displayName('s')} AS display_name,
+             s.identity_from_login,
              ${shortName('s')} AS short_name,
              s.birth_date,
              CASE WHEN s.birth_date IS NULL THEN NULL
@@ -1269,7 +1275,7 @@ export async function findStudent(
              (student_left_on(s.id) + retention_health_period())::date::text AS health_erases_on,
              (student_left_on(s.id) + retention_identity_period())::date::text AS identity_erases_on,
              s.health_erased_at
-        FROM student s
+        FROM student_person s
         LEFT JOIN student_level l
                ON l.id = s.level_id AND l.organization_id = s.organization_id
        WHERE s.id = $1 AND s.archived_at IS NULL
@@ -1551,7 +1557,7 @@ export async function updateStudent(
   organizationId: string,
   studentId: string,
   input: StudentInput,
-): Promise<'updated' | 'not_found' | 'bad_level'> {
+): Promise<'updated' | 'not_found' | 'bad_level' | 'owned_by_login'> {
   try {
     return await updateStudentIn(organizationId, studentId, input);
   } catch (error) {
@@ -1561,18 +1567,161 @@ export async function updateStudent(
   }
 }
 
+/**
+ * What a linked adult's record shows, and whose account holds it — POOLSE-177.
+ * Null for everybody else, whose record is the club's alone.
+ */
+/**
+ * The date of birth's standing — POOLSE-186. `declared` is a date that came from
+ * the person's own login and that the office has not confirmed.
+ */
+export async function birthDateState(
+  organizationId: string,
+  studentId: string,
+): Promise<{ declared: boolean; verifiedAt: string | null }> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ declared: boolean; verified_at: string | null }>(
+      `SELECT birth_date_declared_at IS NOT NULL AS declared, birth_date_verified_at AS verified_at
+         FROM student WHERE id = $1`,
+      [studentId],
+    );
+    return { declared: rows[0]?.declared ?? false, verifiedAt: rows[0]?.verified_at ?? null };
+  });
+}
+
+/**
+ * The office confirms a date of birth against the ID document, as it stands or
+ * corrected — POOLSE-186. A correction reaches the login too, as the record's own
+ * edit does, because the record reads through it. The value stays out of the log.
+ */
+export async function confirmBirthDateIn(
+  tx: Tx,
+  membershipId: string,
+  studentId: string,
+  birthDate: string | null,
+): Promise<'done' | 'not_found' | 'no_date'> {
+  const { rows } = await tx.query<{ birth_date: string | null }>(
+    `SELECT birth_date::text AS birth_date FROM student WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+    [studentId],
+  );
+  const row = rows[0];
+  if (row === undefined) return 'not_found';
+  const date = birthDate ?? row.birth_date;
+  if (date === null) return 'no_date';
+
+  const login = await readLoginOwned(tx, studentId);
+  if (login !== null) {
+    await tx.query(`UPDATE app_user SET birth_date = $2::date WHERE id = $1 AND birth_date IS DISTINCT FROM $2::date`, [
+      login.appUserId,
+      date,
+    ]);
+  }
+  await tx.query(
+    `UPDATE student
+        SET birth_date = $2::date, birth_date_declared_at = NULL,
+            birth_date_verified_at = now(), birth_date_verified_by = $3
+      WHERE id = $1`,
+    [studentId, date, membershipId],
+  );
+  await recordAudit(tx, {
+    action: 'student.birth_date_confirmed',
+    entityType: 'student',
+    entityId: studentId,
+    data: { corrected: date !== row.birth_date },
+  });
+  return 'done';
+}
+
+export async function confirmBirthDate(
+  organizationId: string,
+  membershipId: string,
+  studentId: string,
+  birthDate: string | null,
+): Promise<'done' | 'not_found' | 'no_date'> {
+  return withOrg(organizationId, (tx) => confirmBirthDateIn(tx, membershipId, studentId, birthDate));
+}
+
+async function readLoginOwned(
+  tx: Tx,
+  studentId: string,
+): Promise<{
+  appUserId: string;
+  firstName: string;
+  lastName: string;
+  birthDate: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+} | null> {
+  const { rows } = await tx.query<{
+    app_user_id: string;
+    first_name: string;
+    last_name: string;
+    birth_date: string | null;
+    contact_email: string | null;
+    contact_phone: string | null;
+  }>(
+    `SELECT m.app_user_id, p.first_name, p.last_name, p.birth_date::text AS birth_date,
+            p.contact_email::text AS contact_email, p.contact_phone
+       FROM student_person p
+       JOIN membership m ON m.id = p.membership_id AND m.organization_id = p.organization_id
+      WHERE p.id = $1 AND p.identity_from_login`,
+    [studentId],
+  );
+  const row = rows[0];
+  if (row === undefined) return null;
+  return {
+    appUserId: row.app_user_id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    birthDate: row.birth_date,
+    contactEmail: row.contact_email,
+    contactPhone: row.contact_phone,
+  };
+}
+
 async function updateStudentIn(
   organizationId: string,
   studentId: string,
   input: StudentInput,
-): Promise<'updated' | 'not_found' | 'bad_level'> {
+): Promise<'updated' | 'not_found' | 'bad_level' | 'owned_by_login'> {
   return withOrg(organizationId, async (tx) => {
     if (!(await levelExists(tx, input.levelId))) return 'bad_level';
 
     // Locked and read first, so the entry can say what each field was — POOLSE-80.
-    const before = await lockStudentFields(tx, studentId);
-    if (before === null) return 'not_found';
+    const locked = await lockStudentFields(tx, studentId);
+    if (locked === null) return 'not_found';
     const identityBefore = input.identity === undefined ? null : await readIdentity(tx, studentId);
+
+    /*
+     * POOLSE-177. A linked adult's name and email are Clerk's: unchanged they
+     * pass, because the form sends every field back, and changed they are
+     * refused. Birth date and phone land on their account, which is one row in
+     * every club they belong to; the birth date also lands here, because the
+     * rules read the club's record. The log compares against what the office
+     * was shown, so saving an untouched form records nothing.
+     */
+    const login = await readLoginOwned(tx, studentId);
+    if (login !== null) {
+      const sameEmail = (login.contactEmail ?? '').toLowerCase() === (input.contactEmail ?? '').toLowerCase();
+      if (input.firstName !== login.firstName || input.lastName !== login.lastName || !sameEmail) {
+        return 'owned_by_login';
+      }
+      await tx.query(
+        `UPDATE app_user
+            SET birth_date = $2::date, contact_phone = $3
+          WHERE id = $1
+            AND (birth_date IS DISTINCT FROM $2::date OR contact_phone IS DISTINCT FROM $3)`,
+        [login.appUserId, input.birthDate, input.contactPhone],
+      );
+    }
+    const before = login === null ? locked : { ...locked, ...fieldsShownFrom(login) };
+    // The club's own name and email stay as they were, beneath the login's.
+    const kept = login === null ? input : {
+      ...input,
+      firstName: locked['firstName'] as string,
+      lastName: locked['lastName'] as string,
+      contactEmail: locked['contactEmail'] as string | null,
+    };
 
     await tx.query(
       `UPDATE student
@@ -1582,11 +1731,11 @@ async function updateStudentIn(
         WHERE id = $1`,
       [
         studentId,
-        input.firstName,
-        input.lastName,
+        kept.firstName,
+        kept.lastName,
         input.birthDate,
         input.levelId,
-        input.contactEmail,
+        kept.contactEmail,
         input.contactPhone,
         input.taxNumber,
         input.notes,
@@ -1656,6 +1805,22 @@ type StudentField =
   | 'notes'
   | 'gender'
   | 'federationLicence';
+
+function fieldsShownFrom(login: {
+  firstName: string;
+  lastName: string;
+  birthDate: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+}): Partial<Record<StudentField, unknown>> {
+  return {
+    firstName: login.firstName,
+    lastName: login.lastName,
+    birthDate: login.birthDate,
+    contactEmail: login.contactEmail,
+    contactPhone: login.contactPhone,
+  };
+}
 
 function fieldsOf(input: Omit<StudentInput, 'guardians'>): Record<StudentField, unknown> {
   return {
@@ -1881,6 +2046,7 @@ function toStudent(row: {
   photo_file_id: string | null;
   photo_consent: boolean;
   is_adult_student: boolean;
+  identity_from_login: boolean;
   is_guardian: boolean;
   sports?: string[];
   left_on?: string | null;
@@ -1934,6 +2100,7 @@ function toStudent(row: {
     photoFileId: row.photo_file_id,
     photoConsent: row.photo_consent,
     isAdultStudent: row.is_adult_student,
+    identityFromLogin: row.identity_from_login,
     isGuardian: row.is_guardian,
     ...(row.sports === undefined ? {} : { sports: row.sports }),
     ...(row.insurance_state === undefined
@@ -2194,7 +2361,7 @@ export async function searchPeople(
               ${personName('m.id')} AS name,
               ${personShortName('m.id')} AS short_name,
               person_email(m.id)::text AS email,
-              m.phone,
+              person_phone(m.id) AS phone,
               m.tax_number,
               m.address,
               coalesce((
@@ -2267,7 +2434,7 @@ export async function studentsOf(
               ${shortName('s')} AS name,
               gl.relationship
          FROM guardian_link gl
-         JOIN student s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
+         JOIN student_person s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
         WHERE gl.guardian_membership_id = $1
           AND gl.archived_at IS NULL
           AND s.archived_at IS NULL
@@ -2291,12 +2458,12 @@ export async function familyStudents(
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string; name: string; relationship: string | null; self: boolean }>(
       `SELECT s.id, ${shortName('s')} AS name, NULL::text AS relationship, true AS self
-         FROM student s
+         FROM student_person s
         WHERE s.membership_id = $1 AND s.archived_at IS NULL
        UNION ALL
        SELECT s.id, ${shortName('s')} AS name, gl.relationship, false AS self
          FROM guardian_link gl
-         JOIN student s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
+         JOIN student_person s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
         WHERE gl.guardian_membership_id = $1
           AND gl.archived_at IS NULL
           AND s.archived_at IS NULL
@@ -2362,7 +2529,7 @@ export async function listGuardians(
              ${personName('m.id')} AS name,
              ${personShortName('m.id')} AS short_name,
              person_email(m.id)::text AS email,
-             m.phone,
+             person_phone(m.id) AS phone,
              m.app_user_id IS NOT NULL AS has_login,
              -- The same person, enrolled - round 4.
              --
@@ -2382,7 +2549,7 @@ export async function listGuardians(
              -- template literal and a backtick in a comment ends the string.)
              (
                SELECT s2.id
-                 FROM student s2
+                 FROM student_person s2
                 WHERE s2.organization_id = m.organization_id
                   AND s2.archived_at IS NULL
                   AND m.birth_date IS NOT NULL
@@ -2403,7 +2570,7 @@ export async function listGuardians(
                         ORDER BY ${nameOrder('s')}
                       )
                  FROM guardian_link gl
-                 JOIN student s
+                 JOIN student_person s
                    ON s.id = gl.student_id
                   AND s.organization_id = gl.organization_id
                 WHERE gl.guardian_membership_id = m.id
@@ -2531,7 +2698,7 @@ export async function findDuplicate(
                  WHERE mr.membership_id = m.id AND mr.archived_at IS NULL
               ), '{}') AS roles,
               person_email(m.id)::text AS email,
-              m.phone,
+              person_phone(m.id) AS phone,
               (
                 SELECT count(*) FROM guardian_link gl
                  WHERE gl.guardian_membership_id = m.id AND gl.archived_at IS NULL

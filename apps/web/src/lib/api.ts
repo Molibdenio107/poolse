@@ -1636,6 +1636,8 @@ export interface StudentIdentity {
 }
 
 export interface Student {
+  /** The date of birth's standing, for the office only — POOLSE-186. */
+  birthDateState?: { declared: boolean; verifiedAt: string | null };
   /** Their level in each sport other than swimming — POOLSE-148; on the record only. */
   sportLevels?: { sport: PoolseSport; levelId: string; levelName: string }[];
   /** When this student left and when their data goes — 7b.8. Null while enrolled. */
@@ -1701,6 +1703,8 @@ export interface Student {
    * point away from her.
    */
   isAdultStudent: boolean;
+  /** POOLSE-177: a linked adult, whose name and email are their own account's. */
+  identityFromLogin: boolean;
   isGuardian: boolean;
   /** The sports of the active turmas — on lists only (multi-sport Slice 3). */
   sports?: PoolseSport[];
@@ -5624,12 +5628,16 @@ export interface AppAgendaEntry {
   standIn: boolean;
   status: 'scheduled' | 'cancelled' | 'completed';
   byClosure: boolean;
+  /** The last day of the closure that reached it — POOLSE-174. */
+  closedUntil: string | null;
   cancellationReason: string | null;
   moved: boolean;
   /** *Vou / Não vou* — POOLSE-90 slice 2: the last answer, or null. */
   going: boolean | null;
   /** This reader answers for this child. */
   mayAnswer: boolean;
+  /** The reader is this student, and no date of birth is held — POOLSE-186. */
+  needsBirthDate: boolean;
   /** Still takes an answer: a turma's, not cancelled, not started. */
   noticeOpen: boolean;
 }
@@ -5711,6 +5719,73 @@ export interface AppChild {
   payTo: PayTo | null;
 }
 
+/** One paper on *Documentos* — POOLSE-179. */
+export interface AppDocumentRow {
+  kind: 'fpn_declaration' | 'socio_form' | 'id_document' | 'medical_exam';
+  /** `sent`: the family sent one and the office has not decided yet (POOLSE-179 slice 2). */
+  status: 'missing' | 'ok' | 'expired' | 'sent';
+  validUntil: string | null;
+  print: { path: 'boletim' | 'fpn'; seasonId: string | null; minor: boolean } | null;
+  notConfigured: boolean;
+  /** This reader may send this kind now: a live encarregado or an adult student, nothing waiting. */
+  canSend: boolean;
+}
+
+export interface AppChildDocuments {
+  id: string;
+  name: string;
+  documents: AppDocumentRow[];
+}
+
+/** One fee occurrence on *Pagamentos* — POOLSE-178. */
+export interface AppFeeItem {
+  lineId: string;
+  kind: 'mensalidade' | 'inscricao' | 'seguro' | 'quota';
+  periodStart: string;
+  recurring: boolean;
+  seasonName: string | null;
+  className: string | null;
+}
+
+export interface AppFeeCharge extends AppFeeItem {
+  amountCents: number;
+  dueOn: string | null;
+  sharedWith: string[];
+}
+
+export interface AppChildFees {
+  id: string;
+  name: string;
+  overdue: AppFeeCharge[];
+  upcoming: AppFeeCharge[];
+  paid: AppFeeItem[];
+  penaltyCents: number;
+  payTo: PayTo | null;
+}
+
+/** One line on the family's calendar — POOLSE-175. */
+export interface AppCalendarEntry extends Omit<AppAgendaEntry, 'sessionId'> {
+  /** Null on a day of the weekly pattern, past the generated lessons. */
+  sessionId: string | null;
+  generated: boolean;
+  attendance: 'present' | 'absent' | 'excused' | null;
+  /** The lesson's page answers it. */
+  opens: boolean;
+}
+
+export interface AppCalendarClosure {
+  id: string;
+  reason: string;
+  startsOn: string;
+  endsOn: string;
+  scope: 'site' | 'tank';
+}
+
+export interface AppCalendar extends Omit<AppAgenda, 'entries'> {
+  entries: AppCalendarEntry[];
+  closures: AppCalendarClosure[];
+}
+
 export interface AppAgenda {
   children: AppChild[];
   entries: AppAgendaEntry[];
@@ -5724,6 +5799,8 @@ export interface AppLesson {
   water: AppWater[];
   /** Each of the reader's children in this lesson, and where their feedback stands. */
   feedback: FamilyFeedback[];
+  /** Who the lesson expects, as numbers and never names — POOLSE-174. Null enrolled for a parceria. */
+  count: { enrolled: number | null; notComing: number };
 }
 
 /**
@@ -5755,6 +5832,7 @@ export interface FamilyFeedback {
   /** The last day it may be written or changed. */
   closesOn: string;
   mayAnswer: boolean;
+  needsBirthDate: boolean;
   feedback: LessonFeedback | null;
 }
 

@@ -424,7 +424,7 @@ export async function readEmergencyContact(
                 display_name(m.first_name, m.last_name),
                 s.emergency_contact_name
               ) AS name,
-              coalesce(m.phone, s.emergency_contact_phone) AS phone,
+              coalesce(person_phone(m.id), s.emergency_contact_phone) AS phone,
               s.emergency_contact_relationship AS relationship
          FROM student s
          LEFT JOIN membership m

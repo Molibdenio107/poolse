@@ -89,7 +89,7 @@ export async function turmaSkills(
     const { rows: students } = await tx.query<{ id: string; name: string }>(
       `SELECT s.id, ${shortName('s')} AS name
          FROM enrollment e
-         JOIN student s ON s.id = e.student_id AND s.organization_id = e.organization_id
+         JOIN student_person s ON s.id = e.student_id AND s.organization_id = e.organization_id
         WHERE e.class_group_id = $1
           AND e.status = 'active'
           AND s.archived_at IS NULL

@@ -63,6 +63,7 @@ test.describe('as a guardian', () => {
     const filter = page.getByRole('navigation', { name: /mostrar as aulas de|show the lessons of/i });
     await expect(filter.getByRole('link')).toHaveCount(3);
     const cards = page.locator(`a[href^="/app/familia/aulas/${lesson.sessionId}"]`);
+    // POOLSE-174: a hero each. The rows are *Aulas* since POOLSE-175.
     await expect(cards).toHaveCount(2);
     await expect(cards.filter({ hasText: 'Ana Poolside' })).toHaveCount(1);
     await expect(cards.filter({ hasText: 'Bruno Poolside' })).toHaveCount(1);
@@ -139,7 +140,8 @@ test.describe('as a guardian, before a lesson', () => {
     await expect(notGoing).toHaveAttribute('aria-pressed', 'true');
     await noSidewaysScroll(page);
 
-    await visit(page, '/app/familia');
+    // The rows are *Aulas* since POOLSE-175; tomorrow's month, for the last of one.
+    await visit(page, `/app/familia/aulas?month=${new Date(Date.now() + 86_400_000).toISOString().slice(0, 7)}`);
     await expect(
       page.locator(`a[href^="/app/familia/aulas/${sessionId}"]`).filter({ hasText: 'Ana Poolside' }),
     ).toContainText(/avisou que não vem|said they are not coming/i);
@@ -178,8 +180,8 @@ test.describe('push, as a guardian', () => {
         return Promise.resolve('default');
       };
     });
-    // The push switch lives on *O meu perfil* (POOLSE-136, Rui 31-10-2026).
-    await visit(page, '/app/perfil');
+    // The push switch lives on *Definições* (POOLSE-176).
+    await visit(page, '/app/perfil/definicoes');
     await expect(page.getByText(/avisos neste telemóvel|notifications on this phone/i)).toBeVisible();
     if (info.project.name === 'iphone') {
       await expect(page.getByText(/adicione a poolse ao ecrã principal|add poolse to your home screen/i)).toBeVisible();
@@ -241,7 +243,7 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
       await expect(page).toHaveURL(/\/app\/familia\/pagamentos$/, { timeout: 10_000 });
     }).toPass({ timeout: 45_000 });
     await expect(bottomBar(page).getByRole('link', { name: /^(pagamentos|payments)$/i })).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('heading', { name: /^(mensalidades|monthly fees)$/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^(em dívida|overdue)$/i }).first()).toBeVisible();
     await noSidewaysScroll(page);
   });
 
@@ -259,32 +261,99 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
     await expect(bottomBar(page)).toHaveCount(0);
   });
 
-  test('O meu perfil opens from the Perfil tab and from the photo, with its preferences and a way out (Rui, 31-10-2026)', async ({ page }) => {
+  test('POOLSE-176 — Perfil reads, Editar dados opens a sheet, and Definições is one row away', async ({ page }) => {
     await visit(page, '/app/familia');
-    const corner = page.locator('header').getByRole('link', { name: /^(o meu perfil|my profile)$/i });
-    await expect(corner).toBeVisible();
-    expect((await corner.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    await expect(async () => {
-      if (!page.url().includes('/app/perfil')) await corner.tap({ timeout: 5_000 });
-      await expect(page).toHaveURL(/\/app\/perfil/, { timeout: 10_000 });
-    }).toPass({ timeout: 45_000 });
+    // The corner is the club: its name for a reader, and no link.
+    const header = page.locator('header');
+    await expect(header.getByRole('img', { name: 'Clube E2E' })).toBeVisible();
+    await expect(header.getByRole('link', { name: /^(o meu perfil|my profile)$/i })).toHaveCount(0);
+
+    await visit(page, '/app/perfil?home=family');
     await expect(page.getByRole('heading', { level: 1, name: /^(o meu perfil|my profile)$/i })).toBeVisible();
-    await expect(page.getByLabel(/nome próprio|first name/i)).toBeVisible();
-    await expect(page.getByText(/avisos neste telemóvel|notifications on this phone/i)).toBeVisible();
+    await expect(page.getByText(/encarregado de educação de|guardian of/i)).toBeVisible();
+    await expect(page.locator('main').locator("input:not([type='hidden']), select, textarea")).toHaveCount(0);
     await expect(page.getByRole('button', { name: /terminar sessão|sign out/i })).toBeVisible();
-    // A tab screen: the bar stays with Perfil current, and there is no Voltar.
     await expect(bottomBar(page).getByRole('link', { name: /^(perfil|profile)$/i })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('link', { name: /^(voltar|back)$/i })).toHaveCount(0);
-    // The diamond tab is the same page.
-    await visit(page, '/app/familia');
-    await expect(bottomBar(page).getByRole('link', { name: /^(perfil|profile)$/i })).toHaveAttribute('href', '/app/perfil?home=family');
     // A family-only login is not staff: no way into the backoffice here.
     await expect(page.getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toHaveCount(0);
+    await noSidewaysScroll(page);
+
+    const edit = page.getByRole('button', { name: /^(editar dados|edit details)$/i });
+    await expect(async () => {
+      if ((await page.getByRole('dialog').count()) === 0) await edit.tap();
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 15_000 });
+    const sheet = page.getByRole('dialog');
+    await expect(sheet.getByLabel(/nome próprio|first name/i)).toBeVisible();
+    await sheet.getByRole('button', { name: /^(cancelar|cancel)$/i }).tap();
+    await expect(sheet).toHaveCount(0);
+
+    await visit(page, '/app/perfil/definicoes?home=family');
+    await expect(page.getByRole('button', { name: /^(idioma|language)/i })).toBeVisible();
+    await expect(page.getByText(/avisos neste telemóvel|notifications on this phone/i)).toBeVisible();
+    await expect(bottomBar(page)).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /voltar ao perfil|back to my profile/i })).toHaveAttribute('href', '/app/perfil?home=family');
+  });
+
+  test('POOLSE-175 — Aulas is a calendar: the month steps, keeps the child, and stops at its edges', async ({ page }) => {
+    await visit(page, '/app/familia/aulas');
+    const calendar = page.getByRole('region', { name: /calendário de aulas|lesson calendar/i });
+    await expect(calendar).toBeVisible();
+    await expect(page.getByText(/aulas passadas nem atestados|no past lessons or certificates/i)).toHaveCount(0);
+
+    // Seven days, and the lessons of the month below them.
+    await expect(calendar.getByRole('listitem')).toHaveCount(7);
+    const next = page.getByRole('link', { name: /mês seguinte|next month/i });
+    // By each link's own address: a tap during hydration can land on nothing.
+    for (let step = 0; step < 6; step += 1) {
+      const href = await next.getAttribute('href');
+      expect(href).toMatch(/month=\d{4}-\d{2}/);
+      await visit(page, href!);
+    }
+    // Six months ahead is the edge: no further link, and the API agrees.
+    await expect(next).toHaveCount(0);
+    await noSidewaysScroll(page);
+  });
+
+  test('POOLSE-179 — Documentos is one row from Aulas, a status per paper, and no way out of app mode', async ({ page }) => {
+    await visit(page, '/app/familia/aulas');
+    await expect(page.getByRole('link', { name: /^(documentos|documents)$/i })).toHaveAttribute('href', '/app/familia/documentos');
+    await visit(page, '/app/familia/documentos');
+    await expect(page.getByRole('heading', { level: 1, name: /^(documentos|documents)$/i })).toBeVisible();
+    await expect(page.getByText(/boletim de sócio|membership form/i).first()).toBeVisible();
+    await expect(page.locator('main a[href*="/dashboard"]')).toHaveCount(0);
+    await expect(bottomBar(page)).toHaveCount(0);
+    await noSidewaysScroll(page);
+  });
+
+  test('POOLSE-173 — rounder on a phone, and the tab bar keeps its shapes', async ({ page }) => {
+    await visit(page, '/app/familia');
+    const radius = (selector: string): Promise<string> =>
+      page.locator(selector).first().evaluate((el) => getComputedStyle(el).borderTopLeftRadius);
+
+    expect(await radius('main .app-hero >> xpath=..')).toBe('20px');
+    expect(await radius('[data-bottom-bar] > div')).toBe('16px');
+    // Only the container rounds: a tab stays square and keeps its glyph.
+    expect(await radius('[data-bottom-bar] a')).toBe('0px');
+    await expect(bottomBar(page).locator('a svg')).toHaveCount(4);
+    // The shapes are decoration: a pseudo-element takes no tap and holds no text.
+    expect(
+      await page.locator('main .app-hero').first().evaluate((el) => getComputedStyle(el, '::before').pointerEvents),
+    ).toBe('none');
+    await visit(page, '/app/familia/pagamentos');
+    await expect(page.locator('main .app-hero')).toHaveCount(0);
+    // POOLSE-178: the shape, no way out of app mode, and a sentence and no button.
+    await expect(page.getByRole('heading', { name: /^(em dívida|overdue)$/i }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^(próximos pagamentos|next payments)$/i }).first()).toBeVisible();
+    await expect(page.locator('main a[href*="/dashboard"]')).toHaveCount(0);
+    await expect(page.getByText(/pagar na app — em breve|paying in the app is coming soon/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /pagar na app|paying in the app/i })).toHaveCount(0);
     await noSidewaysScroll(page);
   });
 
   test('Idioma opens a bottom sheet of the languages, the current one ticked', async ({ page }) => {
-    await visit(page, '/app/perfil');
+    await visit(page, '/app/perfil/definicoes');
     await page.getByRole('button', { name: /^(idioma|language)/i }).tap();
     const sheet = page.getByRole('dialog', { name: /^(idioma|language)$/i });
     await expect(sheet).toBeVisible();
@@ -299,6 +368,12 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
 
 test.describe('POOLSE-136 — on a laptop, as a guardian', () => {
   test.use({ storageState: GUARDIAN_SESSION, viewport: { width: 1280, height: 900 } });
+
+  test('POOLSE-173 — a laptop keeps the sharp scale', async ({ page }) => {
+    await visit(page, '/app/familia');
+    const hero = page.locator('main .app-hero').first().locator('xpath=..');
+    expect(await hero.evaluate((el) => getComputedStyle(el).borderTopLeftRadius)).toBe('4px');
+  });
 
   test('QA 7 — the same four tabs as a row under the header, no bottom bar', async ({ page }) => {
     await visit(page, '/app/familia');

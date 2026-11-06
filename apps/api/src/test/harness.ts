@@ -228,8 +228,14 @@ const TENANT_TABLES = [
   'boletim_template_field',
   'boletim_template',
   // POOLSE-133: a student's exame médico; child of student and stored_file.
+  // POOLSE-182: the ledger. Month rows first (they name a site), then what feeds them.
+  'cost_month',
+  'cost_entry',
+  'inventory_purchase',
   'medical_exam',
   // POOLSE-132: signed forms on a student; child of student, season and stored_file.
+  // POOLSE-179: names a student, a season, a file and two memberships.
+  'family_submission',
   'student_document',
   'student_medical_leave',
   'consent',

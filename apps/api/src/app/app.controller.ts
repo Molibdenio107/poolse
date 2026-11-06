@@ -1,3 +1,5 @@
+import { familyFees, type FamilyChildFees } from '../billing/family-fees.repository.js';
+import { familyDocuments, type FamilyDocumentRow } from '../students/family-documents.repository.js';
 import { payToFor, type PayTo } from '../billing/payment-destinations.js';
 import {
   BadRequestException,
@@ -19,7 +21,13 @@ import { familyStudents } from '../students/students.repository.js';
 import { studentFees } from '../billing/fees.repository.js';
 import type { FeeBalance } from '../billing/fee-balance.js';
 import {
+  type LessonCount,
   readAgenda,
+  readCalendar,
+  readCalendarClosures,
+  type CalendarClosure,
+  type CalendarEntry,
+  readLessonCount,
   readRecent,
   readWater,
   type AgendaEntry,
@@ -34,6 +42,7 @@ import {
   type LessonFeedback,
 } from '../feedback/feedback.repository.js';
 import { listMedicalLeave, type CertificateFile } from '../students/medical-leave.repository.js';
+import { agendaWindowAllowed } from '@poolse/rules';
 import { clubToday } from '../common/club-day.js';
 import { readMyWeek, type WeekClass } from '../dashboard/instructor.repository.js';
 import { readMaintenanceHome, type MaintenanceHome } from './maintenance-home.repository.js';
@@ -45,6 +54,11 @@ import {
   type AppRequestOptions,
 } from '../leads/app-requests.repository.js';
 import { LEAD_CONSENT_VERSION } from '../leads/public-leads.controller.js';
+import { Throttle } from '@nestjs/throttler';
+import { FAMILY_UPLOAD } from '../common/throttle.js';
+import { judgeUpload } from '../files/upload-check.js';
+import { heicToJpeg, looksLikeHeic } from '../files/heic.js';
+import { SENDABLE, sendDocument, type SendableKind } from '../students/family-submissions.repository.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -67,6 +81,12 @@ interface AgendaResponse {
   water: WaterReading[];
   /** *Últimas aulas* — attended lessons inside the feedback window (POOLSE-116). */
   recent: RecentLesson[];
+}
+
+/** The agenda over a window, for *Aulas* — POOLSE-175. */
+interface CalendarResponse extends Omit<AgendaResponse, 'entries'> {
+  entries: CalendarEntry[];
+  closures: CalendarClosure[];
 }
 
 /** A comment's ceiling — the table's CHECK says the same. */
@@ -97,7 +117,11 @@ const LEAVE_SHOWN_DAYS = 90;
 @Controller('app')
 export class AppController {
   @Get('agenda')
-  async agenda(@Query('child') child?: string): Promise<AgendaResponse> {
+  async agenda(
+    @Query('child') child?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ): Promise<AgendaResponse | CalendarResponse> {
     requireRole('guardian', 'student');
     const { organizationId, membershipId } = currentTenant();
 
@@ -106,6 +130,23 @@ export class AppController {
       throw new NotFoundException('No such student');
     }
     const chosen = child === undefined ? mine : mine.filter((one) => one.id === child);
+
+    // POOLSE-175: a window is both ends, inside the calendar's reach. Neither is
+    // the two weeks *Início* and every older caller read, unchanged.
+    if (from !== undefined || to !== undefined) {
+      if (from === undefined || to === undefined || !agendaWindowAllowed(clubToday(), from, to)) {
+        throw new BadRequestException('No such window');
+      }
+      const ids = chosen.map((one) => one.id);
+      const entries = await readCalendar(organizationId, membershipId, ids, { from, to });
+      return {
+        children: await withFees(organizationId, mine),
+        entries,
+        closures: await readCalendarClosures(organizationId, ids, { from, to }),
+        water: await waterFor(organizationId, entries),
+        recent: await readRecent(organizationId, membershipId, ids),
+      };
+    }
 
     const entries = await readAgenda(
       organizationId,
@@ -122,6 +163,122 @@ export class AppController {
         chosen.map((one) => one.id),
       ),
     };
+  }
+
+  /**
+   * *Pagamentos* — POOLSE-178: each child's overdue, coming and settled fees,
+   * and where to pay. `family` is every child, for the chips; `children` is the
+   * one asked for, or all of them. Another family's child is a 404.
+   */
+  @Get('fees')
+  async fees(
+    @Query('child') child?: string,
+  ): Promise<{ children: FamilyChildFees[]; family: { id: string; name: string }[] }> {
+    requireRole('guardian', 'student');
+    const { organizationId, membershipId } = currentTenant();
+    const mine = await familyStudents(organizationId, membershipId);
+    if (child !== undefined && !mine.some((one) => one.id === child)) {
+      throw new NotFoundException('No such student');
+    }
+    const chosen = child === undefined ? mine : mine.filter((one) => one.id === child);
+    return {
+      children: await Promise.all(chosen.map((one) => familyFees(organizationId, one, mine))),
+      family: mine.map((one) => ({ id: one.id, name: one.name })),
+    };
+  }
+
+  /**
+   * *Documentos* — POOLSE-179: each child's papers as a status, by their sports.
+   * Another family's child is a 404.
+   */
+  @Get('documents')
+  async documents(@Query('child') child?: string): Promise<{
+    children: { id: string; name: string; documents: FamilyDocumentRow[] }[];
+    family: { id: string; name: string }[];
+  }> {
+    requireRole('guardian', 'student');
+    const { organizationId, membershipId } = currentTenant();
+    const mine = await familyStudents(organizationId, membershipId);
+    if (child !== undefined && !mine.some((one) => one.id === child)) {
+      throw new NotFoundException('No such student');
+    }
+    const chosen = child === undefined ? mine : mine.filter((one) => one.id === child);
+    return {
+      children: await Promise.all(
+        chosen.map(async (one) => ({
+          id: one.id,
+          name: one.name,
+          documents: (await familyDocuments(organizationId, one.id, membershipId)) ?? [],
+        })),
+      ),
+      family: mine.map((one) => ({ id: one.id, name: one.name })),
+    };
+  }
+
+  /**
+   * A family sends a document — POOLSE-179 slice 2. The raw file in the body,
+   * as `POST /files` takes it; `kind` is one of `SENDABLE`, and an exam carries
+   * the date read off it. A live encarregado, or the student from 18; anybody
+   * else, and another family's child, is a 404. Nothing the office holds
+   * changes until it accepts (`family_submission`).
+   *
+   * An iPhone's HEIC is turned into a JPEG first, then judged like any upload:
+   * by its bytes, 10 MB at most. Ten sendings an hour per person.
+   */
+  @Throttle(FAMILY_UPLOAD)
+  @Post('documents/:kind')
+  async sendDocument(
+    @Param('kind') kind: string,
+    @Query('child') child: string | undefined,
+    @Query('name') name: string | undefined,
+    @Query('examinedOn') examinedOn: string | undefined,
+    @Body() body: unknown,
+  ): Promise<{ sent: true }> {
+    requireRole('guardian', 'student');
+    if (!(SENDABLE as readonly string[]).includes(kind)) throw new NotFoundException('No such document');
+    if (child === undefined || !UUID.test(child)) throw new NotFoundException('No such student');
+    let date: string | null = null;
+    if (kind === 'medical_exam') {
+      if (examinedOn === undefined || !/^\d{4}-\d{2}-\d{2}$/.test(examinedOn) || examinedOn > clubToday()) {
+        throw new BadRequestException({ code: 'exam_date', message: 'The exam date is needed, and not in the future' });
+      }
+      date = examinedOn;
+    }
+    const { organizationId, membershipId } = currentTenant();
+    // Another family's child is a 404 before anything about it is read.
+    const mine = await familyStudents(organizationId, membershipId);
+    if (!mine.some((one) => one.id === child)) throw new NotFoundException('No such student');
+
+    // The kind must be one this child's sports ask for (BA 2).
+    const documents = await familyDocuments(organizationId, child, membershipId);
+    const row = documents?.find((one) => one.kind === kind);
+    if (row === undefined) throw new NotFoundException('No such document');
+    if (!row.canSend) {
+      if (row.status === 'sent') throw new ConflictException({ code: 'already_sent', message: 'One is already waiting for the office' });
+      // A minor's own login reads its papers and never sends them (BA 1, QA 6).
+      throw new ForbiddenException({ code: 'minor_reads_only', message: 'A guardian sends this' });
+    }
+
+    let raw = body;
+    let fileName = name;
+    if (Buffer.isBuffer(body) && looksLikeHeic(body)) {
+      const jpeg = await heicToJpeg(body);
+      if (jpeg === 'too_large') throw new BadRequestException({ code: 'file_too_large', message: 'This photo is too large' });
+      if (jpeg === 'unreadable') throw new BadRequestException({ code: 'file_type', message: 'This photo could not be read' });
+      raw = jpeg;
+      fileName = (name ?? 'foto').replace(/\.(heic|heif)$/i, '') + '.jpg';
+    }
+    const { bytes, contentType, originalName } = judgeUpload(
+      kind === 'id_document' ? 'student_id_document' : kind === 'medical_exam' ? 'medical_certificate' : 'student_document',
+      raw,
+      fileName,
+    );
+
+    const outcome = await sendDocument(organizationId, membershipId, child, kind as SendableKind, date, bytes, contentType, originalName);
+    if (outcome === 'not_found') throw new NotFoundException('No such student');
+    if (outcome === 'pending') throw new ConflictException({ code: 'already_sent', message: 'One is already waiting for the office' });
+    if (outcome === 'no_season') throw new ConflictException({ code: 'no_season', message: 'The club has no published season' });
+    return { sent: true };
   }
 
   /**
@@ -159,7 +316,7 @@ export class AppController {
   @Get('lessons/:sessionId')
   async lesson(
     @Param('sessionId') sessionId: string,
-  ): Promise<Omit<AgendaResponse, 'children' | 'recent'> & { feedback: FamilyFeedback[] }> {
+  ): Promise<Omit<AgendaResponse, 'children' | 'recent'> & { feedback: FamilyFeedback[]; count: LessonCount }> {
     requireRole('guardian', 'student');
     if (!UUID.test(sessionId)) throw new NotFoundException('No such lesson');
     const { organizationId, membershipId } = currentTenant();
@@ -175,6 +332,7 @@ export class AppController {
     return {
       entries,
       water: await waterFor(organizationId, entries),
+      count: await readLessonCount(organizationId, sessionId),
       feedback: await familyFeedback(
         organizationId,
         membershipId,
@@ -372,7 +530,7 @@ function parseFeedback(body: Record<string, unknown>): { studentId: string; mood
 }
 
 /** The water at the tanks these lessons are in — never when the module is off. */
-async function waterFor(organizationId: string, entries: AgendaEntry[]): Promise<WaterReading[]> {
+async function waterFor(organizationId: string, entries: Pick<AgendaEntry, 'poolId'>[]): Promise<WaterReading[]> {
   if (!moduleIsOn('water_quality')) return [];
   const pools = [...new Set(entries.map((entry) => entry.poolId).filter((id): id is string => id !== null))];
   return readWater(organizationId, pools);

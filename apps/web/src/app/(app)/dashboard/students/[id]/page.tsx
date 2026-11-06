@@ -41,6 +41,8 @@ import { FamilyAccess, type Invitee } from './family-access';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 import type { StudentDocuments } from '@/lib/fpn-forms';
 import { FpnSection, IdentificationSection } from './documents';
+import { FamilySubmissions, type FamilySubmission } from './family-submissions';
+import { BirthDateConfirm } from './birth-date-confirm';
 import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -412,6 +414,7 @@ export default async function StudentPage({
                     {/* A 16rem basis, so on a phone the form wraps under the photo
                         rather than shrinking beside it to a 138px column (POOLSE-88). */}
                     <div className="min-w-0 flex-1 basis-64">
+                      {loaded.birthDateState?.declared === true && <BirthDateConfirm studentId={loaded.id} />}
                       <StudentForm
                         organizationId={reg.organizationId}
                         levels={reg.levels}
@@ -553,6 +556,11 @@ export default async function StudentPage({
             if (documents.state === 'refused') return <PageError message={t('common.notAllowed')} />;
             if (documents.state === 'failed') return <PageError message={t(documents.failure.key)} />;
             const docs = documents.data;
+            // POOLSE-179 slice 2: what a family sent, waiting for the office. A failed
+            // read hides the panel rather than the tab — the sections still work.
+            const sent = await outcome(
+              apiFetch<{ submissions: FamilySubmission[] }>(`/students/${id}/documents/submissions`),
+            );
             // The boletim de sócio joined these on 01-11-2026 (Rui), from Mensalidades.
             const offered: DocumentsSection[] =
               docs.minor === false
@@ -562,6 +570,7 @@ export default async function StudentPage({
             const path = `/dashboard/students/${id}`;
             return (
               <div className="flex flex-col gap-4">
+                {sent.state === 'ok' && <FamilySubmissions studentId={loaded.id} submissions={sent.data.submissions} />}
                 <SectionPills
                   label={t('documents.sectionsLabel')}
                   current={current}

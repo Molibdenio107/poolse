@@ -714,7 +714,7 @@ export async function board(organizationId: string, standardId: string, marginMs
                 ${STROKE_ORDER} AS stroke_order
            FROM qualifying_gaps($1, NULL) q
            JOIN federation_age_group g ON g.id = q.age_group_id
-           JOIN student s ON s.id = q.student_id
+           JOIN student_person s ON s.id = q.student_id
            LEFT JOIN student_level l ON l.id = s.level_id AND l.organization_id = s.organization_id
        ) x
         WHERE x.competitive OR x.has_time
@@ -748,15 +748,16 @@ export async function board(organizationId: string, standardId: string, marginMs
     }
 
     const { rows: unplaced } = await tx.query<{ student_id: string; name: string; birth_date: string | null }>(
-      `SELECT s.id AS student_id, ${displayName('s')} AS name, s.birth_date::text AS birth_date
+      `SELECT s.id AS student_id, ${displayName('person')} AS name, s.birth_date::text AS birth_date
          FROM student s
+         JOIN student_person person ON person.id = s.id
          JOIN student_level l ON l.id = s.level_id AND l.organization_id = s.organization_id
         WHERE s.archived_at IS NULL AND l.competitive
           AND NOT EXISTS (
             SELECT 1 FROM federation_age_group g
              WHERE g.season_id = $1 AND g.archived_at IS NULL
                AND federation_age_group_admits(g.gender, g.born_from, g.born_to, s.birth_date, s.gender))
-        ORDER BY ${displayName('s')}`,
+        ORDER BY ${displayName('person')}`,
       [standard.season_id],
     );
 

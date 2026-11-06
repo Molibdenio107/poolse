@@ -92,7 +92,8 @@ export async function uploadIdPhotoAction(_previous: IdPhotoState, formData: For
   if (!(file instanceof File) || file.size === 0) return { ok: false, errorKey: 'files.uploadFailed' };
   const bytes = await file.arrayBuffer();
   try {
-    const query = new URLSearchParams({ purpose: 'student_document', name: file.name });
+    // POOLSE-179: sealed at rest — the API refuses an ID photo under any other purpose.
+    const query = new URLSearchParams({ purpose: 'student_id_document', name: file.name });
     const stored = await apiUpload<{ id: string }>(`/files?${query.toString()}`, bytes);
     await apiPost(`/students/${studentId}/documents/copies`, { kind: 'id_document', seasonId: null, fileId: stored.id });
   } catch (error) {

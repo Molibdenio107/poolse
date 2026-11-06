@@ -253,7 +253,7 @@ export function Dialog({
           placement === 'side'
             ? 'max-w-md self-stretch overflow-y-auto pb-[calc(theme(spacing.5)+var(--safe-bottom))] sm:rounded-lg'
             : placement === 'sheet'
-              ? 'max-h-[90dvh] overflow-y-auto rounded-t border-0 px-4 pt-2.5 pb-[calc(30px+var(--safe-bottom))] shadow-card md:max-w-lg md:rounded md:border md:p-5'
+              ? 'max-h-[90dvh] overflow-y-auto rounded-t-[var(--radius-sheet)] border-0 px-4 pt-2.5 pb-[calc(30px+var(--safe-bottom))] shadow-card md:max-w-lg md:rounded md:border md:p-5'
               : placement === 'start'
               ? 'max-w-xs self-stretch overflow-y-auto pb-[calc(theme(spacing.5)+var(--safe-bottom))] pl-[calc(theme(spacing.5)+var(--safe-left))]'
               : 'max-w-lg rounded-lg max-sm:min-h-dvh max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:pt-[calc(theme(spacing.5)+var(--safe-top))] max-sm:pb-[calc(theme(spacing.5)+var(--safe-bottom))]',

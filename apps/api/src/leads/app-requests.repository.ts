@@ -63,12 +63,12 @@ export interface AppRequestOptions {
 async function peopleOf(tx: Tx, membershipId: string): Promise<AppRequestPerson[]> {
   const { rows } = await tx.query<AppRequestPerson>(
     `SELECT s.id, ${shortName('s')} AS name, true AS self, s.level_id AS "levelId"
-       FROM student s
+       FROM student_person s
       WHERE s.membership_id = $1 AND s.archived_at IS NULL
      UNION
      SELECT s.id, ${shortName('s')} AS name, false AS self, s.level_id AS "levelId"
        FROM guardian_link gl
-       JOIN student s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
+       JOIN student_person s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
       WHERE gl.guardian_membership_id = $1 AND gl.archived_at IS NULL AND s.archived_at IS NULL
       ORDER BY self DESC, name`,
     [membershipId],
@@ -222,7 +222,7 @@ export async function submitAppRequest(
         const people = await peopleOf(tx, membershipId);
         if (!people.some((one) => one.id === input.studentId)) throw new AppRequestRefused('not_yours');
         const { rows } = await tx.query<{ first_name: string; last_name: string; birth_date: string | null }>(
-          `SELECT first_name, last_name, birth_date::text AS birth_date FROM student WHERE id = $1`,
+          `SELECT first_name, last_name, birth_date::text AS birth_date FROM student_person WHERE id = $1`,
           [input.studentId],
         );
         const enrolled = await tx.query(

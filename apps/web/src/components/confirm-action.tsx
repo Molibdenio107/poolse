@@ -131,6 +131,7 @@ export function ConfirmButton({
   disabled = false,
   name,
   value,
+  noValidate = false,
   onConfirm,
   placement,
   children,
@@ -147,6 +148,8 @@ export function ConfirmButton({
   /** The submitter's name and value, when the old submit button carried them. */
   name?: string;
   value?: string;
+  /** The old button's `formNoValidate`: a refusal needs none of the form's required fields. */
+  noValidate?: boolean;
   /** Called instead of submitting the form — for a button that ran an action itself. */
   onConfirm?: () => void;
   placement?: 'centre' | 'sheet';
@@ -183,7 +186,7 @@ export function ConfirmButton({
         {children}
       </button>
       {onConfirm === undefined && name !== undefined && (
-        <button ref={submitter} type="submit" name={name} value={value} hidden tabIndex={-1} aria-hidden />
+        <button ref={submitter} type="submit" name={name} value={value} formNoValidate={noValidate} hidden tabIndex={-1} aria-hidden />
       )}
       <Dialog
         open={open}

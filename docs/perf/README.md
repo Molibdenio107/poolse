@@ -2,6 +2,25 @@
 
 Written for whoever picks up POOLSE-172. Numbers first, fixes later: this page changes no behaviour.
 
+## After POOLSE-172 (05-11-2026)
+
+Same seed, same build, [baseline-2026-11-05.md](./baseline-2026-11-05.md). Warm DOM ready, production:
+
+| Page | 04-11 | 05-11 | API calls | DB ms |
+|---|---:|---:|---:|---:|
+| Painel | 163 | 158 | 7 → 3 | 281 → 337 |
+| Alunos, page 2 | 168 | 163 | 7 → 3 | 141 → 115 |
+| Student record | 229 | 218 | 17 → 13 | 298 → 274 |
+| Calendário | 335 | 256 | 13 → 9 | 316 → 211 |
+| Pessoas | 115 | 101 | 7 → 3 | 89 → 75 |
+| Site page | 127 | 124 | 18 → 14 | 227 → 217 |
+
+Three runs on one machine, so a few milliseconds either way is noise: Painel's database time is one of those, and only Calendário's gain is unmistakable. The layout's saving is mostly invisible on localhost, because it removes round trips, and a round trip here costs almost nothing.
+
+**Corrections to what follows.** The fixed cost per request is **3 queries**, not ~7. Cost 2's candidate did not apply: the roster was already the week's turmas, and the cost was `enrollment_clashes()` asked once per student. The "per-request-chain cache of `resolve_memberships`" is **refused**: a suspension, a removed role and an ended support window take effect on the next request (POOLSE-172).
+
+**What is left, in order:** `/shell`'s 48 queries, mostly the transaction wrapping around each of `readAttention`'s reads; the student record's 13 calls, which was never slow enough to earn its own ticket.
+
 ## The answer to "is Poolse getting slower?"
 
 **Most of what is felt on `pnpm dev` is the dev server, not Poolse.** Same club, same pages, same browser

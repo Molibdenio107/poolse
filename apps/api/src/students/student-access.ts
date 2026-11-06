@@ -1,6 +1,6 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole } from '../tenant/roles.js';
+import { hasRole, requireRole } from '../tenant/roles.js';
 import { sportScope } from '../tenant/sport-scope.js';
 import { mayActForStudent } from './redemption.repository.js';
 import { studentInSports } from './students.repository.js';
@@ -32,4 +32,18 @@ export async function requireActsForStudent(studentId: string): Promise<void> {
   if (!(await mayActForStudent(organizationId, membershipId, studentId))) {
     throw new NotFoundException('No such student');
   }
+}
+
+/**
+ * The club's filled forms — POOLSE-179: the office, or this child's own family.
+ * Answers which it was, because a family's copy leaves the SNS number off and
+ * its print goes on the record. Staff who are not the office keep their 403; a
+ * stranger gets the 404 every family read gives.
+ */
+export async function requireOfficeOrFamily(studentId: string): Promise<'office' | 'family'> {
+  if (hasRole('owner', 'admin')) return 'office';
+  const { organizationId, membershipId } = currentTenant();
+  if (await mayActForStudent(organizationId, membershipId, studentId)) return 'family';
+  if (hasRole('instructor', 'maintenance')) requireRole('owner', 'admin');
+  throw new NotFoundException('No such student');
 }

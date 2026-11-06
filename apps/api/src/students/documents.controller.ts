@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Body,
   Controller,
   Get,
@@ -13,6 +14,16 @@ import {
 import { isValidCcNumber, normalizeCcNumber } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
+import { parseBirthDate } from './students.controller.js';
+import { recordFamilyPrint } from './family-documents.repository.js';
+import {
+  acceptSubmission,
+  listPending,
+  rejectSubmission,
+  type Submission,
+} from './family-submissions.repository.js';
+import { EXAM_RESULTS, type ExamResult } from './medical-exams.repository.js';
+import { requireOfficeOrFamily } from './student-access.js';
 import { CoreRoute } from '../tenant/modules.js';
 import {
   FPN_DISCIPLINES,
@@ -162,6 +173,63 @@ export class StudentDocumentsController {
     return { filed: true };
   }
 
+  /** What the family sent and the office has not decided — POOLSE-179 slice 2. */
+  @Get('submissions')
+  async submissions(@Param('studentId', ParseUUIDPipe) studentId: string): Promise<{ submissions: Submission[] }> {
+    requireRole('owner', 'admin');
+    return { submissions: await listPending(currentTenant().organizationId, studentId) };
+  }
+
+  /**
+   * Accept: filed as the office files a copy (a current one is replaced), or, for
+   * an exam, recorded with the result the office reads off the certificate.
+   */
+  @Post('submissions/:submissionId/accept')
+  async accept(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Param('submissionId', ParseUUIDPipe) submissionId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ accepted: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId, membershipId } = currentTenant();
+    const result = body['result'];
+    const validUntil = body['validUntil'];
+    let exam: { result: ExamResult; validUntil: string | null } | null = null;
+    if (result !== undefined) {
+      if (!(EXAM_RESULTS as readonly unknown[]).includes(result)) throw new BadRequestException('Unknown result');
+      if (validUntil !== undefined && validUntil !== null && (typeof validUntil !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(validUntil))) {
+        throw new BadRequestException('validUntil is a date');
+      }
+      exam = { result: result as ExamResult, validUntil: typeof validUntil === 'string' ? validUntil : null };
+    }
+    const outcome = await acceptSubmission(
+      organizationId,
+      membershipId,
+      studentId,
+      submissionId,
+      exam,
+      parseBirthDate(body['birthDate']),
+    );
+    if (outcome === 'not_found') throw new NotFoundException('Nothing waiting with that id');
+    if (outcome === 'needs_result') throw new BadRequestException({ code: 'needs_result', message: 'An exam needs its result' });
+    if (outcome === 'bad_file') throw new ConflictException('This file cannot be filed');
+    return { accepted: true };
+  }
+
+  /** Reject: nothing is filed, and a sealed file (ID photo, exam) is shredded. */
+  @Post('submissions/:submissionId/reject')
+  async reject(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Param('submissionId', ParseUUIDPipe) submissionId: string,
+  ): Promise<{ rejected: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId, membershipId } = currentTenant();
+    if ((await rejectSubmission(organizationId, membershipId, studentId, submissionId)) !== 'done') {
+      throw new NotFoundException('Nothing waiting with that id');
+    }
+    return { rejected: true };
+  }
+
   /** The ID document with the number in full, for the record (each read audited). */
   @Get('id-document')
   async idDocument(@Param('studentId', ParseUUIDPipe) studentId: string): Promise<IdDocumentFull> {
@@ -178,10 +246,12 @@ export class StudentDocumentsController {
     @Query('season') season?: string,
     @Query('minor') minor?: string,
   ): Promise<FpnPrint> {
-    requireRole('owner', 'admin');
+    const reader = await requireOfficeOrFamily(studentId);
     const seasonId = season !== undefined && /^[0-9a-f-]{36}$/i.test(season) ? season : null;
-    const found = await fpnPrint(currentTenant().organizationId, studentId, seasonId, minor === '1');
+    const { organizationId } = currentTenant();
+    const found = await fpnPrint(organizationId, studentId, seasonId, minor === '1');
     if (found === null) throw new NotFoundException('No such student');
+    if (reader === 'family') await recordFamilyPrint(organizationId, studentId, 'fpn');
     return found;
   }
 }
@@ -192,10 +262,14 @@ export class StudentDocumentsController {
 export class BoletimController {
   @Get()
   async print(@Param('studentId', ParseUUIDPipe) studentId: string): Promise<BoletimPrint> {
-    requireRole('owner', 'admin');
-    const found = await boletimPrint(currentTenant().organizationId, studentId);
+    const reader = await requireOfficeOrFamily(studentId);
+    const { organizationId } = currentTenant();
+    const found = await boletimPrint(organizationId, studentId);
     if (found === null) throw new NotFoundException('No such student');
-    return found;
+    if (reader === 'office') return found;
+    // POOLSE-131: the SNS number is read by the office alone.
+    await recordFamilyPrint(organizationId, studentId, 'boletim');
+    return { ...found, snsNumber: null };
   }
 }
 

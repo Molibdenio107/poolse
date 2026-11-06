@@ -411,5 +411,7 @@ export * from './modules.js';
 export * from './sports.js';
 export * from './payment.js';
 export * from './identity.js';
+export * from './agenda-months.js';
+export * from './family-documents.js';
 export * from './ai.js';
 export * from './boletim.js';

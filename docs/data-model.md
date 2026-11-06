@@ -401,7 +401,7 @@ go-live.
 ```
 student
   id, organization_id, first_name, last_name, birth_date, level_id,
-  app_user_id (nullable), membership_id (nullable), notes,
+  app_user_id (nullable, no writer: see student_person), membership_id (nullable), notes,
   contact_email, contact_phone, tax_number, archived_at,
   is_socio boolean not null default false, socio_number, socio_since
   unique (organization_id, socio_number) where archived_at is null
@@ -715,6 +715,22 @@ tax_number)` and `(organization_id, email)` are what make "this person already e
 the role instead" both cheap to check and safe under two operators doing it at once. NIF is
 matched before email: two people can share a household address, and only one can have a
 given tax number.
+
+### A student read through their login — POOLSE-177
+
+**`student_person` is `student` as the club reads it.** It has every column of `student`, under the same names, plus `identity_from_login`. An adult-path student whose `membership_id` reaches a login reads `first_name`, `last_name`, `birth_date`, `contact_email` and `contact_phone` from `app_user`, each falling back to the student's own column. Everybody else reads the student's columns. `security_invoker`, so RLS applies. A read that shows a person selects from it; a new `student` column is added to it too (`student-person.sql` test 1).
+
+**The link is `student.membership_id` → `membership.app_user_id`.** `student.app_user_id` has no writer.
+
+**Adult path only, so there is no CHECK and nothing is nulled.** The path is derived, and a 17-year-old turns 18 with no write, so a constraint cannot hold it, and a null birth date would itself take the student off the path. The columns stay, as the club's record and the fallback.
+
+**A record with no birth date reads through too, for the display only:** no date on the club's record, no live guardian, and a login whose own date makes them an adult. `student_is_adult_path()` is not changed, because it decides who signs their own consent, and a date a person typed must not decide that. A date on the club's record always wins.
+
+**Rules read `student.birth_date`**: the adult path (the view's own test), age bands, FPN age groups and retention, so nobody moves their own age group from a phone. An office correction writes both. An adult who changes their birth date in the app changes what the record shows and not those rules.
+
+**An anonymised student never reads through.** `person_phone(membership_id)` sits beside `person_name` and `person_email`.
+
+**The backfill** wrote the office's birth date and phone to `app_user` and logged `student.identity_backfilled`, naming the fields and no value. Clerk's name and email stood. A login with a membership in another club was left out.
 
 ### How a name is written, shortened and filed
 
@@ -4237,6 +4253,66 @@ Migration `1794651400000_staff-id-document-photo`.
   by retention. It acts on the request's own club only and only destroys a key.
 - **`apply_retention()`** clears both columns with the number, so retention shreds the photos.
 
+### Student ID document photograph, sealed — POOLSE-179 slice 2, 5 November 2026
+
+Migration `1794653000000_student-id-document-sealed`.
+
+- **`file_purpose`** gains `student_id_document`, and **`stored_file_sealed`** names it. The FPN
+  declarations and the boletim stay `student_document` and stay plain.
+- **`student_document_id_sealed`** (BEFORE INSERT or UPDATE OF `file_id`, `kind`): a `student_document`
+  of kind `id_document` must point at a `student_id_document` file, and such a file at nothing else.
+  Rows filed before the migration keep their plain file until
+  `apps/api/src/files/reseal-student-id-documents.ts` moves them (a dry run unless `--apply`).
+- **`student_document_id_shreds`** (AFTER UPDATE OF `replaced_at`, `file_id`) and
+  **`student_anonymised_id_shreds`** (AFTER UPDATE OF `student.anonymised_at`) call the definer
+  `student_id_document_shred(org, file)`, `staff_id_document_shred`'s shape: one club, only
+  destroys. A replaced ID photo is shredded at once; every one goes when retention anonymises the
+  student.
+- Asserted in `test/student-id-document.sql`.
+
+### What a family sends — POOLSE-179 slice 2, 5 November 2026
+
+Migration `1794653100000_family-submission`.
+
+```
+enum family_submission_kind: fpn_declaration | fpn_declaration_minor | socio_form | id_document | medical_exam
+enum family_submission_decision: accepted | rejected
+```
+
+- **`family_submission`**: `student_id`, `kind`, `season_id` (the FPN declarations only, by CHECK), `file_id`, `examined_on` (exams only, by CHECK), `submitted_by`, `submitted_at`, `decision` / `decided_by` / `decided_at` (whole, by CHECK; `decided_by` may be null only for retention). Composite FKs; tenant RLS.
+- **Grants:** `poolse_app` holds SELECT, INSERT and `UPDATE (decision, decided_by, decided_at)`.
+- **Indexes:** a partial unique index allows one pending per child, kind and season, and `family_submission_file_once` allows one sending per file.
+- **`family_submission_guard`**: the file's purpose follows the kind, and a decision is final.
+- **`family_submission_shred(org, submission)`** is a definer with one club, and only destroys a sealed file not filed on a record. Triggers call it on reject, on `student.anonymised_at` (everything sent) and on `health_erased_at` (the exams).
+- **Nothing is filed by the table.** Accepting goes through `fileCopyIn` / `insertExamIn`.
+- In `TENANT_TABLES`. Asserted in `test/family-submission.sql`.
+
+### The cost ledger — POOLSE-182, 5 November 2026
+
+Migration `1794653200000_cost-ledger`.
+
+```
+enum cost_kind: electricity | gas | water | maintenance_service | materials | insurance | salary | fixed | other
+enum cost_basis: invoice | estimate
+enum cost_recurrence: none | monthly | yearly
+```
+
+- **`cost_entry`**: water, maintenance services, fixed costs and other.
+  - Columns: `amount_cents` (net), `vat_cents`, `basis`, `facility_id` (null for the whole club), `supplier`, `document_number`, `file_id`, `note`, `recorded_by`, `archived_at`.
+  - A one-off has `period_from`/`period_to`; a template has `recurrence` and `effective_from`/`effective_to`; an occurrence has `template_id`.
+  - A service names `maintenance_request_id` or `task_completion_id`, never both.
+  - The kind is limited by CHECK: energy and salaries are read through, and materials and insurance have their own homes.
+  - Unique `(organization_id, template_id, period_from)` counts archived rows, so *não pago* stays out.
+- **`inventory_purchase`**: item, quantity, amount, VAT, `bought_on`, supplier, document, file. **`inventory_item.unit_cost_cents`** is the last purchase's, for information only.
+- **`insurance_policy.premium_cents` / `premium_vat_cents`**: the premium spreads over `valid_from … valid_to`.
+- **`cost_month`** `(organization_id, source_kind, source_id, month)`: `share_cents`, `vat_cents`, `kind`, `basis`, `facility_id`. It is derived, kept by triggers on the four sources (`energy_invoice` included), and never written on read. `poolse_app` holds SELECT, INSERT and DELETE.
+- **Functions:**
+  - `allocate_cost(from, to, cents)`: by day, rounding carried forward, an exact sum.
+  - `cost_window(from, to)`: a window's totals, splitting a month by days.
+  - `salary_months(from, to, without_owner)`: pay accrued on read.
+  - `materialise_fixed_costs(until)`: generates occurrences, idempotently.
+- Tenant RLS on all three tables, composite FKs, in `TENANT_TABLES`. Asserted in `test/cost-allocation.sql`.
+
 ### Staff contract — POOLSE-149 slice C, 2 November 2026
 
 Migration `1794651500000_staff-contract`.
@@ -4403,3 +4479,13 @@ being inlined. `test/restorable.sql` rebuilds every expression and partial index
 - `boletim_template_field.width numeric(5,4)` (1 November 2026) is the white strip under a value, a fraction of the
   page width. Null means no strip; it stays on the page by CHECK.
 - `boletim_field` is the closed list Poolse fills. It equals `BOLETIM_FIELDS` in `@poolse/rules`, by test.
+
+### A declared date of birth — POOLSE-186, 5 November 2026
+
+Migration `1794653300000_student-birth-date-declared`.
+
+- **`student.birth_date_declared_at`**: the date came from the person's own login and the office has not confirmed it.
+- **`student.birth_date_verified_at` / `_by`**: the office confirmed the date. `student_birth_date_one_state` refuses both states at once.
+- **`student_birth_date_fill`**, **`membership_birth_date_fill`** and **`app_user_birth_date_fill`** fill a blank date from the login, unless a live guardian exists. **`student_birth_date_state`** clears both states when the date changes.
+- **`student_is_adult_path()`** refuses a declared date. `student_person` carries both columns and still reads a declared record through.
+- Asserted in `test/student-birth-date.sql`.

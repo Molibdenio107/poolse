@@ -38,6 +38,12 @@ import { CoreRoute, PoolseModule } from '../tenant/modules.js';
  * the club's logo, the apólice, a partnership's contract and a certificate are
  * all the office's to file. Reading them is `GET /files/:id`'s rule, by purpose.
  */
+/** The club's logo, shared with `GET /shell` — POOLSE-172. */
+export async function logoForReader(): Promise<string | null> {
+  requireRole('owner', 'admin', 'instructor', 'maintenance', 'student', 'guardian');
+  return logoFileId(currentTenant().organizationId);
+}
+
 @CoreRoute()
 @Controller()
 export class AttachmentsController {
@@ -136,8 +142,7 @@ export class AttachmentsController {
 
   @Get('settings/logo')
   async logo(): Promise<{ fileId: string | null }> {
-    requireRole('owner', 'admin', 'instructor', 'maintenance', 'student', 'guardian');
-    return { fileId: await logoFileId(currentTenant().organizationId) };
+    return { fileId: await logoForReader() };
   }
 
   @Put('settings/logo')

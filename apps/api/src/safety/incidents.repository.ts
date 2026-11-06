@@ -512,7 +512,7 @@ export async function searchIncidentPeople(
     const sql =
       kind === 'student'
         ? `SELECT s.id, btrim(s.first_name || ' ' || s.last_name) AS name
-             FROM student s
+             FROM student_person s
             WHERE s.archived_at IS NULL
               AND ${searchPredicate("s.first_name || ' ' || s.last_name", '$1')}
             ORDER BY lower(s.last_name), lower(s.first_name), s.id

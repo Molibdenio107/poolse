@@ -1083,7 +1083,7 @@ async function readStudentFees(
              FROM student_fee_payment hist
             WHERE hist.student_fee_id = sf.id
          ) paid_hist ON true
-         JOIN student st ON st.id = sf.student_id
+         JOIN student_person st ON st.id = sf.student_id
          /*
           * The quota that applies to this student today.
           *
@@ -1772,7 +1772,7 @@ export async function repriceStudentFee(
                 coalesce(band.id, line.plan_id) AS plan_id,
                 coalesce(band.amount_cents, line.amount_cents) AS amount_cents
            FROM line
-           JOIN student st ON st.id = line.student_id
+           JOIN student_person st ON st.id = line.student_id
            LEFT JOIN LATERAL (
              SELECT q.id, q.amount_cents
                FROM fee_plan q
@@ -2282,7 +2282,7 @@ export async function setSocio(
                 coalesce(p.default_fee_period_id, d.id) AS period_id
            FROM fee_plan p
            JOIN site ON site.facility_id = p.facility_id
-           JOIN student s ON s.id = $2
+           JOIN student_person s ON s.id = $2
            LEFT JOIN fee_period d
                   ON d.facility_id = p.facility_id AND d.archived_at IS NULL AND d.is_default
           WHERE p.kind = 'quota' AND p.archived_at IS NULL

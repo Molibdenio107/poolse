@@ -2,32 +2,28 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { SignOutButton } from '@clerk/nextjs';
-import { ChevronRight, LayoutDashboard, LogOut } from 'lucide-react';
+import { ChevronRight, LayoutDashboard, LogOut, Settings } from 'lucide-react';
 import { apiFetch, type ActiveSession, type Me } from '@/lib/api';
-import { hatsOf } from '@/lib/app-hats';
+import { hatsOf, isHat } from '@/lib/app-hats';
 import { outcome } from '@/lib/load-failure';
-import { formatStamp } from '@/lib/date-format';
-import { readTheme } from '@/lib/preferences';
-import { locales } from '@/i18n';
+import { formatDate, formatStamp } from '@/lib/date-format';
 import { LinkBusy } from '@/components/link-busy';
 import { IdPhoto } from '@/components/id-photo';
 import { PageError } from '@/components/page-shell';
-import { ProfileForm } from '../../dashboard/profile/profile-form';
-import { MessagePreferenceCard } from '../../dashboard/profile/message-preference-card';
+import { PersonAvatar } from '@/components/person-avatar';
 import { Sessions } from '../../dashboard/sessions';
 import { AppSwitcher } from '../app-switcher';
-import { PushCard } from '../push-card';
-import { PreferenceRows } from './preference-rows';
+import { EditProfile } from './edit-profile';
 
 /**
  * *O meu perfil* in app mode — Rui, 31-10-2026. The diamond *Perfil* tab opens
- * it, and so does the photo in the header's top-right corner; a tab screen, so
- * the tab bar stays and there is no *Voltar*. One screen, top to bottom:
+ * it; a tab screen, so the tab bar stays and there is no *Voltar*. One screen,
+ * top to bottom:
  *
- * 1. The person: photo, name, birth date, phone (`ProfileForm`, the desk page's
- *    own save, without its language and theme fields).
- * 2. *Preferências*: notifications on this phone, *Idioma* and *Tema* as rows
- *    that open a bottom sheet, and the club's general messages by email.
+ * 1. The person, read-only: photo, name, birth date, phone, and *Editar dados*
+ *    (POOLSE-176), which opens `ProfileForm` in a sheet.
+ * 2. *Definições*, one row: language, theme, push and the club's email, a
+ *    screen deeper in.
  * 3. *Áreas*, for somebody with more than one home or a staff role: the
  *    switcher and *Abrir o backoffice* — never left out, or a parent-instructor
  *    is locked in app mode.
@@ -36,8 +32,14 @@ import { PreferenceRows } from './preference-rows';
  * The owner's parts — subscription, support access, transfer — stay on the
  * backoffice's `/dashboard/profile`.
  */
-export default async function AppProfilePage(): Promise<React.ReactElement> {
+export default async function AppProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ home?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const asked = (await searchParams).home;
+  const home = isHat(asked) ? asked : undefined;
 
   let me: Me;
   try {
@@ -49,12 +51,24 @@ export default async function AppProfilePage(): Promise<React.ReactElement> {
   if (membership === undefined) redirect('/dashboard');
   const hats = hatsOf(membership.roles);
 
-  const [locale, theme, sessionsLoad] = await Promise.all([
+  const [locale, sessionsLoad, familyLoad] = await Promise.all([
     getLocale(),
-    readTheme(),
     outcome(apiFetch<{ sessions: ActiveSession[] }>('/me/sessions')),
+    outcome(apiFetch<{ students: { name: string; self: boolean }[] }>('/family')),
   ]);
   const sessions = sessionsLoad.state === 'ok' ? sessionsLoad.data.sessions : [];
+
+  // Whose profile this is (POOLSE-177): editing it never changes a child's record.
+  const family = familyLoad.state === 'ok' ? familyLoad.data.students : [];
+  const children = family.filter((one) => !one.self).map((one) => one.name);
+  const whose =
+    children.length > 0
+      ? t('app.profile.guardianOf', {
+          names: new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' }).format(children),
+        })
+      : family.length > 0
+        ? t('app.profile.ownAccount')
+        : null;
   const fullName = [me.user.firstName, me.user.lastName].filter(Boolean).join(' ');
   const row = 'flex min-h-[52px] items-center justify-between gap-3 py-2';
   const label = 'pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted';
@@ -63,24 +77,37 @@ export default async function AppProfilePage(): Promise<React.ReactElement> {
     <>
       <h1>{t('profile.title')}</h1>
 
-      {/* The photo and its buttons centred, every field the card's width (Rui, 31-10-2026). */}
-      <section className="app-form flex flex-col gap-4 rounded bg-surface p-4 shadow-card">
-        <div className="flex justify-center">
-          <IdPhoto url={me.user.avatarUrl} name={fullName} target="own-photo" />
+      {/* It reads first (POOLSE-176): nothing on this card is an input. */}
+      <section className="flex flex-col items-center gap-4 rounded bg-surface p-4 text-center shadow-card">
+        <PersonAvatar id={fullName} name={fullName} photoUrl={me.user.avatarUrl} className="size-20 text-xl" />
+        <div className="flex flex-col gap-1">
+          <p className="text-lg font-bold">{fullName}</p>
+          {whose !== null && <p className="text-sm text-foreground-muted">{whose}</p>}
         </div>
-        <ProfileForm me={me} withPreferences={false} />
+        <dl className="flex w-full flex-col divide-y divide-border text-left">
+          <div className="flex items-center justify-between gap-3 py-2">
+            <dt className="text-sm text-foreground-muted">{t('profile.birthDate')}</dt>
+            <dd>{me.user.birthDate === null ? '—' : formatDate(me.user.birthDate)}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-3 py-2">
+            <dt className="text-sm text-foreground-muted">{t('profile.contactPhone')}</dt>
+            <dd>{me.user.contactPhone ?? '—'}</dd>
+          </div>
+        </dl>
+        <EditProfile me={me} photo={<IdPhoto url={me.user.avatarUrl} name={fullName} target="own-photo" />} />
       </section>
 
-      <section className="flex flex-col">
-        <h2 className={label}>{t('app.profile.preferences')}</h2>
-        <ul className="flex flex-col divide-y divide-border">
-          <PreferenceRows locale={locale} locales={locales} theme={theme} />
-        </ul>
-        <div className="mt-2 flex flex-col gap-3">
-          <PushCard />
-          <MessagePreferenceCard clubName={membership.organizationName} />
-        </div>
-      </section>
+      <Link
+        href={home === undefined ? '/app/perfil/definicoes' : `/app/perfil/definicoes?home=${home}`}
+        className={`${row} rounded bg-surface px-4 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+      >
+        <span className="flex items-center gap-3">
+          <Settings className="size-5 text-primary" aria-hidden />
+          {t('app.profile.settings')}
+        </span>
+        <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
+        <LinkBusy />
+      </Link>
 
       {(hats.homes.length > 1 || hats.staff) && (
         <section className="flex flex-col gap-2">

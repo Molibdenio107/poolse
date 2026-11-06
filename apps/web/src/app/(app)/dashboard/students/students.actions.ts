@@ -144,6 +144,10 @@ export async function createStudentAction(
   };
   const missingName = nameRequired(body);
   if (missingName !== null) return missingName;
+  // POOLSE-186: this form asks; imports and invitations stay free to leave it blank.
+  if (String(formData.get('birthDate') ?? '').trim() === '') {
+    return { ok: false, errorKey: 'students.birthDateRequired', fields: { birthDate: 'students.birthDateRequired' } };
+  }
 
   const unacknowledged = unacknowledgedAgeMismatch(formData);
   if (unacknowledged !== null) return unacknowledged;
@@ -182,6 +186,9 @@ export async function updateStudentAction(
   try {
     await apiPatch(`/students/${studentId}`, body, { organizationId });
   } catch (error) {
+    if (error instanceof ApiError && error.code === 'field_owned_by_app_user') {
+      return { ok: false, errorKey: 'students.ownedByLogin' };
+    }
     return withFields(error, 'students.saveFailed');
   }
 

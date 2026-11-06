@@ -46,6 +46,8 @@ export interface StudentFormValues {
   levelId?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
+  /** POOLSE-177: a linked adult, whose name and email are their own account's. */
+  identityFromLogin?: boolean;
   taxNumber?: string | null;
   federationLicence?: string | null;
   notes?: string | null;
@@ -96,6 +98,7 @@ export function StudentForm({
    * is what that listener was standing in for.
    */
   const [birthDate, setBirthDate] = useState(student?.birthDate ?? '');
+  const ownedByLogin = student?.identityFromLogin === true;
 
   /**
    * The server's error for one field, ready to spread onto its component.
@@ -139,6 +142,7 @@ export function StudentForm({
           initial={student?.firstName ?? ''}
           maxLength={120}
           required
+          readOnly={ownedByLogin}
           className="max-w-none"
           {...fieldError('firstName')}
         />
@@ -149,6 +153,7 @@ export function StudentForm({
           initial={student?.lastName ?? ''}
           maxLength={120}
           required
+          readOnly={ownedByLogin}
           className="max-w-none"
           {...fieldError('lastName')}
         />
@@ -167,6 +172,7 @@ export function StudentForm({
           type="date"
           label={t('students.birthDate')}
           initial={student?.birthDate ?? ''}
+          required={mode === 'create'}
           onValueChange={setBirthDate}
           className="max-w-none"
           {...fieldError('birthDate')}
@@ -202,6 +208,7 @@ export function StudentForm({
           label={t('students.contactEmail')}
           initial={student?.contactEmail ?? ''}
           maxLength={254}
+          readOnly={ownedByLogin}
           className="max-w-none"
           {...fieldError('contactEmail')}
         />

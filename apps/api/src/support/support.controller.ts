@@ -53,6 +53,12 @@ function liveConflict(error: GrantAlreadyLiveError): ConflictException {
  * not the controller. That includes a support session itself, which is an
  * Admin: support cannot extend its own window.
  */
+/** The club's strip, shared with `GET /shell` — POOLSE-172. */
+export async function supportStatusForReader(): Promise<Awaited<ReturnType<typeof supportStatus>>> {
+  requireRole('owner', 'admin');
+  return supportStatus(currentTenant().organizationId);
+}
+
 @CoreRoute()
 @Controller('support-grants')
 export class SupportGrantsController {
@@ -82,9 +88,8 @@ export class SupportGrantsController {
    * in the log should be able to tell it is Poolse.
    */
   @Get('status')
-  async status(): Promise<Awaited<ReturnType<typeof supportStatus>>> {
-    requireRole('owner', 'admin');
-    return supportStatus(currentTenant().organizationId);
+  status(): Promise<Awaited<ReturnType<typeof supportStatus>>> {
+    return supportStatusForReader();
   }
 
   /** What support did here — Owner only, like the rest of this screen. */

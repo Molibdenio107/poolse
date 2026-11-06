@@ -303,6 +303,9 @@
     --radius: 4px;
     --radius-control: 2px;
     --radius-chip: 6px;
+    /* The same as a card until the family app rounds them on a phone (POOLSE-173). */
+    --radius-hero: var(--radius);
+    --radius-sheet: var(--radius);
     --shadow-card: 0 1px 3px rgb(0 0 0 / 0.08);
     /* The handoff's names for the two above (docs/design/tokens.css), so its files read beside ours. */
     --radius-card: var(--radius);
@@ -702,7 +705,9 @@
  * App mode — POOLSE-90. Inside it, the shared components read the mobile
  * palette through the tokens they already use, so nothing is restyled by hand.
  */
-[data-surface='app'] {
+/* On `body` too, because a dialog portals out of the surface and is app mode all the same. */
+[data-surface='app'],
+body:has([data-surface='app']) {
   /*
    * One face for everything in app mode — POOLSE-138. The family is set here as
    * well as the variables, because what this element inherits from `<body>` is
@@ -728,6 +733,89 @@
  */
 body:has([data-surface='app']) {
   background-color: rgb(var(--app-background));
+}
+
+/*
+ * A closed day on the family's calendar — POOLSE-175. Hatching, so it differs
+ * from a lesson's dot by shape; a fill behind text it must not make unreadable.
+ */
+.closed-hatch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgb(var(--foreground) / 0.22) 0 3px,
+    transparent 3px 7px
+  );
+}
+
+/*
+ * The family app is soft on a phone — POOLSE-173 (Rui, 05-11-2026): "more playful,
+ * more kid friendly... but I want to keep the geometric forms for the menus".
+ *
+ * App mode under a finger and below `md`; a laptop keeps today's scale and the
+ * backoffice never matches. On `body`, because a dialog portals out of
+ * `data-surface` and reads these too. Shape and type only: no new hue.
+ *
+ * The tab bar's shapes are its own SVGs, so only its container rounds, through
+ * `--radius`. The press lives under `main`, so the bar never takes it.
+ */
+@media (pointer: coarse) and (max-width: 767.98px) {
+  body:has([data-surface='app']) {
+    --radius: 16px;
+    --radius-control: 9999px;
+    --radius-hero: 20px;
+    --radius-sheet: 20px;
+  }
+  body:has([data-surface='app']) :is(input:not([type='checkbox'], [type='radio'], [type='range']), select, textarea) {
+    border-radius: 12px;
+  }
+  body:has([data-surface='app']) input[type='checkbox'] {
+    border-radius: 6px;
+  }
+  [data-shell='tabs'] {
+    --app-title: 28px;
+  }
+  [data-surface='app'] main :is(button, a.h-control) {
+    font-weight: 700;
+  }
+  /* Section labels in sentence case: the same words, no longer shouting. */
+  [data-surface='app'] .app-section-label,
+  [data-surface='app'] main h2.uppercase {
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /*
+   * The one colour block's soft shape. Decoration and never meaning: a pseudo-
+   * element, so nothing reads it, in the corner where no text runs under it.
+   */
+  .app-hero {
+    position: relative;
+    overflow: hidden;
+  }
+  .app-hero::before {
+    content: '';
+    position: absolute;
+    top: -64px;
+    right: -48px;
+    width: 150px;
+    height: 150px;
+    border-radius: 9999px;
+    background: rgb(var(--surface) / 0.18);
+    pointer-events: none;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 767.98px) and (prefers-reduced-motion: no-preference) {
+  [data-surface='app'] main :is(a, button) {
+    transition:
+      transform 120ms ease,
+      background-color 120ms ease,
+      color 120ms ease;
+  }
+  [data-surface='app'] main :is(a, button):active {
+    transform: scale(0.97);
+  }
 }
 
 /*
@@ -975,7 +1063,7 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
  * The screen title and the section labels are styled here, by element and one
  * class, so no page sets a size. Under a finger the phone type scale applies:
  * body 17, secondary 15, title 22 / 700, labels 13 uppercase; a laptop keeps
- * the current scale. The maintenance home (`classic`) is untouched.
+ * the current scale. The maintenance home has worn them since POOLSE-181.
  */
 [data-shell='tabs'] {
   --app-body: 1rem;

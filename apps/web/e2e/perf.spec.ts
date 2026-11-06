@@ -41,6 +41,8 @@ const DOCS = resolve(__dirname, '../../../docs/perf');
  */
 const LAYOUT = new Set([
   '/me',
+  '/shell',
+  // Before POOLSE-172; kept so a run of an older commit still compares.
   '/settings/logo',
   '/subscription/alert',
   '/attention',

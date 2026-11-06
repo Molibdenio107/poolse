@@ -278,6 +278,14 @@ existing student only has blanks filled).
 `app_user.last_seen_at`, stamped by `/me` (`touch_app_user_seen`, at most every 15 minutes, never failing
 the read). *Acesso à app* reads *Usa a app · último acesso há 3 dias*, or *Entrou a …, sem acessos depois*.
 
+## A date of birth the person gave — POOLSE-186
+
+A new student on the desktop form needs a date of birth; imports and invitations may leave it blank. When the club's record is blank and the person's login holds a date, the record takes it once, unless a guardian is on the record. It shows *Data de nascimento por confirmar* to the owner and admins, and works at once for answering and sending in the app. It never counts for the adult path, so it does not decide who signs consent, until the office confirms it: with *Confirmar a data* on the record, or by accepting an ID document, which asks for the date as written on it. A warning, never a gate. Changing the date clears the confirmation.
+
+## What a family sent — POOLSE-179
+
+*Enviado pela família* sits above the sections of the record's *Documentos* tab (`GET /students/:id/documents/submissions`, owner and admin). *Aceitar* files the copy through the office's own path, in one transaction, and an exam needs the result the office reads off it. *Rejeitar* files nothing: a sealed file is shredded, a plain one archived, and the family can send again. Both ask first, and a decision is final. Until then nothing on the record changes, so a pending exam is never the child's standing.
+
 ## Documentos — POOLSE-132
 
 The tab formerly *Documento de identificação*. Three sections: **Identificação** (the ID upload, and the ID
@@ -708,3 +716,13 @@ every list filters by it.
   in `import.ts`, `enrolmentsRefused` on the result).
 - *Convidar membros* sits on the header's right; *Convidar aluno* stays above the list. The page is `width="wide"`,
   the second wide page after the calendar.
+
+## A linked adult's details — POOLSE-177
+
+An adult-path student with a login reads their name, email, birth date and phone from their own account, on the record, the list, search and every document drawn from them. A guardian's phone reads through to the child's *Contactos* the same way (`person_phone`), and so does an emergency contact's. A minor with a login, and a student with none, are the club's record. A record with no birth date reads through too, when there is no guardian and the login's own date says adult; consent and age rules still wait for the club's date.
+
+**The office** (owner, admin): a linked adult's name and email are read-only, with no label beside them (Rui, 05-11-2026), and a change is a 409 `field_owned_by_app_user`. Birth date and phone may be corrected: they land on the person's account, which is one row in every club they belong to, and the birth date also lands on the club's record, which the rules read. Audited on the student, named and never valued.
+
+**The app:** *O meu perfil* says whose it is, *Encarregado de educação de …* or *A sua conta*. Editing it never changes a child's record.
+
+Reading through costs the Alunos list its sort index, about 14 ms on 400 students. `docs/data-model.md`, *A student read through their login*.

@@ -71,6 +71,11 @@ others. The point is the gate: `audit:check` is set at `high` precisely so that 
 
 ## Still open, knowingly
 
+**Student ID photos filed before 05-11-2026 are plaintext in the bucket** until
+`apps/api/src/files/reseal-student-id-documents.ts --apply` has run in that environment
+(POOLSE-179). New ones are sealed (`student_id_document`). Delete this line once both
+staging and production report `0 plaintext ID photograph(s)`.
+
 Five moderate advisories remain (29-10-2026). Every one needs a **major** version bump, which
 is a migration with its own testing rather than a line in a lockfile, so each is
 its own slice. None is reachable from a request today; the reachability note is
@@ -94,6 +99,10 @@ move within the major the tree already resolved. Delete an entry when the
 dependency that pulled it in catches up.
 
 ### Two limits worth knowing
+
+**A shredded key survives in the backups for 30 days.** Crypto-shredding destroys the wrapped key on
+its row, and the pg backups keep a copy, so restoring a backup inside its 30 days revives the key.
+This applies to every sealed purpose.
 
 **Unauthenticated floods are not counted.** Nest runs middleware before guards,
 so a flood carrying a bad token is refused by `ClerkAuthMiddleware` before the

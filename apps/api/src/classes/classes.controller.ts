@@ -493,7 +493,7 @@ async function formOptions(organizationId: string): Promise<ClassesResponse['opt
       // date rather than an age because `fitsLevel` works in months and the
       // browser is the only place that knows what day it is for the reader.
       `SELECT id, ${shortName('student')} AS name, birth_date AS "birthDate"
-         FROM student WHERE archived_at IS NULL ORDER BY ${nameOrder('student')}`,
+         FROM student_person student WHERE archived_at IS NULL ORDER BY ${nameOrder('student')}`,
     );
 
     // The club's fee categories, so the turma form has something to pick from

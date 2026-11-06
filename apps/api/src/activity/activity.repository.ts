@@ -126,7 +126,7 @@ export async function listActivity(
              FROM audit_log a
              LEFT JOIN class_session s
                ON a.entity_type = 'class_session' AND s.id = a.entity_id
-             LEFT JOIN student st
+             LEFT JOIN student_person st
                ON a.action = 'attendance.changed' AND st.id::text = a.data->>'studentId'
             WHERE (${scope})
               -- Changes only. Opening the medical record is an access, logged

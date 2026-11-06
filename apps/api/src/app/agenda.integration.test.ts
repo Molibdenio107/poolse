@@ -55,6 +55,17 @@ test('the agenda shows coming lessons where they land, with their states, and th
       [org, group!.id, child!.id],
     );
 
+    // A classmate from another family, who says they are not coming to `moved`.
+    const [classmate] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name) VALUES ($1, 'Bruna', 'Colega') RETURNING id`,
+      [org],
+    );
+    await tenant.sql(
+      `INSERT INTO enrollment (organization_id, class_group_id, student_id, status, joined_on)
+       VALUES ($1, $2, $3, 'active', club_today() - 30)`,
+      [org, group!.id, classmate!.id],
+    );
+
     /** A lesson `days` from the club's today at `hour`, Lisbon. */
     async function lesson(days: number, hour: string, extra = ''): Promise<string> {
       const [row] = await tenant.sql<{ id: string }>(
@@ -70,6 +81,11 @@ test('the agenda shows coming lessons where they land, with their states, and th
 
     const ordinary = await lesson(1, '18:00');
     const moved = await lesson(2, '19:30', 'moved_at = now()');
+    await tenant.sql(
+      `INSERT INTO session_notice (organization_id, class_session_id, student_id, going, answered_by_membership_id)
+       VALUES ($1, $2, $3, false, $4)`,
+      [org, moved, classmate!.id, guardian],
+    );
     const [closure] = await tenant.sql<{ id: string }>(
       `INSERT INTO closure (organization_id, facility_id, starts_on, ends_on, reason, source)
        VALUES ($1, $2, club_today() + 3, club_today() + 3, 'Obras no tanque', 'manual') RETURNING id`,
@@ -106,6 +122,7 @@ test('the agenda shows coming lessons where they land, with their states, and th
       assert.equal(byId.get(moved)?.localTime, '19:30', 'QA 4: at the hour it moved to');
       assert.equal(byId.get(closed)?.status, 'cancelled');
       assert.equal(byId.get(closed)?.byClosure, true, 'QA 5: closed by a closure, from the session itself');
+      assert.match(byId.get(closed)?.closedUntil ?? '', /^\d{4}-\d{2}-\d{2}$/, 'POOLSE-174: until when it is shut');
       assert.equal(byId.get(ordinary)?.instructorFirstName, 'Ana');
 
       // QA 6: the temperature, with when it was taken — the screen says "há 4 dias".
@@ -121,6 +138,9 @@ test('the agenda shows coming lessons where they land, with their states, and th
       // how it went. Further back it is a 404 again.
       const one = await new AppController().lesson(moved);
       assert.equal(one.entries[0]?.sessionId, moved);
+      // POOLSE-174, rule 6: a count, never a roll.
+      assert.deepEqual(one.count, { enrolled: 2, notComing: 1 });
+      assert.doesNotMatch(JSON.stringify(one), /Bruna|Colega/, 'no other child reaches a family');
       assert.equal((await new AppController().lesson(past!.id)).entries[0]?.sessionId, past!.id);
       const longAgo = await lesson(-20, '18:00');
       await expectStatus(() => new AppController().lesson(longAgo), 404);

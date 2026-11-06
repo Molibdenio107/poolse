@@ -82,7 +82,7 @@ export async function readDocuments(organizationId: string, studentId: string): 
               s.id_document_issued_on::text AS issued_on, s.id_document_valid_until::text AS valid_until,
               s.address_line, s.locality, s.postal_code,
               o.fpn_association AS association, o.fpn_club_code AS club_code
-         FROM student s JOIN organization o ON o.id = s.organization_id
+         FROM student_person s JOIN organization o ON o.id = s.organization_id
         WHERE s.id = $1 AND s.archived_at IS NULL`,
       [studentId],
     );
@@ -277,11 +277,31 @@ export async function fileCopy(
   seasonId: string | null,
   fileId: string,
 ): Promise<FileOutcome> {
-  return withOrg(organizationId, async (tx) => {
+  return withOrg(organizationId, (tx) => fileCopyIn(tx, organizationId, membershipId, studentId, kind, seasonId, fileId));
+}
+
+/** `fileCopy` inside the caller's transaction — POOLSE-179's accept files a family's copy with it. */
+export async function fileCopyIn(
+  tx: Tx,
+  organizationId: string,
+  membershipId: string,
+  studentId: string,
+  kind: StudentDocumentKind,
+  seasonId: string | null,
+  fileId: string,
+): Promise<FileOutcome> {
+  {
     const student = await tx.query('SELECT 1 FROM student WHERE id = $1 AND archived_at IS NULL', [studentId]);
     if (student.rowCount === 0) return 'not_found';
-    const file = await tx.query(`SELECT 1 FROM stored_file WHERE id = $1 AND purpose = 'student_document'`, [fileId]);
+    // POOLSE-179: an ID photograph only on a sealed file, every other kind on a
+    // plain one — the database holds the same rule (`student_document_id_sealed`).
+    const purpose = kind === 'id_document' ? 'student_id_document' : 'student_document';
+    const file = await tx.query(`SELECT 1 FROM stored_file WHERE id = $1 AND purpose = $2::file_purpose`, [fileId, purpose]);
     if (file.rowCount === 0) return 'bad_file';
+    // A file is filed once (security review 05-11-2026): the same id on two
+    // students would let replacing one shred the other's ID photo.
+    const filed = await tx.query('SELECT 1 FROM student_document WHERE file_id = $1', [fileId]);
+    if (filed.rowCount !== 0) return 'bad_file';
     if (seasonId !== null) {
       const season = await tx.query('SELECT 1 FROM season WHERE id = $1 AND archived_at IS NULL', [seasonId]);
       if (season.rowCount === 0) return 'bad_season';
@@ -305,7 +325,7 @@ export async function fileCopy(
       data: { kind, seasonId, documentId: rows[0]!.id },
     });
     return 'filed';
-  });
+  }
 }
 
 export interface FpnPrint {
@@ -365,7 +385,7 @@ export async function fpnPrint(
               s.fpn_disciplines::text[] AS disciplines,
               o.fpn_association AS association, o.fpn_club_code AS club_code,
               (SELECT f.city FROM facility f WHERE f.archived_at IS NULL ORDER BY f.created_at LIMIT 1) AS place
-         FROM student s JOIN organization o ON o.id = s.organization_id
+         FROM student_person s JOIN organization o ON o.id = s.organization_id
         WHERE s.id = $1 AND s.archived_at IS NULL`,
       [studentId],
     );
@@ -485,14 +505,14 @@ export async function boletimPrint(organizationId: string, studentId: string): P
                    ELSE s.birth_date > club_today() - make_interval(years => o.age_of_majority) END AS minor,
               (SELECT jsonb_build_object(
                         'name', person_name(gl.guardian_membership_id),
-                        'phone', m.phone,
+                        'phone', person_phone(m.id),
                         'email', person_email(gl.guardian_membership_id)::text,
                         'relationship', gl.relationship)
                  FROM guardian_link gl
                  JOIN membership m ON m.id = gl.guardian_membership_id
                 WHERE gl.student_id = s.id AND gl.archived_at IS NULL
                 ORDER BY gl.is_primary DESC, gl.created_at LIMIT 1) AS guardian
-         FROM student s JOIN organization o ON o.id = s.organization_id
+         FROM student_person s JOIN organization o ON o.id = s.organization_id
         WHERE s.id = $1 AND s.archived_at IS NULL`,
       [studentId],
     );

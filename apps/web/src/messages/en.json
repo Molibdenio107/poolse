@@ -42,8 +42,84 @@
       "teaching": "My lessons",
       "maintenance": "Maintenance"
     },
+    "fees": {
+      "overdue": "Overdue",
+      "upcoming": "Next payments",
+      "paid": "Paid",
+      "nothing": "Nothing",
+      "until": "By {date}",
+      "penalty": "Late charge",
+      "sharedWith": "Joint invoice with {names}",
+      "comingSoon": "Paying in the app is coming soon. For now, pay by bank transfer or MB WAY.",
+      "kind": {
+        "mensalidade": "Monthly fee",
+        "inscricao": "Registration",
+        "seguro": "Insurance",
+        "quota": "Membership fee"
+      }
+    },
+    "documents": {
+      "title": "Documents",
+      "backTo": "Back to documents",
+      "print": "Fill in and print",
+      "notConfigured": "The club has not set up this document yet.",
+      "status": {
+        "missing": "Missing",
+        "ok": "Up to date",
+        "okUntil": "Up to date (until {date})",
+        "expired": "Expired",
+        "sent": "Sent — waiting for the office"
+      },
+      "send": {
+        "open": "Send",
+        "openAgain": "Send a new one",
+        "file": "File for {kind}",
+        "examDate": "Exam date (as on the document)",
+        "submit": "Send to the office",
+        "hint": "A PDF or a photo (iPhone photos too), up to 10 MB. It waits for the office and only replaces what the club holds once accepted.",
+        "sent": "Sent. The office will review it.",
+        "failed": "It could not be sent. Try again.",
+        "refused": {
+          "fileType": "This file is not a PDF or a photo.",
+          "tooLarge": "The file is larger than 10 MB.",
+          "empty": "Choose a file.",
+          "examDate": "Give the exam date, which cannot be in the future.",
+          "alreadySent": "One is already waiting for the office.",
+          "guardianSends": "A guardian sends this document.",
+          "noSeason": "The club has not opened the season yet.",
+          "tooMany": "Too many sendings in the last hour. Try later."
+        }
+      },
+      "kind": {
+        "fpn_declaration": "FPN declaration",
+        "socio_form": "Membership form",
+        "id_document": "ID document",
+        "medical_exam": "Medical exam"
+      }
+    },
     "family": {
       "title": "Schedule",
+      "calendar": {
+        "label": "Lesson calendar",
+        "previous": "Previous month",
+        "next": "Next month",
+        "lesson": "Lesson",
+        "planned": "Planned",
+        "closedRange": "Closed from {from} to {to}",
+        "closedDay": "Closed on {date}",
+        "notYet": "No lessons booked yet — the office is still setting up the classes.",
+        "noneThisMonth": "No lessons this month.",
+        "attendance": {
+          "present": "Present",
+          "absent": "Absent",
+          "excused": "Excused absence"
+        }
+      },
+      "hero": {
+        "nothing": "No lessons booked",
+        "closedUntil": "Closed until {date}",
+        "count": "{enrolled, plural, one {# enrolled} other {# enrolled}}{notComing, plural, =0 {} one { · # said they are not coming} other { · # said they are not coming}}"
+      },
       "today": "Today",
       "tomorrow": "Tomorrow",
       "water": "Water at {celsius} °C · taken {ago}",
@@ -51,7 +127,6 @@
       "closed": "Closed",
       "cancelled": "Cancelled",
       "moved": "Moved for this week only",
-      "feesTitle": "Monthly fees",
       "owing": "Overdue: {amount}",
       "toPay": "To pay: {amount}",
       "toPayBy": "To pay: {amount}, by {date}",
@@ -59,7 +134,6 @@
       "nobody": "No student is linked to this account yet. Please speak to the club.",
       "childFilter": "Show the lessons of",
       "everyone": "Everyone",
-      "empty": "There are no lessons in the next two weeks.",
       "backToAgenda": "Back to the agenda",
       "backToLessons": "Back to the lessons",
       "alsoComing": "{count, plural, one {# of your children is in this lesson.} other {# of your children are in this lesson.}}",
@@ -72,11 +146,7 @@
       "certificateReplace": "Replace certificate",
       "certificateSent": "Certificate sent on {date}.",
       "certificateMissing": "No certificate yet.",
-      "certificatesFailed": "The medical leaves could not be loaded.",
-      "next": "Next: {when} · {name}",
-      "noNext": "No lessons booked",
-      "noFees": "There are no fees to show.",
-      "noPastLessons": "There are no past lessons or certificates to show yet."
+      "certificatesFailed": "The medical leaves could not be loaded."
     },
     "feedback": {
       "title": "How it went",
@@ -127,6 +197,7 @@
       "saidNotGoing": "Said they are not coming",
       "savedGoing": "Sent: coming to the lesson",
       "savedNotGoing": "Sent: not coming to the lesson",
+      "needsBirthDate": "Add your date of birth in Profile so you can answer.",
       "guardianAnswers": "This student's guardian answers for them.",
       "notAllowed": "You cannot answer right now.",
       "failed": "The answer could not be saved. Try again.",
@@ -150,6 +221,15 @@
     },
     "maintenance": {
       "title": "Maintenance",
+      "record": {
+        "title": "Record",
+        "complete": "Complete a task",
+        "clean": "Cleaning",
+        "report": "Report a fault",
+        "nothingToComplete": "No tasks to complete.",
+        "nothingToClean": "No spaces to clean.",
+        "backTo": "Back to Record"
+      },
       "backTo": "Back to maintenance",
       "report": "Report",
       "allDone": "Nothing to do: no overdue tasks, spaces to clean or open issues.",
@@ -242,13 +322,31 @@
         "hoje": "Today",
         "semana": "Week"
       },
+      "manutencao": {
+        "hoje": "Today",
+        "registar": "Record"
+      },
       "perfil": "Profile"
     },
     "profile": {
+      "edit": "Edit details",
+      "settings": "Settings",
+      "backTo": "Back to my profile",
+      "guardianOf": "Guardian of {names}",
+      "ownAccount": "Your account",
       "preferences": "Preferences",
       "homes": "My areas",
       "signOut": "Sign out"
     }
+  },
+  "birthDateConfirm": {
+    "pending": "Date of birth to confirm",
+    "hint": "The person gave it themselves in the app. Check it against their ID document.",
+    "confirm": "Confirm the date",
+    "confirmTitle": "Confirm the date of birth?",
+    "confirmMessage": "This records that the date was checked against the ID document. If it is wrong, correct it below first.",
+    "confirmed": "Date of birth confirmed.",
+    "failed": "The date could not be confirmed."
   },
   "common": {
     "working": "Working…",
@@ -406,7 +504,8 @@
     "errors": {
       "nameTooLong": "Too long — 100 characters at most.",
       "phoneShape": "Not a valid number. Use digits, spaces and the signs + ( ) - .",
-      "birthDateInvalid": "Not a valid date.",
+      "birthDateRequired": "Enter the date of birth.",
+    "birthDateInvalid": "Not a valid date.",
       "birthDateTooEarly": "Earlier than 1900.",
       "birthDateFuture": "A date of birth cannot be in the future.",
       "localeInvalid": "Unsupported language.",
@@ -2351,6 +2450,7 @@
     "archive": "Archive",
     "confirmArchive": "Archive {name}?",
     "nameRequired": "A first and last name are required.",
+    "ownedByLogin": "This student manages their name and email in the app.",
     "createFailed": "Could not add the student.",
     "saveFailed": "Could not save the changes.",
     "archiveFailed": "Could not archive.",
@@ -3296,7 +3396,12 @@
     "noticeGoing": "Confirmed",
     "noticeNotGoing": "Said not coming",
     "examExpired": "Medical exam expired",
-    "examNone": "No medical exam"
+    "examNone": "No medical exam",
+    "warnings": {
+      "title": "Insurance and medical exam",
+      "noInsurance": "{count, plural, one {# without insurance} other {# without insurance}}",
+      "exam": "{count, plural, one {# medical exam missing} other {# medical exams missing}}"
+    }
   },
   "calendar": {
     "resizeLanes": "Drag to change how many lanes it uses",
@@ -6142,6 +6247,8 @@
       "student": {
         "created": "Student created",
         "updated": "Record changed",
+        "identity_backfilled": "Details aligned with the student’s account",
+        "document_printed": "Form printed by the family",
         "filled": "Record completed by an import",
         "archived": "Student archived",
         "restored": "Student restored",
@@ -6875,6 +6982,41 @@
     "openExisting": "Open the record"
   },
   "documents": {
+    "submissions": {
+      "title": "{count, plural, one {Sent by the family: # document to review} other {Sent by the family: # documents to review}}",
+      "kind": {
+        "fpn_declaration": "FPN declaration",
+        "fpn_declaration_minor": "FPN declaration (minors)",
+        "socio_form": "Membership form",
+        "id_document": "ID document",
+        "medical_exam": "Medical exam"
+      },
+      "sentBy": "Sent by {name} on {when}",
+      "someone": "a family member",
+      "examinedOn": "exam on {date}",
+      "result": "Result",
+      "chooseResult": "Choose…",
+      "results": {
+        "fit": "Fit",
+        "fit_with_conditions": "Fit with conditions",
+        "unfit": "Unfit"
+      },
+      "validUntil": "Valid until (optional)",
+      "accept": "Accept",
+      "reject": "Reject",
+      "acceptTitle": "Accept “{kind}”?",
+      "acceptMessage": "It is filed on the student's record, as a document handed in at the office would be.",
+      "rejectTitle": "Reject “{kind}”?",
+      "rejectMessage": "Nothing is filed and this sending cannot be recovered. The family can send it again.",
+      "acceptIdMessage": "It is filed on the student's record, and the date of birth is confirmed as written above.",
+      "birthDate": "Date of birth (as on the document)",
+      "needsBirthDate": "Enter the date of birth shown on the document.",
+      "accepted": "Accepted and filed.",
+      "rejected": "Rejected. Nothing was filed.",
+      "needsResult": "Choose the exam's result.",
+      "gone": "This sending has already been decided.",
+      "failed": "The decision could not be saved."
+    },
     "sectionsLabel": "Document sections",
     "section": {
       "identificacao": "Identification",

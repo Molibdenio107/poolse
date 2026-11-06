@@ -59,7 +59,9 @@ export async function FeedbackPanel({
           </div>
         )}
         <p className="text-sm text-foreground-muted">
-          {state === 'closed' ? t('app.feedback.frozen') : t('app.feedback.guardianAnswers')}
+          {state === 'closed'
+            ? t('app.feedback.frozen')
+            : t(standing.needsBirthDate ? 'app.notice.needsBirthDate' : 'app.feedback.guardianAnswers')}
         </p>
       </>
     );
