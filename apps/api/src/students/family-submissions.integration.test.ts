@@ -5,6 +5,7 @@ import { AppController } from '../app/app.controller.js';
 import { StudentDocumentsController } from './documents.controller.js';
 import { StudentsController } from './students.controller.js';
 import { getObjectBytes } from '../files/storage.js';
+import { completeFpnForm } from '../test/fpn-fixture.js';
 import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant, type ScratchTenant } from '../test/harness.js';
 
 /**
@@ -57,6 +58,7 @@ async function seed(tenant: ScratchTenant): Promise<Family> {
      VALUES ($1, $2, $3, 'active', club_today() - 10)`,
     [org, group!.id, child],
   );
+  await completeFpnForm(tenant, child);
   return { guardian, child, stranger, ownLogin };
 }
 

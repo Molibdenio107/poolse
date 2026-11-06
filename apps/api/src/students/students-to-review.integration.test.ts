@@ -5,6 +5,7 @@ import { AppController } from '../app/app.controller.js';
 import { AttentionController } from '../attention/attention.controller.js';
 import { StudentDocumentsController } from './documents.controller.js';
 import { StudentsController } from './students.controller.js';
+import { completeFpnForm } from '../test/fpn-fixture.js';
 import { actingAs, addMember, closeHarness, withScratchTenant, type ScratchTenant } from '../test/harness.js';
 
 /**
@@ -68,6 +69,7 @@ const read = (tenant: ScratchTenant) => asOffice(tenant, () => new AttentionCont
 /** An FPN declaration is asked of a student in a pool turma, so they join one first. */
 const sendFpn = async (tenant: ScratchTenant, membershipId: string, role: 'guardian' | 'student', student: string) => {
   await enrol(tenant, student, null);
+  await completeFpnForm(tenant, student);
   return actingAs(tenant, { membershipId, roles: [role] }, () =>
     new AppController().sendDocument('fpn_declaration', student, 'f.pdf', undefined, PDF),
   );

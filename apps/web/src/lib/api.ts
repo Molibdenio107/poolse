@@ -5846,6 +5846,32 @@ export interface AppDocumentRow {
   notConfigured: boolean;
   /** This reader may send this kind now: a live encarregado or an adult student, nothing waiting. */
   canSend: boolean;
+  /** The FPN form's mandatory fields still empty — POOLSE-193. */
+  missing: string[];
+  incomplete: boolean;
+}
+
+/** `GET /app/documents/fpn` — POOLSE-193. */
+export interface AppFpnReview {
+  studentName: string;
+  signerName: string;
+  minor: boolean;
+  addressLine: string | null;
+  locality: string | null;
+  postalCode: string | null;
+  idDocumentType: 'cc' | 'bi' | 'passport' | 'other' | null;
+  idDocumentNumber: string | null;
+  issuedOn: string | null;
+  validUntil: string | null;
+  disciplines: string[];
+  seasonName: string | null;
+  association: string | null;
+  clubCode: string | null;
+  missing: string[];
+  status: AppDocumentRow['status'];
+  canSend: boolean;
+  print: AppDocumentRow['print'];
+  notConfigured: boolean;
 }
 
 export interface AppChildDocuments {

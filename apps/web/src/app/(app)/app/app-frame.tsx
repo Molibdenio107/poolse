@@ -17,8 +17,9 @@ import { cn } from '@/lib/utils';
  *   bottom tab bar below `md` and the same tabs as a row under the header from
  *   `md` up. Layout follows width, never the pointer (CLAUDE.md, POOLSE-88).
  *   `data-shell="tabs"` turns on the phone type scale (globals.css).
- * - **A screen deeper in** (a lesson, a form): the same header, no tabs — it has
- *   its own *Voltar*, and no bar can sit over its Save bar.
+ * - **A screen deeper in** (a lesson, a form): the same header and the same tabs
+ *   (Rui, 06-11-2026, reversing POOLSE-136), with its own *Voltar* as well. A Save
+ *   bar sits on `--app-bar-clear`, so it stays above them.
  *
  * The maintenance home kept its pre-shell header until POOLSE-181 gave it its
  * own tabs. Preferences, the switcher, push and *Abrir o backoffice* live on
@@ -60,30 +61,24 @@ export function AppFrame({
           <span className="min-w-0 truncate text-sm font-semibold">{organizationName}</span>
           <ClubCorner name={organizationName} logoFileId={logoFileId} />
         </div>
-        {tabbed && (
-          <Suspense fallback={null}>
-            <TabBar homes={homes} placement="top" />
-          </Suspense>
-        )}
+        <Suspense fallback={null}>
+          <TabBar homes={homes} placement="top" />
+        </Suspense>
       </header>
 
       <main
         className={cn(
           'mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-4 pt-4',
           // Clear of the bottom bar below `md`, and of the home bar always.
-          tabbed
-            ? 'pb-[calc(5.5rem+var(--safe-bottom))] md:pb-[calc(1.5rem+var(--safe-bottom))]'
-            : 'pb-[calc(1.5rem+var(--safe-bottom))]',
+          'pb-[calc(5.5rem+var(--safe-bottom))] md:pb-[calc(1.5rem+var(--safe-bottom))]',
         )}
       >
         {children}
       </main>
 
-      {tabbed && (
-        <Suspense fallback={null}>
-          <TabBar homes={homes} placement="bottom" />
-        </Suspense>
-      )}
+      <Suspense fallback={null}>
+        <TabBar homes={homes} placement="bottom" />
+      </Suspense>
     </div>
   );
 }
@@ -159,7 +154,7 @@ function TabBar({ homes, placement }: { homes: AppHat[]; placement: 'top' | 'bot
 
   if (placement === 'top') {
     return (
-      <nav aria-label={t('app.tabs.label')} className="mx-auto hidden w-full max-w-2xl px-4 pb-2 md:block">
+      <nav aria-label={t('app.tabs.label')} className="mx-auto hidden w-full max-w-2xl px-4 pb-2 md:block print:hidden">
         <div className="flex gap-1 rounded-sm bg-surface-muted p-1">{tabs}</div>
       </nav>
     );
@@ -167,7 +162,7 @@ function TabBar({ homes, placement }: { homes: AppHat[]; placement: 'top' | 'bot
   return (
     <nav
       aria-label={t('app.tabs.label')}
-      className="fixed inset-x-0 bottom-0 z-30 px-2 pb-[calc(0.5rem+var(--safe-bottom))] pl-[calc(0.5rem+var(--safe-left))] pr-[calc(0.5rem+var(--safe-right))] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 print:hidden px-2 pb-[calc(0.5rem+var(--safe-bottom))] pl-[calc(0.5rem+var(--safe-left))] pr-[calc(0.5rem+var(--safe-right))] md:hidden"
       data-bottom-bar
     >
       <div className="flex rounded bg-surface shadow-card">{tabs}</div>

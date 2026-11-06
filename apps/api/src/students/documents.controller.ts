@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Body,
   Controller,
   Get,
@@ -21,6 +22,7 @@ import {
   listPending,
   rejectSubmission,
   type Submission,
+  maySendFor,
 } from './family-submissions.repository.js';
 import { EXAM_RESULTS, type ExamResult } from './medical-exams.repository.js';
 import { requireOfficeOrFamily } from './student-access.js';
@@ -40,6 +42,7 @@ import {
   type FpnDiscipline,
   type FpnPrint,
   type IdDocumentFull,
+  type DocumentEdit,
   type IdDocumentEdit,
   type StudentDocumentKind,
   type StudentDocuments,
@@ -73,6 +76,67 @@ function short(value: unknown, field: string): string | null {
   return text;
 }
 
+/** The ID document and the disciplines from a body: one reading, whoever is writing. */
+export function readDocumentEdit(body: Record<string, unknown>): DocumentEdit {
+  const edit: DocumentEdit = {};
+
+  if ('idDocumentType' in body || 'idDocumentNumber' in body) {
+    const rawType = body['idDocumentType'];
+    const type = rawType === '' || rawType === null || rawType === undefined ? null : rawType;
+    if (type !== null && !(STUDENT_ID_DOCUMENT_TYPES as readonly unknown[]).includes(type)) {
+      throw new BadRequestException({ code: 'invalid_type', message: 'Unknown document type', fields: { idDocumentType: 'documents.error.type' } });
+    }
+    const doc: IdDocumentEdit = {
+      type: type as StudentIdDocumentType | null,
+      issuedOn: date(body['idDocumentIssuedOn'], 'idDocumentIssuedOn'),
+      validUntil: date(body['idDocumentValidUntil'], 'idDocumentValidUntil'),
+    };
+    // An absent number keeps the one on file: the screen never holds it.
+    if (typeof body['idDocumentNumber'] === 'string' && body['idDocumentNumber'].trim() !== '') {
+      let number = body['idDocumentNumber'].trim().toUpperCase();
+      if (type === 'cc') {
+        number = normalizeCcNumber(number);
+        if (!isValidCcNumber(number)) {
+          throw new BadRequestException({ code: 'invalid_cc', message: 'Not a valid Cartão de Cidadão number', fields: { idDocumentNumber: 'documents.error.cc' } });
+        }
+      } else if (number.length > 30) {
+        throw new BadRequestException({ code: 'too_long', message: 'Number too long', fields: { idDocumentNumber: 'documents.error.tooLong' } });
+      }
+      doc.number = number;
+    } else if (body['idDocumentClear'] === true) {
+      doc.number = null;
+    }
+    if (doc.issuedOn !== null && doc.validUntil !== null && doc.validUntil < doc.issuedOn) {
+      throw new BadRequestException({ code: 'dates_order', message: 'Valid until is before issued', fields: { idDocumentValidUntil: 'documents.error.order' } });
+    }
+    edit.idDocument = doc;
+  }
+
+  if ('disciplines' in body) {
+    const raw = body['disciplines'];
+    if (!Array.isArray(raw) || raw.some((d) => !(FPN_DISCIPLINES as readonly unknown[]).includes(d))) {
+      throw new BadRequestException('disciplines is a list of FPN disciplines');
+    }
+    edit.disciplines = [...new Set(raw as FpnDiscipline[])];
+  }
+  return edit;
+}
+
+/** Saves it, saying a stored number that is no Cartão de Cidadão as a field's error. */
+export async function saveEdit(organizationId: string, studentId: string, edit: DocumentEdit): Promise<void> {
+  let saved: boolean;
+  try {
+    saved = await saveDocumentFields(organizationId, studentId, edit);
+  } catch (error) {
+    // "Cartão de Cidadão" chosen for a number typed on Geral that is not one.
+    if (error instanceof StoredNumberNotCcError) {
+      throw new BadRequestException({ code: 'invalid_cc', message: error.message, fields: { idDocumentNumber: 'documents.error.ccStored' } });
+    }
+    throw error;
+  }
+  if (!saved) throw new NotFoundException('No such student');
+}
+
 @CoreRoute()
 @Controller('students/:studentId/documents')
 export class StudentDocumentsController {
@@ -91,59 +155,9 @@ export class StudentDocumentsController {
     @Body() body: Record<string, unknown>,
   ): Promise<{ saved: true }> {
     requireRole('owner', 'admin');
-    const edit: { idDocument?: IdDocumentEdit; disciplines?: FpnDiscipline[] } = {};
+    const edit = readDocumentEdit(body);
 
-    if ('idDocumentType' in body || 'idDocumentNumber' in body) {
-      const rawType = body['idDocumentType'];
-      const type = rawType === '' || rawType === null || rawType === undefined ? null : rawType;
-      if (type !== null && !(STUDENT_ID_DOCUMENT_TYPES as readonly unknown[]).includes(type)) {
-        throw new BadRequestException({ code: 'invalid_type', message: 'Unknown document type', fields: { idDocumentType: 'documents.error.type' } });
-      }
-      const doc: IdDocumentEdit = {
-        type: type as StudentIdDocumentType | null,
-        issuedOn: date(body['idDocumentIssuedOn'], 'idDocumentIssuedOn'),
-        validUntil: date(body['idDocumentValidUntil'], 'idDocumentValidUntil'),
-      };
-      // An absent number keeps the one on file: the screen never holds it.
-      if (typeof body['idDocumentNumber'] === 'string' && body['idDocumentNumber'].trim() !== '') {
-        let number = body['idDocumentNumber'].trim().toUpperCase();
-        if (type === 'cc') {
-          number = normalizeCcNumber(number);
-          if (!isValidCcNumber(number)) {
-            throw new BadRequestException({ code: 'invalid_cc', message: 'Not a valid Cartão de Cidadão number', fields: { idDocumentNumber: 'documents.error.cc' } });
-          }
-        } else if (number.length > 30) {
-          throw new BadRequestException({ code: 'too_long', message: 'Number too long', fields: { idDocumentNumber: 'documents.error.tooLong' } });
-        }
-        doc.number = number;
-      } else if (body['idDocumentClear'] === true) {
-        doc.number = null;
-      }
-      if (doc.issuedOn !== null && doc.validUntil !== null && doc.validUntil < doc.issuedOn) {
-        throw new BadRequestException({ code: 'dates_order', message: 'Valid until is before issued', fields: { idDocumentValidUntil: 'documents.error.order' } });
-      }
-      edit.idDocument = doc;
-    }
-
-    if ('disciplines' in body) {
-      const raw = body['disciplines'];
-      if (!Array.isArray(raw) || raw.some((d) => !(FPN_DISCIPLINES as readonly unknown[]).includes(d))) {
-        throw new BadRequestException('disciplines is a list of FPN disciplines');
-      }
-      edit.disciplines = [...new Set(raw as FpnDiscipline[])];
-    }
-
-    let saved: boolean;
-    try {
-      saved = await saveDocumentFields(currentTenant().organizationId, studentId, edit);
-    } catch (error) {
-      // "Cartão de Cidadão" chosen for a number typed on Geral that is not one.
-      if (error instanceof StoredNumberNotCcError) {
-        throw new BadRequestException({ code: 'invalid_cc', message: error.message, fields: { idDocumentNumber: 'documents.error.ccStored' } });
-      }
-      throw error;
-    }
-    if (!saved) throw new NotFoundException('No such student');
+    await saveEdit(currentTenant().organizationId, studentId, edit);
     return { saved: true };
   }
 
@@ -248,7 +262,18 @@ export class StudentDocumentsController {
   ): Promise<FpnPrint> {
     const reader = await requireOfficeOrFamily(studentId);
     const seasonId = season !== undefined && /^[0-9a-f-]{36}$/i.test(season) ? season : null;
-    const { organizationId } = currentTenant();
+    const { organizationId, membershipId } = currentTenant();
+    // POOLSE-193: the one who signs takes it, and only once it is complete. The
+    // office's desk path never asked, and does not now.
+    if (reader === 'family') {
+      if (!membershipId || !(await maySendFor(organizationId, membershipId, studentId))) {
+        throw new ForbiddenException({ code: 'minor_reads_only', message: 'A guardian takes this form' });
+      }
+      const held = await readDocuments(organizationId, studentId);
+      if (held !== null && held.missing.length > 0) {
+        throw new ConflictException({ code: 'form_incomplete', message: 'Mandatory data is missing', missing: held.missing });
+      }
+    }
     const found = await fpnPrint(organizationId, studentId, seasonId, minor === '1');
     if (found === null) throw new NotFoundException('No such student');
     if (reader === 'family') await recordFamilyPrint(organizationId, studentId, 'fpn');

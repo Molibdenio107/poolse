@@ -39,14 +39,18 @@ test('a family and nothing else is family-only', () => {
 // POOLSE-136 — which bar a screen wears, and which tab is current.
 const q = (query = '') => new URLSearchParams(query);
 
-test("a home's own tabs carry the bar; a screen deeper in does not", () => {
+test("a home's own tabs carry the bar; and so does a screen deeper in", () => {
   assert.deepEqual(tabFor('/app/familia', q(), ['family', 'teaching']), { hat: 'family', index: 0 });
   assert.deepEqual(tabFor('/app/familia/aulas', q('child=x'), ['family', 'teaching']), { hat: 'family', index: 1 });
   assert.deepEqual(tabFor('/app/familia/progressos', q(), ['family', 'teaching']), { hat: 'family', index: 2 });
-  assert.equal(tabFor('/app/familia/pagamentos', q(), ['family', 'teaching']), null, 'on Perfil since 06-11-2026');
-  assert.equal(tabFor('/app/familia/aulas/abc', q(), ['family', 'teaching']), null);
-  assert.equal(tabFor('/app/familia/inscrever', q(), ['family', 'teaching']), null);
-  assert.equal(tabFor('/app/manutencao/reportar', q(), ['maintenance']), null);
+  // A screen deeper in keeps the bar, lit on the tab that leads to it (Rui, 06-11-2026).
+  assert.deepEqual(tabFor('/app/familia/pagamentos', q(), ['family', 'teaching']), { hat: 'family', index: 3 });
+  assert.deepEqual(tabFor('/app/familia/documentos/abc/fpn/rever', q(), ['family']), { hat: 'family', index: 3 });
+  assert.deepEqual(tabFor('/app/familia/aulas/abc', q(), ['family', 'teaching']), { hat: 'family', index: 1 });
+  assert.deepEqual(tabFor('/app/familia/inscrever', q(), ['family', 'teaching']), { hat: 'family', index: 1 });
+  assert.deepEqual(tabFor('/app/manutencao/reportar', q(), ['maintenance']), { hat: 'maintenance', index: 1 });
+  assert.deepEqual(tabFor('/app/perfil/definicoes', q('home=family'), ['teaching', 'family']), { hat: 'family', index: 3 });
+  assert.equal(tabFor('/app', q(), ['family']), null);
 });
 
 test('Hoje and Semana are one page; Perfil wears the home it was opened from', () => {

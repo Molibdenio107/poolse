@@ -47,7 +47,7 @@ export function ReportForm({ spaces }: { spaces: { value: string; label: string 
       <TextAreaField name="description" label={t('spaces.issueDescription')} rows={3} {...error('description')} />
       <div
         data-bottom-bar
-        className="sticky bottom-0 -mx-4 border-t border-border bg-background px-4 py-2 pb-[calc(0.5rem+var(--safe-bottom))] md:static md:mx-0 md:border-0 md:p-0"
+        className="sticky bottom-[var(--app-bar-clear)] md:bottom-0 -mx-4 border-t border-border bg-background px-4 py-2 pb-[calc(0.5rem+var(--safe-bottom))] md:static md:mx-0 md:border-0 md:p-0"
       >
         <button
           type="submit"

@@ -250,7 +250,7 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
     await visit(page, '/app/perfil?home=family');
     await expect(page.getByRole('link', { name: /^(pagamentos|payments)$/i })).toHaveAttribute('href', '/app/familia/pagamentos');
     await visit(page, '/app/familia/pagamentos');
-    await expect(bottomBar(page)).toHaveCount(0);
+    await expect(bottomBar(page)).toHaveCount(1);
     await expect(page.getByRole('heading', { name: /^(em dívida|overdue)$/i }).first()).toBeVisible();
     await noSidewaysScroll(page);
   });
@@ -266,7 +266,7 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
     expect(row.y + row.height).toBeLessThanOrEqual(bar.y);
 
     await visit(page, `/app/familia/aulas/${lesson.sessionId}`);
-    await expect(bottomBar(page)).toHaveCount(0);
+    await expect(bottomBar(page)).toHaveCount(1);
   });
 
   test('POOLSE-176 — Perfil reads, Editar dados opens a sheet, and Definições is one row away', async ({ page }) => {
@@ -300,7 +300,7 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
     await visit(page, '/app/perfil/definicoes?home=family');
     await expect(page.getByRole('button', { name: /^(idioma|language)/i })).toBeVisible();
     await expect(page.getByText(/avisos neste telemóvel|notifications on this phone/i)).toBeVisible();
-    await expect(bottomBar(page)).toHaveCount(0);
+    await expect(bottomBar(page)).toHaveCount(1);
     await expect(page.getByRole('link', { name: /voltar ao perfil|back to my profile/i })).toHaveAttribute('href', '/app/perfil?home=family');
   });
 
@@ -343,7 +343,7 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
     await expect(page.getByRole('heading', { level: 1, name: /^(documentos|documents)$/i })).toBeVisible();
     await expect(page.getByText(/boletim de sócio|membership form/i).first()).toBeVisible();
     await expect(page.locator('main a[href*="/dashboard"]')).toHaveCount(0);
-    await expect(bottomBar(page)).toHaveCount(0);
+    await expect(bottomBar(page)).toHaveCount(1);
     await noSidewaysScroll(page);
   });
 

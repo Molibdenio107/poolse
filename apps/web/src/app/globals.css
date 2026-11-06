@@ -1286,3 +1286,11 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
     background-color: transparent;
   }
 }
+
+/*
+ * What a sticky Save bar stands on, so it stays above the app's menu bar, which is
+ * on every screen (Rui, 06-11-2026). On `data-surface`, the app's own scope.
+ */
+[data-surface='app'] {
+  --app-bar-clear: calc(4.75rem + var(--safe-bottom));
+}

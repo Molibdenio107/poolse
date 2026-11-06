@@ -294,3 +294,11 @@ A tap on the logo grows it out of its place in the header, a circle alone on the
 ## A form on the phone is a file — POOLSE-193, slice A
 
 The download icon on *Documentos* gives a real PDF of the club's form (`…/boletim/pdf`, `…/fpn/pdf`), one page, Portuguese whoever downloads it, with nobody's name in its metadata. The API decides who may read it, leaves the SNS number off and audits the read, on the same routes the print pages use. `private, no-store`.
+
+## Checking the FPN form — POOLSE-193, slice B
+
+On *Documentos* the FPN row opens *Declaração FPN* (`/app/familia/documentos/:id/fpn/rever`), for a live encarregado or the adult student: every value the form prints, the mandatory ones marked, and what is missing said apart as the person's or the club's. `GET /app/documents/fpn` reads the ID number in full, audited as `student.id_document_read`. While a mandatory field is empty the download is off and the API refuses both the form (`form_incomplete`, 409) and the sending, so hiding the button is not the control. A minor's own login sees the row's state and takes nothing (403). The office's desk print is unaffected. Complete, the page offers the PDF, says to sign by hand or with Chave Móvel Digital, and sends the signed copy to *Por rever*. *Corrigir os meus dados* saves straight onto the record (`PATCH /app/documents/fpn`), through the office's own validation, named in the log and never valued, and is locked while a signed copy waits.
+
+## The menu is on every screen — 06-11-2026
+
+Rui: the bar is always visible, to make moving around easy. `tabFor` lights the tab a deeper screen is reached from (*Documentos* and *Pagamentos* under *Perfil*, a lesson under *Aulas*), which keep their own *Voltar*. A sticky Save bar stands on `--app-bar-clear`. It stays off paper.

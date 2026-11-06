@@ -10,7 +10,8 @@
 - **`pdf-lib` was last published in 2022.** It is MIT, has no native code and no network, and runs on Vercel unchanged, where `pdfkit` needs its font files bundled. Cheap to swap: only `form-pdf.ts` imports it.
 - **A name Helvetica cannot write prints `?` for that letter**, rather than failing the form.
 - **The family's print pages are now unlinked** (`[id]/boletim/page.tsx`, `[id]/fpn/page.tsx`, their layout). Left in place, as a proposal to remove.
-- Slices B (review and blocking), C (proposals) and D (the office's section) are not built, so the FPN form downloads today even with data missing.
+- **Slice B built the same night:** the review page, `GET /app/documents/fpn`, and `form_incomplete` on the form and on the sending. A minor's own login no longer takes the FPN form at all, which the old print allowed. Test fixtures complete the form with `completeFpnForm` (`test/fpn-fixture.ts`).
+- **Slice C is direct editing** (Rui): no table, `PATCH /app/documents/fpn`. Slice D, the office's section, is not built.
 
 ### PO — why this exists
 
@@ -30,8 +31,8 @@ Chave Móvel Digital signs a PDF, so a print page or an image cannot carry the s
 2. **Review.** Before the download, the screen lists every value the club's form prints for this person, and marks the mandatory ones.
 3. **Mandatory** is the `missing` list `fpnPrint` already returns: address, locality, postal code, ID number, ID validity, modalidades, and the club's association and code.
 4. **Blocked until complete** (Rui): while one is empty the download is off, and the screen lists what is missing and whose it is: the person's to fill, or the club's.
-5. **A correction is a proposal** (Rui): the person changes a wrong or empty value in the app. It waits in the office's *Por rever*, raises POOLSE-190's circle, and the record changes only on *Aceitar*. A rejected proposal says so in the app.
-6. A pending proposal keeps the download off for the field it touches, so nobody signs a form the office has not agreed.
+5. **The person edits their details directly** (Rui, 06-11-2026, reversing this ticket's first answer that a correction waits for the office): the record changes on *Guardar*, through the office's own reading and save, and the log names each change without its value. The signed form is what the office reviews.
+6. The details lock while a signed copy waits for the office, so what it reviews matches the record.
 7. **Download** is a real PDF file: the club's form with the same fields at the same places as the office's print, always in Portuguese. It is audited as `student.document_printed`, as the print is. The SNS number stays off.
 8. **Signing** is the person's, outside Poolse: Chave Móvel Digital on the PDF, or printed, signed by hand and photographed. The screen says both, in few words.
 9. **Sending** uses today's upload. PDF, JPEG, PNG and HEIC, 10 MB. A signed PDF is stored byte for byte, or the signature breaks.
@@ -39,7 +40,7 @@ Chave Móvel Digital signs a PDF, so a print page or an image cannot carry the s
 11. **The office's FPN section** (Rui): the state of the form and *Por rever* come first. Printing and uploading a copy stay, folded, for someone who signs at the desk or has no app.
 12. **The boletim** gets the working PDF (rule 7's file) and nothing else. It stays download only, with no mandatory check.
 
-13. **What the person may propose** (Rui, 06-11-2026): address, locality, postal code, the ID document's type, number and dates, and the modalidades. The FPN form does not print the NIF or filiação. The club's association and code stay the office's.
+13. **What the person may edit** (Rui, 06-11-2026): address, locality, postal code, the ID document's type, number and dates, and the modalidades. The FPN form does not print the NIF or filiação. The club's association and code stay the office's.
 14. **The review shows the ID number in full** (Rui, 06-11-2026): the person can really check it, the PDF prints it anyway, and each read is audited.
 
 ### Dev notes
@@ -48,8 +49,7 @@ Chave Móvel Digital signs a PDF, so a print page or an image cannot carry the s
 - **This is a dated exception to** *A document on paper is a route with print styles, never a PDF library*. Edit that line in `CLAUDE.md` and its paragraph in `docs/conventions/interface.md` in this ticket's commit, app forms only. `docs/decisions.md` holds the call.
 - **PDF:** `pdf-lib`, in a server-only route handler under `/app/familia/documentos/[id]/`, `attachment`, `Cache-Control: no-store`, a file name with no person's name. It reads `GET /students/:id/documents/fpn` or `/boletim`, so `requireOfficeOrFamily`, the SNS rule and the audit stay in one place. Use `boletimValue` and the placements as `BoletimSheet` / `placementStyle` do, so the two renders share their inputs. Check the white strip (`width`) and the disciplines' X, and that Helvetica's WinAnsi carries Portuguese accents. `embedJpg`, because `lib/page-image.ts` stores a JPEG.
 - **Links:** a plain anchor, never prefetched, as today.
-- **Proposals:** use the `write-migration` skill. A new table in `TENANT_TABLES`, RLS, composite FKs. An ID number in a proposal is encrypted as the record's is, and its read audits. Accepting writes through the record's own paths (`docs/conventions/students-and-families.md`: *An edit records what it changed*). Add it to `studentsToReview`, keeping one definition of the circle.
-- **Decided earlier and reversed in part:** POOLSE-177 and POOLSE-179 keep those fields office-only. They still are, because a proposal changes nothing until accepted, so say that plainly in the ticket's commit.
+- **Decided earlier and reversed:** POOLSE-177 and POOLSE-179 kept these fields office-only. `docs/decisions.md` holds the reversal.
 - **Trap:** `judgeUpload` strips EXIF from JPEGs. Prove with a test that a PDF is stored unchanged.
 - **Trap:** `POST /app/documents/fpn_declaration` must refuse while rule 4 or 6 holds, because hiding the button is not the control. Decide this with the office's desk path, which never passes through it.
 - **Trap:** `/app/documents` carries no number, file or name. The review needs its own endpoint, its own audit, and the same family check.
@@ -64,9 +64,9 @@ Chave Móvel Digital signs a PDF, so a print page or an image cannot carry the s
 4. Given an empty address, then the download is off and the screen says it is the person's to fill.
 5. Given no club code, then the screen says it is the club's.
 6. Given a request straight to the PDF route with a mandatory field empty, then it is refused.
-7. Given a proposal, then the record is unchanged, the office's circle shows, and the field's download stays off.
-8. Given *Aceitar*, then the record changes, the audit says so, and the download opens.
-9. Given *Rejeitar*, then the record is unchanged and the app says so.
+7. Given a correction saved, then the record changes, and the log names the fields without their values.
+8. Given a wrong postal code or Cartão de Cidadão number, then it is refused beside the field.
+9. Given a signed copy waiting, then a correction is refused.
 10. Given a PDF with a digital signature, when it is sent and opened by the office, then the bytes are identical.
 11. Given a photo of a signed paper, then it is sent and waits as before.
 12. Given a sent form accepted, then the app reads *ok*; rejected, then it reads *por enviar* again.
@@ -79,7 +79,7 @@ Chave Móvel Digital signs a PDF, so a print page or an image cannot carry the s
 
 - [ ] Both forms download as a real PDF on a phone, in an installed app, walked on real devices.
 - [ ] The FPN form cannot be downloaded or sent while mandatory data is missing or proposed, enforced by the API.
-- [ ] A correction changes nothing until the office accepts it, and raises the circle.
+- [ ] A guardian or adult student corrects the details directly, and the change is on the record.
 - [ ] A signed PDF is stored byte for byte.
 - [ ] The office reviews the signed copy first; the desk path still works.
 - [ ] The boletim stays download only.

@@ -2,7 +2,7 @@ import { documentsForSports, type FamilyDocument } from '@poolse/rules';
 import { withOrg } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { clubToday } from '../common/club-day.js';
-import { readDocuments } from './documents.repository.js';
+import { fpnPrint, readDocuments } from './documents.repository.js';
 import { listExams } from './medical-exams.repository.js';
 import { maySendFor, pendingKinds } from './family-submissions.repository.js';
 
@@ -23,6 +23,34 @@ export interface FamilyDocumentRow {
   notConfigured: boolean;
   /** This reader may send this kind now: a live encarregado or an adult student, nothing waiting. */
   canSend: boolean;
+  /** The FPN form's mandatory fields still empty, as keys — POOLSE-193. Empty for the rest. */
+  missing: string[];
+  /** This reader could act on the form, and mandatory data stops them. */
+  incomplete: boolean;
+}
+
+/** What the phone's review shows before the FPN form is downloaded — POOLSE-193 rule 2. */
+export interface FpnReview {
+  studentName: string;
+  signerName: string;
+  minor: boolean;
+  addressLine: string | null;
+  locality: string | null;
+  postalCode: string | null;
+  idDocumentType: string | null;
+  /** In full (Rui, 06-11-2026): the form prints it, and the read is audited. */
+  idDocumentNumber: string | null;
+  issuedOn: string | null;
+  validUntil: string | null;
+  disciplines: string[];
+  seasonName: string | null;
+  association: string | null;
+  clubCode: string | null;
+  missing: string[];
+  status: FamilyDocumentRow['status'];
+  canSend: boolean;
+  print: FamilyDocumentRow['print'];
+  notConfigured: boolean;
 }
 
 /** The sports of a student's active turmas, by each turma's recinto. */
@@ -67,6 +95,8 @@ export async function familyDocuments(
         print: held.templates[form] ? { path: 'fpn', seasonId: season, minor } : null,
         notConfigured: !held.templates[form],
         canSend: false,
+        missing: held.missing,
+        incomplete: false,
       };
     }
     if (kind === 'socio_form') {
@@ -77,6 +107,8 @@ export async function familyDocuments(
         print: held.templates.socio_form ? { path: 'boletim', seasonId: null, minor } : null,
         notConfigured: !held.templates.socio_form,
         canSend: false,
+        missing: [],
+        incomplete: false,
       };
     }
     // id_document; the exam's status is added by the caller.
@@ -89,6 +121,8 @@ export async function familyDocuments(
       print: null,
       notConfigured: false,
       canSend: false,
+      missing: [],
+      incomplete: false,
     };
   };
 
@@ -107,6 +141,8 @@ export async function familyDocuments(
       print: null,
       notConfigured: false,
       canSend: false,
+      missing: [],
+      incomplete: false,
     };
   });
 
@@ -117,9 +153,58 @@ export async function familyDocuments(
       one.kind === 'fpn_declaration'
         ? pending.has('fpn_declaration') || pending.has('fpn_declaration_minor')
         : pending.has(one.kind);
-    // The boletim is only ever downloaded (Rui, 06-11-2026).
-    return { ...one, status: waiting ? 'sent' : one.status, canSend: maySend && !waiting && one.kind !== 'socio_form' };
+    const incomplete = maySend && !waiting && one.missing.length > 0;
+    return {
+      ...one,
+      status: waiting ? 'sent' : one.status,
+      // The boletim is only ever downloaded (Rui, 06-11-2026).
+      canSend: maySend && !waiting && one.kind !== 'socio_form' && !incomplete,
+      incomplete,
+      // A minor's own login reads the FPN form's state and does not take it (POOLSE-193 rule 1).
+      print: one.kind === 'fpn_declaration' && !maySend ? null : one.print,
+    };
   });
+}
+
+/**
+ * The FPN form's values for the person who will sign it — POOLSE-193. Null when
+ * the student is not this club's. The caller has already asked `maySendFor`.
+ */
+export async function familyFpnReview(
+  organizationId: string,
+  studentId: string,
+  membershipId: string,
+): Promise<FpnReview | null> {
+  const rows = await familyDocuments(organizationId, studentId, membershipId);
+  const row = rows?.find((one) => one.kind === 'fpn_declaration');
+  if (row === undefined) return null;
+  const held = await readDocuments(organizationId, studentId);
+  if (held === null) return null;
+  const season = held.seasons.find((one) => one.published)?.id ?? null;
+  // Reads the ID number, and `fpnPrint` audits that.
+  const form = await fpnPrint(organizationId, studentId, season, held.minor !== false);
+  if (form === null) return null;
+  return {
+    studentName: form.studentName,
+    signerName: form.signerName,
+    minor: form.minor,
+    addressLine: form.addressLine,
+    locality: form.locality,
+    postalCode: form.postalCode,
+    idDocumentType: form.idDocumentType,
+    idDocumentNumber: form.idDocumentNumber,
+    issuedOn: form.issuedOn,
+    validUntil: form.validUntil,
+    disciplines: form.disciplines,
+    seasonName: form.seasonName,
+    association: form.association,
+    clubCode: form.clubCode,
+    missing: row.missing,
+    status: row.status,
+    canSend: row.canSend,
+    print: row.print,
+    notConfigured: row.notConfigured,
+  };
 }
 
 /** A family printing a form is on the student's record: who, which, when. */

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ArrowLeft, Download, Plus } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Download, Plus } from 'lucide-react';
 import { ApiError, apiFetch, type AppChildDocuments, type AppDocumentRow } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { describeLoad } from '@/lib/load-failure';
@@ -110,6 +110,25 @@ export default async function FamilyDocuments({
                   <Download className="size-5" aria-hidden />
                 </a>
               );
+              // POOLSE-193: the FPN form is checked before it is taken, so its
+              // download and its sending live on the review.
+              if (row.kind === 'fpn_declaration' && row.print !== null) {
+                return (
+                  <li key={row.kind} className="flex flex-col gap-1 py-2">
+                    <Link
+                      href={`/app/familia/documentos/${one.id}/fpn/rever`}
+                      aria-label={t('app.documents.review.open', { kind })}
+                      className="flex min-h-control items-center justify-between gap-3"
+                    >
+                      {heading}
+                      <ChevronRight aria-hidden className="size-5 shrink-0 text-primary" />
+                    </Link>
+                    {row.incomplete && (
+                      <span className="text-sm text-foreground-muted">{t('app.documents.review.incomplete')}</span>
+                    )}
+                  </li>
+                );
+              }
               return (
                 <li key={row.kind} className="flex flex-col gap-1 py-2">
                   {row.canSend ? (

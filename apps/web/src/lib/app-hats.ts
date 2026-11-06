@@ -107,8 +107,9 @@ export function isHat(value: string | null | undefined): value is AppHat {
 
 /**
  * Which bar a screen wears and which tab is current, or null for a screen that
- * has none — a lesson's page, a form. Only the tabs' own
- * addresses carry the bar: a screen deeper in has its own *Voltar*.
+ * has none. **The bar is on every screen** (Rui, 06-11-2026, reversing POOLSE-136's
+ * tab screens only): a screen deeper in lights the tab it was reached from, and
+ * keeps its own *Voltar*.
  */
 export function tabFor(
   pathname: string,
@@ -131,5 +132,15 @@ export function tabFor(
     if (hat === undefined) return null;
     return { hat, index: TABS[hat].length - 1 };
   }
+  // A screen deeper in, under the tab that leads to it.
+  if (path.startsWith('/app/perfil/')) return tabFor('/app/perfil', search, homes);
+  if (path.startsWith('/app/familia/aulas/') || path === '/app/familia/inscrever') return { hat: 'family', index: 1 };
+  if (path.startsWith('/app/familia/progressos/')) return { hat: 'family', index: 2 };
+  if (path === '/app/familia/pagamentos' || path.startsWith('/app/familia/documentos')) {
+    return { hat: 'family', index: TABS.family.length - 1 };
+  }
+  if (path.startsWith('/app/familia/')) return { hat: 'family', index: 0 };
+  if (path === '/app/manutencao/reportar') return { hat: 'maintenance', index: 1 };
+  if (path.startsWith('/app/manutencao/')) return { hat: 'maintenance', index: 0 };
   return null;
 }

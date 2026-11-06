@@ -99,7 +99,7 @@ export function FeedbackForm({
 
       <p className="text-sm text-foreground-muted">{t('app.feedback.notAnonymous')}</p>
 
-      <div data-bottom-bar className="sticky bottom-0 -mx-3 border-t border-border bg-surface px-3 py-2 pb-[calc(0.5rem+var(--safe-bottom))] md:static md:mx-0 md:border-0 md:p-0">
+      <div data-bottom-bar className="sticky bottom-[var(--app-bar-clear)] md:bottom-0 -mx-3 border-t border-border bg-surface px-3 py-2 pb-[calc(0.5rem+var(--safe-bottom))] md:static md:mx-0 md:border-0 md:p-0">
         <button
           type="submit"
           disabled={pending || mood === ''}

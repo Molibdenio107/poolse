@@ -171,6 +171,13 @@ export interface IdDocumentEdit {
   validUntil: string | null;
 }
 
+/** What one save may change. */
+export interface DocumentEdit {
+  idDocument?: IdDocumentEdit;
+  disciplines?: FpnDiscipline[];
+  address?: { addressLine: string | null; locality: string | null; postalCode: string | null };
+}
+
 /** The ID document and the disciplines, one save. Fields named, never valued. */
 /** The number on file is not a whole Cartão de Cidadão number, so the type cannot be "cc". */
 export class StoredNumberNotCcError extends Error {
@@ -182,7 +189,7 @@ export class StoredNumberNotCcError extends Error {
 export async function saveDocumentFields(
   organizationId: string,
   studentId: string,
-  edit: { idDocument?: IdDocumentEdit; disciplines?: FpnDiscipline[] },
+  edit: DocumentEdit,
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
     const current = await tx.query<{ id: string }>(
@@ -224,6 +231,17 @@ export async function saveDocumentFields(
         moved.push('idDocumentNumber');
       }
       moved.push('idDocumentType', 'idDocumentDates');
+    }
+
+    // POOLSE-193: the person's own address, on the same save as what it goes on.
+    if (edit.address !== undefined) {
+      await tx.query(`UPDATE student SET address_line = $2, locality = $3, postal_code = $4 WHERE id = $1`, [
+        studentId,
+        edit.address.addressLine,
+        edit.address.locality,
+        edit.address.postalCode,
+      ]);
+      moved.push('addressLine', 'locality', 'postalCode');
     }
 
     if (edit.disciplines !== undefined) {

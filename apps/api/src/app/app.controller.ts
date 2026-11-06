@@ -1,5 +1,5 @@
 import { familyFees, type FamilyChildFees } from '../billing/family-fees.repository.js';
-import { familyDocuments, type FamilyDocumentRow } from '../students/family-documents.repository.js';
+import { familyDocuments, familyFpnReview, type FamilyDocumentRow, type FpnReview } from '../students/family-documents.repository.js';
 import { payToFor, type PayTo } from '../billing/payment-destinations.js';
 import {
   BadRequestException,
@@ -10,6 +10,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -58,7 +59,9 @@ import { Throttle } from '@nestjs/throttler';
 import { FAMILY_UPLOAD } from '../common/throttle.js';
 import { judgeUpload } from '../files/upload-check.js';
 import { heicToJpeg, looksLikeHeic } from '../files/heic.js';
-import { SENDABLE, sendDocument, type SendableKind } from '../students/family-submissions.repository.js';
+import { readDocumentEdit, saveEdit } from '../students/documents.controller.js';
+import { parseIdentity } from '../students/identity.js';
+import { maySendFor, SENDABLE, sendDocument, type SendableKind } from '../students/family-submissions.repository.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -188,6 +191,78 @@ export class AppController {
   }
 
   /**
+   * The FPN form's values, for the person who will sign it — POOLSE-193. Its own
+   * route, because `/app/documents` carries no number and this one reads it, audited.
+   * A minor's own login does not take the form, so it does not read this.
+   */
+  @Get('documents/fpn')
+  async fpnReview(@Query('child') child?: string): Promise<FpnReview> {
+    requireRole('guardian', 'student');
+    const { organizationId, membershipId } = currentTenant();
+    const mine = await familyStudents(organizationId, membershipId);
+    if (child === undefined || !mine.some((one) => one.id === child)) {
+      throw new NotFoundException('No such student');
+    }
+    if (!membershipId || !(await maySendFor(organizationId, membershipId, child))) {
+      throw new ForbiddenException({ code: 'minor_reads_only', message: 'A guardian takes this form' });
+    }
+    const review = await familyFpnReview(organizationId, child, membershipId);
+    if (review === null) throw new NotFoundException('No such document');
+    return review;
+  }
+
+  /**
+   * The person corrects what the FPN form prints — POOLSE-193 (Rui, 06-11-2026):
+   * straight onto the record, through the office's own reading and save, because the
+   * signed form is what the office reviews. Named in the log, never valued. Locked
+   * while a signed copy waits, so the form on the office's desk matches the record.
+   */
+  @Patch('documents/fpn')
+  async saveFpnDetails(
+    @Query('child') child: string | undefined,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ saved: true }> {
+    requireRole('guardian', 'student');
+    const { organizationId, membershipId } = currentTenant();
+    const mine = await familyStudents(organizationId, membershipId);
+    if (child === undefined || !mine.some((one) => one.id === child)) {
+      throw new NotFoundException('No such student');
+    }
+    if (!membershipId || !(await maySendFor(organizationId, membershipId, child))) {
+      throw new ForbiddenException({ code: 'minor_reads_only', message: 'A guardian takes this form' });
+    }
+    const rows = await familyDocuments(organizationId, child, membershipId);
+    if (rows?.find((one) => one.kind === 'fpn_declaration')?.status === 'sent') {
+      throw new ConflictException({ code: 'already_sent', message: 'A signed copy is waiting for the office' });
+    }
+    // Named keys only, and only those sent: a body cannot reach `idDocumentClear`,
+    // and a key it left out never reads as a blank that wipes what is on file.
+    const sent = (keys: readonly string[]): Record<string, unknown> =>
+      Object.fromEntries(keys.filter((key) => key in body).map((key) => [key, body[key]]));
+    const address = sent(['addressLine', 'locality', 'postalCode']);
+    const identity = parseIdentity(address);
+    if (identity !== undefined && Object.keys(address).length < 3) {
+      throw new BadRequestException({ code: 'partial_address', message: 'The address is saved as one group' });
+    }
+    const edit = readDocumentEdit(
+      sent(['idDocumentType', 'idDocumentNumber', 'idDocumentIssuedOn', 'idDocumentValidUntil', 'disciplines']),
+    );
+    await saveEdit(organizationId, child, {
+      ...edit,
+      ...(identity === undefined
+        ? {}
+        : {
+            address: {
+              addressLine: identity.addressLine,
+              locality: identity.locality,
+              postalCode: identity.postalCode,
+            },
+          }),
+    });
+    return { saved: true };
+  }
+
+  /**
    * *Documentos* — POOLSE-179: each child's papers as a status, by their sports.
    * Another family's child is a 404.
    */
@@ -255,6 +330,8 @@ export class AppController {
     if (row === undefined) throw new NotFoundException('No such document');
     if (!row.canSend) {
       if (row.status === 'sent') throw new ConflictException({ code: 'already_sent', message: 'One is already waiting for the office' });
+      // POOLSE-193: hiding the button is not the control.
+      if (row.incomplete) throw new ConflictException({ code: 'form_incomplete', message: 'Mandatory data is missing' });
       // A minor's own login reads its papers and never sends them (BA 1, QA 6).
       throw new ForbiddenException({ code: 'minor_reads_only', message: 'A guardian sends this' });
     }

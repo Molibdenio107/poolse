@@ -1395,3 +1395,7 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-06** — **A lesson may carry a Desafio** (POOLSE-195, Rui): the instructor's short text, read below the plan in its own colour and answered *Consegui* or *Não consegui* inside the lesson feedback. Classmates see the results under POOLSE-194's rules. Order: 191, 192, 193, 194, 195, then POOLSE-188.
 
 - **2026-11-06** — **A personal email is outside the 20 messages a day** (POOLSE-191, default taken while building; Rui may reverse): that ceiling is against mass mail, and a day of reminders must not block the club's own bulk messages. Its addresses still count towards the 2,000.
+
+- **2026-11-06** — **The person edits the FPN form's details directly** (POOLSE-193, Rui), **reversing** the same day's *a correction is a proposal the office accepts*, and POOLSE-177 and -179 for these fields: address, locality, postal code, the ID document and the modalidades, by a live encarregado or the adult student. The signed form is what the office reviews. Changes are named in the log and never valued, and the details lock while a signed copy waits.
+
+- **2026-11-06** — **The app's menu bar is on every screen** (Rui), **reversing** POOLSE-136's *a screen deeper in has no tabs*: it lights the tab that leads there, and a Save bar sits above it.
