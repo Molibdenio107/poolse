@@ -2,8 +2,10 @@ import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ChevronRight, Lock } from 'lucide-react';
 import { LinkBusy } from '@/components/link-busy';
+import { Classmates } from '@/components/app/classmates';
 import { PersonAvatar } from '@/components/person-avatar';
-import type { AppAgendaEntry, AppChild, AppWater } from '@/lib/api';
+import { apiFetch, type AppAgendaEntry, type AppChild, type AppClassmates, type AppWater } from '@/lib/api';
+import { photoUrlFor } from '@/lib/photo';
 import { withFrom } from '@/lib/back';
 import { formatDate, formatDayMonth } from '@/lib/date-format';
 import { FeeSentence, WaterLine, endTime } from '@/app/(app)/app/familia/agenda-parts';
@@ -39,12 +41,18 @@ export async function NextLessonHero({
   const locale = await getLocale();
   const next = entries.find((entry) => entry.status !== 'cancelled');
   const closure = entries.find((entry) => entry.byClosure && entry.closedUntil !== null);
+  const photo = photoUrlFor(child.photoFileId ?? null);
+  // Best effort: the hero still says the lesson if this read fails.
+  const people =
+    next === undefined
+      ? null
+      : await apiFetch<AppClassmates>(`/app/lessons/${next.sessionId}/classmates`).catch(() => null);
 
   return (
     <div className="flex flex-col overflow-hidden rounded-[var(--radius-hero)] shadow-card">
       {next === undefined ? (
         <div className="flex items-center gap-3 bg-surface p-4">
-          <PersonAvatar id={child.id} name={child.name} className="size-11 text-sm" />
+          <PersonAvatar id={child.id} name={child.name} photoUrl={photo} className="size-11 text-sm" />
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="app-card-name font-bold">{child.name}</span>
             {closure === undefined ? (
@@ -65,7 +73,7 @@ export async function NextLessonHero({
           <span className="flex items-center gap-3">
             {/* On the card's own colour: the avatar's tint is a wash, and the fill would swallow it. */}
             <span className="shrink-0 rounded-full bg-surface">
-              <PersonAvatar id={child.id} name={child.name} className="size-11 text-sm" />
+              <PersonAvatar id={child.id} name={child.name} photoUrl={photo} className="size-11 text-sm" />
             </span>
             <span className="app-card-name min-w-0 flex-1 font-bold">{child.name}</span>
             <ChevronRight className="size-5 shrink-0" aria-hidden />
@@ -87,6 +95,9 @@ export async function NextLessonHero({
           <LinkBusy />
         </Link>
       )}
+
+      {/* Outside the link: a link cannot hold the buttons that open a photo. */}
+      {people !== null && <Classmates data={people} collapse />}
 
       {child.fees !== null && (
         <Link

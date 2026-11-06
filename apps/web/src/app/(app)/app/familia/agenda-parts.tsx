@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
+import { PersonAvatar } from '@/components/person-avatar';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Ban, Check, ChevronRight, Lock, MoveRight, Thermometer, UserRound, X } from 'lucide-react';
 import type { AppAgendaEntry, AppChild, AppWater } from '@/lib/api';
@@ -84,8 +85,17 @@ export async function EntryCard({
           {[entry.siteName, entry.poolName, lanes].filter(Boolean).join(' · ')}
         </span>
         {entry.instructorFirstName !== null && (
-          <span className="flex items-center gap-1 text-sm">
-            <UserRound className="size-3.5 shrink-0" aria-hidden />
+          <span className="flex items-center gap-1.5 text-sm">
+            {entry.instructorPhotoUrl === null ? (
+              <UserRound className="size-3.5 shrink-0" aria-hidden />
+            ) : (
+              <PersonAvatar
+                id={entry.instructorFirstName}
+                name={entry.instructorFirstName}
+                photoUrl={entry.instructorPhotoUrl}
+                className="size-5 text-[10px]"
+              />
+            )}
             {entry.standIn
               ? t('app.family.standIn', { name: entry.instructorFirstName })
               : entry.instructorFirstName}

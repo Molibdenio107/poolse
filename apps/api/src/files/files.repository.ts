@@ -211,6 +211,8 @@ export async function openFile(
       photo_attached: boolean;
       photo_consented: boolean;
       own_child_photo: boolean;
+      classmate_photo: boolean;
+      teaches_mine: boolean;
       id_document_holder: string | null;
       id_document_student: string | null;
       contract_holder: string | null;
@@ -242,6 +244,37 @@ export async function openFile(
                  OR EXISTS (SELECT 1 FROM guardian_link gl
                              WHERE gl.student_id = sp.id AND gl.guardian_membership_id = $2
                                AND gl.archived_at IS NULL))) AS own_child_photo,
+              -- POOLSE-194: an adult's photo, to someone in their turma now. A
+              -- minor's never reaches another family, whoever asks.
+              (sp.id IS NOT NULL AND student_is_adult_path(sp.organization_id, sp.id) AND EXISTS (
+                 SELECT 1 FROM enrollment them
+                   JOIN enrollment us
+                     ON us.organization_id = them.organization_id AND us.class_group_id = them.class_group_id
+                    AND us.status = 'active'
+                   JOIN student my ON my.id = us.student_id AND my.organization_id = us.organization_id
+                  WHERE them.organization_id = sp.organization_id AND them.student_id = sp.id
+                    AND them.status = 'active' AND my.archived_at IS NULL
+                    AND (my.membership_id = $2
+                         OR EXISTS (SELECT 1 FROM guardian_link gl
+                                     WHERE gl.student_id = my.id AND gl.guardian_membership_id = $2
+                                       AND gl.archived_at IS NULL)))) AS classmate_photo,
+              -- POOLSE-194: the photo of whoever teaches a child of this family,
+              -- this week or the next, a stand-in included.
+              EXISTS (
+                SELECT 1 FROM membership im
+                  JOIN class_session cs
+                    ON cs.organization_id = im.organization_id AND cs.resolved_instructor_id = im.id
+                   AND cs.occurs_on BETWEEN club_today() - 7 AND club_today() + 14
+                  JOIN enrollment us
+                    ON us.organization_id = cs.organization_id AND us.class_group_id = cs.class_group_id
+                   AND us.status <> 'waiting'
+                  JOIN student my ON my.id = us.student_id AND my.organization_id = us.organization_id
+                 WHERE im.organization_id = f.organization_id AND im.photo_file_id = f.id
+                   AND my.archived_at IS NULL
+                   AND (my.membership_id = $2
+                        OR EXISTS (SELECT 1 FROM guardian_link gl
+                                    WHERE gl.student_id = my.id AND gl.guardian_membership_id = $2
+                                      AND gl.archived_at IS NULL))) AS teaches_mine,
               -- Whose ID document this photograph is (POOLSE-149).
               (SELECT m.id FROM membership m
                 WHERE m.organization_id = f.organization_id
@@ -279,7 +312,7 @@ export async function openFile(
   const sealed = SEALED_PURPOSES.has(row.purpose);
   const allowed = row.purpose === 'student_photo'
     ? row.photo_attached
-      ? row.photo_consented && (hasRole(...RULES.student_photo.read) || row.own_child_photo)
+      ? row.photo_consented && (hasRole(...RULES.student_photo.read) || row.own_child_photo || row.classmate_photo)
       : row.uploaded_by === membershipId
     : row.purpose === 'staff_contract'
     ? row.contract_holder === membershipId ||
@@ -290,6 +323,8 @@ export async function openFile(
     : sealed
     ? hasRole(...RULES[row.purpose].read) || row.own_child_certificate
     : hasRole(...RULES[row.purpose].read) ||
+      // POOLSE-194: a family sees who teaches its child.
+      (row.purpose === 'staff_photo' && row.teaches_mine) ||
       // A certificate is readable by the person it certifies.
       row.own_certificate ||
       // A file just uploaded, before it is attached, is its uploader's.

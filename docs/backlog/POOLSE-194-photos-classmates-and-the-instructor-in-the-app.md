@@ -4,6 +4,13 @@
 
 **Type:** Feature · **Area:** Mobile app / Students / Interface · **Priority:** Medium (pilot) · **Depends on** [POOLSE-174](./POOLSE-174-inicio-is-the-next-lesson.md) · **Build after** POOLSE-193 (Rui, 06-11-2026)
 
+### As built so far (06-11-2026)
+
+- **Built:** the classmates list and the instructor on *Início* and each lesson (`GET /app/lessons/:id/classmates`), the family's own child's photo, tap to zoom (`components/app/photo-zoom.tsx`, shared with the logo), and the two widened photo rules in `files.repository.ts`.
+- **The hidden students are one line** (*Mais 13 alunos · 4 vão*), not a row each: thirteen *Um aluno* rows pushed the rest of *Início* off the phone. It says *Um aluno* for one.
+- **Listed by name:** the reader's own and adults, each *Vou* or *Inscrito*. Rule 9 asked for who answered *Vou*; Rui's first message also asked for who is *inscrito*.
+- **Not built:** the backoffice sweep of rule 1, and the privacy notice item on the go-live checklist.
+
 ### PO — why this exists
 
 Rui, 06-11-2026: *"when a student has a photo it should display as a small avatar everywhere the student is throughout the app and the mobile app also."* And: *"on the mobile app, 'inicio' a student should be able to see who's going or not (other students) - basically who's 'inscrito' and also who confirmed the 'Vou' 'não vou'. Every student should be able to visualize each other photos by clicking on them and see a zoomed picture. Also, the instructor of the respective class is not visible to the student. please fix. This should be applied to also all the next classes that a student can see on the mobile app that is enrolled of course."*

@@ -60,6 +60,16 @@
         "quota": "Quota"
       }
     },
+    "classmates": {
+      "others": "{count, plural, one {Mais # aluno} other {Mais # alunos}}",
+      "all": "{count, plural, one {# aluno} other {# alunos}}",
+      "seeAll": "Ver todos ({count})",
+      "othersGoing": "{count, plural, one {# vai} other {# vão}}",
+      "going": "Vou",
+      "enrolled": "Inscrito",
+      "instructor": "Professor: {name}",
+      "seePhoto": "Ver a fotografia de {name}"
+    },
     "documents": {
       "title": "Documentos",
       "backTo": "Voltar aos documentos",

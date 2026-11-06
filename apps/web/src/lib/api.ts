@@ -5742,6 +5742,7 @@ export interface AppAgendaEntry {
   localTime: string;
   durationMinutes: number;
   instructorFirstName: string | null;
+  instructorPhotoUrl: string | null;
   standIn: boolean;
   status: 'scheduled' | 'cancelled' | 'completed';
   byClosure: boolean;
@@ -5825,9 +5826,18 @@ export interface AppWater {
   takenAt: string;
 }
 
+/** `GET /app/lessons/:id/classmates` — POOLSE-194. */
+export interface AppClassmates {
+  instructor: { name: string; photoUrl: string | null; standIn: boolean } | null;
+  enrolled: number | null;
+  notComing: number;
+  people: { name: string | null; photoFileId: string | null; going: boolean | null }[];
+}
+
 export interface AppChild {
   id: string;
   name: string;
+  photoFileId?: string | null;
   relationship: string | null;
   self: boolean;
   /** From the fee read's `balance`; null when nothing is agreed. */

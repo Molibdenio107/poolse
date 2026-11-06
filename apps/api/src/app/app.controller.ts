@@ -24,6 +24,8 @@ import type { FeeBalance } from '../billing/fee-balance.js';
 import {
   type LessonCount,
   readAgenda,
+  readClassmates,
+  type Classmates,
   readCalendar,
   readCalendarClosures,
   type CalendarClosure,
@@ -417,6 +419,22 @@ export class AppController {
         [...new Set(entries.map((entry) => entry.studentId))],
       ),
     };
+  }
+
+  /**
+   * Who teaches this lesson and who is in it — POOLSE-194. For a family with a
+   * child in it, and a 404 for anybody else's lesson. A route of its own, because
+   * `lessons/:sessionId` carries numbers only.
+   */
+  @Get('lessons/:sessionId/classmates')
+  async classmates(@Param('sessionId') sessionId: string): Promise<Classmates> {
+    requireRole('guardian', 'student');
+    if (!UUID.test(sessionId)) throw new NotFoundException('No such lesson');
+    const { organizationId, membershipId } = currentTenant();
+    const mine = (await familyStudents(organizationId, membershipId)).map((one) => one.id);
+    const entries = await readAgenda(organizationId, membershipId, mine, sessionId);
+    if (entries.length === 0) throw new NotFoundException('No such lesson');
+    return readClassmates(organizationId, sessionId, mine);
   }
 
   /**

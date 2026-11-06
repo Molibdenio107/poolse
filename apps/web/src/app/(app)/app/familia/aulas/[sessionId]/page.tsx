@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ArrowLeft, CalendarCheck, NotebookPen, Users } from 'lucide-react';
-import { ApiError, apiFetch, type AppLesson } from '@/lib/api';
+import { ArrowLeft, CalendarCheck, NotebookPen } from 'lucide-react';
+import { ApiError, apiFetch, type AppClassmates, type AppLesson } from '@/lib/api';
+import { Classmates } from '@/components/app/classmates';
 import type { LessonPlan } from '../../../../dashboard/calendar/lesson-plan.actions';
 import { describeLoad } from '@/lib/load-failure';
 import { backTarget } from '@/lib/back';
@@ -44,6 +45,7 @@ export default async function FamilyLesson({
 
   // The plan is a nice-to-have on this page: a refusal or a failure shows no plan.
   const plan = await apiFetch<LessonPlan>(`/sessions/${sessionId}/plan`).catch(() => null);
+  const people = await apiFetch<AppClassmates>(`/app/lessons/${sessionId}/classmates`).catch(() => null);
   const first = lesson.entries[0]!;
   const water = first.poolId === null ? null : (lesson.water.find((one) => one.poolId === first.poolId) ?? null);
   const several = lesson.entries.length > 1;
@@ -71,12 +73,11 @@ export default async function FamilyLesson({
         </p>
       )}
 
-      {/* A count and never a roll (POOLSE-174, rule 6): no other child's name reaches a family. */}
-      {lesson.count.enrolled !== null && (
-        <p className="flex items-center gap-1.5 text-sm text-foreground-muted">
-          <Users className="size-4 shrink-0" aria-hidden />
-          {t('app.family.hero.count', { enrolled: lesson.count.enrolled, notComing: lesson.count.notComing })}
-        </p>
+      {/* POOLSE-194: no minor's name reaches another family, and the API sends none. */}
+      {people !== null && (
+        <div className="overflow-hidden rounded-lg shadow-card">
+          <Classmates data={people} />
+        </div>
       )}
 
       <section className="flex flex-col gap-2 rounded-lg bg-surface p-3 shadow-card">

@@ -59,6 +59,16 @@
         "quota": "Membership fee"
       }
     },
+    "classmates": {
+      "others": "{count, plural, one {# more student} other {# more students}}",
+      "all": "{count, plural, one {# student} other {# students}}",
+      "seeAll": "See everyone ({count})",
+      "othersGoing": "{count, plural, other {# going}}",
+      "going": "Going",
+      "enrolled": "Enrolled",
+      "instructor": "Instructor: {name}",
+      "seePhoto": "See {name}'s photo"
+    },
     "documents": {
       "title": "Documents",
       "backTo": "Back to documents",

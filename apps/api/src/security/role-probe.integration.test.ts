@@ -1335,7 +1335,7 @@ test('a student finds their own record through /family', async () => {
   await as(fixture.studentMemberId, ['student'], async () => {
     const { students } = await new FamilyController().mine();
     assert.deepEqual(students, [
-      { id: fixture.brunoStudentId, name: students[0]!.name, relationship: null, self: true },
+      { id: fixture.brunoStudentId, name: students[0]!.name, relationship: null, self: true, photoFileId: null },
     ]);
   });
   await as(fixture.unlinkedGuardianId, ['guardian'], async () => {

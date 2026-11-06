@@ -45,6 +45,8 @@ export interface AgendaEntry {
   durationMinutes: number;
   /** The teacher's first name — the stand-in's when one is set. */
   instructorFirstName: string | null;
+  /** Their photo: Clerk's, or the file the club holds (POOLSE-194). */
+  instructorPhotoUrl: string | null;
   standIn: boolean;
   status: 'scheduled' | 'cancelled' | 'completed';
   /** Cancelled because a closure reaches it — *Encerrado*. */
@@ -134,6 +136,7 @@ async function readEntries(
               to_char(cs.starts_at AT TIME ZONE ${TZ}, 'HH24:MI')    AS "localTime",
               cs.duration_minutes AS "durationMinutes",
               split_part(coalesce(iu.cached_first_name, im.first_name), ' ', 1) AS "instructorFirstName",
+              coalesce(iu.cached_avatar_url, '/files/' || im.photo_file_id::text) AS "instructorPhotoUrl",
               cs.substitute_instructor_membership_id IS NOT NULL AS "standIn",
               cs.status::text AS status,
               cs.closure_id IS NOT NULL AS "byClosure",
@@ -220,6 +223,7 @@ export async function readCalendar(
               to_char(sch.start_time, 'HH24:MI') AS "localTime",
               sch.duration_minutes AS "durationMinutes",
               split_part(coalesce(iu.cached_first_name, im.first_name), ' ', 1) AS "instructorFirstName",
+              coalesce(iu.cached_avatar_url, '/files/' || im.photo_file_id::text) AS "instructorPhotoUrl",
               false AS "standIn",
               'scheduled' AS status,
               false AS "byClosure",
@@ -333,6 +337,83 @@ export async function readLessonCount(organizationId: string, sessionId: string)
       [sessionId],
     );
     return rows[0] ?? { enrolled: null, notComing: 0 };
+  });
+}
+
+/** Who is in a lesson, as another family may see it — POOLSE-194. */
+export interface Classmates {
+  instructor: { name: string; photoUrl: string | null; standIn: boolean } | null;
+  enrolled: number | null;
+  notComing: number;
+  /** Everybody but those who said *Não vou*. A minor who is not the reader's own has no name, id or photo. */
+  people: { name: string | null; photoFileId: string | null; going: boolean | null }[];
+}
+
+/**
+ * The lesson's people for this reader — POOLSE-194 (Rui, 06-11-2026).
+ *
+ * **In SQL, and only what may leave.** A minor who is not the reader's own comes
+ * back with no name, no id and no file: a blank painted over on a screen is still
+ * in the response. Minor means not proved adult, so `student_is_adult_path()`
+ * decides: a declared date or a live guardian hides the person. *Não vou* is a
+ * count, so those rows never leave. The numbers are the instructor's own.
+ */
+export async function readClassmates(
+  organizationId: string,
+  sessionId: string,
+  mine: string[],
+): Promise<Classmates> {
+  return withOrg(organizationId, async (tx) => {
+    const lesson = await tx.query<{
+      enrolled: number | null;
+      not_coming: number;
+      instructor: string | null;
+      photo_url: string | null;
+      stand_in: boolean;
+    }>(
+      `SELECT ${ENROLLED_IN_SESSION} AS enrolled, ${NOT_COMING_TO_SESSION} AS not_coming,
+              split_part(coalesce(iu.cached_first_name, im.first_name), ' ', 1) AS instructor,
+              coalesce(iu.cached_avatar_url, '/files/' || im.photo_file_id::text) AS photo_url,
+              cs.substitute_instructor_membership_id IS NOT NULL AS stand_in
+         FROM class_session cs
+         LEFT JOIN membership im ON im.id = cs.resolved_instructor_id AND im.organization_id = cs.organization_id
+         LEFT JOIN app_user iu ON iu.id = im.app_user_id
+        WHERE cs.id = $1`,
+      [sessionId],
+    );
+    const row = lesson.rows[0];
+    const people = await tx.query<{ name: string | null; photo_file_id: string | null; going: boolean | null }>(
+      `SELECT CASE WHEN x.shown THEN btrim(split_part(x.first_name, ' ', 1) || ' ' || left(x.last_name, 1) || '.') END AS name,
+              CASE WHEN x.shown AND x.consented THEN x.photo_file_id END AS photo_file_id,
+              x.going
+         FROM (
+           SELECT s.first_name, s.last_name, s.photo_file_id, sn.going,
+                  (s.id = ANY($2::uuid[]) OR student_is_adult_path(s.organization_id, s.id)) AS shown,
+                  EXISTS (SELECT 1 FROM consent pc
+                           WHERE pc.organization_id = s.organization_id AND pc.student_id = s.id
+                             AND pc.kind = 'photo' AND pc.granted AND pc.withdrawn_at IS NULL) AS consented
+             FROM class_session cs
+             JOIN enrollment e
+               ON e.organization_id = cs.organization_id AND e.class_group_id = cs.class_group_id
+              AND e.status <> 'waiting' AND e.joined_on <= cs.occurs_on
+              AND (e.ended_on IS NULL OR e.ended_on >= cs.occurs_on)
+             JOIN student_person s ON s.id = e.student_id AND s.organization_id = e.organization_id AND s.archived_at IS NULL
+             LEFT JOIN session_notice sn
+               ON sn.organization_id = cs.organization_id AND sn.class_session_id = cs.id AND sn.student_id = s.id
+            WHERE cs.id = $1 AND sn.going IS NOT FALSE
+         ) x
+        ORDER BY x.going IS TRUE DESC, x.shown DESC, x.first_name`,
+      [sessionId, mine],
+    );
+    return {
+      instructor:
+        row === undefined || row.instructor === null || row.instructor === ''
+          ? null
+          : { name: row.instructor, photoUrl: row.photo_url, standIn: row.stand_in },
+      enrolled: row?.enrolled ?? null,
+      notComing: row?.not_coming ?? 0,
+      people: people.rows.map((one) => ({ name: one.name, photoFileId: one.photo_file_id, going: one.going })),
+    };
   });
 }
 

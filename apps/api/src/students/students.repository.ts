@@ -2498,14 +2498,14 @@ export async function studentsOf(
 export async function familyStudents(
   organizationId: string,
   membershipId: string,
-): Promise<{ id: string; name: string; relationship: string | null; self: boolean }[]> {
+): Promise<{ id: string; name: string; relationship: string | null; self: boolean; photoFileId: string | null }[]> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ id: string; name: string; relationship: string | null; self: boolean }>(
-      `SELECT s.id, ${shortName('s')} AS name, NULL::text AS relationship, true AS self
+    const { rows } = await tx.query<{ id: string; name: string; relationship: string | null; self: boolean; photoFileId: string | null }>(
+      `SELECT s.id, ${shortName('s')} AS name, ${PHOTO_KEY} AS "photoFileId", NULL::text AS relationship, true AS self
          FROM student_person s
         WHERE s.membership_id = $1 AND s.archived_at IS NULL
        UNION ALL
-       SELECT s.id, ${shortName('s')} AS name, gl.relationship, false AS self
+       SELECT s.id, ${shortName('s')} AS name, ${PHOTO_KEY} AS "photoFileId", gl.relationship, false AS self
          FROM guardian_link gl
          JOIN student_person s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
         WHERE gl.guardian_membership_id = $1
