@@ -289,4 +289,4 @@ The family's triangle tab is *Progressos*: each child's best times, read from `G
 
 ## The club's logo — 06-11-2026
 
-A tap on the logo in the header zooms it open, and closing zooms it away. With reduced motion it opens and closes at once.
+A tap on the logo grows it out of its place in the header, a circle alone on the scrim with no window around it, and a tap anywhere sends it back. With reduced motion it opens and closes at once.

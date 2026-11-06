@@ -1217,36 +1217,61 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
 }
 
 /*
- * The club's logo opens and closes by zooming — Rui, 06-11-2026. `ClubLogo` holds
- * the dialog open for the zoom out. Reduced motion draws neither, and the dialog
- * opens and closes as any other.
+ * The club's logo, large — Rui, 06-11-2026. It grows out of its place in the
+ * header and goes back, a circle alone on the scrim: this takes the dialog's
+ * window away, keeps its title and close button for a screen reader, and centres
+ * it so the sums in `ClubLogo` hold. Reduced motion draws no movement.
  */
+.logo-lightbox {
+  width: auto !important;
+  max-width: none !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 9999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.logo-lightbox > div:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.logo-lightbox-image {
+  display: block;
+}
+:has(> .logo-lightbox) {
+  align-items: center !important;
+  justify-content: center !important;
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .logo-zoom-in {
-    animation: logo-zoom-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  .logo-lightbox-image {
+    animation: logo-grow 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
-  .logo-zoom-out {
-    animation: logo-zoom-out 200ms ease-in both;
+  .logo-lightbox-closing .logo-lightbox-image {
+    animation: logo-shrink 220ms ease-in both;
   }
-  :has(> .logo-zoom-in) {
-    animation: logo-scrim-in 260ms ease-out both;
+  :has(> .logo-lightbox) {
+    animation: logo-scrim-in 280ms ease-out both;
   }
-  :has(> .logo-zoom-out) {
-    animation: logo-scrim-out 200ms ease-in both;
+  :has(> .logo-lightbox-closing) {
+    animation: logo-scrim-out 220ms ease-in both;
   }
 }
 
-@keyframes logo-zoom-in {
+@keyframes logo-grow {
   from {
-    opacity: 0;
-    transform: scale(0.6);
+    transform: translate(var(--logo-x, 0), var(--logo-y, 0)) scale(var(--logo-scale, 0.1));
   }
 }
 
-@keyframes logo-zoom-out {
+@keyframes logo-shrink {
   to {
-    opacity: 0;
-    transform: scale(0.6);
+    transform: translate(var(--logo-x, 0), var(--logo-y, 0)) scale(var(--logo-scale, 0.1));
   }
 }
 
