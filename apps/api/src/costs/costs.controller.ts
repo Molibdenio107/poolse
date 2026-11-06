@@ -8,10 +8,12 @@ import {
   archiveCost,
   costWindow,
   ledgerMonths,
+  listCostEntries,
   recordCost,
   recordPurchase,
   setPremium,
   type CostEntryInput,
+  type CostEntryRow,
   type Ledger,
   type WindowTotal,
 } from './costs.repository.js';
@@ -115,6 +117,13 @@ export class CostsController {
         return module === undefined || moduleIsOn(module);
       },
     );
+  }
+
+  /** What was typed on *Custos*, so each can be stopped or removed. */
+  @Get('entries')
+  async entries(): Promise<{ entries: CostEntryRow[] }> {
+    requireRole('owner', 'admin');
+    return { entries: await listCostEntries(currentTenant().organizationId) };
   }
 
   /** Water, a fixed cost (once, monthly or yearly), or another cost the club pays. */

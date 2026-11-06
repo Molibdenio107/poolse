@@ -210,7 +210,7 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-186](./POOLSE-186-a-declared-date-of-birth.md) | **Built 05-11-2026.** A date of birth a person gave reaches the club's record, and the office confirms it | Students / Mobile app | High (pilot) | POOLSE-177, POOLSE-179 | 0 |
 | [POOLSE-187](./POOLSE-187-an-older-unpaid-period-stays-owed.md) | **Built 06-11-2026.** An older unpaid period stays owed: *Em dívida* counts every unpaid occurrence through `feeBalance`, from POOLSE-178's filed question. Built after 183 | Finance / Students / Mobile app | High (pre go-live) | POOLSE-42, 178, 183 | 0 |
 | [POOLSE-188](./POOLSE-188-see-the-app-as-a-real-person.md) | An owner, an admin or support picks a view on the app and sees a real person's app, read-only and audited | Mobile app / Support | Medium (pilot) | 90, 79, 136 | 1 |
-| [POOLSE-189](./POOLSE-189-record-the-costs-that-have-no-screen.md) | Screens to record water, fixed costs, maintenance services and premiums, so *Custos* is complete | Finance / Maintenance | Medium (pilot) | 182, 183 | 0 |
+| [POOLSE-189](./POOLSE-189-record-the-costs-that-have-no-screen.md) | **Built 06-11-2026.** Screens to record water, fixed costs, maintenance services and premiums, so *Custos* is complete | Finance / Maintenance | Medium (pilot) | 182, 183 | 0 |
 
 ## To discuss — raised 01-11-2026, parked until after the pilot has used the app
 

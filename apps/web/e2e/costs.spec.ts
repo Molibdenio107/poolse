@@ -38,6 +38,32 @@ test.describe('the office', () => {
     await expect(page.getByRole('dialog').getByText(/^(custos|costs)$/i).first()).toBeVisible();
   });
 
+  test('POOLSE-189 — a cost is typed, shows in its list, and is removed after asking', async ({ page }) => {
+    const supplier = `Teste e2e ${Date.now()}`;
+    await page.goto(COSTS, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('button', { name: /^(registar custo|record a cost)$/i }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel(/valor sem iva|amount without vat/i).fill('abc');
+    await dialog.getByLabel(/^(de|from)/i).fill('2026-03-01');
+    await dialog.getByLabel(/^(até|to)/i).fill('2026-03-31');
+    await dialog.getByLabel(/fornecedor|supplier/i).fill(supplier);
+    await dialog.getByRole('button', { name: /^(guardar|save)$/i }).click();
+    // A refusal keeps the dialog and what was typed, with the sentence under the box.
+    await expect(dialog.getByText(/indique um valor|give an amount/i)).toBeVisible();
+    await expect(dialog.getByLabel(/fornecedor|supplier/i)).toHaveValue(supplier);
+
+    await dialog.getByLabel(/valor sem iva|amount without vat/i).fill('120,50');
+    await dialog.getByRole('button', { name: /^(guardar|save)$/i }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    const row = page.getByRole('listitem').filter({ hasText: supplier });
+    await expect(row).toContainText(/120,50/);
+
+    // Cleans up its own row.
+    await row.getByRole('button', { name: /^(remover|remove)$/i }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /^(remover|remove)$/i }).click();
+    await expect(page.getByRole('listitem').filter({ hasText: supplier })).toHaveCount(0);
+  });
+
   test('QA 7 — the CSV totals are the tiles, to the cent', async ({ page }) => {
     await page.goto(COSTS, { waitUntil: 'domcontentloaded' });
     const total = page

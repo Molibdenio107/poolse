@@ -42,4 +42,6 @@ An Admin's figures leave the Owner's pay out, as every pay read does.
 - **The table and the CSV carry rounding forward**, so they equal the tiles to the cent.
 - A kind whose module is off stays out, and an Admin's figures leave the Owner's pay out, said in words.
 
-Not built: a site filter (one site per licence for now), and any screen to record water, fixed costs, maintenance services or a premium, which only the API takes today.
+Not built: a site filter (one site per licence for now).
+
+**Recording (POOLSE-189).** *Registar custo* on *Custos* takes water, fixed, a service and other, once or recurring, and lists what was typed; archiving a recurring one stops the months to come and keeps the past. A purchase is recorded on an inventory row, a service on an avaria, a premium on its policy. A cost is never edited: a mistake is removed and recorded again.

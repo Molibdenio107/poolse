@@ -12,6 +12,7 @@ import { SelectField, TextAreaField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { archiveIssue, reportIssue, resolveIssue, setIssueSeverity } from '../../spaces.actions';
 import { Reveal } from '@/components/ui/reveal';
+import { RecordService } from '../../../faturacao/custos/cost-forms';
 
 const SEVERITIES: readonly Severity[] = ['high', 'normal', 'low'];
 
@@ -113,6 +114,7 @@ function IssueRow({
         </div>
 
         <div className="flex items-center gap-2">
+          {canResolve && <RecordService requestId={issue.id} className="text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" />}
           {issue.status === 'open' && canResolve && (
             <button type="button" onClick={() => setResolving(true)} className={BUTTON}>
               <Check className="size-4" aria-hidden="true" />

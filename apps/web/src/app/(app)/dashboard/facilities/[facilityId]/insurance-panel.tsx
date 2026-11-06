@@ -5,6 +5,7 @@ import { AttachedDocument } from '@/components/file-upload';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
+import { PremiumForm } from '../../faturacao/custos/cost-forms';
 import { Dialog } from '@/components/ui/dialog';
 import { TextAreaField, TextField } from '@/components/ui/field';
 import { centsToInput, formatCents, parseCents } from '@/lib/money';
@@ -175,6 +176,14 @@ export function InsurancePanel({
                 </div>
               </div>
 
+              {canManage && (
+                <PremiumForm
+                  facilityId={facilityId}
+                  policyId={policy.id}
+                  premiumCents={policy.premiumCents}
+                  premiumVatCents={policy.premiumVatCents}
+                />
+              )}
               <Reveal open={canManage && editing === policy.id}>
                 <PolicyForm
                   facilityId={facilityId}

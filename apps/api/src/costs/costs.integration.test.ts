@@ -270,3 +270,34 @@ test('183 — another club reads none of it', async () => {
     });
   });
 });
+
+test('189 QA 2 — a monthly cost shows every month, and stopping it keeps the past and ends the rest', async () => {
+  await withScratchTenant(async (tenant) => {
+    const controller = new CostsController();
+    const { id } = await asOwner(tenant, () =>
+      controller.record({ kind: 'fixed', amountCents: 10_000, recurrence: 'monthly', effectiveFrom: '2026-01-01' }),
+    );
+    const listed = await asOwner(tenant, () => controller.entries());
+    assert.deepEqual(listed.entries.map((one) => [one.id, one.recurrence, one.startsOn]), [[id, 'monthly', '2026-01-01']]);
+
+    const before = await asOwner(tenant, () => controller.overview('civil', '2026'));
+    assert.ok(before.table.filter((month) => month.groups.fixed !== undefined).length >= 2);
+    await asOwner(tenant, () => controller.archive(id));
+    assert.deepEqual((await asOwner(tenant, () => controller.entries())).entries, []);
+    const after = await asOwner(tenant, () => controller.overview('civil', '2026'));
+    assert.equal(after.invoicedCents, before.invoicedCents, 'the months already generated stay');
+  });
+});
+
+test('189 QA 5 and 6 — an instructor reads no entries, and another club sees none', async () => {
+  await withScratchTenant(async (mine) => {
+    await recordWater(mine, '2025-08', 10_000);
+    await actingAs(mine, { roles: ['instructor'] }, () => expectStatus(() => new CostsController().entries(), 403));
+    await withScratchTenant(async (theirs) => {
+      assert.deepEqual((await asOwner(theirs, () => new CostsController().entries())).entries, []);
+      await asOwner(theirs, () =>
+        expectStatus(() => new CostsController().premium('00000000-0000-4000-8000-000000000000', { premiumCents: 1 }), 404),
+      );
+    });
+  });
+});
