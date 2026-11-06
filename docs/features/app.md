@@ -286,3 +286,7 @@ The family's triangle tab is *Progressos*: each child's best times, read from `G
 **Adding progress.** A guardian, or a student who answers for themselves (`family_may_answer()`), adds a swim time on *Progressos*: hours, minutes, seconds and hundredths in their own boxes, and a pool from the club's list, whose length gives the course. They remove what they entered. A typed time reads *Indicada pelo aluno* on desktop and can be a personal best, never official or for mínimos. *Distância nadada* adds up every time on the record and is never typed. *Integrações* lists what comes after go-live, with nothing behind it.
 
 *Progressos* has three sections, *Resumo*, *Registos* and *Integrações*. *Resumo* is the distance, the favourite stroke and the best time per stroke. *Registos* lists every time, with the add button, and a time may name one of the child's lessons of the last 30 days, whose day it takes. The favourite stroke is the same field the office sees, and is informative.
+
+## The club's logo — 06-11-2026
+
+A tap on the logo in the header zooms it open, and closing zooms it away. With reduced motion it opens and closes at once.
