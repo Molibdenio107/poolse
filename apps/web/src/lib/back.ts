@@ -87,6 +87,7 @@ const LABELS: readonly (readonly [string, string])[] = [
   ['/dashboard/calendar/closures', 'back.toClosures'],
   ['/dashboard/calendar/sessions', 'back.toLesson'],
   ['/dashboard/calendar', 'calendar.backToCalendar'],
+  ['/dashboard/faturacao/custos', 'costs.backTo'],
   ['/dashboard/faturacao', 'invoices.backToList'],
   ['/dashboard/rececao', 'back.toReception'],
   ['/dashboard/arquivados', 'back.toArchive'],

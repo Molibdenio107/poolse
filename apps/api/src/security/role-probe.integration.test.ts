@@ -633,6 +633,7 @@ test('operational reads refuse non-staff (403)', async () => {
     // POOLSE-182: the ledger is the office's; recording is staff's.
     await refused('GET costs/months', 403, () => new CostsController().months('2026-01-01', '2026-12-31'));
     await refused('GET costs/window', 403, () => new CostsController().window('2026-01-01', '2026-12-31'));
+    await refused('GET costs/overview', 403, () => new CostsController().overview());
     await refused('POST costs/purchases', 403, () =>
       new CostsController().purchase({ inventoryItemId: NO_SUCH_ID, quantity: 1, amountCents: 1, boughtOn: '2026-01-01' }),
     );

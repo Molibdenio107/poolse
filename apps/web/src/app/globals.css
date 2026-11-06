@@ -261,6 +261,12 @@
     --chart-1: 61 141 161;
     --chart-2: 214 112 40;
     --chart-3: 104 150 76;
+    /* POOLSE-183: the rest of Custos' eight kinds, validated in stack order. */
+    --chart-4: 123 95 192;
+    --chart-5: 173 138 18;
+    --chart-6: 201 72 122;
+    --chart-7: 58 91 176;
+    --chart-8: 156 85 48;
 
     /*
      * The staff board's post-its — POOLSE-169 (Rui, 04-11-2026). Four papers,
@@ -431,6 +437,11 @@
     --chart-1: 126 186 201;
     --chart-2: 245 150 80;
     --chart-3: 154 191 131;
+    --chart-4: 165 139 235;
+    --chart-5: 207 174 46;
+    --chart-6: 242 112 143;
+    --chart-7: 111 147 234;
+    --chart-8: 204 133 88;
     /* The papers dimmed for a dark room, the ink unchanged — POOLSE-169. */
     --note-yellow: 214 198 118;
     --note-orange: 216 176 140;

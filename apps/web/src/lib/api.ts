@@ -1269,6 +1269,62 @@ export interface ComparedTotal {
 }
 
 /** `GET /energy/summary` — the Energia page's dashboard. */
+/** POOLSE-183, in the stack's order, bottom to top. */
+export const COST_GROUPS = [
+  'gas',
+  'electricity',
+  'materials',
+  'insurance',
+  'salary',
+  'water',
+  'maintenance_service',
+  'fixed',
+] as const;
+export type CostGroup = (typeof COST_GROUPS)[number];
+export type CostRuler = 'civil' | 'season';
+
+export interface CostsOverview {
+  ruler: CostRuler;
+  withVat: boolean;
+  windows: Record<CostRuler, { key: string; label: string }[]>;
+  window: { key: string; label: string; from: string; to: string; runningToday: boolean };
+  chart: { month: string; groups: Partial<Record<CostGroup, number>> }[];
+  seasons: { name: string; startsOn: string; endsOn: string }[];
+  totals: { group: CostGroup; invoicedCents: number; estimatedCents: number }[];
+  invoicedCents: number;
+  estimatedCents: number;
+  estimatedMonths: number;
+  table: {
+    month: string;
+    partial: boolean;
+    groups: Partial<Record<CostGroup, { invoicedCents: number; estimatedCents: number }>>;
+  }[];
+  averages: {
+    months: number;
+    perMonthCents: number | null;
+    taughtHours: number;
+    perHourCents: number | null;
+    studentMonths: number;
+    perStudentMonthCents: number | null;
+    cubicMetres: number | null;
+    poolsWithoutVolume: number;
+    perCubicMetreCents: number | null;
+  };
+  comparison:
+    | {
+        months: number;
+        groups: { group: CostGroup; currentCents: number; previousCents: number }[];
+        currentCents: number;
+        previousCents: number;
+      }
+    | { months: number; groups: null }
+    | null;
+  previousLabel: string | null;
+  salariesWithoutHours: number;
+  unpricedSupplyMonths: number;
+  ownerPayLeftOut: boolean;
+}
+
 export interface EnergySummary {
   canSeeMoney: boolean;
   months: { month: string; carriers: Record<MeterCarrier, CarrierMonth> }[];

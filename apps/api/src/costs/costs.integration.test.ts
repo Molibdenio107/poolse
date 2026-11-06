@@ -191,3 +191,82 @@ test('a supply’s unbilled month is estimated from its tariff; a billed month i
     ]);
   });
 });
+
+const recordWater = (tenant: ScratchTenant, month: string, amountCents: number, vatCents = 0): Promise<{ id: string }> =>
+  asOwner(tenant, () =>
+    new CostsController().record({ kind: 'water', amountCents, vatCents, periodFrom: `${month}-01`, periodTo: `${month}-28` }),
+  );
+
+test('183 QA 1 — one set of rows, two rulers: an época cuts where its dates do, a year where it ends', async () => {
+  await withScratchTenant(async (tenant) => {
+    await recordWater(tenant, '2025-02', 28_000);
+    await recordWater(tenant, '2025-08', 9_000);
+    const [season] = await tenant.sql<{ id: string }>(
+      `INSERT INTO season (organization_id, name, starts_on, ends_on, status)
+       VALUES ($1, 'Época 24/25', '2024-09-15', '2025-07-31', 'archived') RETURNING id`,
+      [tenant.organizationId],
+    );
+    const controller = new CostsController();
+    const year = await asOwner(tenant, () => controller.overview('civil', '2025'));
+    assert.equal(year.ruler, 'civil');
+    assert.equal(year.window.from, '2025-01-01');
+    assert.equal(year.window.to, '2025-12-31');
+    assert.equal(year.invoicedCents, 37_000);
+
+    const epoca = await asOwner(tenant, () => controller.overview('season', season!.id));
+    assert.equal(epoca.window.from, '2024-09-15');
+    assert.equal(epoca.window.to, '2025-07-31');
+    assert.equal(epoca.invoicedCents, 28_000, 'August falls outside the época');
+    assert.deepEqual(epoca.seasons.map((one) => one.name).slice(0, 1), year.seasons.map((one) => one.name).slice(0, 1));
+    assert.ok(epoca.table.some((month) => month.month === '2024-09' && month.partial));
+  });
+});
+
+test('183 QA 3 and rule 7 — a missing denominator is null, not zero, and com IVA adds the VAT', async () => {
+  await withScratchTenant(async (tenant) => {
+    await recordWater(tenant, '2025-08', 10_000, 2_300);
+    const controller = new CostsController();
+    const plain = await asOwner(tenant, () => controller.overview('civil', '2025'));
+    assert.equal(plain.averages.taughtHours, 0);
+    assert.equal(plain.averages.perHourCents, null);
+    assert.equal(plain.averages.perStudentMonthCents, null);
+    assert.equal(plain.averages.perMonthCents, Math.round(10_000 / 12));
+    assert.equal(plain.withVat, false);
+    const gross = await asOwner(tenant, () => controller.overview('civil', '2025', '1'));
+    assert.equal(gross.invoicedCents, 12_300);
+  });
+});
+
+test('183 — a running year stops at today, so it counts no pay not yet earned', async () => {
+  await withScratchTenant(async (tenant) => {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date());
+    const overview = await asOwner(tenant, () => new CostsController().overview());
+    assert.equal(overview.window.to, today);
+    assert.equal(overview.chart.length, 24);
+    assert.equal(overview.chart.at(-1)!.month, today.slice(0, 7));
+  });
+});
+
+test('183 QA 4 — an admin opens it without the Owner, an instructor and maintenance are refused', async () => {
+  await withScratchTenant(async (tenant) => {
+    const asAdmin = await actingAs(tenant, { roles: ['admin'] }, () => new CostsController().overview());
+    assert.equal(asAdmin.ownerPayLeftOut, true);
+    const mine = await asOwner(tenant, () => new CostsController().overview());
+    assert.equal(mine.ownerPayLeftOut, false);
+    for (const role of ['instructor', 'maintenance', 'guardian', 'student'] as const) {
+      await actingAs(tenant, { roles: [role] }, () => expectStatus(() => new CostsController().overview(), 403));
+    }
+    await actingAs(tenant, { roles: ['owner'] }, () => expectStatus(() => new CostsController().overview('moon'), 400));
+  });
+});
+
+test('183 — another club reads none of it', async () => {
+  await withScratchTenant(async (mine) => {
+    await recordWater(mine, '2025-08', 10_000);
+    await withScratchTenant(async (theirs) => {
+      const seen = await asOwner(theirs, () => new CostsController().overview('civil', '2025'));
+      assert.equal(seen.invoicedCents, 0);
+      assert.deepEqual(seen.totals, []);
+    });
+  });
+});
