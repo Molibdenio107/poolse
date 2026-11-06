@@ -101,19 +101,21 @@ test('refusals: a stranger’s child, a minor’s own login, a renamed executabl
   await withScratchTenant(async (tenant) => {
     const family = await seed(tenant);
     await asGuardian(tenant, family, async () => {
-      await expectStatus(() => new AppController().sendDocument('socio_form', family.stranger, 'f.pdf', undefined, PDF), 404);
-      await expectStatus(() => new AppController().sendDocument('socio_form', family.child, 'f.pdf', undefined, EXE), 400);
+      await expectStatus(() => new AppController().sendDocument('id_document', family.stranger, 'f.pdf', undefined, PDF), 404);
+      await expectStatus(() => new AppController().sendDocument('id_document', family.child, 'f.pdf', undefined, EXE), 400);
+      // The boletim is only ever downloaded (Rui, 06-11-2026).
+      await expectStatus(() => new AppController().sendDocument('socio_form', family.child, 'f.pdf', undefined, PDF), 404);
       await expectStatus(() => new AppController().sendDocument('medical_exam', family.child, 'e.pdf', undefined, PDF), 400);
       await expectStatus(() => new AppController().sendDocument('nonsense', family.child, 'e.pdf', undefined, PDF), 404);
     });
     await actingAs(tenant, { membershipId: family.ownLogin, roles: ['student'] }, async () => {
-      await expectStatus(() => new AppController().sendDocument('socio_form', family.child, 'f.pdf', undefined, PDF), 403);
+      await expectStatus(() => new AppController().sendDocument('fpn_declaration', family.child, 'f.pdf', undefined, PDF), 403);
       // …and still reads the statuses.
       const { children } = await new AppController().documents(family.child);
       assert.ok(children[0]!.documents.every((one) => one.canSend === false));
     });
     await actingAs(tenant, { roles: ['instructor'] }, () =>
-      expectStatus(() => new AppController().sendDocument('socio_form', family.child, 'f.pdf', undefined, PDF), 403),
+      expectStatus(() => new AppController().sendDocument('fpn_declaration', family.child, 'f.pdf', undefined, PDF), 403),
     );
   });
 });
@@ -187,7 +189,7 @@ test('a rejected plain form is archived, so nobody can open it again', async () 
   await withScratchTenant(async (tenant) => {
     const family = await seed(tenant);
     await asGuardian(tenant, family, () =>
-      new AppController().sendDocument('socio_form', family.child, 'boletim.pdf', undefined, PDF),
+      new AppController().sendDocument('fpn_declaration', family.child, 'fpn.pdf', undefined, PDF),
     );
     const [sent] = (await asOffice(tenant, () => new StudentDocumentsController().submissions(family.child))).submissions;
     await asOffice(tenant, () => new StudentDocumentsController().reject(family.child, sent!.id));
@@ -209,7 +211,7 @@ test('a photo’s GPS position never reaches the bucket', async () => {
     const exif = Buffer.concat([Buffer.from([0xff, 0xe1, 0x00, 0x1c]), Buffer.from('Exif\0\0', 'latin1'), Buffer.from('II*\0', 'latin1'), Buffer.from('GPS:41.1579N,8.6291W', 'latin1')]);
     exif.writeUInt16BE(exif.length - 2, 2);
     const photo = Buffer.concat([JPEG.subarray(0, 2), exif, JPEG.subarray(2)]);
-    await asGuardian(tenant, family, () => new AppController().sendDocument('socio_form', family.child, 'f.jpg', undefined, photo));
+    await asGuardian(tenant, family, () => new AppController().sendDocument('fpn_declaration', family.child, 'f.jpg', undefined, photo));
     const [sent] = (await asOffice(tenant, () => new StudentDocumentsController().submissions(family.child))).submissions;
     const [row] = await tenant.sql<{ storage_key: string }>('SELECT storage_key FROM stored_file WHERE id = $1', [sent!.fileId]);
     const stored = await getObjectBytes(row!.storage_key);
@@ -222,14 +224,14 @@ test('the family’s actions are on the record, named, never valued', async () =
   await withScratchTenant(async (tenant) => {
     const family = await seed(tenant);
     await asGuardian(tenant, family, () =>
-      new AppController().sendDocument('socio_form', family.child, 'boletim.pdf', undefined, PDF),
+      new AppController().sendDocument('fpn_declaration', family.child, 'fpn.pdf', undefined, PDF),
     );
     const [entry] = await tenant.sql<{ actor_membership_id: string; data: { kind: string } }>(
       `SELECT actor_membership_id, data FROM audit_log WHERE entity_id = $1 AND action = 'student.document_sent'`,
       [family.child],
     );
     assert.equal(entry!.actor_membership_id, family.guardian);
-    assert.equal(entry!.data.kind, 'socio_form');
+    assert.equal(entry!.data.kind, 'fpn_declaration_minor');
   });
 });
 

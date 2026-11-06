@@ -21,10 +21,11 @@ export default async function FamilyFormLayout({
     <>
       <Link
         href={`/app/familia/documentos?child=${id}`}
+        aria-label={t('app.documents.backTo')}
         className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline coarse:-my-3 coarse:py-3 print:hidden"
       >
         <ArrowLeft className="size-4" aria-hidden />
-        {t('app.documents.backTo')}
+        {t('common.back')}
         <LinkBusy />
       </Link>
       {children}

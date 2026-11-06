@@ -58,9 +58,6 @@ export function NoticeToggle({
         {button(true)}
         {button(false)}
       </div>
-      <p className="text-sm text-foreground-muted">
-        {going === null ? t('app.notice.unanswered') : going ? t('app.notice.saidGoing') : t('app.notice.saidNotGoing')}
-      </p>
     </div>
   );
 }

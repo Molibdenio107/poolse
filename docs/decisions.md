@@ -1365,3 +1365,7 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-06** — **Custos reads eight groups, and pay does not make a month estimated** (POOLSE-183): `other` folds into *Fixos e outros* because a chart carries eight hues, and since salaries are always estimated, *inclui N meses estimados* counts only other estimates. A running window stops at today.
 
 - **2026-11-06** — **`CLAUDE.md` holds one line per convention, and `docs/conventions/` holds the full text** (Rui): it had reached 24,300 words reloaded on every step. It is 4,500 now, with every paragraph moved word for word into ten topic files.
+
+- **2026-11-06** — **The app stays short** (Rui): *Documentos* is a row on *Perfil*, the boletim is download only (refused by the API too), a plus sends and an arrow downloads, *Enviar ao clube* replaces *à secretaria*, back reads *Voltar*, the lesson question is *Sim / Não* with no sentence under it, and the water shows only its temperature, **reversing** POOLSE-90's *always with its age*.
+
+- **2026-11-06** — **An owner picks a view on the app and sees a real person's app, read-only and audited** (POOLSE-188, Rui, over a picker of held roles and over sample data), the same for support under a grant.

@@ -136,9 +136,9 @@ test.describe('as a guardian, before a lesson', () => {
     await visit(page, `/app/familia/aulas/${sessionId}`);
     // Two of hers are in the lesson, so each question names its child.
     const ana = page.locator('section').filter({ has: page.getByRole('heading', { name: /ana poolside/i }) }).filter({
-      has: page.getByRole('button', { name: /^(não vou|i'm not coming)$/i }),
+      has: page.getByRole('button', { name: /^(não|no)$/i }),
     });
-    const notGoing = ana.getByRole('button', { name: /^(não vou|i'm not coming)$/i });
+    const notGoing = ana.getByRole('button', { name: /^(não|no)$/i });
     expect((await notGoing.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await notGoing.tap();
     await expect(page.getByText(/avisado: não vem à aula|sent: not coming to the lesson/i)).toBeVisible({ timeout: 15_000 });
@@ -189,7 +189,7 @@ test.describe('push, as a guardian', () => {
     await visit(page, '/app/perfil/definicoes');
     await expect(page.getByText(/avisos neste telemóvel|notifications on this phone/i)).toBeVisible();
     if (info.project.name === 'iphone') {
-      await expect(page.getByText(/adicione a poolse ao ecrã principal|add poolse to your home screen/i)).toBeVisible();
+      await expect(page.getByText(/adicionar ao ecrã principal|add to home screen/i)).toBeVisible();
       await expect(page.getByRole('switch')).toHaveCount(0);
     } else {
       const toggle = page.getByRole('switch', { name: /avisos neste telemóvel|notifications on this phone/i });
@@ -328,10 +328,15 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
     await noSidewaysScroll(page);
   });
 
-  test('POOLSE-179 — Documentos is one row from Aulas, a status per paper, and no way out of app mode', async ({ page }) => {
+  test('POOLSE-179 — Documentos is a row on Perfil, not on Aulas, and no way out of app mode', async ({ page }) => {
     await visit(page, '/app/familia/aulas');
+    await expect(page.getByRole('link', { name: /^(documentos|documents)$/i })).toHaveCount(0);
+    await visit(page, '/app/perfil?home=family');
     await expect(page.getByRole('link', { name: /^(documentos|documents)$/i })).toHaveAttribute('href', '/app/familia/documentos');
     await visit(page, '/app/familia/documentos');
+    // Icons, named to a screen reader, and the boletim is download only.
+    await expect(page.getByText(/^(enviar|send)$/i)).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /voltar ao perfil|back to my profile/i })).toHaveText(/^(voltar|back)$/i);
     await expect(page.getByRole('heading', { level: 1, name: /^(documentos|documents)$/i })).toBeVisible();
     await expect(page.getByText(/boletim de sócio|membership form/i).first()).toBeVisible();
     await expect(page.locator('main a[href*="/dashboard"]')).toHaveCount(0);
@@ -359,7 +364,7 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
     await expect(page.getByRole('heading', { name: /^(em dívida|overdue)$/i }).first()).toBeVisible();
     await expect(page.getByRole('heading', { name: /^(próximos pagamentos|next payments)$/i }).first()).toBeVisible();
     await expect(page.locator('main a[href*="/dashboard"]')).toHaveCount(0);
-    await expect(page.getByText(/pagar na app — em breve|paying in the app is coming soon/i)).toBeVisible();
+    await expect(page.getByText(/pague por transferência ou mb way|pay by bank transfer or mb way/i)).toBeVisible();
     await expect(page.getByRole('button', { name: /pagar na app|paying in the app/i })).toHaveCount(0);
     await noSidewaysScroll(page);
   });

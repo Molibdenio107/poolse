@@ -15,8 +15,8 @@ import { confirmBirthDateIn } from './students.repository.js';
  */
 
 /** What a family may send. The FPN declaration's adult or minor form is the server's choice. */
-export type SendableKind = 'fpn_declaration' | 'socio_form' | 'id_document' | 'medical_exam';
-export const SENDABLE: readonly SendableKind[] = ['fpn_declaration', 'socio_form', 'id_document', 'medical_exam'];
+export type SendableKind = 'fpn_declaration' | 'id_document' | 'medical_exam';
+export const SENDABLE: readonly SendableKind[] = ['fpn_declaration', 'id_document', 'medical_exam'];
 
 type StoredKind = StudentDocumentKind | 'medical_exam';
 

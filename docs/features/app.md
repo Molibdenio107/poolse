@@ -274,3 +274,7 @@ Opened with `?from=/app…` on a phone, the register is compact: a row is the na
 Maintenance has three tabs: *Hoje*, *Registar* and *Perfil*. *Registar* reads `/app/maintenance`, the endpoint *Hoje* reads: *Concluir tarefa* and *Limpeza* open a sheet of what is open, using the same one-tap forms, and *Reportar avaria* opens the existing form, whose *Voltar* returns to *Registar*. A water analysis is still recorded in the pool's water tab.
 
 `app-frame.tsx` has two shapes now, tabs and detail; the old staff header is gone, and its controls live on *Perfil* and *Definições*.
+
+## Shorter app — 06-11-2026
+
+*Documentos* is a row on *Perfil* for a family, and its back goes there. Each paper has a plus to send and a download icon, named to a screen reader; the boletim is download only and the API refuses it (`SENDABLE`). A paper goes *ao clube*. Every back link in app mode reads *Voltar*, with the destination as its accessible name. *Vem à aula?* answers *Sim* or *Não*, with the chosen one filled and no sentence under it. The water shows its temperature only.
