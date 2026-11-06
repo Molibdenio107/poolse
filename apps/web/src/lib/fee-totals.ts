@@ -18,8 +18,9 @@ export interface FeeTotals {
 
 export function feeTotals(fees: StudentFees): FeeTotals {
   return {
-    live: fees.lines.filter((line) => line.endsOn === null),
-    ended: fees.lines.filter((line) => line.endsOn !== null),
+    // POOLSE-187: an ended line that still owes stays where it can be settled.
+    live: fees.lines.filter((line) => line.endsOn === null || line.olderUnpaid.length > 0),
+    ended: fees.lines.filter((line) => line.endsOn !== null && line.olderUnpaid.length === 0),
     grandTotal: fees.balance.totalCents,
     paidTotal: fees.balance.paidCents,
     outstanding: fees.balance.outstandingCents,

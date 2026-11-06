@@ -4,6 +4,10 @@
 
 **Type:** Bug · **Area:** Finance / Students / Mobile app · **Priority:** High (pre go-live) · **Depends on** POOLSE-42, [POOLSE-178](./POOLSE-178-pagamentos-says-what-is-due-and-what-is-coming.md), [POOLSE-183](./POOLSE-183-custos-per-year-and-per-season.md) (built after it, by order only)
 
+### As built (06-11-2026) — wins over what follows
+
+`student_fee` lines gain `olderUnpaid`, read in the fee query beside the current occurrence, and `feeBalance` adds them. No migration. *Pagamentos* lists each period and counts them; the office's fee block says how many, and its period switcher now offers them, or nobody could clear one. An ended line that still owes stays with the running lines for the same reason. The late charge is unchanged.
+
 ### PO — why this exists
 
 Filed while building POOLSE-178 (05-11-2026): *"An older period left unpaid is in no total anywhere in Poolse."* Rui, 06-11-2026: ticket it, fix before go-live, build it after POOLSE-183.
@@ -48,8 +52,8 @@ Filed while building POOLSE-178 (05-11-2026): *"An older period left unpaid is i
 9. Both themes, desk and phone, on *Pagamentos* with three older periods.
 
 ### Acceptance criteria
-- [ ] Every unpaid occurrence up to the current one counts, through `feeBalance` alone.
-- [ ] The office's fee block, *Pagamentos* and the dashboard card read one figure.
-- [ ] Rule 8 holds, including for a line entered mid-way.
-- [ ] `docs/features/students.md` and `docs/features/invoicing.md` updated.
-- [ ] QA 1–9 green.
+- [x] Every unpaid occurrence up to the current one counts, through `feeBalance` alone.
+- [x] The office's fee block, *Pagamentos* and the dashboard card read one figure.
+- [x] Rule 8 holds, including for a line entered mid-way.
+- [x] `docs/features/students.md` and `docs/features/invoicing.md` updated.
+- [x] QA 1–9 green.

@@ -84,7 +84,7 @@ export const TABS: Record<TabbedHat, AppTab[]> = {
     { href: '/app/familia', labelKey: 'app.tabs.familia.inicio', glyph: 'square' },
     // The hexagon *Modalidades* replaces this one when a family has two sports (POOLSE-127).
     { href: '/app/familia/aulas', labelKey: 'app.tabs.familia.aulas', glyph: 'circle' },
-    { href: '/app/familia/pagamentos', labelKey: 'app.tabs.familia.pagamentos', glyph: 'triangle' },
+    { href: '/app/familia/progressos', labelKey: 'app.tabs.familia.progressos', glyph: 'triangle' },
     { href: '/app/perfil?home=family', labelKey: 'app.tabs.perfil', glyph: 'diamond' },
   ],
   teaching: [
@@ -118,7 +118,7 @@ export function tabFor(
   const path = pathname.replace(/\/$/, '');
   if (path === '/app/familia') return { hat: 'family', index: 0 };
   if (path === '/app/familia/aulas') return { hat: 'family', index: 1 };
-  if (path === '/app/familia/pagamentos') return { hat: 'family', index: 2 };
+  if (path === '/app/familia/progressos') return { hat: 'family', index: 2 };
   if (path === '/app/aulas') return { hat: 'teaching', index: search.has('semana') ? 1 : 0 };
   if (path === '/app/manutencao') return { hat: 'maintenance', index: 0 };
   if (path === '/app/manutencao/registar') return { hat: 'maintenance', index: 1 };

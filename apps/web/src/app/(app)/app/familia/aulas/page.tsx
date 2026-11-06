@@ -10,7 +10,6 @@ import { PageError } from '@/components/page-shell';
 import { WeekStrip } from '@/components/app/week-strip';
 import { EntryCard, dayHeading } from '../agenda-parts';
 import { FamilyCertificates } from '../certificates';
-import { RecentLessons } from '../feedback';
 import { ChildFilter } from '../child-filter';
 
 /**
@@ -66,11 +65,6 @@ export default async function FamilyLessons({
     for (let at = closure.startsOn; at <= closure.endsOn; at = addDays(at, 1)) closedDays.add(at);
   }
 
-  const recent = await RecentLessons({
-    recent: agenda.recent,
-    names: several && child === undefined ? nameOf : null,
-    from: path,
-  });
   const certificates =
     leaves.state === 'ok'
       ? await FamilyCertificates({
@@ -80,8 +74,8 @@ export default async function FamilyLessons({
         })
       : null;
 
-  // What is coming leads, and what has happened sits under *Últimas aulas*,
-  // newest first (rule 4), so the tab opens on today in any month.
+  // What is coming leads, then what has happened, newest first (rule 4). *Últimas
+  // aulas* moved to *Início* (Rui, 06-11-2026).
   const days = [...byDay.entries()];
   const coming = days.filter(([date]) => date >= day);
   const earlier = days.filter(([date]) => date < day).reverse();
@@ -130,8 +124,6 @@ export default async function FamilyLessons({
       )}
 
       {coming.map(([date, entries]) => dayRows(date, entries))}
-
-      {recent}
 
       {earlier.map(([date, entries]) => dayRows(date, entries))}
 

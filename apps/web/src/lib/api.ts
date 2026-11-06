@@ -1283,6 +1283,16 @@ export const COST_GROUPS = [
 export type CostGroup = (typeof COST_GROUPS)[number];
 export type CostRuler = 'civil' | 'season';
 
+export interface CostEntry {
+  id: string;
+  kind: 'water' | 'fixed' | 'maintenance_service' | 'other' | 'electricity' | 'gas';
+  amountCents: number;
+  recurrence: 'none' | 'monthly' | 'yearly';
+  startsOn: string;
+  endsOn: string | null;
+  supplier: string | null;
+}
+
 export interface CostsOverview {
   ruler: CostRuler;
   withVat: boolean;
@@ -2187,6 +2197,8 @@ export interface StudentFeeLine {
   /** Occurrences invoiced outside Poolse, newest first — POOLSE-163. */
   externalCharges: { id: string; occurrenceOn: string; reference: string }[];
   isOverdue: boolean;
+  /** Older occurrences still unpaid, oldest first — POOLSE-187. */
+  olderUnpaid: { periodStart: string; dueOn: string; isOverdue: boolean }[];
   /** Set only when the plan has moved on — that is the marker, and the whole rule. */
   planAmountCentsNow: number | null;
   /**
@@ -3146,6 +3158,8 @@ export interface Season {
  * not the club's, and two implementations of one rule agree until they do not.
  */
 export interface InsurancePolicy {
+  premiumCents: number | null;
+  premiumVatCents: number | null;
   id: string;
   insurer: string;
   policyNumber: string;

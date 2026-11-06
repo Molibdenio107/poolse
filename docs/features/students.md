@@ -726,3 +726,7 @@ An adult-path student with a login reads their name, email, birth date and phone
 **The app:** *O meu perfil* says whose it is, *Encarregado de educação de …* or *A sua conta*. Editing it never changes a child's record.
 
 Reading through costs the Alunos list its sort index, about 14 ms on 400 students. `docs/data-model.md`, *A student read through their login*.
+
+## Older unpaid periods — POOLSE-187
+
+`balance` counts every unpaid occurrence of a line, not only the current one, from the period holding the line's `created_at` or its start if later, because an earlier month may have been paid before Poolse. A payment or an external invoice settles one. An ended line owes up to its end, and stays among the running lines so the office can settle it. A late charge stays one per kind of charge.

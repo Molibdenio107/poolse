@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { SignOutButton } from '@clerk/nextjs';
-import { ChevronRight, FileText, LayoutDashboard, LogOut, Settings } from 'lucide-react';
+import { ChevronRight, FileText, LayoutDashboard, LogOut, Settings, Wallet } from 'lucide-react';
 import { apiFetch, type ActiveSession, type Me } from '@/lib/api';
 import { hatsOf, isHat } from '@/lib/app-hats';
 import { outcome } from '@/lib/load-failure';
@@ -108,6 +108,20 @@ export default async function AppProfilePage({
         <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
         <LinkBusy />
       </Link>
+
+      {hats.homes.includes('family') && (
+        <Link
+          href="/app/familia/pagamentos"
+          className={`${row} rounded bg-surface px-4 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}
+        >
+          <span className="flex items-center gap-3">
+            <Wallet className="size-5 text-primary" aria-hidden />
+            {t('app.tabs.familia.pagamentos')}
+          </span>
+          <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
+          <LinkBusy />
+        </Link>
+      )}
 
       {hats.homes.includes('family') && (
         <Link

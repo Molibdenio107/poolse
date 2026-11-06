@@ -189,6 +189,7 @@ Read [`docs/conventions/money.md`](docs/conventions/money.md) before touching an
 - A document's state is `total − paid` and never a column.
 - Where families pay is one account per club, and an IBAN change is told to every owner.
 - A fee line with no `fee_period_id` is charged once
+- A fee line owes every unpaid period from the month it was entered, not only the current one (`olderUnpaid`, POOLSE-187).
 - An Admin sees every staff member's pay except the Owner's, and the card says so.
 - A free-swim sale is an invoice line, and who is in the water is `pool_occupancy()`.
 - A cost is an amount with a period, and a window is a sum of `cost_month`.
@@ -247,6 +248,8 @@ Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before tou
 - A side sheet fits the window; the one growable thing inside it takes the slack.
 - Eight level tints, measured in both themes, and always shown at full strength somewhere.
 - A page that fails unexpectedly lands in `dashboard/error.tsx`
+- A message in the family app on a phone is a solid full-width bar above the tab bar (`.toast-card`); the backoffice keeps its quiet toast (Rui, 06-11-2026).
+- A typed cost or purchase is *Faturado* only with a document number; without one it is *Estimado* (Rui, 06-11-2026).
 - The family app says the least it can (Rui, 06-11-2026): short labels, *Voltar* with the destination for screen readers only, icons with names for a screen reader, no sentence that repeats a control.
 - The family app is soft on a phone
 

@@ -6,12 +6,13 @@ import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
 import { SectionPills } from '@/components/section-pills';
 import { StackedMonthBars, type ChartRuler } from '@/components/stacked-month-bars';
 import { Hint } from '@/components/ui/tooltip';
-import { apiFetch, COST_GROUPS, type CostGroup, type CostRuler, type CostsOverview } from '@/lib/api';
+import { apiFetch, COST_GROUPS, type CostEntry, type CostGroup, type CostRuler, type CostsOverview } from '@/lib/api';
 import { backProp, originBack } from '@/lib/back';
 import { formatDate } from '@/lib/date-format';
 import { describeLoad } from '@/lib/load-failure';
 import { formatCents } from '@/lib/money';
 import { cn } from '@/lib/utils';
+import { RecordCost, RecordedCosts } from './record-cost';
 
 /**
  * *Custos* — POOLSE-183. What the club spent, by kind, read by the civil year or
@@ -41,6 +42,8 @@ const RECORDED_AT: Partial<Record<CostGroup, string>> = {
   water: '/dashboard/energy',
   salary: '/dashboard/facilities/staff/salaries',
   materials: '/dashboard/facilities/inventory',
+  insurance: '/dashboard/facilities',
+  maintenance_service: '/dashboard/facilities',
 };
 
 function monthPosition(date: string, months: readonly string[], endOfDay: boolean): number | null {
@@ -74,8 +77,12 @@ export default async function CostsPage({
   };
 
   let data: CostsOverview;
+  let entries: CostEntry[];
   try {
-    data = await apiFetch<CostsOverview>(`/costs/overview?${params.toString()}`);
+    [data, { entries }] = await Promise.all([
+      apiFetch<CostsOverview>(`/costs/overview?${params.toString()}`),
+      apiFetch<{ entries: CostEntry[] }>('/costs/entries'),
+    ]);
   } catch (error) {
     const failure = describeLoad(error);
     return (
@@ -164,12 +171,15 @@ export default async function CostsPage({
     <PageShell
       {...shell}
       actions={
-        <DownloadLink
-          href={`/dashboard/faturacao/custos/export?${params.toString()}`}
-          className="inline-flex h-control items-center justify-center rounded-sm bg-surface px-4 text-control shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        >
-          {t('costs.exportCsv')}
-        </DownloadLink>
+        <div className="flex flex-wrap gap-2">
+          <RecordCost />
+          <DownloadLink
+            href={`/dashboard/faturacao/custos/export?${params.toString()}`}
+            className="inline-flex h-control items-center justify-center rounded-sm bg-surface px-4 text-control shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('costs.exportCsv')}
+          </DownloadLink>
+        </div>
       }
     >
       <div className="flex flex-col gap-2">
@@ -411,6 +421,8 @@ export default async function CostsPage({
           </section>
         </>
       )}
+
+      <RecordedCosts entries={entries} />
     </PageShell>
   );
 }

@@ -116,4 +116,4 @@ Legend: ✅ docs or commit say built · ◐ partly · ❔ verify on screen (no c
 - **172, 174–182, 186**: built, on `feat/poolse-186-birth-date`.
 - **183**: built.
 - **184, 185**: not built.
-- **187** (older unpaid periods stay owed): not built, pre go-live, after 183.
+- **187, 189**: built.

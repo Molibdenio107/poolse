@@ -261,14 +261,45 @@ export interface CostEntryInput {
   taskCompletionId: string | null;
 }
 
+export interface CostEntryRow {
+  id: string;
+  kind: CostKind;
+  amountCents: number;
+  recurrence: 'none' | 'monthly' | 'yearly';
+  startsOn: string;
+  endsOn: string | null;
+  supplier: string | null;
+}
+
+/**
+ * What a person typed, newest first — POOLSE-189. Never a recurring cost's
+ * generated months: the template stands for them, and archiving it stops them.
+ */
+export async function listCostEntries(organizationId: string): Promise<CostEntryRow[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<CostEntryRow>(
+      `SELECT id, kind::text AS kind, amount_cents AS "amountCents", recurrence::text AS recurrence,
+              to_char(coalesce(effective_from, period_from), 'YYYY-MM-DD') AS "startsOn",
+              to_char(coalesce(effective_to, period_to), 'YYYY-MM-DD') AS "endsOn",
+              supplier
+         FROM cost_entry
+        WHERE organization_id = $1 AND archived_at IS NULL AND template_id IS NULL
+        ORDER BY created_at DESC
+        LIMIT 50`,
+      [organizationId],
+    );
+    return rows;
+  });
+}
+
 export async function recordCost(organizationId: string, membershipId: string, input: CostEntryInput): Promise<string> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO cost_entry (organization_id, facility_id, kind, amount_cents, vat_cents, period_from, period_to,
                                recurrence, effective_from, effective_to, supplier, document_number, note,
-                               maintenance_request_id, task_completion_id, recorded_by)
+                               maintenance_request_id, task_completion_id, recorded_by, basis)
        VALUES ($1, $2, $3::cost_kind, $4, $5, $6::date, $7::date, $8::cost_recurrence, $9::date, $10::date,
-               $11, $12, $13, $14, $15, $16)
+               $11, $12, $13, $14, $15, $16, $17::cost_basis)
        RETURNING id`,
       [
         organizationId,
@@ -287,6 +318,8 @@ export async function recordCost(organizationId: string, membershipId: string, i
         input.maintenanceRequestId,
         input.taskCompletionId,
         membershipId,
+        // *Faturado* means a document exists (Rui, 06-11-2026).
+        input.documentNumber === null ? 'estimate' : 'invoice',
       ],
     );
     const id = rows[0]!.id;

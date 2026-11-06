@@ -136,9 +136,8 @@ async function sharedDocuments(
 /**
  * One child's *Pagamentos* — POOLSE-178.
  *
- * **Overdue is what `balance` calls overdue**: each line's current occurrence.
- * The fee read tracks that one, so a list here that walked older periods would
- * disagree with the total on every other screen.
+ * **Overdue is what `balance` calls overdue**: each line's current occurrence
+ * and every older one still unpaid (POOLSE-187), oldest first.
  */
 export async function familyFees(
   organizationId: string,
@@ -150,8 +149,13 @@ export async function familyFees(
   const named = new Map(family.map((one) => [one.id, one.name]));
 
   const overdue = fees.lines
-    .filter((line) => line.isOverdue && line.currentPeriodStart !== null)
-    .map((line) => charge(line, line.currentPeriodStart!, line.dueOn));
+    .flatMap((line) => [
+      ...line.olderUnpaid.map((one) => charge(line, one.periodStart, one.dueOn)),
+      ...(line.isOverdue && line.currentPeriodStart !== null
+        ? [charge(line, line.currentPeriodStart, line.dueOn)]
+        : []),
+    ])
+    .sort((a, b) => a.periodStart.localeCompare(b.periodStart));
   const dueNext = fees.lines
     .filter((line) => !line.isPaid && !line.isOverdue && line.currentPeriodStart !== null)
     .map((line) => charge(line, line.currentPeriodStart!, line.dueOn));

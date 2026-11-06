@@ -25,6 +25,9 @@ export interface InsurancePolicy {
   validFrom: string;
   validTo: string;
   costPerPersonCents: number;
+  /** The whole premium and its VAT, spread over the policy's dates — POOLSE-189. */
+  premiumCents: number | null;
+  premiumVatCents: number | null;
   notes: string | null;
   /**
    * Whether this policy has run out, and whether it is close to it — derived in
@@ -89,6 +92,8 @@ export async function listPolicies(
       valid_from: string;
       valid_to: string;
       cost_per_person_cents: number;
+      premium_cents: number | null;
+      premium_vat_cents: number | null;
       notes: string | null;
       days_to_expiry: number;
       covered_count: number;
@@ -108,7 +113,7 @@ export async function listPolicies(
       `SELECT p.id, p.insurer, p.policy_number,
               p.valid_from::text AS valid_from,
               p.valid_to::text   AS valid_to,
-              p.cost_per_person_cents, p.notes, p.document_file_id,
+              p.cost_per_person_cents, p.premium_cents, p.premium_vat_cents, p.notes, p.document_file_id,
               (p.valid_to - club_today()) AS days_to_expiry,
               (SELECT count(*)::int FROM student_fee sf
                 WHERE sf.insurance_policy_id = p.id
@@ -129,6 +134,8 @@ export async function listPolicies(
       validFrom: row.valid_from,
       validTo: row.valid_to,
       costPerPersonCents: row.cost_per_person_cents,
+      premiumCents: row.premium_cents,
+      premiumVatCents: row.premium_vat_cents,
       notes: row.notes,
       daysToExpiry: row.days_to_expiry,
       expired: row.days_to_expiry < 0,

@@ -13,6 +13,7 @@ import type { FormState } from '../../actions';
 import { addItemAction, archiveItemAction, updateItemAction } from './inventory.actions';
 import { InventoryImportWizard } from './import-wizard';
 import { Dialog } from '@/components/ui/dialog';
+import { RecordPurchase } from '../../faturacao/custos/cost-forms';
 import { DownloadLink } from '@/components/download-link';
 import { Reveal } from '@/components/ui/reveal';
 
@@ -731,6 +732,7 @@ function ItemRow({
       {canManage && (
         <td className="py-3">
           <div className="flex items-center justify-end gap-4">
+            <RecordPurchase itemId={item.id} itemName={item.name} className="whitespace-nowrap text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" />
             {canArchive && (
               <>
                 <button

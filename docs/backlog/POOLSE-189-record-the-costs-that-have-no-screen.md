@@ -4,6 +4,13 @@
 
 **Type:** Feature · **Area:** Finance / Maintenance · **Priority:** Medium (pilot) · **Depends on** [POOLSE-182](./POOLSE-182-cost-ledger-and-month-allocation.md), [POOLSE-183](./POOLSE-183-custos-per-year-and-per-season.md)
 
+### As built (06-11-2026) — wins over what follows
+
+- *Registar custo* on *Custos* takes water, fixed, a maintenance service with no avaria, and other, once or recurring, and lists what was typed (`GET /costs/entries`). Archiving a recurring cost stops the months to come and keeps the past.
+- *Registar compra* on each inventory row, *Registar custo* on each avaria, and a premium form on each policy, all in `custos/cost-forms.tsx`.
+- **Rule 1, in part:** a service on a task done has no form yet; the API takes it.
+- **Basis (Rui, 06-11-2026):** a typed cost or purchase is *Faturado* only with a document number; without one it is *Estimado*. A premium stays invoiced.
+
 ### PO — why this exists
 
 POOLSE-182 built `POST /costs`, `POST /costs/maintenance-service`, `POST /costs/purchases` and `PUT /costs/premiums/:policyId` with no screen. *Custos* (POOLSE-183) therefore reads energy, salaries and any purchases only, and a total that leaves out water, rent and insurance looks exactly like a complete one.
@@ -39,6 +46,6 @@ POOLSE-182 built `POST /costs`, `POST /costs/maintenance-service`, `POST /costs/
 7. Both themes, desk and phone.
 
 ### Acceptance criteria
-- [ ] All four costs have a screen, in the place their work is done.
-- [ ] *Ver onde se regista* on every kind on *Custos*.
-- [ ] QA 1–7 green.
+- [x] All four costs have a screen, in the place their work is done.
+- [ ] *Ver onde se regista* on every kind except *Fixos e outros*, recorded on the page itself on *Custos*.
+- [x] QA 1–7 green.
