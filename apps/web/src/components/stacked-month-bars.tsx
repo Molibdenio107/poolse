@@ -32,12 +32,25 @@ export interface StackedMonth {
   values: Record<string, number | null>;
 }
 
+/**
+ * A vertical line across the bars — POOLSE-183's two rulers. `at` is months from
+ * the left edge, fractional, so an época starting on the 15th sits mid-month. Solid
+ * and dashed differ in shape, so neither leans on colour.
+ */
+export interface ChartRuler {
+  at: number;
+  style: 'solid' | 'dashed';
+  label?: string;
+}
+
 export async function StackedMonthBars({
   months,
   series,
   formatValue,
   caption,
   emptyLabel,
+  rulers = [],
+  showTable = true,
 }: {
   months: StackedMonth[];
   series: StackedSeries[];
@@ -46,6 +59,9 @@ export async function StackedMonthBars({
   caption: string;
   /** What a month with no figure says, in its tooltip and the table. */
   emptyLabel: string;
+  rulers?: readonly ChartRuler[];
+  /** Off where the page already carries the figures in a table of its own. */
+  showTable?: boolean;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const format = await getFormatter();
@@ -75,7 +91,30 @@ export async function StackedMonthBars({
         <p className="text-xs text-foreground-muted">
           {max > 0 ? t('energy.dashboard.chartMax', { value: formatValue(max) }) : emptyLabel}
         </p>
-        <div className="flex h-48 items-end justify-between gap-1 border-b border-border" aria-hidden={max === 0}>
+        <div className="relative flex h-48 items-end justify-between gap-1 border-b border-border" aria-hidden={max === 0}>
+          {rulers.map((ruler) => (
+            <span
+              key={`${ruler.style}-${ruler.at}`}
+              aria-hidden
+              className={cn(
+                'pointer-events-none absolute inset-y-0 border-l border-foreground-muted',
+                ruler.style === 'dashed' && 'border-dashed',
+              )}
+              style={{ left: `${(ruler.at / months.length) * 100}%` }}
+            >
+              {ruler.label !== undefined && (
+                // Near the right edge the label reads leftwards, inside the card.
+                <span
+                  className={cn(
+                    'absolute top-0 whitespace-nowrap bg-surface px-1 text-[0.6875rem] text-foreground-muted',
+                    ruler.at > months.length * 0.8 ? 'right-1' : 'left-1',
+                  )}
+                >
+                  {ruler.label}
+                </span>
+              )}
+            </span>
+          ))}
           {months.map((m, index) => {
             const total = totals[index]!;
             const present = series.filter((s) => (m.values[s.key] ?? 0) > 0);
@@ -117,7 +156,8 @@ export async function StackedMonthBars({
                 ) : (
                   <div
                     className="flex w-full max-w-6 flex-col-reverse gap-[2px]"
-                    style={{ height: `${(total / max) * 100}%` }}
+                    // With rulers, headroom for their labels above the tallest bar.
+                    style={{ height: `${(total / max) * (rulers.length > 0 ? 88 : 100)}%` }}
                   >
                     {present.map((s, at) => (
                       <span
@@ -133,8 +173,15 @@ export async function StackedMonthBars({
           })}
         </div>
         <div className="flex justify-between gap-1 text-[0.6875rem] text-foreground-muted" aria-hidden>
-          {months.map((m) => (
-            <span key={m.month} className="flex-1 text-center">
+          {months.map((m, index) => (
+            // Two years on a phone: every third month, or the names collide.
+            <span
+              key={m.month}
+              className={cn(
+                'min-w-0 flex-1 text-center',
+                months.length > 12 && index % 3 !== 0 && 'max-md:invisible',
+              )}
+            >
               {format.dateTime(monthOf(m.month), 'monthShort')}
             </span>
           ))}
@@ -142,6 +189,7 @@ export async function StackedMonthBars({
       </div>
 
       {/* The figures as a table — the relief for a series under 3:1, and a reader's own way in. */}
+      {showTable && (
       <details className="group text-sm">
         <summary className="inline-flex cursor-pointer items-center gap-1 rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
           {t('energy.dashboard.showTable')}
@@ -178,6 +226,7 @@ export async function StackedMonthBars({
           </table>
         </div>
       </details>
+      )}
     </figure>
   );
 }

@@ -57,7 +57,7 @@ Open questions a ticket leaves are counted in the README's *Open* column.
   priority, depends on, open count. Do not renumber or reorder.
 - If the ticket records a product call, append one dated line to `docs/decisions.md`,
   newest last, bold lead, "(Rui)" where it was his, "**reverses**" where it does.
-- If it changes a standing rule, edit the relevant paragraph of `CLAUDE.md` in the same
+- If it changes a standing rule, edit its line in `CLAUDE.md` and its paragraph in `docs/conventions/` in the same
   commit, and say so in the ticket.
 - Do not commit; Rui commits.
 

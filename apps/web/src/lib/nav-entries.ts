@@ -404,6 +404,8 @@ export const SECTIONS: Item[] = [
     roles: ['owner', 'admin'],
     kinds: ['business'],
     module: 'invoicing',
+    // POOLSE-183.
+    children: [{ href: '/dashboard/faturacao/custos', key: 'costs.title', roles: ['owner', 'admin'] }],
   },
   {
     href: '/dashboard/students',

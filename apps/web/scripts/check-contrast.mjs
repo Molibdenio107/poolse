@@ -225,6 +225,11 @@ const PAIRS = [
   ['chart-1', 'surface', 3, 'chart series 1 — teal: electricity, turmas'],
   ['chart-2', 'surface', 3, 'chart series 2 — soft orange: gas, parcerias'],
   ['chart-3', 'surface', 3, 'chart series 3 — green: water'],
+  ['chart-4', 'surface', 3, 'chart series 4 — purple: salaries'],
+  ['chart-5', 'surface', 3, 'chart series 5 — gold: materials'],
+  ['chart-6', 'surface', 3, 'chart series 6 — pink: insurance'],
+  ['chart-7', 'surface', 3, 'chart series 7 — blue: maintenance services'],
+  ['chart-8', 'surface', 3, 'chart series 8 — brown: fixed and other costs'],
 
   // Today's column on the calendar (POOLSE-107): the brand at 6 % over the card.
   // `bg+fg@alpha` is composited before it is measured; nothing else is.

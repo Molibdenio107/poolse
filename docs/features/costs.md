@@ -1,6 +1,6 @@
 # Costs — the ledger (POOLSE-182)
 
-One place every euro the club spends can be read from. There is no screen yet (POOLSE-183). The schema is in `docs/data-model.md`, *The cost ledger*.
+One place every euro the club spends can be read from, on *Custos* under Faturação (POOLSE-183). The schema is in `docs/data-model.md`, *The cost ledger*.
 
 ## What it does
 
@@ -27,3 +27,19 @@ Invoices and estimates are distinct on every row and are never summed without na
 | `POST /costs/maintenance-service`, `POST /costs/purchases` | Yes | Yes, answered with an id, never a total | 403 |
 
 An Admin's figures leave the Owner's pay out, as every pay read does.
+
+## Custos — POOLSE-183
+
+`/dashboard/faturacao/custos`, owner and admin, read off `GET /costs/overview?ruler=civil|season&window=&vat=1`; the CSV is `export/route.ts` on the same read.
+
+- **Two rulers over the same rows.** A civil year (at most five back) or a shared published época. Solid lines mark a civil year on the chart and dashed lines an época's start and end. The chart is always the last 24 months, whole; the tiles and the table follow the chosen window.
+- **A window stops at today**, so a running year counts no pay not yet earned, and a month cut by the window counts its days.
+- **Eight groups for nine kinds**: `other` reads with `fixed` as *Fixos e outros*, because a chart carries eight hues at most.
+- **Three numbers, never one**: Faturado, Estimado, and Total (faturado + estimado). Salaries are always estimated, so *inclui N meses estimados* counts only months with another estimate.
+- **Averages name their denominator**: months, hours taught (POOLSE-28's, across every recinto), alunos-mês (each active enrolment's days in each month, over that month's days) and m³ (energy and water only). A missing denominator is a sentence, and a volume missing on any pool withholds the m³ figure.
+- **Comparison**: the previous window, over complete months with figures on both sides, paired by position. Under six such months it says so and shows none.
+- **Tax**: sem IVA by default; *Com IVA* for every club, because no setting says whether a club recovers VAT.
+- **The table and the CSV carry rounding forward**, so they equal the tiles to the cent.
+- A kind whose module is off stays out, and an Admin's figures leave the Owner's pay out, said in words.
+
+Not built: a site filter (one site per licence for now), and any screen to record water, fixed costs, maintenance services or a premium, which only the API takes today.

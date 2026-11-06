@@ -1,7 +1,9 @@
 import { BadRequestException, Body, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Put, Query } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
-import { CoreRoute } from '../tenant/modules.js';
+import { CoreRoute, moduleIsOn } from '../tenant/modules.js';
+import { GROUP_MODULE } from './cost-overview.js';
+import { costsOverview, type CostRuler, type CostsOverview } from './cost-overview.repository.js';
 import {
   archiveCost,
   costWindow,
@@ -88,6 +90,31 @@ export class CostsController {
     requireRole('owner', 'admin');
     const [a, b] = windowOf(from, to);
     return costWindow(currentTenant().organizationId, a, b, !hasRole('owner'));
+  }
+
+  /**
+   * The *Custos* page, whole — POOLSE-183. A kind whose module is off stays out,
+   * and an Admin's figures leave the Owner's pay out, which the page says.
+   */
+  @Get('overview')
+  async overview(
+    @Query('ruler') ruler?: string,
+    @Query('window') window?: string,
+    @Query('vat') vat?: string,
+  ): Promise<CostsOverview> {
+    requireRole('owner', 'admin');
+    if (ruler !== undefined && ruler !== 'civil' && ruler !== 'season') {
+      throw new BadRequestException('ruler is civil or season');
+    }
+    return costsOverview(
+      currentTenant().organizationId,
+      { ruler: (ruler ?? 'civil') as CostRuler, key: window, withVat: vat === '1' },
+      !hasRole('owner'),
+      (group) => {
+        const module = GROUP_MODULE[group];
+        return module === undefined || moduleIsOn(module);
+      },
+    );
   }
 
   /** Water, a fixed cost (once, monthly or yearly), or another cost the club pays. */

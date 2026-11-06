@@ -4,6 +4,18 @@
 
 **Type:** Feature · **Area:** Finance / Dashboards · **Priority:** Medium (pilot) · **Depends on** [POOLSE-182](./POOLSE-182-cost-ledger-and-month-allocation.md), [POOLSE-28](./POOLSE-28-heating-cost-per-lesson-hour.md), [POOLSE-66](./POOLSE-66-role-aware-dashboard.md) · **Unblocks** [POOLSE-184](./POOLSE-184-cost-suggestions-as-rules.md)
 
+### As built (06-11-2026) — wins over what follows
+
+`GET /costs/overview` replaces the ticket's two reads, so the page and its CSV cannot differ. `apps/api/src/costs/cost-overview.ts` is the arithmetic, tested on its own.
+
+- **Eight groups:** the ledger has nine kinds, so `other` joins `fixed` as *Fixos e outros*.
+- **Rule 3:** salaries are always estimated, so the sentence counts months with another estimate.
+- **Rule 7:** *Com IVA* for every club (Rui). No VAT-recovery setting exists.
+- **Rule 8:** energy, salaries and materials link to their pages. Water, fixed costs, maintenance services and premiums have no recording screen yet.
+- **A running window stops at today**, and a comparison leaves out a running month.
+- **Chart:** `StackedMonthBars` gained `rulers` and `showTable`, rather than adding Recharts. Colours `--chart-4…8`, run through the dataviz validator in stack order. Three settled brand colours sit under its chroma floor and were kept, with the legend, tooltips and table naming every kind.
+- **Left out:** the site filter (dev note), since a licence covers one site.
+
 ### PO — why this exists
 
 Rui, 05-11-2026: *"tell the owner the average costs of everything together but separated at the same time per civil year and per season."*
@@ -45,7 +57,7 @@ Energia shows kWh and one meter's euros; Salários shows a monthly figure; nothi
 7. Given the CSV, then its totals equal the tiles to the cent.
 
 ### Acceptance criteria
-- [ ] *Custos* page with the two rulers, tiles per kind, faturado / estimado / total, four averages.
-- [ ] Previous-window comparison with the 6-month rule.
-- [ ] Owner/admin only; palette entry; CSV.
-- [ ] QA 1–7 green.
+- [x] *Custos* page with the two rulers, tiles per kind, faturado / estimado / total, four averages.
+- [x] Previous-window comparison with the 6-month rule.
+- [x] Owner/admin only; palette entry; CSV.
+- [x] QA 1–7 green.

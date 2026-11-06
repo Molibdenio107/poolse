@@ -1361,3 +1361,7 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-06** — **A fee line owes from the month it was entered, never before** (POOLSE-187 rule 8, Rui): a line starting in September entered in November may have been paid before Poolse, so earlier periods are not shown as debt.
 
 - **2026-11-06** — **The family's *Aulas* steps a week, not a month, and a closure is the strip's hatching alone** (Rui, **reverses** POOLSE-175's month stepper and closure bands): the strip showed seven days while its arrows moved a month, so most of a month could not be seen, and the bands repeated what the calendar already marks.
+
+- **2026-11-06** — **Custos reads eight groups, and pay does not make a month estimated** (POOLSE-183): `other` folds into *Fixos e outros* because a chart carries eight hues, and since salaries are always estimated, *inclui N meses estimados* counts only other estimates. A running window stops at today.
+
+- **2026-11-06** — **`CLAUDE.md` holds one line per convention, and `docs/conventions/` holds the full text** (Rui): it had reached 24,300 words reloaded on every step. It is 4,500 now, with every paragraph moved word for word into ten topic files.
