@@ -309,11 +309,17 @@
         "too_many": "You already have 10 requests awaiting a reply. Wait for the club to answer before sending more."
       }
     },
+    "records": {
+      "none": "No records yet.",
+      "failed": "The records could not be loaded.",
+      "event": "{distance} m {stroke}"
+    },
     "tabs": {
       "label": "Tabs",
       "familia": {
         "inicio": "Home",
         "aulas": "Lessons",
+        "marcas": "Records",
         "pagamentos": "Payments"
       },
       "aulas": {

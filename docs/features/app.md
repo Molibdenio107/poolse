@@ -278,3 +278,7 @@ Maintenance has three tabs: *Hoje*, *Registar* and *Perfil*. *Registar* reads `/
 ## Shorter app — 06-11-2026
 
 *Documentos* is a row on *Perfil* for a family, and its back goes there. Each paper has a plus to send and a download icon, named to a screen reader; the boletim is download only and the API refuses it (`SENDABLE`). A paper goes *ao clube*. Every back link in app mode reads *Voltar*, with the destination as its accessible name. *Vem à aula?* answers *Sim* or *Não*, with the chosen one filled and no sentence under it. The water shows its temperature only.
+
+## Marcas and Perfil — 06-11-2026
+
+The family's triangle tab is *Marcas*: each child's best times, read from `GET /students/:id/progression`. Adding one from the app is not built yet. *Pagamentos* and *Documentos* are rows on *Perfil*, a screen deeper in. *Últimas aulas* moved from *Aulas* to *Início*, where a family gives feedback. A lesson's card no longer repeats the answer to *Vem à aula?*, because the lesson's page shows it.

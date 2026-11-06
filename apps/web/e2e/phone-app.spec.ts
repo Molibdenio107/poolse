@@ -99,8 +99,8 @@ test.describe('as a guardian', () => {
 
   test('POOLSE-116 — yesterday from Últimas aulas: a face, a few words, sent one-handed', async ({ page }) => {
     const { sessionId } = await poolsideYesterday();
-    // Past lessons live on *Aulas* since POOLSE-136.
-    await visit(page, '/app/familia/aulas');
+    // Past lessons live on *Início* since 06-11-2026.
+    await visit(page, '/app/familia');
     const recent = page.getByRole('heading', { name: /últimas aulas|recent lessons/i });
     await expect(recent).toBeVisible();
     const link = page.locator(`a[href^="/app/familia/aulas/${sessionId}"]`).first();
@@ -123,7 +123,7 @@ test.describe('as a guardian', () => {
     await expect(page.getByText(/feedback enviado|feedback sent/i)).toBeVisible({ timeout: 15_000 });
     await noSidewaysScroll(page);
 
-    await visit(page, '/app/familia/aulas');
+    await visit(page, '/app/familia');
     await expect(page.locator(`a[href^="/app/familia/aulas/${sessionId}"]`).first()).toContainText(/^.*(bem|good)/i);
   });
 });
@@ -149,7 +149,7 @@ test.describe('as a guardian, before a lesson', () => {
     await visit(page, `/app/familia/aulas?week=${agendaWeekOf(clubDay(1))}`);
     await expect(
       page.locator(`a[href^="/app/familia/aulas/${sessionId}"]`).filter({ hasText: 'Ana Poolside' }),
-    ).toContainText(/avisou que não vem|said they are not coming/i);
+    ).not.toContainText(/avisou que não vem|said they are not coming/i);
   });
 });
 
@@ -229,7 +229,7 @@ const bottomBar = (page: Page) => page.locator('nav[data-bottom-bar]');
 test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
   test.use({ storageState: GUARDIAN_SESSION });
 
-  test('QA 1–2 — four tabs, Início current; the fees are on Pagamentos and off the agenda', async ({ page }) => {
+  test('QA 1–2 — four tabs, Início current; Marcas is a tab and Pagamentos a row on Perfil', async ({ page }) => {
     await poolsideLesson();
     await visit(page, '/app/familia');
     const bar = bottomBar(page);
@@ -243,11 +243,14 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
     await expect(page.locator('header').getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: /^(mensalidades|monthly fees)$/i })).toHaveCount(0);
 
-    await expect(async () => {
-      if (!page.url().includes('/pagamentos')) await bar.getByRole('link', { name: /^(pagamentos|payments)$/i }).tap({ timeout: 5_000 });
-      await expect(page).toHaveURL(/\/app\/familia\/pagamentos$/, { timeout: 10_000 });
-    }).toPass({ timeout: 45_000 });
-    await expect(bottomBar(page).getByRole('link', { name: /^(pagamentos|payments)$/i })).toHaveAttribute('aria-current', 'page');
+    await expect(bar.getByRole('link', { name: /^(marcas|records)$/i })).toHaveAttribute('href', '/app/familia/marcas');
+    await expect(bar.getByRole('link', { name: /^(pagamentos|payments)$/i })).toHaveCount(0);
+    await visit(page, '/app/familia/marcas');
+    await expect(bottomBar(page).getByRole('link', { name: /^(marcas|records)$/i })).toHaveAttribute('aria-current', 'page');
+    await visit(page, '/app/perfil?home=family');
+    await expect(page.getByRole('link', { name: /^(pagamentos|payments)$/i })).toHaveAttribute('href', '/app/familia/pagamentos');
+    await visit(page, '/app/familia/pagamentos');
+    await expect(bottomBar(page)).toHaveCount(0);
     await expect(page.getByRole('heading', { name: /^(em dívida|overdue)$/i }).first()).toBeVisible();
     await noSidewaysScroll(page);
   });

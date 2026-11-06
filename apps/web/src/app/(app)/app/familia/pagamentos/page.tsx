@@ -1,4 +1,7 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
+import { LinkBusy } from '@/components/link-busy';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type AppChildFees, type AppFeeCharge, type AppFeeItem } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
@@ -82,7 +85,16 @@ export default async function FamilyPayments({
 
   return (
     <>
-      <h1>{t('app.tabs.familia.pagamentos')}</h1>
+      <Link
+        href="/app/perfil?home=family"
+        aria-label={t('app.profile.backTo')}
+        className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline coarse:-my-3 coarse:py-3"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        {t('common.back')}
+        <LinkBusy />
+      </Link>
+      <h1 className="text-xl font-semibold tracking-tight">{t('app.tabs.familia.pagamentos')}</h1>
       <ChildFilter base="/app/familia/pagamentos" children={answer.family} chosen={child} />
 
       {answer.children.length === 0 && <p className="text-foreground-muted">{t('app.family.nobody')}</p>}

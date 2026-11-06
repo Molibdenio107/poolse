@@ -124,17 +124,6 @@ export async function EntryCard({
           </span>
         )}
         {water !== null && !cancelled && <WaterLine water={water} />}
-        {/* What the family told the club — POOLSE-90 slice 2. Words and an icon. */}
-        {!cancelled && entry.going !== null && (
-          <span className="flex items-center gap-1 text-sm font-medium">
-            {entry.going ? (
-              <Check className="size-3.5 shrink-0" aria-hidden />
-            ) : (
-              <X className="size-3.5 shrink-0" aria-hidden />
-            )}
-            {entry.going ? t('app.notice.saidGoing') : t('app.notice.saidNotGoing')}
-          </span>
-        )}
       </div>
       {href !== null && <ChevronRight className="mt-1 size-4 shrink-0 text-foreground-muted" aria-hidden />}
     </div>

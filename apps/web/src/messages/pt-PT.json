@@ -310,11 +310,17 @@
         "too_many": "Já tem 10 pedidos à espera de resposta. Aguarde que o clube responda antes de enviar mais."
       }
     },
+    "records": {
+      "none": "Ainda sem marcas.",
+      "failed": "Não foi possível carregar as marcas.",
+      "event": "{distance} m {stroke}"
+    },
     "tabs": {
       "label": "Separadores",
       "familia": {
         "inicio": "Início",
         "aulas": "Aulas",
+        "marcas": "Marcas",
         "pagamentos": "Pagamentos"
       },
       "aulas": {

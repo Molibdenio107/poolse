@@ -8,6 +8,7 @@ import { describeLoad } from '@/lib/load-failure';
 import { PageError } from '@/components/page-shell';
 import { ChildFilter } from './child-filter';
 import { NextLessonHero } from '@/components/app/next-lesson-hero';
+import { RecentLessons } from './feedback';
 import { UserPlus } from 'lucide-react';
 
 /**
@@ -83,6 +84,13 @@ export default async function FamilyAgenda({
           </ul>
         </>
       )}
+
+      {/* Past lessons sit here, where a family gives feedback (Rui, 06-11-2026). */}
+      {await RecentLessons({
+        recent: agenda.recent,
+        names: agenda.children.length > 1 && child === undefined ? new Map(agenda.children.map((one) => [one.id, one.name])) : null,
+        from: child === undefined ? '/app/familia' : `/app/familia?child=${child}`,
+      })}
 
       {/* POOLSE-121: ask the club for a place in a class, for a child or a new one. */}
       <Link
