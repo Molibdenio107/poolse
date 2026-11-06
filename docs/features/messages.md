@@ -140,3 +140,16 @@ language.
   students it reached and who posted it; *Novo aviso* folded above.
 - **Not built.** Email or push for an aviso; a read receipt; rich text. A per-sport copy of the menu entry: the
   list is not filtered by sport, so a copy would show the same page under every sport.
+
+## A message to one student — POOLSE-191 (6 November 2026)
+
+**The student's *Mensagens* tab.** Who: owner and admin to any student, an instructor to a student actively in one of their turmas (`not_your_student` otherwise). The tab shows only with the `messages` module on and a reader the API answers. An instructor reads what they sent; the office reads everything.
+
+- **Who receives it** is `message_recipients()`'s `student` branch: live guardians, else the student, enrolled or not. It is named before anything leaves.
+- **Email** is a `message` with `audience = 'student'`, a record first, sent after the commit and retried. **The opt-out does not reach it**, and it carries no opt-out link. It is outside the 20 messages a day; its addresses count.
+- **WhatsApp** records a row with `channel = 'whatsapp'`, no address and no delivery, and answers one `wa.me` link per person with a usable phone, built by `whatsappUrl` in `@poolse/rules` (a bare number is Portuguese; 2,000 characters at most). A person opens it and presses send, so the screen says *Aberto no WhatsApp*, never sent. Audited as `message.whatsapp_opened`.
+- **Também como aviso na app** is a tick, off by default, with a last day a week away. It writes an aviso for this student in the same transaction, which `GET /app/avisos` shows only to their guardians and their own login.
+- It is on neither *Mensagens* nor *Avisos*, and `GET` and `DELETE /messages/:id` answer 404.
+- **Retention:** when the student's identity goes, `apply_retention()` replaces the words and keeps the row.
+
+Routes: `GET` and `POST /students/:studentId/messages`. **Not built:** replies, attachments, automatic sending.

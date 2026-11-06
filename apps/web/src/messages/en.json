@@ -384,6 +384,45 @@
       "signOut": "Sign out"
     }
   },
+  "studentMessages": {
+    "tab": "Messages",
+    "write": "Write",
+    "to": "Goes to: {who}",
+    "guardian": "{name} (guardian)",
+    "emailOff": "Email is off on this server: the message is recorded, but does not leave.",
+    "noEmail": "No email on file: email is not available.",
+    "noPhone": "No valid mobile number on file: WhatsApp is not available.",
+    "subject": "Subject",
+    "body": "Message",
+    "showInApp": "Also show as a notice in the app",
+    "until": "Notice until",
+    "sendEmail": "Send email",
+    "prepareWhatsapp": "Prepare WhatsApp",
+    "confirmTitle": "Send this message?",
+    "confirmEmail": "It goes to {who} and stays on this record. Once sent it cannot be undone.",
+    "confirmWhatsapp": "It is recorded on this record as opened in WhatsApp. The conversation then opens with the text ready, and you press send.",
+    "openNow": "Open the conversation and press send in WhatsApp:",
+    "open": "Open WhatsApp: {name}",
+    "sent": "Message recorded.",
+    "recorded": "Recorded. WhatsApp still has to be opened.",
+    "history": "Sent",
+    "none": "No messages for this student yet.",
+    "line": "{state} · {when} · {who}",
+    "toLine": "To: {who}",
+    "someone": "someone",
+    "state": {
+      "whatsapp": "Opened in WhatsApp",
+      "app": "App notice until {date}",
+      "delivered": "Email sent",
+      "waiting": "Email: {done} of {total} sent"
+    },
+    "error": {
+      "failed": "The message could not be recorded.",
+      "noPhone": "Nobody on this record has a valid mobile number.",
+      "noEmail": "Nobody on this record has an email.",
+      "tooLongForWhatsapp": "Too long for WhatsApp: use up to 2000 characters, or send it by email."
+    }
+  },
   "birthDateConfirm": {
     "pending": "Date of birth to confirm",
     "hint": "The person gave it themselves in the app. Check it against their ID document.",

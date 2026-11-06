@@ -4,6 +4,16 @@
 
 **Type:** Feature · **Area:** Students / Messages · **Priority:** High (pilot) · **Depends on** [POOLSE-67](./POOLSE-67-messages-to-families.md), [POOLSE-166](./POOLSE-166-avisos-in-app-notices-with-a-window.md) · **Unblocks** [POOLSE-192](./POOLSE-192-schedule-a-medical-exam.md)
 
+### As built (06-11-2026)
+
+- **Migrations `1794653600000` and `…001`.** `message.student_id`, the `student` audience, the `whatsapp` channel, both recipients functions, the ceiling and `apply_retention()`.
+- **Changed from rule 3 below:** a personal email is outside the 20 messages a day and its addresses still count. A busy reminder day must not block the club's bulk messages.
+- **Added: retention.** When the student's identity goes, the words of their personal messages go too, because they may name them.
+- **WhatsApp is two presses:** *Preparar WhatsApp* records, and *Abrir WhatsApp* per person opens the conversation. A browser blocks a window opened after a wait, and the record must exist first.
+- **An instructor sees names only**, plus whether a person can be reached: addresses and phones stay on the record, and a phone reaches them only inside the link.
+- **`GET` and `DELETE /messages/:id` answer 404** for a personal message.
+- Walked in a browser in both themes. Email was off in dev, so *0 de 1 enviados* is what was seen, and no real WhatsApp was opened.
+
 ### PO — why this exists
 
 Rui, 06-11-2026: *"Each student on back office, desktop app, should have a send message section, so it will be a simple message system to send via email or mobile whatsapp to remind the student of a schedule medical exam or something else. What already exists, keep as it is."*

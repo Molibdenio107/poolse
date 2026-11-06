@@ -43,6 +43,8 @@ import type { StudentDocuments } from '@/lib/fpn-forms';
 import { FpnSection, IdentificationSection } from './documents';
 import { FamilySubmissions, type FamilySubmission } from './family-submissions';
 import { BirthDateConfirm } from './birth-date-confirm';
+import { StudentMessages, type StudentMessagesData } from './student-messages';
+import { moduleIsOn } from '@/lib/modules';
 import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -261,6 +263,15 @@ export default async function StudentPage({
   const access: Outcome<AppAccess> | null = family
     ? null
     : await outcome(apiFetch<AppAccess>(`/students/${id}/invitations`));
+  /*
+   * *Mensagens* — POOLSE-191. The API decides who may: an instructor who does
+   * not teach this student gets a refusal, which hides the tab.
+   */
+  const personal =
+    family || !(await moduleIsOn('messages'))
+      ? null
+      : await outcome(apiFetch<StudentMessagesData>(`/students/${id}/messages`));
+
   const invitable =
     access?.state === 'ok' &&
     access.data.canInvite &&
@@ -931,6 +942,20 @@ export default async function StudentPage({
         },
         {
           // POOLSE-80 — who changed what, and Reverter. Owner and Admin.
+          slug: 'messages',
+          labelKey: 'studentMessages.tab',
+          visible: personal?.state === 'ok',
+          content: () =>
+            personal?.state === 'ok' ? (
+              <StudentMessages
+                studentId={loaded.id}
+                data={personal.data}
+                defaultUntil={addDays(today(), 7)}
+                minUntil={today()}
+              />
+            ) : null,
+        },
+        {
           slug: 'activity',
           labelKey: 'activity.tab',
           visible: reg.canManage,

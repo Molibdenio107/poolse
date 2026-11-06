@@ -91,6 +91,7 @@ import { PushController } from '../push/push.controller.js';
 import { AttentionController } from '../attention/attention.controller.js';
 import { ShellController } from '../shell/shell.controller.js';
 import { AppAvisosController, AvisosController } from '../messages/avisos.controller.js';
+import { StudentMessagesController } from '../messages/student-messages.controller.js';
 import { StaffNotesController } from '../staff-notes/staff-notes.controller.js';
 
 /**
@@ -1653,6 +1654,15 @@ test('POOLSE-157 rule 7: a guardian and a student are refused every staff screen
     );
     await refused(`POST staff/:id/reinvite as ${label}`, 403, () =>
       new StaffController().move(fixture.instructorId, { email: 'x@example.com' }),
+    );
+  });
+});
+
+test('POOLSE-191: a message to one student — a guardian and a student cannot read or send one', async () => {
+  await asEach(async ({ label }) => {
+    await refused(`GET students/:id/messages as ${label}`, 403, () => new StudentMessagesController().list(NO_SUCH_ID));
+    await refused(`POST students/:id/messages as ${label}`, 403, () =>
+      new StudentMessagesController().send(NO_SUCH_ID, { channel: 'email', subject: 'a', body: 'b' }),
     );
   });
 });

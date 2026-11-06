@@ -26,12 +26,22 @@ import { TOTAL_COUNT, windowed, type PageQuery, type Paginated } from '../common
  * `closure` (12 October 2026) is the families of turmas a closure took a lesson
  * from. It is written from the closure itself, never offered in the composer.
  */
-export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization' | 'closure' | 'session' | 'sport';
+export type MessageAudience =
+  | 'class_group'
+  | 'level'
+  | 'facility'
+  | 'organization'
+  | 'closure'
+  | 'session'
+  | 'sport'
+  // POOLSE-191: one person, from their page, and never through this composer.
+  | 'student';
 
 /**
  * What a person may address a message to. `session` is not here: a cancellation
  * notice is written by Poolse when a lesson is cancelled (POOLSE-90 slice 4),
- * through `sendSessionNoticeIn`, never composed by hand.
+ * through `sendSessionNoticeIn`, never composed by hand. `student` is not here
+ * either: it has its own route, on the student.
  */
 export const MESSAGE_AUDIENCES: readonly MessageAudience[] = [
   'class_group',
@@ -314,7 +324,7 @@ export async function sendSessionNoticeIn(
   );
 }
 
-async function insertMessageIn(
+export async function insertMessageIn(
   tx: Tx,
   organizationId: string,
   sentByMembershipId: string,
@@ -324,18 +334,19 @@ async function insertMessageIn(
   subject: string,
   body: string,
   audit: { audience: MessageAudience; targetId: string | null },
+  studentId: string | null = null,
 ): Promise<{ id: string; addressCount: number }> {
   {
     const { rows } = await tx.query<{ id: string | null; address_count: number }>(
-      `WITH everyone AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6, $7)),
+      `WITH everyone AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6, $7, $13::uuid)),
             -- Who is written to: REACHED, above, shared by the preview and the send.
             r AS (${REACHED}),
             n AS (SELECT count(DISTINCT email)::int AS address_count FROM r WHERE email IS NOT NULL),
             m AS (
               INSERT INTO message (organization_id, audience, class_group_id, level_id,
                                    facility_id, closure_id, class_session_id, subject, body,
-                                   sent_by_membership_id, address_count, sport_id)
-              SELECT $1, $2::message_audience, $11, $4, $5, $6, $12, $8, $9, $10, n.address_count, $7
+                                   sent_by_membership_id, address_count, sport_id, student_id)
+              SELECT $1, $2::message_audience, $11, $4, $5, $6, $12, $8, $9, $10, n.address_count, $7, $13::uuid
                 FROM n
                WHERE n.address_count > 0
               RETURNING id, address_count
@@ -356,7 +367,7 @@ async function insertMessageIn(
               SELECT DISTINCT ON (r.email) $1, r.email,
                      replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '')
                 FROM r CROSS JOIN m
-               WHERE r.email IS NOT NULL AND $2::message_audience NOT IN ('closure', 'session')
+               WHERE r.email IS NOT NULL AND $2::message_audience NOT IN ('closure', 'session', 'student')
               ON CONFLICT (organization_id, email) DO NOTHING
               RETURNING 1
             )
@@ -366,7 +377,7 @@ async function insertMessageIn(
         -- saying so costs nothing.
         CROSS JOIN (SELECT count(*) FROM ins) AS written
         CROSS JOIN (SELECT count(*) FROM tok) AS tokens`,
-      [organizationId, ...recipientParams, subject, body, sentByMembershipId, rowClassGroupId, rowSessionId],
+      [organizationId, ...recipientParams, subject, body, sentByMembershipId, rowClassGroupId, rowSessionId, studentId],
     );
 
     const row = rows[0]!;
@@ -460,8 +471,10 @@ export async function listMessages(
              FROM message m
              ${SUMMARY_JOINS}
             WHERE m.archived_at IS NULL
-              -- Avisos have their own list (POOLSE-166).
+              -- Avisos have their own list (POOLSE-166), and a message to one
+              -- person is on their page (POOLSE-191).
               AND m.channel = 'email'
+              AND m.audience <> 'student'
               AND ($1::uuid[] IS NULL OR m.class_group_id = ANY($1::uuid[]))
             ORDER BY m.sent_at DESC, m.id
             LIMIT $2 OFFSET $3`,
@@ -486,6 +499,7 @@ export async function getMessage(
         WHERE m.id = $1
           AND m.archived_at IS NULL
           AND m.channel = 'email'
+          AND m.audience <> 'student'
           AND ($2::uuid[] IS NULL OR m.class_group_id = ANY($2::uuid[]))`,
       [messageId, turmaIds],
     );
@@ -530,7 +544,7 @@ export async function archiveMessage(organizationId: string, messageId: string):
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string }>(
       `UPDATE message SET archived_at = now()
-        WHERE id = $1 AND archived_at IS NULL AND channel = 'email'
+        WHERE id = $1 AND archived_at IS NULL AND channel = 'email' AND audience <> 'student'
       RETURNING id`,
       [messageId],
     );
@@ -660,7 +674,8 @@ export async function findDelivery(
       organizationName: row.organization_name,
       organizationLocale: row.organization_locale,
       pending: row.pending ?? [],
-      optOutAllowed: row.audience !== 'closure',
+      // A message to one person is not a general one: POOLSE-191.
+      optOutAllowed: row.audience !== 'closure' && row.audience !== 'student',
       tokens: row.tokens ?? {},
     };
   });

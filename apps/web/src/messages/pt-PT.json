@@ -385,6 +385,45 @@
       "signOut": "Terminar sessão"
     }
   },
+  "studentMessages": {
+    "tab": "Mensagens",
+    "write": "Escrever",
+    "to": "Vai para: {who}",
+    "guardian": "{name} (encarregado)",
+    "emailOff": "O email não está ligado neste servidor: a mensagem fica registada, mas não sai.",
+    "noEmail": "Sem email registado: o email não está disponível.",
+    "noPhone": "Sem telemóvel válido registado: o WhatsApp não está disponível.",
+    "subject": "Assunto",
+    "body": "Mensagem",
+    "showInApp": "Mostrar também como aviso na app",
+    "until": "Aviso até",
+    "sendEmail": "Enviar email",
+    "prepareWhatsapp": "Preparar WhatsApp",
+    "confirmTitle": "Enviar esta mensagem?",
+    "confirmEmail": "Vai para {who}, e fica registada nesta ficha. Depois de enviada não pode ser anulada.",
+    "confirmWhatsapp": "Fica registada nesta ficha como aberta no WhatsApp. Depois abre a conversa com o texto pronto, e é a si que cabe carregar em enviar.",
+    "openNow": "Abra a conversa e carregue em enviar no WhatsApp:",
+    "open": "Abrir WhatsApp: {name}",
+    "sent": "Mensagem registada.",
+    "recorded": "Registada. Falta abrir o WhatsApp.",
+    "history": "Enviadas",
+    "none": "Ainda não há mensagens para este aluno.",
+    "line": "{state} · {when} · {who}",
+    "toLine": "Para: {who}",
+    "someone": "alguém",
+    "state": {
+      "whatsapp": "Aberto no WhatsApp",
+      "app": "Aviso na app até {date}",
+      "delivered": "Email enviado",
+      "waiting": "Email: {done} de {total} enviados"
+    },
+    "error": {
+      "failed": "Não foi possível registar a mensagem.",
+      "noPhone": "Ninguém neste registo tem um telemóvel válido.",
+      "noEmail": "Ninguém neste registo tem email.",
+      "tooLongForWhatsapp": "Demasiado longa para o WhatsApp: use até 2000 caracteres, ou envie por email."
+    }
+  },
   "birthDateConfirm": {
     "pending": "Data de nascimento por confirmar",
     "hint": "Foi indicada pela própria pessoa na aplicação. Confira-a com o documento de identificação.",

@@ -306,6 +306,7 @@ Read [`docs/conventions/students-and-families.md`](docs/conventions/students-and
 - A qualification's colour is `qualification_status()` in SQL, read through `qualification_current`.
 - A family may stop a club's general messages, and nothing else.
 - An aviso is a `message` with `channel = 'app'` and a window, never mail
+- A message to one student is `audience = 'student'`, and WhatsApp is a record of a link opened, never a send.
 - A message to families is a record first and an email second.
 - A student's identity, documents and exam are the student's own record
 - What a family sends is a `family_submission`, and it changes nothing until the office accepts.

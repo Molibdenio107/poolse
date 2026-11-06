@@ -36,6 +36,7 @@ import { CostsController } from './costs/costs.controller.js';
 import { SpacesController } from './spaces/spaces.controller.js';
 import { MaintenanceController } from './maintenance/maintenance.controller.js';
 import { MessagesController } from './messages/messages.controller.js';
+import { StudentMessagesController } from './messages/student-messages.controller.js';
 import { AppAvisosController, AvisosController } from './messages/avisos.controller.js';
 import { StaffNotesController } from './staff-notes/staff-notes.controller.js';
 import { QualificationsController } from './staff/qualifications.controller.js';
@@ -194,6 +195,7 @@ export const IDENTITY_ONLY_ROUTES = [
     MeController,
     DashboardController,
     MessagesController,
+    StudentMessagesController,
     AvisosController,
     AppAvisosController,
     StaffNotesController,

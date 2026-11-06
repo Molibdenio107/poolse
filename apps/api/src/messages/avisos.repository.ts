@@ -1,4 +1,4 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { NoRecipientsError, targetParams, type MessageAudience, type MessageTarget } from './messages.repository.js';
 
@@ -59,22 +59,39 @@ export async function postAviso(
   shownFrom: string,
   shownUntil: string,
 ): Promise<{ id: string; studentCount: number }> {
-  return withOrg(organizationId, async (tx) => {
+  return withOrg(organizationId, (tx) =>
+    insertAvisoIn(tx, organizationId, sentByMembershipId, target, subject, body, shownFrom, shownUntil),
+  );
+}
+
+/** The same, in the caller's transaction: POOLSE-191 sends one with its message. */
+export async function insertAvisoIn(
+  tx: Tx,
+  organizationId: string,
+  sentByMembershipId: string,
+  target: MessageTarget,
+  subject: string,
+  body: string,
+  shownFrom: string,
+  shownUntil: string,
+): Promise<{ id: string; studentCount: number }> {
+  {
     const params = targetParams(target);
+    const studentId = target.audience === 'student' ? target.targetId : null;
     const { rows } = await tx.query<{ id: string | null; student_count: number }>(
       `WITH r AS (
               SELECT DISTINCT ON (a.student_id, a.guardian_membership_id)
                      a.student_id, a.guardian_membership_id, a.student_name, a.name
-                FROM message_recipients_all($1, $2::message_audience, $3, $4, $5, $6, $7) a
+                FROM message_recipients_all($1, $2::message_audience, $3, $4, $5, $6, $7, $13::uuid) a
                WHERE a.student_id IS NOT NULL
             ),
             n AS (SELECT count(DISTINCT student_id)::int AS student_count FROM r),
             m AS (
               INSERT INTO message (organization_id, audience, class_group_id, level_id, facility_id,
                                    sport_id, subject, body, sent_by_membership_id, address_count,
-                                   channel, shown_from, shown_until)
+                                   channel, shown_from, shown_until, student_id)
               SELECT $1, $2::message_audience, $3, $4, $5, $7, $8, $9, $10, 0,
-                     'app', $11::date, $12::date
+                     'app', $11::date, $12::date, $13::uuid
                 FROM n
                WHERE n.student_count > 0
               RETURNING id
@@ -90,7 +107,7 @@ export async function postAviso(
        SELECT m.id, n.student_count
          FROM n LEFT JOIN m ON true
         CROSS JOIN (SELECT count(*) FROM ins) AS written`,
-      [organizationId, ...params, subject, body, sentByMembershipId, shownFrom, shownUntil],
+      [organizationId, ...params, subject, body, sentByMembershipId, shownFrom, shownUntil, studentId],
     );
     const row = rows[0]!;
     if (row.id === null) throw new NoRecipientsError();
@@ -102,7 +119,7 @@ export async function postAviso(
       data: { audience: target.audience, targetId: target.targetId, shownFrom, shownUntil },
     });
     return { id: row.id, studentCount: row.student_count };
-  });
+  }
 }
 
 /**
@@ -149,6 +166,7 @@ export async function listAvisos(
          LEFT JOIN student_level lv ON lv.id = m.level_id AND lv.organization_id = m.organization_id
          LEFT JOIN facility f ON f.id = m.facility_id AND f.organization_id = m.organization_id
         WHERE m.channel = 'app' AND m.archived_at IS NULL
+          AND m.audience <> 'student'
           AND ($1::uuid[] IS NULL OR m.class_group_id = ANY($1::uuid[]))
         ORDER BY m.shown_until DESC, m.sent_at DESC, m.id`,
       [turmaIds, readerMembershipId],
@@ -224,7 +242,8 @@ export async function avisosForReader(organizationId: string, membershipId: stri
               array_agg(DISTINCT mine.first_name ORDER BY mine.first_name) AS names
          FROM message m
          CROSS JOIN LATERAL message_recipients_all(m.organization_id, m.audience, m.class_group_id,
-                                                   m.level_id, m.facility_id, NULL, m.sport_id) r
+                                                   m.level_id, m.facility_id, NULL, m.sport_id,
+                                                   m.student_id) r
          JOIN mine ON mine.id = r.student_id
         WHERE m.channel = 'app' AND m.archived_at IS NULL
           AND club_today() BETWEEN m.shown_from AND m.shown_until

@@ -415,3 +415,4 @@ export * from './agenda-months.js';
 export * from './family-documents.js';
 export * from './ai.js';
 export * from './boletim.js';
+export * from './whatsapp.js';

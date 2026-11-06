@@ -4493,3 +4493,5 @@ Migration `1794653300000_student-birth-date-declared`.
 ### What a family records (06-11-2026)
 
 `student_record.self_reported` marks a time typed in the app: it may be a personal best, never names a meet (by CHECK), and never reaches `qualifying_attempts()`.
+
+**`message.student_id`** (POOLSE-191) names the one student of an `audience = 'student'` message, by composite key, and `message_audience_target` covers it. **`message_channel` has `whatsapp`:** a record of a link opened, `audience = 'student'` only (`message_whatsapp_student`), no address, no delivery. `message_recipients()` and `message_recipients_all()` take a trailing `p_student_id`. The ceiling skips `whatsapp`, and a `student` email counts towards addresses only.
