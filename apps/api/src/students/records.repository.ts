@@ -36,6 +36,8 @@ export interface SwimRecord {
   meetName: string | null;
   /** Swum at an official meet: what the qualifying slice will read. */
   official: boolean;
+  /** Typed by the family: may be a best, never official. */
+  selfReported: boolean;
   /** True when this is the student's best over this stroke, distance and course. */
   isPersonalBest: boolean;
 }
@@ -48,6 +50,7 @@ export interface PersonalBest {
   swumOn: string;
   /** The best itself was swum at an official meet. */
   official: boolean;
+  selfReported: boolean;
   /**
    * The best *at an official meet*, when it is not the overall best — POOLSE-81.
    * Null when there is none, or when the overall best already is one.
@@ -117,6 +120,7 @@ export async function progressionFor(
       meet_id: string | null;
       meet_name: string | null;
       official: boolean;
+      self_reported: boolean;
       is_personal_best: boolean;
     }>(
       `
@@ -131,6 +135,7 @@ export async function progressionFor(
              r.meet_id,
              sm.name AS meet_name,
              coalesce(sm.official, false) AS official,
+             r.self_reported,
              -- The best over this stroke, distance and course, decided in the
              -- same pass. A 25 m and a 50 m time are two different bests, and a
              -- time with no course is its own group, never folded into either.
@@ -167,6 +172,7 @@ export async function progressionFor(
       meetId: row.meet_id,
       meetName: row.meet_name,
       official: row.official,
+      selfReported: row.self_reported,
       isPersonalBest: row.is_personal_best,
     }));
 
@@ -215,6 +221,7 @@ function bestsOf(records: SwimRecord[]): PersonalBest[] {
       timeMs: best.timeMs,
       swumOn: best.swumOn,
       official: best.official,
+      selfReported: best.selfReported,
       officialBest:
         official === undefined || official.id === best.id
           ? null
@@ -327,6 +334,8 @@ export interface NewRecord {
    * for a training time.
    */
   meet: { id: string } | { name: string; official: boolean } | null;
+  /** Typed by the family (Rui, 06-11-2026). Never with a meet, by CHECK. */
+  selfReported?: boolean;
 }
 
 /** Raised when a typed time names a meet this club does not have. */
@@ -351,9 +360,9 @@ export async function addRecord(
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO student_record (
          organization_id, student_id, stroke, distance_m, course, time_ms, swum_on,
-         note, recorded_by_membership_id, meet_id
+         note, recorded_by_membership_id, meet_id, self_reported
        )
-       VALUES ($1, $2, $3::swim_stroke, $4, $5::swim_course, $6, $7::date, $8, $9, $10)
+       VALUES ($1, $2, $3::swim_stroke, $4, $5::swim_course, $6, $7::date, $8, $9, $10, $11)
        RETURNING id`,
       [
         organizationId,
@@ -366,6 +375,7 @@ export async function addRecord(
         input.note,
         membershipId,
         meetId,
+        input.selfReported === true,
       ],
     );
 

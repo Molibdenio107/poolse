@@ -74,6 +74,7 @@ import {
 } from './organizations/organizations.controller.js';
 import { SensitiveController } from './sensitive/sensitive.controller.js';
 import { RecordsController } from './students/records.controller.js';
+import { FamilyProgressController, StudentMeasuresController } from './students/family-progress.controller.js';
 import { LevelsController, StudentsController } from './students/students.controller.js';
 import { BoletimController, FpnSettingsController, StudentDocumentsController } from './students/documents.controller.js';
 import { DocumentTemplatesController } from './students/boletim-template.controller.js';
@@ -309,6 +310,8 @@ export const IDENTITY_ONLY_ROUTES = [
     PlacesController,
     VacationsController,
     RecordsController,
+    FamilyProgressController,
+    StudentMeasuresController,
     JoinController,
   ],
   providers: [

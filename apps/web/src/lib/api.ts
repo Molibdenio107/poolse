@@ -2463,8 +2463,25 @@ export interface SwimRecord {
   meetName: string | null;
   /** Swum at an official meet. */
   official: boolean;
+  /** Typed by the family: may be a best, never official. */
+  selfReported: boolean;
   /** Best over this stroke, distance and course. */
   isPersonalBest: boolean;
+}
+
+export interface StudentMeasure {
+  id: string;
+  kind: 'weight' | 'height' | 'distance_swum';
+  value: number;
+  unit: string;
+  measuredOn: string;
+  mine: boolean;
+}
+
+export interface FamilyProgress {
+  measures: StudentMeasure[];
+  canEnter: boolean;
+  canEnterTimes: boolean;
 }
 
 export interface PersonalBest {
@@ -2474,6 +2491,7 @@ export interface PersonalBest {
   timeMs: number;
   swumOn: string;
   official: boolean;
+  selfReported: boolean;
   /** The best at an official meet, where that is a different swim. */
   officialBest: { timeMs: number; swumOn: string; meetName: string } | null;
 }

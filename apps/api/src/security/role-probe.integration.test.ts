@@ -37,6 +37,7 @@ import { FilesController } from '../files/files.controller.js';
 import { SensitiveController } from '../sensitive/sensitive.controller.js';
 import { InventoryController } from '../inventory/inventory.controller.js';
 import { CostsController } from '../costs/costs.controller.js';
+import { FamilyProgressController, StudentMeasuresController } from '../students/family-progress.controller.js';
 import { InvitationsController } from '../invitations/invitations.controller.js';
 import {
   FamilyInvitationsBulkController,
@@ -558,6 +559,14 @@ test('POST skills/mark: refused for non-staff and for an instructor outside the 
   });
 
   await as(fixture.unlinkedGuardianId, ['guardian'], async () => {
+    // A family's own progress: a stranger's child is a 404, and the office's read refuses.
+    await refused('GET app/progress/:id', 404, () => new FamilyProgressController().read(fixture.aliceId));
+    await refused('POST app/progress/:id/times', 404, () => new FamilyProgressController().addTime(fixture.aliceId, {}));
+    await refused('POST app/progress/:id/measures', 404, () => new FamilyProgressController().addMeasure(fixture.aliceId, {}));
+    await refused('POST app/progress/:id/times/:r/archive', 404, () => new FamilyProgressController().archiveTime(fixture.aliceId, NO_SUCH_ID));
+    await refused('POST app/progress/:id/measures/:m/archive', 404, () => new FamilyProgressController().archiveMeasure(fixture.aliceId, NO_SUCH_ID));
+    await refused('GET students/:id/measures', 403, () => new StudentMeasuresController().list(fixture.aliceId));
+    await refused('POST students/:id/measures/:m/archive', 403, () => new StudentMeasuresController().archive(fixture.aliceId, NO_SUCH_ID));
     await refused('POST skills/mark as unlinked guardian', 403, () =>
       new SkillsController().mark({
         marks: [

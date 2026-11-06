@@ -282,3 +282,5 @@ Maintenance has three tabs: *Hoje*, *Registar* and *Perfil*. *Registar* reads `/
 ## Progressos and Perfil — 06-11-2026
 
 The family's triangle tab is *Progressos*: each child's best times, read from `GET /students/:id/progression`. Adding one from the app is not built yet. *Pagamentos* and *Documentos* are rows on *Perfil*, a screen deeper in. *Últimas aulas* moved from *Aulas* to *Início*, where a family gives feedback. A lesson's card no longer repeats the answer to *Vem à aula?*, because the lesson's page shows it.
+
+**Adding progress.** A guardian, or a student who answers for themselves (`family_may_answer()`), adds a swim time, weight, height or distance swum on *Progressos*, and removes what they entered. A typed time reads *Indicada pelo aluno* on desktop and can be a personal best, never official or for mínimos. Weight, height and distance are read by the family and by owner and admin, never by an instructor.

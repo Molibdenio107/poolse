@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { describeLoad, outcome, type LoadFailure } from '@/lib/load-failure';
 import { backTarget } from '@/lib/back';
 import {
   ApiError,
@@ -9,6 +9,7 @@ import {
   type Progression,
   type Stroke,
   type Student,
+  type StudentMeasure,
   type SwimRecord,
 } from '@/lib/api';
 import { formatTime, ProgressChart } from '@/components/progress-chart';
@@ -137,6 +138,9 @@ export default async function ProgressPage({
   const competitionOn = await moduleIsOn('competition');
   const hasRecords = loaded.records.length > 0;
 
+  // The office's alone: a refusal for an instructor simply means no card.
+  const measures = await outcome(apiFetch<{ measures: StudentMeasure[] }>(`/students/${id}/measures`));
+
   return (
     <DetailPage
       // The full legal name — a detail page, not a list (POOLSE-32 criterion 3).
@@ -241,6 +245,9 @@ export default async function ProgressPage({
                         <span className="flex flex-col items-end gap-0.5">
                           <span className="flex items-baseline gap-3">
                             <span className="font-mono text-lg">{formatTime(best.timeMs)}</span>
+                            {best.selfReported && (
+                              <span className="text-sm text-foreground-muted">{t('progress.selfReported')}</span>
+                            )}
                             {best.official && (
                               <span className="rounded border border-primary/40 px-2 text-sm text-primary">
                                 {t('progress.official')}
@@ -314,6 +321,29 @@ export default async function ProgressPage({
           },
         },
         {
+          slug: 'measures',
+          labelKey: 'progress.measuresTitle',
+          visible: measures.state === 'ok' && measures.data.measures.length > 0,
+          content: () => (
+            <section className="flex flex-col gap-1 rounded bg-surface p-5 shadow-card">
+              <ul className="flex flex-col divide-y divide-border">
+                {(measures.state === 'ok' ? measures.data.measures : []).map((measure) => (
+                  <li key={measure.id} className="flex items-baseline justify-between gap-4 py-2">
+                    <span>
+                      {t('progress.measureLine', {
+                        kind: t(`app.records.kind.${measure.kind}`),
+                        value: measure.value,
+                        unit: measure.unit,
+                      })}
+                    </span>
+                    <span className="text-sm text-foreground-muted">{formatDate(measure.measuredOn)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ),
+        },
+        {
           slug: 'history',
           labelKey: 'progress.history',
           visible: hasRecords,
@@ -337,6 +367,9 @@ export default async function ProgressPage({
                           <span className="ml-2 rounded bg-success/15 px-2 py-0.5 text-sm text-success">
                             {t('progress.personalBest')}
                           </span>
+                        )}
+                        {record.selfReported && (
+                          <span className="text-sm text-foreground-muted">{t('progress.selfReported')}</span>
                         )}
                         {record.official && (
                           <span className="ml-2 rounded border border-primary/40 px-2 text-sm text-primary">

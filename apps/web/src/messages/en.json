@@ -310,6 +310,38 @@
       }
     },
     "records": {
+    "bests": "Best times",
+        "entered": "Added by you",
+        "addTime": "Time",
+        "addMeasure": "Measure",
+        "save": "Save",
+        "stroke": "Stroke",
+        "distance": "Distance (m)",
+        "pool": "Pool",
+        "time": "Time",
+        "timeHint": "For example 1:02.35",
+        "date": "Date",
+        "measure": "What it measures",
+        "value": "Value",
+        "measureLine": "{kind}: {value} {unit}",
+        "kind": {
+          "weight": "Weight",
+          "height": "Height",
+          "distance_swum": "Distance swum"
+        },
+        "typedOn": "{date} · added by you",
+        "remove": "Remove",
+        "removeTitle": "Remove {name}?",
+        "removeMessage": "It leaves your progress and does not come back.",
+        "guardianAnswers": "A guardian records this.",
+        "saveFailed": "It could not be saved. Try again.",
+        "invalid": {
+          "distanceM": "Give the metres.",
+          "time": "Give the time, for example 1:02.35.",
+          "swumOn": "Give a date, not in the future.",
+          "value": "Give a valid value.",
+          "measuredOn": "Give a date, not in the future."
+        },
       "none": "No records yet.",
       "failed": "The records could not be loaded.",
       "event": "{distance} m {stroke}"
@@ -2698,6 +2730,9 @@
     "title": "Progression",
     "open": "Times and progression",
     "stroke": "Stroke",
+    "measuresTitle": "Measures from the family",
+    "measureLine": "{kind}: {value} {unit}",
+    "selfReported": "Added by the student",
     "strokes": {
       "freestyle": "Freestyle",
       "backstroke": "Backstroke",

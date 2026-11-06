@@ -1579,4 +1579,24 @@ BEGIN
   RAISE NOTICE 'PASS test 28: a post-it cannot cross the tenant boundary';
 END $$;
 
+DO $$
+DECLARE
+  v_a uuid; v_b uuid; v_mem_b uuid; v_student_b uuid; v_seen integer;
+BEGIN
+  INSERT INTO organization (name, slug) VALUES ('Medidas A', 'medidas-a') RETURNING id INTO v_a;
+  INSERT INTO organization (name, slug) VALUES ('Medidas B', 'medidas-b') RETURNING id INTO v_b;
+  INSERT INTO membership (organization_id, email) VALUES (v_b, 'medidas@b.pt') RETURNING id INTO v_mem_b;
+  INSERT INTO student (organization_id, first_name, last_name) VALUES (v_b, 'Ana', 'B') RETURNING id INTO v_student_b;
+  INSERT INTO student_measure (organization_id, student_id, kind, value, unit, measured_on, entered_by_membership_id)
+  VALUES (v_b, v_student_b, 'weight', 30, 'kg', DATE '2026-10-01', v_mem_b);
+
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_a::text, true);
+  SELECT count(*) INTO v_seen FROM student_measure WHERE organization_id = v_b;
+  IF v_seen <> 0 THEN RAISE EXCEPTION 'FAIL test 29: org A read org B''s measures'; END IF;
+  RESET ROLE;
+
+  RAISE NOTICE 'PASS test 29: a weight cannot cross the tenant boundary';
+END $$;
+
 ROLLBACK;
