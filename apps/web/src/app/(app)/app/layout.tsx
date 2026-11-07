@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation';
 import { apiFetch, type Me } from '@/lib/api';
-import { hatsOf } from '@/lib/app-hats';
+import { hatsOf, viewRoles, type AppHat } from '@/lib/app-hats';
 import { readShell } from '@/lib/shell';
 import { SuspendedNotice } from '../dashboard/suspended-notice';
 import { AppFrame } from './app-frame';
+import { ViewBanner } from './view-banner';
 
 /**
  * App mode's shell — POOLSE-90; its frame since POOLSE-136 (`app-frame.tsx`).
@@ -42,13 +43,21 @@ export default async function AppModeLayout({
     );
   }
 
-  const hats = hatsOf(membership.roles);
+  // POOLSE-188: under a view the one home is the one chosen, and the roles are
+  // the person's. The server has already narrowed them; this only draws.
+  const view = membership.view;
+  const homes = view === null ? hatsOf(viewRoles(membership)).homes : [view.hat as AppHat];
 
   return (
     <AppFrame
       organizationName={membership.organizationName}
       logoFileId={(await readShell()).logoFileId}
-      homes={hats.homes}
+      homes={homes}
+      banner={
+        me.viewing == null ? null : (
+          <ViewBanner name={me.viewing.name} hat={me.viewing.hat} expiresAt={me.viewing.expiresAt} />
+        )
+      }
     >
       {children}
     </AppFrame>

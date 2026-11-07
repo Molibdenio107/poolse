@@ -6,6 +6,7 @@ import { apiFetch, type ActiveSession, type Me, type People } from '@/lib/api';
 import { backTarget } from '@/lib/back';
 import { ProfileForm } from './profile-form';
 import { TransferOwnership } from './transfer-ownership';
+import { AppViews } from './app-views';
 import { SupportAccess } from './support-access';
 import { loadSupportAccess } from '../support.actions';
 import { Sessions } from '../sessions';
@@ -44,10 +45,10 @@ import { AlertTriangle } from 'lucide-react';
 export default async function ProfilePage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string | string[]; from?: string }>;
+  searchParams: Promise<{ tab?: string | string[]; from?: string; page?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { tab, from } = await searchParams;
+  const { tab, from, page } = await searchParams;
 
   let me: Me | null = null;
   let failure: LoadFailure | null = null;
@@ -308,6 +309,13 @@ export default async function ProfilePage({
               )}
             </section>
           ),
+        },
+        {
+          // POOLSE-188, rule 9: who looked at the app as whom.
+          slug: 'app-views',
+          labelKey: 'appView.history.tab',
+          visible: isOwner,
+          content: () => <AppViews page={page} />,
         },
         {
           // POOLSE-79. The Owner's alone, like the subscription: the club's

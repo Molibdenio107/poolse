@@ -46,6 +46,7 @@ const BRAZILIAN = [
  * probably needs translating.
  */
 const SAME_ON_PURPOSE = new Map([
+  ['appView.backoffice', 'the product word for the office side, as in app.openBackoffice'],
   // A payment method's own name and a number — POOLSE-94.
   ['payTo.mbwayLine', 'MB WAY is the name of the service in both languages'],
   ['clubData.payment.iban', 'IBAN and MB WAY are the same names in both languages'],

@@ -34,6 +34,7 @@ export function formatActivityValue(t: Translate, field: string, value: Activity
  * catalogues. Reads (`*.read`) never reach the list.
  */
 export const LABELLED_ACTIONS: ReadonlySet<string> = new Set([
+  'app_view.started',
   'student.created',
   'student.updated',
   'student.identity_backfilled',

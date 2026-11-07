@@ -3,6 +3,7 @@
 import { ApiError, apiPatch } from '@/lib/api';
 import { describeFailure } from '@/lib/form-failure';
 import type { FormState } from '../../../../../../dashboard/actions';
+import { viewRefusal } from '@/lib/form-failure';
 
 const ID = /^[0-9a-f-]{36}$/i;
 
@@ -27,6 +28,8 @@ export async function saveFpnDetailsAction(_previous: FormState, formData: FormD
     });
     return { ok: true, toastKey: 'app.documents.review.saved' };
   } catch (error) {
+    const view = viewRefusal(error);
+    if (view !== null) return view;
     if (error instanceof ApiError && error.code === 'already_sent') {
       return { ok: false, errorKey: 'app.documents.review.locked' };
     }

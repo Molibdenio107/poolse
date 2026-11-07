@@ -2019,6 +2019,17 @@ export async function setStudentSportLevel(
   });
 }
 
+/** Whether this login is a student the club still has, archived ones aside. */
+export async function hasLiveStudentRecord(organizationId: string, membershipId: string): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query(
+      `SELECT 1 FROM student WHERE membership_id = $1 AND archived_at IS NULL LIMIT 1`,
+      [membershipId],
+    );
+    return rows.length > 0;
+  });
+}
+
 export async function archiveStudent(
   organizationId: string,
   studentId: string,

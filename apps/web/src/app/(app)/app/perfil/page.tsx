@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { SignOutButton } from '@clerk/nextjs';
-import { ChevronRight, FileText, LayoutDashboard, LogOut, Settings, Wallet } from 'lucide-react';
+import { Eye, ChevronRight, FileText, LayoutDashboard, LogOut, Settings, Wallet } from 'lucide-react';
 import { apiFetch, type ActiveSession, type Me } from '@/lib/api';
 import { hatsOf, isHat } from '@/lib/app-hats';
 import { outcome } from '@/lib/load-failure';
@@ -50,6 +50,17 @@ export default async function AppProfilePage({
   const membership = me.memberships[0];
   if (membership === undefined) redirect('/dashboard');
   const hats = hatsOf(membership.roles);
+
+  // POOLSE-188: `/me` is the reader, so everything below would be the reader's
+  // own account inside somebody else's app. A view says whose it is, and stops.
+  if (me.viewing != null) {
+    return (
+      <>
+        <h1>{me.viewing.name}</h1>
+        <p className="text-sm text-foreground-muted">{t('appView.profileInView')}</p>
+      </>
+    );
+  }
 
   const [locale, sessionsLoad, familyLoad] = await Promise.all([
     getLocale(),
@@ -150,6 +161,19 @@ export default async function AppProfilePage({
               <span className="flex items-center gap-3">
                 <LayoutDashboard className="size-5 text-primary" aria-hidden />
                 {t('app.openBackoffice')}
+              </span>
+              <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
+              <LinkBusy />
+            </Link>
+          )}
+          {hats.manages && (
+            <Link
+              href="/app/vista"
+              className={`${row} rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+            >
+              <span className="flex items-center gap-3">
+                <Eye className="size-5 text-primary" aria-hidden />
+                {t('appView.menu')}
               </span>
               <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
               <LinkBusy />

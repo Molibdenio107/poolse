@@ -50,7 +50,7 @@ test('POOLSE-149 B — an ID photo is sealed, read by the office and the person,
       )[0]!.n;
 
     // An admin files the front; the person files the back of their own.
-    const front = await actingAs(tenant, { roles: ['admin'] }, () => staff.fileIdPhoto(coach, 'front', 'cc-frente.jpg', JPEG));
+    const front = await actingAs(tenant, { roles: ['owner'] }, () => staff.fileIdPhoto(coach, 'front', 'cc-frente.jpg', JPEG));
     const back = await actingAs(tenant, { membershipId: coach, roles: ['instructor'] }, () =>
       staff.fileIdPhoto(coach, 'back', 'cc-verso.pdf', PDF),
     );
@@ -86,13 +86,13 @@ test('POOLSE-149 B — an ID photo is sealed, read by the office and the person,
       await expectStatus(() => staff.removeIdPhoto(coach, 'front'), 403);
     });
     // Never through POST /files, and a side is front or back.
-    await actingAs(tenant, { roles: ['admin'] }, async () => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
       await expectStatus(() => files.upload('staff_id_document', 'x.jpg', JPEG), 400);
       await expectStatus(() => staff.fileIdPhoto(coach, 'side', 'x.jpg', JPEG), 400);
     });
 
     // Replacing the front shreds the old one; removing the back shreds it.
-    const replaced = await actingAs(tenant, { roles: ['admin'] }, async () => {
+    const replaced = await actingAs(tenant, { roles: ['owner'] }, async () => {
       const again = await staff.fileIdPhoto(coach, 'front', 'cc-frente-2.jpg', JPEG);
       await staff.removeIdPhoto(coach, 'back');
       await expectStatus(() => staff.removeIdPhoto(coach, 'back'), 404);

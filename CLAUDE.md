@@ -146,7 +146,8 @@ Read [`docs/conventions/database-and-security.md`](docs/conventions/database-and
 - A family is invited from the student, never from Pessoas
 - A person merge never takes the Owner, two logins or support.
 - A staff member's ID document is encrypted, behind its own route, and read aloud to the audit log.
-- A login's name is the person's own.
+- A login's name is the person's own, and the Owner may correct it.
+- The Owner writes anything in the club; on somebody else's record an Admin reads the NIF, NISS, ID, contract, notes and staff roles and does not write them.
 - A read that shows a student selects `FROM student_person s`, never `student`
 
 ### Platform, licence and observability
@@ -162,6 +163,7 @@ Read [`docs/conventions/platform-and-licence.md`](docs/conventions/platform-and-
 - A club may pay outside Stripe, and a manual subscription cannot be forgotten.
 - A trial ends in read-only, which is a third access state.
 - Poolse support enters a club only through a grant the Owner opened, and is never one of the club's people.
+- A view of a person's app is an `app_view` row read on every request, and what it opens is the list in `tenant/app-view.ts`.
 - Platform administration is not a tenant role, and it has its own database login.
 - A personal tenant is `organization.kind`, read in exactly two places.
 - A sport is switched on per club by Rui; the pool always is.

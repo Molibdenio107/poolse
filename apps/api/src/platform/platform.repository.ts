@@ -341,6 +341,7 @@ export async function listTenants(
              (
                SELECT max(a.created_at) FROM audit_log a
                 WHERE a.organization_id = o.id
+                  AND a.action NOT LIKE 'app\_view.%'
              ) AS last_activity_at,
 
              /*

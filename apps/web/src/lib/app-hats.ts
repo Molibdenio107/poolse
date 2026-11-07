@@ -38,6 +38,40 @@ export function hatsOf(roles: readonly string[]): Hats {
   };
 }
 
+/**
+ * Remembers the way in on this device, for this person — POOLSE-188. Holds a
+ * membership id, then the home when it is not the backoffice. It decides nothing
+ * about access: the reader's roles still answer.
+ */
+export const HOME_CHOICE_COOKIE = 'poolse_app_home';
+
+export function homeChoice(membershipId: string, hat: AppHat | null): string {
+  return hat === null ? membershipId : `${membershipId}:${hat}`;
+}
+
+/**
+ * What this device remembers for this person: the backoffice, one of their own
+ * homes, or nothing yet. Somebody else's choice, or a home they no longer hold,
+ * is nothing, so they are asked again.
+ */
+export function rememberedHome(
+  choice: string | undefined,
+  membershipId: string,
+  homes: readonly AppHat[],
+): AppHat | 'backoffice' | null {
+  if (choice === undefined) return null;
+  if (choice === membershipId) return 'backoffice';
+  return homes.find((hat) => choice === homeChoice(membershipId, hat)) ?? null;
+}
+
+/** The roles the app draws for: the person viewed during a view (POOLSE-188). */
+export function viewRoles(membership: {
+  roles: readonly string[];
+  view: { roles: readonly string[] } | null;
+}): readonly string[] {
+  return membership.view?.roles ?? membership.roles;
+}
+
 /** Where `/app` sends this person. */
 export function appHome(roles: readonly string[]): string {
   const hats = hatsOf(roles);

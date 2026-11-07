@@ -329,6 +329,11 @@ export interface Me {
      */
     supportExpiresAt: string | null;
     /**
+     * A live view of somebody in this club — POOLSE-188. `roles` above stay the
+     * reader's own; a screen of the app reads `viewRoles` from `lib/app-hats`.
+     */
+    view: { id: string; hat: string; expiresAt: string; roles: string[] } | null;
+    /**
      * The modules this club has on — POOLSE-87, computed by the API. The menu,
      * the site and pool tabs follow it; the API refuses the rest regardless.
      */
@@ -374,6 +379,8 @@ export interface Me {
    * on the web server, never here.
    */
   aiReaders?: AiReader[];
+  /** POOLSE-188: who this reader is looking at, for the banner. */
+  viewing?: { name: string; hat: string; expiresAt: string; support: boolean } | null;
 }
 
 /** The switches /admin flips — `PLATFORM_SWITCHES` on the API. */
@@ -5559,6 +5566,27 @@ export interface SupportRequest {
   id: string;
   reason: string;
   requestedAt: string;
+}
+
+/** A row of *Vistas da app* — POOLSE-188. */
+export interface AppViewEntry {
+  id: string;
+  viewerName: string;
+  viewedName: string;
+  hat: string;
+  support: boolean;
+  reason: string | null;
+  startedAt: string;
+  endedAt: string;
+}
+
+/** A view made as support, on `/admin` — POOLSE-188. */
+export interface SupportViewEntry {
+  id: string;
+  organizationName: string;
+  hat: string | null;
+  reason: string | null;
+  startedAt: string;
 }
 
 export interface SupportActivity {

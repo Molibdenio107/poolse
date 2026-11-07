@@ -116,6 +116,8 @@ export async function writeIdentity(
   organizationId: string,
   membershipId: string,
   edit: IdentityEdit,
+  /** The Owner may correct a login's date of birth (Rui, 07-11-2026). */
+  ownerCorrects = false,
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ login: boolean }>(
@@ -127,8 +129,19 @@ export async function writeIdentity(
 
     const changed: string[] = [];
     if (edit.birthDate !== undefined) {
-      if (row.login) throw new BirthDateIsTheirsError();
-      await tx.query(`UPDATE membership SET birth_date = $2 WHERE id = $1`, [membershipId, edit.birthDate]);
+      if (row.login && !ownerCorrects) throw new BirthDateIsTheirsError();
+      if (row.login) {
+        // On their account, through the one function that writes it, leaving the
+        // rest of their profile as it was.
+        await tx.query(
+          `SELECT 1 FROM membership m JOIN app_user u ON u.id = m.app_user_id,
+                  set_app_user_profile(u.clerk_user_id, u.locale, u.theme_preference, $2::date, u.contact_phone)
+            WHERE m.id = $1`,
+          [membershipId, edit.birthDate],
+        );
+      } else {
+        await tx.query(`UPDATE membership SET birth_date = $2 WHERE id = $1`, [membershipId, edit.birthDate]);
+      }
       changed.push('birthDate');
     }
     if (edit.idDocument !== undefined) {

@@ -1,3 +1,4 @@
+import { fileOpensInView } from '../tenant/app-view.js';
 import { randomUUID } from 'node:crypto';
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
@@ -193,6 +194,7 @@ export async function openFile(
 ): Promise<
   | { body: Readable; contentType: string; originalName: string; byteSize: number }
   | 'refused'
+  | 'viewing_as'
   | null
 > {
   const { membershipId } = currentTenant();
@@ -308,6 +310,8 @@ export async function openFile(
     return rows[0] ?? null;
   });
   if (row === null) return null;
+  // POOLSE-188: under a view the purpose answers first, rule 10a.
+  if (!fileOpensInView(row.purpose)) return 'viewing_as';
 
   const sealed = SEALED_PURPOSES.has(row.purpose);
   const allowed = row.purpose === 'student_photo'

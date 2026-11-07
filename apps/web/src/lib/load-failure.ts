@@ -30,6 +30,10 @@ export function describeLoad(error: unknown): LoadFailure {
     if (error.status === 403 && error.code === 'sport_not_yours') {
       return { key: 'common.sportNotYours', detail: '' };
     }
+    // POOLSE-188: a view opens a list of screens, and this is not on it.
+    if (error.status === 403 && error.code === 'viewing_as') {
+      return { key: 'appView.notInView', detail: '' };
+    }
     if (error.status === 403) return { key: 'common.notAllowed', detail: '' };
     if (error.status === 404) return { key: 'common.notFound', detail: '' };
 

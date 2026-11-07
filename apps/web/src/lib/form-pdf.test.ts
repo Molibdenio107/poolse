@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PDFDocument } from 'pdf-lib';
 import type { BoletimData, BoletimPlacement } from '@poolse/rules';
-import { formPdf } from './form-pdf';
+import { formPdf } from './form-pdf.ts';
 
 /** A 1×1 JPEG, the smallest thing a page can be drawn from. */
 const JPEG = Uint8Array.from(Buffer.from(

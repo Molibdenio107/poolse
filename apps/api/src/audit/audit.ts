@@ -34,7 +34,11 @@ export interface AuditEntry {
  * caller ignores it.
  */
 export async function recordAudit(tx: Tx, entry: AuditEntry): Promise<string> {
-  const { organizationId, membershipId, appUserId } = currentTenant();
+  // Under a view (POOLSE-188) the context carries the person viewed, and the
+  // log names who is really there. The one place that reads `actor`.
+  const tenant = currentTenant();
+  const { organizationId } = tenant;
+  const { membershipId, appUserId } = tenant.actor ?? tenant;
 
   const { rows } = await tx.query<{ id: string }>(
     `INSERT INTO audit_log (

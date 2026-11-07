@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getLocale } from 'next-intl/server';
 import { ApiError, apiPost } from '@/lib/api';
 import type { FormState } from '../../../dashboard/actions';
+import { viewRefusal } from '@/lib/form-failure';
 
 /**
  * Asking to join a class from the app — POOLSE-121. The API decides whose
@@ -27,6 +28,8 @@ export async function requestJoinAction(_previous: FormState, formData: FormData
   try {
     await apiPost('/app/enrolment-requests', body);
   } catch (error) {
+    const view = viewRefusal(error);
+    if (view !== null) return view;
     if (error instanceof ApiError) {
       if (error.status === 400 && Object.keys(error.fields).length > 0) return { ok: false, fields: error.fields };
       if (error.status === 409 && error.code !== null) {

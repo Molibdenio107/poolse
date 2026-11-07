@@ -123,6 +123,9 @@ export async function setRoleAction(
       { organizationId },
     );
   } catch (error) {
+    if (error instanceof ApiError && error.code === 'student_still_active') {
+      return { ok: false, errorKey: 'staff.studentStillActive' };
+    }
     if (error instanceof ApiError && error.status === 403) {
       return { ok: false, errorKey: 'staff.roleRefused' };
     }

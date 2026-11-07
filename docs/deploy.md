@@ -214,6 +214,7 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       and Quicksand from Google at build time and, if that fails, builds with a fallback font and only
       a warning (`Failed to download … Using fallback font instead`). Read the Vercel build log for
       that line after every production build; seen once in dev on 31-10-2026.
+- [ ] **Privacy notice, app views** (POOLSE-188, security review 07-11-2026): the person viewed is not told (Rui, 06-11-2026), so the notice must say that the club and Poolse support can see the app as a person sees it, read-only and on the record. It covers staff as well as families.
 - [ ] **Privacy notice, classmates** (POOLSE-194, Rui 06-11-2026): tell adult students that classmates in their turma see their first name, surname initial and photo, with no opt-out. Minors are never shown.
 - [ ] **The energy bill reader** (POOLSE-106, Rui 22-10-2026; gates POOLSE-137): `ANTHROPIC_API_KEY`
       on Vercel, staging and production; `energy_invoice_ai` on at `/admin` → Plataforma; the pilot

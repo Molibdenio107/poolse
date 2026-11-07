@@ -1,4 +1,5 @@
-import { BadRequestException, Body, Controller, Delete, Get, Headers, Patch, Put } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Headers, Patch, Put } from '@nestjs/common';
+import { viewedName } from '../app-view/app-view.repository.js';
 import { currentAuth } from '../auth/auth.context.js';
 import { touchLastSeen,
   listMemberships,
@@ -17,6 +18,8 @@ import type { AiReader } from '@poolse/rules';
 
 interface MeResponse {
   user: AppUserSummary;
+  /** POOLSE-188: who this reader is looking at, for the banner. */
+  viewing?: { name: string; hat: string; expiresAt: string; support: boolean } | null;
   /**
    * The club the request asked for comes first — POOLSE-79's switcher. So every
    * screen that reads `memberships[0]` reads the club it is acting in, which is
@@ -103,6 +106,19 @@ const SUPPORTED_THEMES = ['light', 'dark', 'system'];
  */
 @Controller('me')
 export class MeController {
+  /**
+   * POOLSE-188. These routes run outside `TenantMiddleware`, so its refusal does
+   * not reach them. They only ever touch the reader's own account, so nobody else
+   * is at risk, but a view is read-only and says so. `/me/preferences` stays open:
+   * `PreferenceSync` sends it unprompted, and a theme is the reader's own.
+   */
+  private async refuseUnderView(clerkUserId: string): Promise<void> {
+    const memberships = await listMemberships(clerkUserId);
+    if (memberships.some((one) => one.view !== null)) {
+      throw new ForbiddenException({ code: 'viewing_as', message: 'Read-only: viewing as another person' });
+    }
+  }
+
   @Get()
   async me(@Headers('x-poolse-organization') requested?: string): Promise<MeResponse> {
     const { clerkUserId } = currentAuth();
@@ -115,7 +131,23 @@ export class MeController {
     const ordered = activeFirst(memberships, requested);
     const active = ordered.memberships[0];
     const aiReaders = active === undefined ? [] : await effectiveReadersFor(active.organizationId).catch(() => []);
-    return { user, ...ordered, switches: await readSwitchesForClubs(), aiReaders };
+    const view = active?.view ?? null;
+    return {
+      user,
+      ...ordered,
+      switches: await readSwitchesForClubs(),
+      aiReaders,
+      // The name for the banner; the rest of the view is on `memberships[0]`.
+      viewing:
+        view === null || active === undefined
+          ? null
+          : {
+              name: await viewedName(active.organizationId, view.membershipId),
+              hat: view.hat,
+              expiresAt: view.expiresAt,
+              support: active.supportExpiresAt !== null,
+            },
+    };
   }
 
   /**
@@ -159,6 +191,7 @@ export class MeController {
   @Put('profile')
   async updateProfile(@Body() body: ProfileBody): Promise<MeResponse> {
     const { clerkUserId } = currentAuth();
+    await this.refuseUnderView(clerkUserId);
 
     const errors: FieldErrors = {};
 
@@ -209,6 +242,7 @@ export class MeController {
   @Put('photo')
   async setPhoto(@Body() body: unknown): Promise<{ avatarUrl: string | null }> {
     const { clerkUserId } = currentAuth();
+    await this.refuseUnderView(clerkUserId);
     if (!Buffer.isBuffer(body) || body.length === 0) {
       throw new BadRequestException({ code: 'file_empty', message: 'No file was sent' });
     }
@@ -228,6 +262,7 @@ export class MeController {
   @Delete('photo')
   async removePhoto(): Promise<{ avatarUrl: string | null }> {
     const { clerkUserId } = currentAuth();
+    await this.refuseUnderView(clerkUserId);
     await ensureAppUser(clerkUserId);
     const user = await removeClerkPhoto(clerkUserId);
     return { avatarUrl: user?.avatarUrl ?? null };

@@ -28,6 +28,8 @@ export type FileTarget =
   /** `student-document:<student>:<kind>:<season>` — a signed FPN declaration (POOLSE-132). */
   | `student-document:${string}:${string}:${string}`
   | 'own-photo'
+  /** `login-photo:<membership>` — the Owner correcting a login's photo, through Clerk (POOLSE-196). */
+  | `login-photo:${string}`
   | 'logo'
   /** `document-template:<kind>` — a club's own form, an image of its paper (POOLSE-142). */
   | `document-template:${'socio_form' | 'fpn_declaration' | 'fpn_declaration_minor'}`;
@@ -49,7 +51,7 @@ export type FilePurpose =
 
 export function purposeOf(target: FileTarget): FilePurpose {
   if (target === 'logo') return 'logo';
-  if (target === 'own-photo') return 'own_photo';
+  if (target === 'own-photo' || target.startsWith('login-photo:')) return 'own_photo';
   const kind = target.split(':')[0];
   switch (kind) {
     case 'facility-photo':

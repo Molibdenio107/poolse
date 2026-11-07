@@ -43,11 +43,14 @@ export function StaffForm({
   organizationId,
   staff,
   canManage,
+  isOwner,
 }: {
   organizationId: string;
   staff: StaffRecord;
   /** Owner or admin: may edit anybody and write notes. */
   canManage: boolean;
+  /** Notes and a login's name are the Owner's to change (Rui, 07-11-2026). */
+  isOwner: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, saving] = useSavedAction(saveStaffAction, INITIAL);
@@ -83,7 +86,9 @@ export function StaffForm({
         />
         {/* Said before anybody tries: the name of somebody who signs in is theirs. */}
         {staff.clerkUserId !== null && (
-          <p className="text-sm text-foreground-muted sm:col-span-2">{t('staff.nameHasLogin')}</p>
+          <p className="text-sm text-foreground-muted sm:col-span-2">
+            {t(isOwner ? 'staff.nameOwnerCorrects' : 'staff.nameHasLogin')}
+          </p>
         )}
         <TextField
           name="phone"
@@ -98,7 +103,7 @@ export function StaffForm({
         <ReadOnlyEmail email={staff.email} />
       </div>
 
-      {canManage && (
+      {isOwner ? (
         <TextAreaField
           name="notes"
           label={t('staff.notes')}
@@ -106,6 +111,14 @@ export function StaffForm({
           hint={t('staff.notesHint')}
           maxLength={2000}
         />
+      ) : (
+        canManage && (
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-foreground-muted">{t('staff.notes')}</span>
+            <p className="whitespace-pre-wrap">{staff.notes ?? '—'}</p>
+            <span className="text-sm text-foreground-muted">{t('staff.ownerEdits')}</span>
+          </div>
+        )
       )}
 
       <div className="flex flex-wrap items-center gap-3">

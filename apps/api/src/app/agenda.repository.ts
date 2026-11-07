@@ -1,3 +1,4 @@
+import { instructorPhotoSql } from '../tenant/app-view.js';
 import { ENROLLED_IN_SESSION, NOT_COMING_TO_SESSION } from '../dashboard/instructor.repository.js';
 import { withOrg } from '@poolse/db';
 import { mayAnswer, needsBirthDate } from '../feedback/feedback.repository.js';
@@ -136,7 +137,7 @@ async function readEntries(
               to_char(cs.starts_at AT TIME ZONE ${TZ}, 'HH24:MI')    AS "localTime",
               cs.duration_minutes AS "durationMinutes",
               split_part(coalesce(iu.cached_first_name, im.first_name), ' ', 1) AS "instructorFirstName",
-              coalesce(iu.cached_avatar_url, '/files/' || im.photo_file_id::text) AS "instructorPhotoUrl",
+              ${instructorPhotoSql('iu', 'im')} AS "instructorPhotoUrl",
               cs.substitute_instructor_membership_id IS NOT NULL AS "standIn",
               cs.status::text AS status,
               cs.closure_id IS NOT NULL AS "byClosure",
@@ -223,7 +224,7 @@ export async function readCalendar(
               to_char(sch.start_time, 'HH24:MI') AS "localTime",
               sch.duration_minutes AS "durationMinutes",
               split_part(coalesce(iu.cached_first_name, im.first_name), ' ', 1) AS "instructorFirstName",
-              coalesce(iu.cached_avatar_url, '/files/' || im.photo_file_id::text) AS "instructorPhotoUrl",
+              ${instructorPhotoSql('iu', 'im')} AS "instructorPhotoUrl",
               false AS "standIn",
               'scheduled' AS status,
               false AS "byClosure",
@@ -403,7 +404,7 @@ export async function readClassmates(
     }>(
       `SELECT ${ENROLLED_IN_SESSION} AS enrolled, ${NOT_COMING_TO_SESSION} AS not_coming,
               split_part(coalesce(iu.cached_first_name, im.first_name), ' ', 1) AS instructor,
-              coalesce(iu.cached_avatar_url, '/files/' || im.photo_file_id::text) AS photo_url,
+              ${instructorPhotoSql('iu', 'im')} AS photo_url,
               cs.substitute_instructor_membership_id IS NOT NULL AS stand_in
          FROM class_session cs
          LEFT JOIN membership im ON im.id = cs.resolved_instructor_id AND im.organization_id = cs.organization_id

@@ -34,11 +34,14 @@ export function Identification({
   membershipId,
   identity,
   own,
+  canEdit,
   storageReady,
 }: {
   membershipId: string;
   identity: StaffIdentity;
   own: boolean;
+  /** The Owner, or the person; an Admin reads (Rui, 07-11-2026). */
+  canEdit: boolean;
   storageReady: boolean;
 }): React.ReactElement {
   const t = useTranslations();
@@ -46,6 +49,7 @@ export function Identification({
 
   const send = useCallback(
     (file: File, side: Side): void => {
+      if (!canEdit) return;
       if (!storageReady) return;
       const data = new FormData();
       data.set('membershipId', membershipId);
@@ -70,7 +74,7 @@ export function Identification({
           <Lock className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           {t('staffIdentity.photo.intro', { months: identity.retentionMonths })}
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <fieldset disabled={!canEdit} className="grid gap-3 sm:grid-cols-2">
           {SIDES.map((side) => (
             <PhotoSide
               key={side}
@@ -82,7 +86,7 @@ export function Identification({
               onFile={(file) => send(file, side)}
             />
           ))}
-        </div>
+        </fieldset>
         <span className="text-sm text-foreground-muted">
           {storageReady ? t('staffIdentity.photo.hint') : t('files.notConfigured')}
         </span>
@@ -91,7 +95,7 @@ export function Identification({
         )}
       </section>
 
-      <IdentityCard membershipId={membershipId} identity={identity} own={own} proposal={state.proposal ?? null} />
+      <IdentityCard membershipId={membershipId} identity={identity} own={own} canEdit={canEdit} ownerCorrects={canEdit && !own} proposal={state.proposal ?? null} />
     </>
   );
 }

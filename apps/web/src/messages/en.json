@@ -749,6 +749,9 @@
     "birthdayToday": "Birthday today"
   },
   "staff": {
+    "nameOwnerCorrects": "This person has an account. Correcting the name or the photo changes it on their account, in every club.",
+    "ownerEdits": "Only the owner changes this.",
+    "studentStillActive": "This person is still a student. Archive the student record first.",
     "nameIsTheirs": "This person has an account, and only they can change their name, under My profile.",
     "nameHasLogin": "This person has an account: the name is their account’s, and only they can change it, under My profile.",
     "title": "Staff",
@@ -4315,6 +4318,7 @@
       "register": "Take the register",
       "newStudent": "New student",
       "importStudents": "Import students",
+      "subscription": "Subscription",
       "theme": "Switch between light and dark theme",
       "locale": "Change the language"
     }
@@ -5873,6 +5877,55 @@
     "downloadDocument": "Download document",
     "certificateHint": "A PDF or a photo, up to 10 MB. Stored encrypted, and deleted 24 months after the leave is removed, or when the student’s health data is erased."
   },
+  "appView": {
+    "title": "How do you want to go in?",
+    "explain": "Choose what you see in this app. You can change it at any time.",
+    "backoffice": "Backoffice",
+    "backofficeHint": "Run the club, as usual.",
+    "own": {
+      "family": "My family",
+      "teaching": "My classes",
+      "maintenance": "My maintenance"
+    },
+    "ownHint": "With your own account. Saves for real.",
+    "others": "See as another person, read-only",
+    "family": "Family",
+    "familyHint": "A student’s or guardian’s app.",
+    "teaching": "Instructor",
+    "teachingHint": "An instructor’s app.",
+    "maintenance": "Maintenance",
+    "maintenanceHint": "A maintenance person’s app.",
+    "backToChoice": "Back to the choice",
+    "search": "Search for a person",
+    "none": "Nobody here has access to the app.",
+    "more": "There are more people. Type a name to search.",
+    "reason": "Reason",
+    "reasonHint": "It is recorded, and the owner reads it. Do not write students’ names or health details.",
+    "reasonRequired": "Write the reason.",
+    "reasonTooLong": "The reason is longer than 500 characters.",
+    "startFailed": "This view could not be opened.",
+    "banner": "Viewing as {name}",
+    "bannerMeta": "{home} · read-only · until {time}",
+    "leave": "Leave",
+    "notInView": "Not available in this view.",
+    "readOnly": "This view is read-only.",
+    "profileInView": "This person’s account does not open in this view.",
+    "menu": "See the app as…",
+    "history": {
+      "tab": "App views",
+      "title": "App views",
+      "explain": "Who saw the app as another person, and when. The person viewed is not told.",
+      "empty": "Nobody has seen the app as another person yet.",
+      "line": "{viewer} viewed as {viewed}",
+      "meta": "{home} · {date}, from {from} to {to}",
+      "support": "Poolse support",
+      "reason": "Reason: {reason}"
+    },
+    "admin": {
+      "title": "Views as support",
+      "empty": "There have been no views as support yet."
+    }
+  },
   "archive": {
     "title": "Archive",
     "subtitle": "What was archived in this club. Restoring brings back the record and whatever was archived with it.",
@@ -6437,6 +6490,9 @@
       "snsNumber": "SNS number"
     },
     "action": {
+      "app_view": {
+        "started": "Saw the app as this person"
+      },
       "student": {
         "created": "Student created",
         "updated": "Record changed",
@@ -6869,6 +6925,7 @@
     "archiveNamed": "Archive the feedback: {name}"
   },
   "staffIdentity": {
+    "birthDateOwnerCorrects": "Correcting the date changes it on their account, in every club.",
     "title": "Identification",
     "visibility": "Only the owner, administrators and the person themself see this.",
     "birthDate": "Date of birth",
@@ -6952,7 +7009,7 @@
       "nifInvalid": "This tax number is not valid. Check the 9 digits.",
       "nissInvalid": "This NISS is not valid. Check the 11 digits.",
       "taxNumberTaken": "Somebody else in this club already has this tax number.",
-      "clubsToSet": "The tax and social security numbers are recorded by the owner or an administrator."
+      "clubsToSet": "The tax and social security numbers are recorded by the owner."
     }
   },
   "staffContract": {

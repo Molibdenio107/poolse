@@ -750,6 +750,9 @@
     "birthdayToday": "Faz anos hoje"
   },
   "staff": {
+    "nameOwnerCorrects": "Esta pessoa tem conta. Se corrigir o nome ou a fotografia, muda na conta dela e em todos os clubes.",
+    "ownerEdits": "Só o proprietário altera isto.",
+    "studentStillActive": "Esta pessoa ainda é aluna. Arquive primeiro a ficha de aluno.",
     "nameIsTheirs": "Esta pessoa tem conta e só ela pode mudar o seu nome, em O meu perfil.",
     "nameHasLogin": "Esta pessoa tem conta: o nome é o da conta dela e só ela o pode mudar, em O meu perfil.",
     "title": "Staff",
@@ -4317,6 +4320,7 @@
       "register": "Registar presenças",
       "newStudent": "Nova aluna ou novo aluno",
       "importStudents": "Importar alunos",
+      "subscription": "Subscrição",
       "theme": "Mudar entre tema claro e escuro",
       "locale": "Mudar o idioma"
     }
@@ -5875,6 +5879,55 @@
     "downloadDocument": "Descarregar documento",
     "certificateHint": "PDF ou fotografia, até 10 MB. Guardado cifrado e apagado 24 meses depois de a baixa ser removida, ou quando os dados de saúde do aluno são apagados."
   },
+  "appView": {
+    "title": "Como quer entrar?",
+    "explain": "Escolha o que vê nesta app. Pode mudar quando quiser.",
+    "backoffice": "Backoffice",
+    "backofficeHint": "Gerir o clube, como sempre.",
+    "own": {
+      "family": "A minha família",
+      "teaching": "As minhas aulas",
+      "maintenance": "A minha manutenção"
+    },
+    "ownHint": "Com a sua conta. Guarda a sério.",
+    "others": "Ver como outra pessoa, só leitura",
+    "family": "Família",
+    "familyHint": "A app de um aluno ou encarregado.",
+    "teaching": "Professor",
+    "teachingHint": "A app de um professor.",
+    "maintenance": "Manutenção",
+    "maintenanceHint": "A app de alguém da manutenção.",
+    "backToChoice": "Voltar à escolha",
+    "search": "Procurar pessoa",
+    "none": "Ninguém aqui tem acesso à app.",
+    "more": "Há mais pessoas. Escreva um nome para procurar.",
+    "reason": "Motivo",
+    "reasonHint": "Fica registado, e o proprietário lê-o. Não escreva nomes de alunos nem dados de saúde.",
+    "reasonRequired": "Escreva o motivo.",
+    "reasonTooLong": "O motivo tem mais de 500 caracteres.",
+    "startFailed": "Não foi possível abrir esta vista.",
+    "banner": "A ver como {name}",
+    "bannerMeta": "{home} · só leitura · até às {time}",
+    "leave": "Sair",
+    "notInView": "Não disponível nesta vista.",
+    "readOnly": "Esta vista é só de leitura.",
+    "profileInView": "A conta desta pessoa não abre nesta vista.",
+    "menu": "Ver a app como…",
+    "history": {
+      "tab": "Vistas da app",
+      "title": "Vistas da app",
+      "explain": "Quem viu a app como outra pessoa, e quando. A pessoa vista não é avisada.",
+      "empty": "Ainda ninguém viu a app como outra pessoa.",
+      "line": "{viewer} viu como {viewed}",
+      "meta": "{home} · {date}, das {from} às {to}",
+      "support": "Suporte Poolse",
+      "reason": "Motivo: {reason}"
+    },
+    "admin": {
+      "title": "Vistas como suporte",
+      "empty": "Ainda não houve vistas como suporte."
+    }
+  },
   "archive": {
     "title": "Arquivados",
     "subtitle": "O que foi arquivado neste clube. Restaurar traz de volta o registo e o que foi arquivado com ele.",
@@ -6439,6 +6492,9 @@
       "snsNumber": "nº de utente"
     },
     "action": {
+      "app_view": {
+        "started": "Viu a app como esta pessoa"
+      },
       "student": {
         "created": "Aluno criado",
         "updated": "Ficha alterada",
@@ -6871,6 +6927,7 @@
     "archiveNamed": "Arquivar o feedback: {name}"
   },
   "staffIdentity": {
+    "birthDateOwnerCorrects": "Se corrigir a data, muda na conta da pessoa, em todos os clubes.",
     "title": "Identificação",
     "visibility": "Só o proprietário, os administradores e a própria pessoa veem estes dados.",
     "birthDate": "Data de nascimento",
@@ -6954,7 +7011,7 @@
       "nifInvalid": "Este NIF não é válido. Confira os 9 algarismos.",
       "nissInvalid": "Este NISS não é válido. Confira os 11 algarismos.",
       "taxNumberTaken": "Outra pessoa deste clube já tem este NIF.",
-      "clubsToSet": "O NIF e o NISS são registados pelo proprietário ou por um administrador."
+      "clubsToSet": "O NIF e o NISS são registados pelo proprietário."
     }
   },
   "staffContract": {

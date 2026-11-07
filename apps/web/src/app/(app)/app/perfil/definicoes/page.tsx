@@ -33,6 +33,8 @@ export default async function AppSettingsPage({
   }
   const membership = me.memberships[0];
   if (membership === undefined) redirect('/dashboard');
+  // POOLSE-188: push and message settings are the reader's own, not the view's.
+  if (me.viewing != null) redirect('/app/perfil');
 
   const [locale, theme] = await Promise.all([getLocale(), readTheme()]);
   const back = isHat(home) ? `/app/perfil?home=${home}` : '/app/perfil';

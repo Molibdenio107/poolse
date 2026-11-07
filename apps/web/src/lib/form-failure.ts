@@ -24,6 +24,17 @@ import type { FormState } from '@/app/(app)/dashboard/actions';
  *   because a failure that reaches a user un-diagnosable is a bug report that
  *   costs a session to reproduce. This one did.
  */
+/**
+ * A write refused because a view is open — POOLSE-188. The phone's own actions
+ * turn a refusal into their own sentences ("a guardian answers this one"), which
+ * would be wrong here: nothing about the person refused it. Each reads this first.
+ */
+export function viewRefusal(error: unknown): FormState | null {
+  return error instanceof ApiError && error.code === 'viewing_as'
+    ? { ok: false, errorKey: 'appView.readOnly' }
+    : null;
+}
+
 export function describeFailure(error: unknown, fallbackKey: string): FormState {
   if (error instanceof ApiError) {
     log(`${fallbackKey}: HTTP ${error.status}`, error.code, error.message);
@@ -41,7 +52,10 @@ export function describeFailure(error: unknown, fallbackKey: string): FormState 
             : // POOLSE-87: the club has this module off — not the reader's role.
               error.code === 'module_disabled'
               ? 'common.moduleDisabled'
-              : 'common.notAllowed',
+              : // POOLSE-188: a view writes nothing, whatever the screen offers.
+                error.code === 'viewing_as'
+                ? 'appView.readOnly'
+                : 'common.notAllowed',
       };
     }
 

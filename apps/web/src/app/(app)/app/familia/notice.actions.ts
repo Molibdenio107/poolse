@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiPut } from '@/lib/api';
 import type { FormState } from '../../dashboard/actions';
+import { viewRefusal } from '@/lib/form-failure';
 
 /**
  * *Vou / Não vou* — POOLSE-90 slice 2. The API decides whose child, who
@@ -17,6 +18,8 @@ export async function saveNoticeAction(_previous: FormState, formData: FormData)
   try {
     await apiPut(`/sessions/${sessionId}/notices/${studentId}`, { going });
   } catch (error) {
+    const view = viewRefusal(error);
+    if (view !== null) return view;
     if (error instanceof ApiError) {
       if (error.status === 403) {
         return {

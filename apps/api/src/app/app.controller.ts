@@ -281,7 +281,7 @@ export class AppController {
     family: { id: string; name: string }[];
   }> {
     requireRole('guardian', 'student');
-    const { organizationId, membershipId } = currentTenant();
+    const { organizationId, membershipId, viewing } = currentTenant();
     const mine = await familyStudents(organizationId, membershipId);
     if (child !== undefined && !mine.some((one) => one.id === child)) {
       throw new NotFoundException('No such student');
@@ -292,7 +292,15 @@ export class AppController {
         chosen.map(async (one) => ({
           id: one.id,
           name: one.name,
-          documents: (await familyDocuments(organizationId, one.id, membershipId)) ?? [],
+          // POOLSE-188: a view takes no form and sends no paper, so the list says so
+          // and the screen draws neither, rather than offering what would be refused.
+          // The exam goes altogether: `expired` is also how an unfit result reads, so
+          // its state is health data (rule 8).
+          documents: ((await familyDocuments(organizationId, one.id, membershipId)) ?? [])
+            .filter((row) => viewing == null || row.kind !== 'medical_exam')
+            .map((row) =>
+              viewing == null ? row : { ...row, print: null, canSend: false, incomplete: false },
+            ),
         })),
       ),
       family: mine.map((one) => ({ id: one.id, name: one.name })),

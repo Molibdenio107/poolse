@@ -1,5 +1,6 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { isSupportView } from '../tenant/app-view.js';
 import { NoRecipientsError, targetParams, type MessageAudience, type MessageTarget } from './messages.repository.js';
 
 /**
@@ -249,9 +250,12 @@ export async function avisosForReader(organizationId: string, membershipId: stri
          JOIN mine ON mine.id = r.student_id
         WHERE m.channel = 'app' AND m.archived_at IS NULL
           AND club_today() BETWEEN m.shown_from AND m.shown_until
+          -- POOLSE-188: a support view leaves out a personal aviso, which is
+          -- where an exam reminder lives.
+          AND ($2 OR m.student_id IS NULL)
         GROUP BY m.id, m.subject, m.body, m.shown_until, m.sent_at
         ORDER BY m.sent_at DESC`,
-      [membershipId],
+      [membershipId, !isSupportView()],
     );
     return rows.map((row) => ({
       id: row.id,

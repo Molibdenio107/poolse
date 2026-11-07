@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { ApiError, apiPut } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import type { FormState } from '../../dashboard/actions';
+import { viewRefusal } from '@/lib/form-failure';
 
 /**
  * A family's feedback on one lesson — POOLSE-116. The API decides everything:
@@ -29,6 +30,8 @@ export async function saveFeedbackAction(_previous: FormState, formData: FormDat
       ...(done === 'true' || done === 'false' ? { challengeDone: done === 'true' } : {}),
     });
   } catch (error) {
+    const view = viewRefusal(error);
+    if (view !== null) return view;
     if (error instanceof ApiError) {
       if (error.status === 400 && Object.keys(error.fields).length > 0) return { ok: false, fields: error.fields };
       // Only the rule-2 refusal is about who answers; a read-only or closed club

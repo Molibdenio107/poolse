@@ -24,13 +24,13 @@ after(async () => {
 const NIF = '123456789';
 const NISS = '12345678902';
 
-test('POOLSE-149 A — owner and admin set every detail, the person their own, a colleague nothing; values stay out of the log', async () => {
+test('POOLSE-149 A — the owner sets every detail, the person their own, a colleague nothing; values stay out of the log', async () => {
   await withScratchTenant(async (tenant) => {
     const coach = await addMember(tenant, 'Ana', 'Ribeiro', ['instructor']);
     const colleague = await addMember(tenant, 'Bruno', 'Lima', ['instructor']);
     const staff = new StaffController();
 
-    await actingAs(tenant, { roles: ['admin'] }, async () => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
       // QA 1: every field, normalised on the way in.
       const saved = await staff.editDetails(coach, {
         address: '  Rua das Flores,   12 ',

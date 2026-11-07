@@ -351,6 +351,9 @@ export async function supportActivity(organizationId: string): Promise<SupportAc
          FROM audit_log a
          JOIN membership m ON m.id = a.actor_membership_id AND m.organization_id = a.organization_id
         WHERE m.support_grant_id IS NOT NULL
+          -- POOLSE-188: one view reads many times, and a read here would push
+          -- what support actually did off the end of the list.
+          AND a.action <> 'app_view.read'
         ORDER BY a.created_at DESC
         LIMIT 100`,
     );

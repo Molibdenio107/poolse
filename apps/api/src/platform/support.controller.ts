@@ -1,3 +1,4 @@
+import { listSupportViews, type SupportViewEntry } from '../app-view/app-view.repository.js';
 import {
   BadRequestException,
   Body,
@@ -46,6 +47,13 @@ export class PlatformSupportController {
   @PlatformAction('support.listed')
   async open(): Promise<{ grants: OpenSupportGrant[] }> {
     return { grants: await listOpenGrants() };
+  }
+
+  /** POOLSE-188: the views made as support, every club. */
+  @Get('views')
+  @PlatformAction('support.views.listed')
+  async views(): Promise<{ views: SupportViewEntry[] }> {
+    return { views: await listSupportViews() };
   }
 
   @Get('tenants/:id')

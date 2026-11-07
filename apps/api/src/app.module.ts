@@ -38,6 +38,7 @@ import { MaintenanceController } from './maintenance/maintenance.controller.js';
 import { MessagesController } from './messages/messages.controller.js';
 import { StudentMessagesController } from './messages/student-messages.controller.js';
 import { MedicalExamScheduleController } from './students/medical-exam-schedule.controller.js';
+import { AppViewController } from './app-view/app-view.controller.js';
 import { AppAvisosController, AvisosController } from './messages/avisos.controller.js';
 import { StaffNotesController } from './staff-notes/staff-notes.controller.js';
 import { QualificationsController } from './staff/qualifications.controller.js';
@@ -200,6 +201,7 @@ export const IDENTITY_ONLY_ROUTES = [
     MedicalExamScheduleController,
     AvisosController,
     AppAvisosController,
+    AppViewController,
     StaffNotesController,
     QualificationsController,
     PoolPublicLinkController,

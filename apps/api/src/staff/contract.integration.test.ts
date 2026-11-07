@@ -41,8 +41,8 @@ test('POOLSE-149 C — a contract keeps its versions and facts, and follows the 
     const staff = new StaffController();
     const files = new FilesController();
 
-    // An admin files a contract twice and sets its facts.
-    const first = await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, async () => {
+    // The owner files a contract twice and sets its facts.
+    const first = await actingAs(tenant, { roles: ['owner'] }, async () => {
       const one = await staff.fileContract(coach, 'contrato-2025.pdf', PDF);
       await staff.fileContract(coach, 'contrato-2026.pdf', PDF);
       // QA 10: a fixed term needs its end; an end before the start is refused.
@@ -94,9 +94,9 @@ test('POOLSE-149 C — a contract keeps its versions and facts, and follows the 
     });
     await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, async () => {
       await expectStatus(() => staff.contract(tenant.ownerMembershipId), 404);
-      await expectStatus(() => staff.editContract(tenant.ownerMembershipId, { kind: 'services' }), 404);
-      await expectStatus(() => staff.fileContract(tenant.ownerMembershipId, 'x.pdf', PDF), 404);
-      await expectStatus(() => staff.removeContract(tenant.ownerMembershipId), 404);
+      await expectStatus(() => staff.editContract(tenant.ownerMembershipId, { kind: 'services' }), 403);
+      await expectStatus(() => staff.fileContract(tenant.ownerMembershipId, 'x.pdf', PDF), 403);
+      await expectStatus(() => staff.removeContract(tenant.ownerMembershipId), 403);
       await expectStatus(() => files.read(ownerFile.fileId), 403);
       // Nor their own: the Owner files an Admin's contract.
       await expectStatus(() => staff.fileContract(admin, 'x.pdf', PDF), 403);

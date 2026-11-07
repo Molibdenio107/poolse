@@ -1,5 +1,6 @@
 import { subMenuPillClass } from '@/components/section-pills';
 import { SupportPanel } from './support-panel';
+import { SupportViews } from './support-views';
 import { SwitchesPanel } from './switches-panel';
 import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -182,7 +183,12 @@ export default async function AdminPage({
       />
 
       {/* Where a club has let support in — POOLSE-79. */}
-      {current === 'support' && <SupportPanel />}
+      {current === 'support' && (
+        <div className="flex flex-col gap-4">
+          <SupportPanel />
+          <SupportViews />
+        </div>
+      )}
 
       {/* Platform-wide switches — Rui, 30-10-2026. */}
       {current === 'platform' && <SwitchesPanel />}

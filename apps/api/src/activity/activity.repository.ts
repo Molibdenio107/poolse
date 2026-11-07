@@ -132,9 +132,11 @@ export async function listActivity(
               -- Changes only. Opening the medical record is an access, logged
               -- on every read, and would bury the edits (16-10-2026).
               AND a.action NOT LIKE '%.read'
+              -- POOLSE-188, rule 9: who was viewed is the Owner's to read.
+              AND ($4 OR a.action NOT LIKE 'app\_view.%')
             ORDER BY a.created_at DESC, a.id DESC
             LIMIT $2 OFFSET $3`,
-          [id, limit, offset],
+          [id, limit, offset, currentTenant().roles.includes('owner') && currentTenant().support !== true],
         ),
       (row) => row,
     );

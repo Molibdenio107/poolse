@@ -57,6 +57,7 @@ interface StudentDetail extends Student {
 import {
   archiveLevel,
   archiveStudent,
+  hasLiveStudentRecord,
   countOutsideRange,
   createLevel,
   createStudent,
@@ -227,6 +228,13 @@ export class GuardiansController {
   }
 }
 
+/** A staff role on an existing person is the Owner's to change (Rui, 07-11-2026). */
+function refuseStaffRoleByNonOwner(role: string): void {
+  if (['admin', 'instructor', 'maintenance'].includes(role) && !hasRole('owner')) {
+    throw new ForbiddenException({ code: 'owner_only', message: 'Only the owner changes a staff role' });
+  }
+}
+
 /**
  * Duplicates and merges — POOLSE-17 AC8, AC9, AC10.
  *
@@ -273,6 +281,7 @@ export class PeopleDedupController {
      * the same escalation by a different door.
      */
     requireGrantable([role]);
+    refuseStaffRoleByNonOwner(role);
 
     // An instructor adds a family role to a parent, never to staff — 16-10-2026
     // sweep: the matrix alone let one make the Owner a guardian.
@@ -298,6 +307,16 @@ export class PeopleDedupController {
 
     if (!isMemberRole(role)) throw new BadRequestException('role is not a member role');
     requireGrantable([role]);
+    refuseStaffRoleByNonOwner(role);
+
+    // A student who is still one would keep a record with no way into it. Archive
+    // first, as when somebody moves from the pool to the staff (Rui, 07-11-2026).
+    if (role === 'student' && (await hasLiveStudentRecord(organizationId, membershipId))) {
+      throw new ConflictException({
+        code: 'student_still_active',
+        message: 'Archive the student record before removing this role',
+      });
+    }
 
     if (!(await revokeRole(organizationId, membershipId, role))) {
       throw new NotFoundException('No such role on that person');
@@ -363,7 +382,9 @@ export class PeopleDedupController {
 export class FamilyController {
   @Get()
   async mine(): Promise<{ students: { id: string; name: string; relationship: string | null; self: boolean }[] }> {
-    const { organizationId, membershipId } = currentTenant();
+    const { organizationId, membershipId, viewing } = currentTenant();
+    // POOLSE-188: viewed as *Professor*, a teacher's own children are not on show.
+    if (viewing != null && viewing.hat !== 'family') return { students: [] };
     return { students: await familyStudents(organizationId, membershipId) };
   }
 }

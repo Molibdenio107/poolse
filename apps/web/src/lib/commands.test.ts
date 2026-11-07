@@ -76,3 +76,25 @@ test('POOLSE-167: the palette lists Mínimos under Natação', () => {
   assert.equal(minimos?.sportKey, 'sport.name.pool');
   assert.deepEqual(minimos?.run, { href: '/dashboard/students/provas/minimos?sport=pool' });
 });
+
+test('a tab of the site is one word away: *documents* goes straight there (Rui, 07-11-2026)', () => {
+  const owner = commandsFor({ roles: ['owner'], kind: 'business', modules: [...POOLSE_MODULES] });
+  const documents = owner.find((one) => one.id === 'siteDocuments')!;
+  assert.deepEqual(documents.run, { href: '/dashboard/facilities/site?tab=documents' });
+  for (const query of ['documentos', 'documents', 'boletim']) {
+    assert.ok((score(documents, 'Documentos', query, 'pt-PT') ?? 0) > 0, query);
+  }
+  assert.ok((score(documents, 'Documents', 'forms', 'en') ?? 0) > 0);
+});
+
+test('only the Owner is offered the subscription, the support access and the app views', () => {
+  const ids = (roles: string[]): string[] =>
+    commandsFor({ roles, kind: 'business', modules: [...POOLSE_MODULES] }).map((one) => one.id);
+  for (const id of ['subscription', 'supportAccess', 'appViews']) {
+    assert.ok(ids(['owner']).includes(id), id);
+    assert.equal(ids(['admin']).includes(id), false, id);
+  }
+  assert.ok(ids(['admin']).includes('siteDocuments'));
+  assert.equal(ids(['instructor']).includes('siteDocuments'), false);
+  assert.equal(ids(['guardian']).includes('archive'), false);
+});

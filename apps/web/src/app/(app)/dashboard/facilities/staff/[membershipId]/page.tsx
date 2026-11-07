@@ -169,7 +169,9 @@ export default async function StaffMemberPage({
                         : null
                       : me?.memberships[0]?.membershipId === membershipId
                         ? 'own-photo'
-                        : null
+                        : viewer.canTransferOwnership
+                          ? `login-photo:${record.membershipId}`
+                          : null
                   }
                   reason={
                     record.appUserId === null
@@ -178,7 +180,7 @@ export default async function StaffMemberPage({
                         : null
                       : me?.memberships[0]?.membershipId === membershipId
                         ? null
-                        : viewer.canArchive
+                        : viewer.canArchive && !viewer.canTransferOwnership
                           ? t('photo.theirOwn')
                           : null
                   }
@@ -188,6 +190,7 @@ export default async function StaffMemberPage({
                     organizationId={viewer.organizationId}
                     staff={record}
                     canManage={viewer.canArchive}
+                    isOwner={viewer.canTransferOwnership}
                   />
                 </div>
               </section>
@@ -207,7 +210,7 @@ export default async function StaffMemberPage({
               )}
 
               {details.state === 'ok' && (
-                <DetailsCard membershipId={membershipId} details={details.data} canManage={viewer.canArchive} />
+                <DetailsCard membershipId={membershipId} details={details.data} canManage={viewer.canTransferOwnership} />
               )}
               {details.state === 'failed' && <PageError message={t('staffDetails.loadFailed')} />}
             </>
@@ -236,6 +239,7 @@ export default async function StaffMemberPage({
                 membershipId={membershipId}
                 identity={identity.data}
                 own={me?.memberships[0]?.membershipId === membershipId}
+                canEdit={viewer.canTransferOwnership || me?.memberships[0]?.membershipId === membershipId}
                 storageReady={storageReady}
               />
             );
@@ -294,7 +298,9 @@ export default async function StaffMemberPage({
             <RoleEditor
               organizationId={viewer.organizationId}
               staff={record}
-              grantable={[...viewer.grantableRoles]}
+              grantable={viewer.grantableRoles.filter(
+                (role) => viewer.canTransferOwnership || !['admin', 'instructor', 'maintenance'].includes(role),
+              )}
             />
           ),
         },

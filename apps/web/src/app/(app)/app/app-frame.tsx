@@ -29,6 +29,7 @@ export function AppFrame({
   organizationName,
   logoFileId,
   homes,
+  banner = null,
   children,
 }: {
   organizationName: string;
@@ -36,6 +37,8 @@ export function AppFrame({
   /** The club's logo, for the corner; null draws its initials (POOLSE-176). */
   logoFileId: string | null;
   homes: AppHat[];
+  /** POOLSE-188: whose app this is, in the sticky header so it never scrolls away. */
+  banner?: React.ReactNode;
   children: React.ReactNode;
 }): React.ReactElement {
   const pathname = usePathname();
@@ -57,6 +60,7 @@ export function AppFrame({
       className="flex min-h-dvh flex-col bg-background pl-safe-left pr-safe-right"
     >
       <header className="sticky top-0 z-20 bg-surface pt-safe-top shadow-hairline-b print:hidden">
+        {banner}
         <div className="mx-auto flex h-14 w-full max-w-2xl items-center justify-between gap-3 px-4">
           <span className="min-w-0 truncate text-sm font-semibold">{organizationName}</span>
           <ClubCorner name={organizationName} logoFileId={logoFileId} />

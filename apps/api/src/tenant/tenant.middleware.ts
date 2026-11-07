@@ -2,7 +2,9 @@ import { ForbiddenException, Injectable, NestMiddleware } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 import * as Sentry from '@sentry/nestjs';
 import { currentAuth } from '../auth/auth.context.js';
+import { recordViewRead } from '../app-view/app-view.repository.js';
 import { listMemberships } from '../identity/identity.repository.js';
+import { isViewLeave, requestPath, viewReadRoute } from './app-view.js';
 import { tenantStorage, type TenantContext } from './tenant.context.js';
 
 /**
@@ -132,13 +134,38 @@ export class TenantMiddleware implements NestMiddleware {
      */
     if (membership.readOnlyAt !== null) {
       const method = req.method.toUpperCase();
-      if (!SAFE_METHODS.has(method) && !isBillingPath(req.path)) {
+      // *Sair* too: a trial ending mid-view must not keep somebody inside it.
+      if (
+        !SAFE_METHODS.has(method) &&
+        !isBillingPath(req.path) &&
+        !(membership.view !== null && isViewLeave(method, requestPath(req.originalUrl)))
+      ) {
         throw new ForbiddenException({
           code: 'tenant_read_only',
           message: 'This organization is read-only until its subscription is settled',
           trialEndedAt: membership.readOnlyAt,
           dataKeptUntil: membership.pendingDeleteAt,
         });
+      }
+    }
+
+    /*
+     * A live view — POOLSE-188. After suspension and read-only, because a club
+     * that is closed is closed to a view too.
+     *
+     * **A list, by the row and never by the client.** Nothing in the request says
+     * a view is on, so a request that "forgot" is still under it, from any device.
+     * What the list does not name answers 403 `viewing_as`: every write, and every
+     * read nobody decided to open, a route added tomorrow included. A read that
+     * is allowed is logged before it runs, and refused if it cannot be.
+     */
+    const view = membership.view;
+    let viewRead: string | null = null;
+    if (view !== null) {
+      const path = requestPath(req.originalUrl);
+      viewRead = viewReadRoute(req.method, path);
+      if (viewRead === null && !isViewLeave(req.method, path)) {
+        throw new ForbiddenException({ code: 'viewing_as', message: 'Read-only: viewing as another person' });
       }
     }
 
@@ -151,6 +178,16 @@ export class TenantMiddleware implements NestMiddleware {
       disabledModules: membership.disabledModules,
       mySports: membership.mySports,
       clubSports: membership.sports,
+      ...(view === null
+        ? {}
+        : {
+            membershipId: view.membershipId,
+            appUserId: view.appUserId,
+            roles: view.roles,
+            mySports: membership.sports.filter((sport) => view.sports.includes(sport)),
+            viewing: { id: view.id, hat: view.hat },
+            actor: { membershipId: membership.membershipId, appUserId: membership.appUserId },
+          }),
     };
 
     /*
@@ -166,6 +203,12 @@ export class TenantMiddleware implements NestMiddleware {
      */
     Sentry.getIsolationScope().setTag('tenant_id', context.organizationId);
 
-    tenantStorage.run(context, () => next());
+    tenantStorage.run(context, () => {
+      if (viewRead === null) {
+        next();
+        return;
+      }
+      recordViewRead(viewRead).then(() => next(), next);
+    });
   }
 }

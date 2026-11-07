@@ -425,9 +425,10 @@ test.describe('POOLSE-136 — the phone shell, as an instructor', () => {
 });
 
 test.describe('as the owner', () => {
-  test('QA 1 — /app sends an owner to the backoffice', async ({ page }) => {
+  // POOLSE-188: an owner now chooses once per device; phone-app-view.spec.ts has the rest.
+  test('QA 1 — /app asks an owner how to go in', async ({ page }) => {
     await visit(page, '/app');
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/app\/vista$/);
   });
 });
 

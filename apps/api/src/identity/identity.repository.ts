@@ -16,6 +16,17 @@ export interface AppUserSummary {
 
 export type OrganizationKind = 'business' | 'personal';
 
+/** A live view of somebody in this club — POOLSE-188. See `resolve_memberships`. */
+export interface MembershipView {
+  id: string;
+  hat: string;
+  expiresAt: string;
+  membershipId: string;
+  appUserId: string;
+  roles: string[];
+  sports: string[];
+}
+
 export interface MembershipSummary {
   appUserId: string;
   organizationId: string;
@@ -29,6 +40,8 @@ export interface MembershipSummary {
   organizationKind: OrganizationKind;
   membershipId: string;
   roles: string[];
+  /** POOLSE-188. `roles` stay the reader's own here; the view is beside them. */
+  view: MembershipView | null;
   /** trialing | active | past_due | canceled | comped. Nothing enforces it until phase 2. */
   subscriptionStatus: string;
   trialEndsAt: string | null;
@@ -176,6 +189,13 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       o_disabled_modules: string[];
       o_enabled_sports: string[];
       o_sports: string[];
+      o_view_id: string | null;
+      o_view_hat: string | null;
+      o_view_expires_at: Date | null;
+      o_viewed_membership_id: string | null;
+      o_viewed_app_user_id: string | null;
+      o_viewed_roles: string[] | null;
+      o_viewed_sports: string[] | null;
     }>('SELECT * FROM resolve_memberships($1)', [clerkUserId]);
 
     return rows.map((row) => ({
@@ -193,6 +213,18 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       readOnlyAt: row.o_read_only_at?.toISOString() ?? null,
       pendingDeleteAt: row.o_pending_delete_at?.toISOString() ?? null,
       supportExpiresAt: row.o_support_expires_at?.toISOString() ?? null,
+      view:
+        row.o_view_id === null
+          ? null
+          : {
+              id: row.o_view_id,
+              hat: row.o_view_hat!,
+              expiresAt: row.o_view_expires_at!.toISOString(),
+              membershipId: row.o_viewed_membership_id!,
+              appUserId: row.o_viewed_app_user_id ?? '',
+              roles: row.o_viewed_roles ?? [],
+              sports: row.o_viewed_sports ?? [],
+            },
       disabledModules: row.o_disabled_modules,
       modules: enabledModules(row.o_disabled_modules),
       sports: enabledSports({ enabledSports: row.o_enabled_sports }),

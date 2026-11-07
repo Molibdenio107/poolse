@@ -41,6 +41,16 @@ export async function uploadFileAction(_previous: FormState, formData: FormData)
     return { ok: true, toastKey: 'files.photoSaved' };
   }
 
+  // The Owner correcting a login's photograph: Clerk's, like one's own.
+  if (target.startsWith('login-photo:')) {
+    try {
+      await apiUpload(`/staff/${encodeURIComponent(target.split(':')[1] ?? '')}/login-photo`, await file.arrayBuffer(), 'PUT');
+    } catch (error) {
+      return refusal(error);
+    }
+    return { ok: true, toastKey: 'files.photoSaved' };
+  }
+
   // A signed FPN declaration is filed under its kind and season — POOLSE-132.
   const copy = studentDocumentCopy(target);
   if (copy !== null) {
@@ -78,6 +88,14 @@ export async function detachFileAction(_previous: FormState, formData: FormData)
   if (target === 'own-photo') {
     try {
       await apiDelete('/me/photo');
+    } catch (error) {
+      return refusal(error);
+    }
+    return { ok: true };
+  }
+  if (target.startsWith('login-photo:')) {
+    try {
+      await apiDelete(`/staff/${encodeURIComponent(target.split(':')[1] ?? '')}/login-photo`);
     } catch (error) {
       return refusal(error);
     }

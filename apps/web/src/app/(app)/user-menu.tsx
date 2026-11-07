@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 import { UserButton } from '@clerk/nextjs';
-import { AlertTriangle, Archive, UserRound } from 'lucide-react';
+import { Eye, AlertTriangle, Archive, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { subscriptionAlertSentence, type SubscriptionAlertView } from '@/lib/subscription-alert';
 
@@ -80,6 +80,13 @@ export function UserMenu({
               label={t('profile.title')}
               labelIcon={<UserRound className="size-4" aria-hidden />}
             />
+            {canArchive && (
+              <UserButton.Link
+                href="/app/vista"
+                label={t('appView.menu')}
+                labelIcon={<Eye className="size-4" aria-hidden />}
+              />
+            )}
             {canArchive && (
               <UserButton.Link
                 href="/dashboard/arquivados"

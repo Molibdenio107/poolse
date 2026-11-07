@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TABS, appHome, familyOnly, hatsOf, tabFor } from './app-hats.ts';
+import { TABS, appHome, familyOnly, hatsOf, homeChoice, rememberedHome, tabFor } from './app-hats.ts';
 
 /**
  * Who lands where in app mode — POOLSE-90, QA 1 and 2. The router, the switcher
@@ -10,6 +10,15 @@ import { TABS, appHome, familyOnly, hatsOf, tabFor } from './app-hats.ts';
 test('an owner or admin is sent to the backoffice, whatever else they are', () => {
   assert.equal(appHome(['owner']), '/dashboard');
   assert.equal(appHome(['admin', 'guardian']), '/dashboard');
+});
+
+test('POOLSE-188: a device remembers the way in, for one person, while they hold it', () => {
+  assert.equal(rememberedHome(undefined, 'me', ['teaching']), null);
+  assert.equal(rememberedHome(homeChoice('me', null), 'me', ['teaching']), 'backoffice');
+  assert.equal(rememberedHome(homeChoice('me', 'teaching'), 'me', ['teaching']), 'teaching');
+  assert.equal(rememberedHome(homeChoice('me', 'teaching'), 'me', []), null, 'a home no longer held');
+  assert.equal(rememberedHome(homeChoice('other', 'teaching'), 'me', ['teaching']), null, 'somebody else');
+  assert.equal(rememberedHome('me:owner', 'me', ['teaching']), null, 'a forged cookie opens nothing');
 });
 
 test('a guardian or a student lands on the family agenda', () => {

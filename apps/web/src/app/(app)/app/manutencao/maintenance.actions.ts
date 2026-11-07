@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiPost } from '@/lib/api';
 import type { FormState } from '../../dashboard/actions';
+import { viewRefusal } from '@/lib/form-failure';
 
 /**
  * The maintenance home's one-tap actions — POOLSE-90 slice 3. Each calls the
@@ -13,6 +14,8 @@ import type { FormState } from '../../dashboard/actions';
 const HOME = '/app/manutencao';
 
 function failure(error: unknown, fallback: string): FormState {
+  const view = viewRefusal(error);
+  if (view !== null) return view;
   if (error instanceof ApiError && error.status === 400 && Object.keys(error.fields).length > 0) {
     return { ok: false, fields: error.fields };
   }

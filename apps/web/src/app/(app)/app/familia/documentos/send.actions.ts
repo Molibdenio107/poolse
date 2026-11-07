@@ -2,6 +2,7 @@
 
 import { ApiError, apiUpload } from '@/lib/api';
 import type { FormState } from '../../../dashboard/actions';
+import { viewRefusal } from '@/lib/form-failure';
 
 const KINDS = ['fpn_declaration', 'socio_form', 'id_document', 'medical_exam'] as const;
 const ID = /^[0-9a-f-]{36}$/i;
@@ -38,6 +39,8 @@ export async function sendDocumentAction(_previous: FormState, formData: FormDat
   try {
     await apiUpload(`/app/documents/${kind}?${query.toString()}`, await file.arrayBuffer());
   } catch (error) {
+    const view = viewRefusal(error);
+    if (view !== null) return view;
     const refused = error instanceof ApiError && typeof error.code === 'string' ? REFUSED[error.code] : undefined;
     if (refused !== undefined) return { ok: false, errorKey: refused };
     if (error instanceof ApiError && error.status === 429) return { ok: false, errorKey: 'app.documents.send.refused.tooMany' };

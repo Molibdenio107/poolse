@@ -250,3 +250,9 @@ creates the record and attaches the file through the same `PUT qualifications/:i
 so it is an ordinary record on Staff → Qualificações, the dashboard card and the alert job.
 The list's **Sem certificado** filter (`?certificate=missing` on `GET /qualifications/expiring`) narrows it
 on the server, before paging, to records with no certificate; *em falta* rows are not among them.
+
+## Who writes what on a staff record
+
+POOLSE-196. The Owner writes everything. An Admin reads the NIF, NISS, ID document, contract, notes and staff roles of somebody else, and writes phone, address, sports and family roles. The person writes their own identity. The Owner may correct the name, date of birth and photo of somebody who signs in; each changes on their account, in every club. The email stays locked.
+
+A student with a login becomes staff on their record: the invitation refuses and links there. Archive the student record before removing the Aluno role, or the removal is refused.

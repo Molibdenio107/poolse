@@ -25,12 +25,18 @@ export function IdentityCard({
   membershipId,
   identity,
   own,
+  canEdit = true,
+  ownerCorrects = false,
   proposal = null,
 }: {
   membershipId: string;
   identity: StaffIdentity;
   /** The reader is the person on the record. */
   own: boolean;
+  /** An Admin reads this and the Owner writes it (Rui, 07-11-2026). */
+  canEdit?: boolean;
+  /** The Owner on somebody else's record, who may correct a login's date of birth. */
+  ownerCorrects?: boolean;
   /** What the reader proposed from the photograph (POOLSE-149), for a person to confirm. */
   proposal?: { type: StaffIdDocumentType | null; number: string | null } | null;
 }): React.ReactElement {
@@ -56,13 +62,15 @@ export function IdentityCard({
 
       <form action={action} className="flex flex-col gap-3">
         <input type="hidden" name="membershipId" value={membershipId} />
+        <fieldset disabled={!canEdit} className="contents">
 
-        {identity.birthDateSource === 'record' ? (
+        {identity.birthDateSource === 'record' || ownerCorrects ? (
           <TextField
             name="birthDate"
             type="date"
             label={t('staffIdentity.birthDate')}
             initial={identity.birthDate ?? ''}
+            {...(identity.birthDateSource === 'login' ? { hint: t('staffIdentity.birthDateOwnerCorrects') } : {})}
             {...error('birthDate')}
           />
         ) : (
@@ -102,6 +110,8 @@ export function IdentityCard({
             {t('staffIdentity.save')}
           </button>
         </div>
+        </fieldset>
+        {!canEdit && <p className="text-sm text-foreground-muted">{t('staff.ownerEdits')}</p>}
       </form>
     </section>
   );

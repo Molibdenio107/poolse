@@ -70,6 +70,9 @@ export class FilesController {
     const opened = await openFile(currentTenant().organizationId, id);
     if (opened === null) throw new NotFoundException();
     if (opened === 'refused') throw new ForbiddenException();
+    if (opened === 'viewing_as') {
+      throw new ForbiddenException({ code: 'viewing_as', message: 'Read-only: viewing as another person' });
+    }
 
     return new StreamableFile(opened.body, {
       type: opened.contentType,

@@ -42,6 +42,8 @@ export async function guardAiCall(roles: readonly string[]): Promise<AiRefusal |
   if (membership === undefined || !membership.roles.some((role) => roles.includes(role))) {
     return 'notAllowed';
   }
+  // POOLSE-188: a view writes nothing, so a metered call would buy nothing.
+  if (membership.view !== null) return 'notAllowed';
 
   const now = Date.now();
   const key = me.user.id;

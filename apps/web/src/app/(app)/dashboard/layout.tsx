@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { readableSports } from '@/lib/sport-scope';
 import * as Sentry from '@sentry/nextjs';
 import { getTranslations } from 'next-intl/server';
@@ -45,6 +46,8 @@ import { ClubSupportStrip, SupportEndedNotice, SupportSessionBanner } from './su
  * personal user seeing Turmas during an outage is a nuisance, not a leak.
  */
 interface Viewer {
+  /** POOLSE-188: a view is open, on any device, and the backoffice waits for *Sair*. */
+  viewing: boolean;
   roles: string[];
   /**
    * This browser is acting as Poolse support in the club — POOLSE-79. The
@@ -90,6 +93,7 @@ async function currentViewer(): Promise<Viewer> {
     }
 
     return {
+      viewing: membership?.view != null,
       roles: membership?.roles ?? [],
       support:
         membership?.supportExpiresAt != null
@@ -129,6 +133,7 @@ async function currentViewer(): Promise<Viewer> {
      */
     return {
       roles: [],
+      viewing: false,
       support: null,
       clubGone: false,
       kind: 'business',
@@ -162,8 +167,9 @@ export default async function DashboardLayout({
    * parts is `null` when there is nothing to draw: the logo, the subscription
    * warning on the avatar (owner and admin, Rui 28-10-2026), the support status.
    */
-  const [{ roles, support, clubGone, kind, modules, sports, organizationName, suspended }, shell] =
+  const [{ viewing, roles, support, clubGone, kind, modules, sports, organizationName, suspended }, shell] =
     await Promise.all([currentViewer(), readShell()]);
+  if (viewing) redirect('/app');
   const { logoFileId, subscriptionAlert: subscription } = shell;
 
   // A support window that ended, with this browser still pointed at its club.

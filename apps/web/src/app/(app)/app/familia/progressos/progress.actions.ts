@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiFetch, apiPost, type ProgressTime } from '@/lib/api';
 import type { FormState } from '../../../dashboard/actions';
+import { viewRefusal } from '@/lib/form-failure';
 
 const PAGE = '/app/familia/progressos';
 
@@ -12,6 +13,8 @@ function text(data: FormData, name: string): string {
 
 /** The API refuses by code; each code lands under the field it is about. */
 function refused(error: unknown, fieldOf: Record<string, string>): FormState {
+  const view = viewRefusal(error);
+  if (view !== null) return view;
   if (error instanceof ApiError) {
     const field = error.code == null ? undefined : fieldOf[error.code];
     if (field !== undefined) return { ok: false, fields: { [field]: `app.records.invalid.${field}` } };

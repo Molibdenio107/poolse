@@ -24,6 +24,14 @@ export interface TenantContext {
   mySports?: readonly string[];
   /** The sports this club has on — what `mySports` is compared with (`sportScope`). */
   clubSports?: readonly string[];
+  /**
+   * A live view — POOLSE-188. While it lasts `membershipId`, `appUserId`, `roles`
+   * and `mySports` above are **the person viewed**, so every read answers as they
+   * would and a read that forgets the view can only answer as them, never as the
+   * owner. `actor` is who is really there, and `recordAudit` is the one reader of it.
+   */
+  viewing?: { id: string; hat: string };
+  actor?: { membershipId: string; appUserId: string };
 }
 
 /**

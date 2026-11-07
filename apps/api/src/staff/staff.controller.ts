@@ -10,6 +10,7 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Put,
   Post,
 
   Query,
@@ -56,7 +57,10 @@ import {
 } from './identity.repository.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
-import { updateClerkName } from '../identity/identity.service.js';
+import { removeClerkPhoto, updateClerkName, updateClerkPhoto } from '../identity/identity.service.js';
+import { withOrg } from '@poolse/db';
+import { recordAudit } from '../audit/audit.js';
+import { MAX_FILE_BYTES, sniffType } from '../files/storage.js';
 import { invitationExpiry, issueToken, normaliseEmail } from '../invitations/invitations.service.js';
 import { deliver } from '../invitations/invitations.controller.js';
 import {
@@ -79,7 +83,10 @@ const MAX_NOTES = 2000;
  *
  * **Who may edit what**, per the decision recorded in the ticket:
  *
- * - Owner and Admin edit anybody's name, phone and notes.
+ * - Owner and Admin edit anybody's phone, address and sports.
+ * - **Only the Owner** edits the NIF, the NISS, the ID document, the contract and
+ *   the notes (Rui, 07-11-2026). An Admin reads them. The person keeps their own
+ *   identity, and a name of somebody who signs in is the person's or the Owner's.
  * - An Instructor edits **their own name and phone**, and nothing else. A
  *   misspelled name needing an admin is the complaint that produced this ticket,
  *   and notes are frequently what an admin writes *about* somebody rather than
@@ -114,10 +121,11 @@ export class StaffController {
     @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
     @Body() body: Record<string, unknown>,
   ): Promise<StaffIdentity> {
-    const actor = requireOwnOrManaged(membershipId);
+    const actor = requireOwnerOrSelf(membershipId);
     const { organizationId } = currentTenant();
     try {
-      if (!(await writeIdentity(organizationId, membershipId, parseIdentity(body)))) {
+      const corrects = hasRole('owner') && membershipId !== actor;
+      if (!(await writeIdentity(organizationId, membershipId, parseIdentity(body), corrects))) {
         throw new NotFoundException('No such staff member');
       }
     } catch (error) {
@@ -143,7 +151,7 @@ export class StaffController {
     requireOwnOrManaged(membershipId);
     const found = await readContract(currentTenant().organizationId, membershipId, hasRole('owner'));
     if (found === null) throw new NotFoundException('No such staff member');
-    return { ...found, canEdit: mayWriteContract(membershipId) };
+    return { ...found, canEdit: mayWriteContract() };
   }
 
   @Patch(':membershipId/contract')
@@ -151,8 +159,7 @@ export class StaffController {
     @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
     @Body() body: Record<string, unknown>,
   ): Promise<StaffContract> {
-    requireRole('owner', 'admin');
-    refuseOwnContract(membershipId);
+    requireRole('owner');
     const { organizationId } = currentTenant();
     if (!(await writeContractFacts(organizationId, membershipId, hasRole('owner'), parseContractFacts(body)))) {
       throw new NotFoundException('No such staff member');
@@ -167,8 +174,7 @@ export class StaffController {
     @Query('name') name: string | undefined,
     @Body() body: unknown,
   ): Promise<{ fileId: string }> {
-    requireRole('owner', 'admin');
-    refuseOwnContract(membershipId);
+    requireRole('owner');
     const { bytes, contentType, originalName } = judgeUpload('staff_contract', body, name);
     const filed = await attachContract(
       currentTenant().organizationId,
@@ -185,8 +191,7 @@ export class StaffController {
   /** Takes the current contract off; it stays in the history. */
   @Delete(':membershipId/contract/file')
   async removeContract(@Param('membershipId', new ParseUUIDPipe()) membershipId: string): Promise<{ removed: true }> {
-    requireRole('owner', 'admin');
-    refuseOwnContract(membershipId);
+    requireRole('owner');
     if (!(await removeContract(currentTenant().organizationId, membershipId, hasRole('owner')))) {
       throw new NotFoundException('No contract on file');
     }
@@ -206,7 +211,7 @@ export class StaffController {
     @Query('name') name: string | undefined,
     @Body() body: unknown,
   ): Promise<{ fileId: string }> {
-    requireOwnOrManaged(membershipId);
+    requireOwnerOrSelf(membershipId);
     const { bytes, contentType, originalName } = judgeUpload('staff_id_document', body, name);
     const filed = await attachIdPhoto(
       currentTenant().organizationId,
@@ -220,13 +225,49 @@ export class StaffController {
     return filed;
   }
 
+  /**
+   * The photograph of somebody who signs in, corrected by the Owner (Rui,
+   * 07-11-2026). It is their account's, so it goes to Clerk and follows them to
+   * any other club, like the name. Support is an Admin here and is refused.
+   */
+  @Put(':membershipId/login-photo')
+  async setLoginPhoto(
+    @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
+    @Body() body: unknown,
+  ): Promise<{ saved: true }> {
+    requireRole('owner');
+    if (!Buffer.isBuffer(body) || body.length === 0) {
+      throw new BadRequestException({ code: 'file_empty', message: 'No file was sent' });
+    }
+    if (body.length > MAX_FILE_BYTES) {
+      throw new BadRequestException({ code: 'file_too_large', message: 'A file may be at most 10 MB' });
+    }
+    const type = sniffType(body);
+    if (type === null || !type.startsWith('image/')) {
+      throw new BadRequestException({ code: 'file_type', message: 'This needs an image' });
+    }
+    await updateClerkPhoto(await loginOf(membershipId), body, type);
+    await recordLoginPhoto(membershipId);
+    return { saved: true };
+  }
+
+  @Delete(':membershipId/login-photo')
+  async removeLoginPhoto(
+    @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
+  ): Promise<{ removed: true }> {
+    requireRole('owner');
+    await removeClerkPhoto(await loginOf(membershipId));
+    await recordLoginPhoto(membershipId);
+    return { removed: true };
+  }
+
   /** Takes a side's photograph off; the database shreds it. */
   @Delete(':membershipId/identity/photo/:side')
   async removeIdPhoto(
     @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
     @Param('side') side: string,
   ): Promise<{ removed: true }> {
-    requireOwnOrManaged(membershipId);
+    requireOwnerOrSelf(membershipId);
     if (!(await removeIdPhoto(currentTenant().organizationId, membershipId, photoSide(side)))) {
       throw new NotFoundException('No photograph on that side');
     }
@@ -259,12 +300,12 @@ export class StaffController {
 
     const was = await readDetails(organizationId, membershipId);
     if (was === null) throw new NotFoundException('No such staff member');
-    if (!hasRole('owner', 'admin')) {
+    if (!hasRole('owner')) {
       const clubs = CLUB_DETAIL_FIELDS.filter((field) => edit[field] !== undefined && edit[field] !== was[field]);
       if (clubs.length > 0) {
         throw new ForbiddenException({
           code: 'forbidden_role',
-          message: 'The NIF and NISS are recorded by an owner or an administrator',
+          message: 'The NIF and NISS are recorded by the owner',
           fields: Object.fromEntries(clubs.map((field) => [field, 'staffDetails.errors.clubsToSet'])),
         });
       }
@@ -391,15 +432,19 @@ export class StaffController {
       firstName: text(body['firstName'], 'firstName', MAX_NAME),
       lastName: text(body['lastName'], 'lastName', MAX_NAME),
       phone: text(body['phone'], 'phone', MAX_PHONE),
-      // Somebody editing their own record keeps whatever notes were already
-      // there rather than being able to clear them by omission.
-      notes: privileged ? text(body['notes'], 'notes', MAX_NOTES) : staff.notes,
+      // Anybody but the Owner keeps whatever notes were already there rather
+      // than being able to clear them by omission (Rui, 07-11-2026).
+      notes: hasRole('owner') ? text(body['notes'], 'notes', MAX_NOTES) : staff.notes,
     };
 
-    if (!privileged && body['notes'] !== undefined) {
+    if (
+      !hasRole('owner') &&
+      body['notes'] !== undefined &&
+      text(body['notes'], 'notes', MAX_NOTES) !== (staff.notes ?? null)
+    ) {
       throw new ForbiddenException({
         code: 'forbidden_role',
-        message: 'Notes are written by an owner or an administrator',
+        message: 'Notes are written by the owner',
       });
     }
 
@@ -416,10 +461,12 @@ export class StaffController {
     /*
      * A login's name is the person's own, in every club — sweep of 15-10-2026.
      * Clerk holds one name for them, so an Admin here (or a support session)
-     * writing it renamed them in every other club and on their own account. Only
-     * the person changes it, on O meu perfil; an unchanged name passes through.
+     * writing it renamed them in every other club and on their own account. The
+     * person changes it on O meu perfil; an unchanged name passes through. **The
+     * Owner may correct it** (Rui, 07-11-2026, narrowing that sweep), knowing it
+     * follows the person to any other club. Support is an Admin here, so it may not.
      */
-    if (clerkHandled && renamed && !own) {
+    if (clerkHandled && renamed && !own && !hasRole('owner')) {
       throw new ForbiddenException({
         code: 'name_is_theirs',
         message: 'This person signs in, and only they can change their name',
@@ -521,6 +568,28 @@ function text(value: unknown, field: string, max: number): string | null {
   return trimmed;
 }
 
+/** The Clerk id behind a member of the club; a person with no login has no such photo. */
+async function loginOf(membershipId: string): Promise<string> {
+  const staff = await findStaff(currentTenant().organizationId, membershipId);
+  if (staff === null || staff.clerkUserId === null) throw new NotFoundException('No such login');
+  return staff.clerkUserId;
+}
+
+async function recordLoginPhoto(membershipId: string): Promise<void> {
+  await withOrg(currentTenant().organizationId, (tx) =>
+    recordAudit(tx, { action: 'membership.login_photo_changed', entityType: 'membership', entityId: membershipId }),
+  );
+}
+
+/** What only the Owner writes for somebody else; anybody may still write their own. */
+function requireOwnerOrSelf(membershipId: string): string {
+  const actor = requireOwnOrManaged(membershipId);
+  if (actor !== membershipId && !hasRole('owner')) {
+    throw new ForbiddenException({ code: 'owner_only', message: 'Only the owner changes this' });
+  }
+  return actor;
+}
+
 /** Owner or admin for anyone; any member of staff for themself. Answers the reader's membership. */
 function requireOwnOrManaged(membershipId: string): string {
   requireRole('owner', 'admin', 'instructor', 'maintenance');
@@ -567,19 +636,9 @@ function parseContractFacts(body: Record<string, unknown>): ContractFacts {
   return { kind, startsOn, endsOn };
 }
 
-/**
- * Nobody but the Owner writes their own contract — the pay rule
- * (CLAUDE.md: nobody but the Owner writes their own pay). An Admin's is the
- * Owner's to file.
- */
-function mayWriteContract(membershipId: string): boolean {
-  return hasRole('owner') || (hasRole('admin') && membershipId !== currentTenant().membershipId);
-}
-
-function refuseOwnContract(membershipId: string): void {
-  if (!hasRole('owner') && membershipId === currentTenant().membershipId) {
-    throw new ForbiddenException({ code: 'own_contract', message: 'Your own contract is filed by the owner' });
-  }
+/** A contract is the Owner's to file, an Admin's own included (Rui, 07-11-2026). */
+function mayWriteContract(): boolean {
+  return hasRole('owner');
 }
 
 function photoSide(raw: string): IdPhotoSide {

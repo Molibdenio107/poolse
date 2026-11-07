@@ -23,7 +23,7 @@ type Synonyms = { 'pt-PT'?: readonly string[]; en?: readonly string[] };
 /** Other words for a page, by its address. */
 const SYNONYMS: Record<string, Synonyms> = {
   '/dashboard': { 'pt-PT': ['inicio', 'painel', 'resumo'], en: ['home', 'overview'] },
-  '/dashboard/facilities': { 'pt-PT': ['piscinas', 'tanques', 'site', 'instalacao'], en: ['pools', 'site', 'facility'] },
+  '/dashboard/facilities': { 'pt-PT': ['piscinas', 'tanques', 'site', 'instalacao', 'agua', 'analises', 'cloro', 'ph'], en: ['pools', 'site', 'facility'] },
   '/dashboard/facilities/inventory': { 'pt-PT': ['armazem', 'material', 'stock'], en: ['stock', 'equipment', 'store room'] },
   '/dashboard/facilities/incidents': { 'pt-PT': ['acidentes', 'incidentes', 'ocorrencia'], en: ['accidents', 'incidents'] },
   '/dashboard/facilities/lifeguards': {
@@ -77,7 +77,9 @@ export interface Command {
 /**
  * The daily actions — one declaration each. A page that is a view of another
  * (Em dívida is Faturação's second view) is declared here, so *quotas* lands on
- * the view somebody means rather than the page above it.
+ * the view somebody means rather than the page above it. So is a tab of the site:
+ * it has no menu entry, and `/dashboard/facilities/site` finds the site (Rui,
+ * 07-11-2026: typing *documents* simply goes there).
  */
 const ACTIONS: Omit<Command, 'kind'>[] = [
   {
@@ -117,6 +119,118 @@ const ACTIONS: Omit<Command, 'kind'>[] = [
     roles: OFFICE,
     kinds: ['business'],
     synonyms: { 'pt-PT': ['importar', 'excel', 'folha', 'ficheiro'], en: ['import', 'spreadsheet', 'excel'] },
+  },
+  {
+    id: 'siteDocuments',
+    labelKey: 'boletimTemplate.tab',
+    run: { href: '/dashboard/facilities/site?tab=documents' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['documentos', 'documents', 'boletim', 'boletim de socio', 'fpn', 'formularios', 'modelos'], en: ['documents', 'forms', 'templates', 'membership form', 'fpn'] },
+  },
+  {
+    id: 'sitePrices',
+    labelKey: 'detailTabs.prices',
+    run: { href: '/dashboard/facilities/site?tab=prices' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['precos', 'prices', 'tabela', 'mensalidades', 'tarifas', 'descontos'], en: ['prices', 'fees', 'price list', 'discounts'] },
+  },
+  {
+    id: 'siteRegulation',
+    labelKey: 'regulation.tab',
+    run: { href: '/dashboard/facilities/site?tab=regulation' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['regulamento', 'regulation', 'regras', 'livro de reclamacoes'], en: ['regulation', 'rules', 'complaints book'] },
+  },
+  {
+    id: 'siteClub',
+    labelKey: 'clubData.tab',
+    run: { href: '/dashboard/facilities/site?tab=club' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['dados do clube', 'iban', 'mb way', 'pagamentos', 'morada do clube', 'nif do clube'], en: ['club details', 'iban', 'mb way', 'payment details'] },
+  },
+  {
+    id: 'siteOccupancy',
+    labelKey: 'detailTabs.occupancy',
+    run: { href: '/dashboard/facilities/site?tab=occupancy' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['ocupacao', 'lotacao', 'taxa de ocupacao'], en: ['occupancy', 'capacity'] },
+  },
+  {
+    id: 'sitePartners',
+    labelKey: 'partners.title',
+    run: { href: '/dashboard/facilities/site?tab=partners' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['parcerias', 'parceiros', 'protocolos', 'contratos de parceria'], en: ['partners', 'partnerships', 'agreements'] },
+  },
+  {
+    id: 'siteSpaces',
+    labelKey: 'spaces.title',
+    run: { href: '/dashboard/facilities/site?tab=spaces' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['espacos', 'balnearios', 'limpeza', 'salas'], en: ['spaces', 'changing rooms', 'cleaning', 'rooms'] },
+  },
+  {
+    id: 'siteMaintenance',
+    labelKey: 'maintenance.section',
+    run: { href: '/dashboard/facilities/site?tab=maintenance' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['manutencao', 'tarefas', 'avarias', 'reparacoes'], en: ['maintenance', 'tasks', 'faults', 'repairs'] },
+  },
+  {
+    id: 'sitePhotos',
+    labelKey: 'facilities.mediaTab',
+    run: { href: '/dashboard/facilities/site?tab=photos' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['multimedia', 'fotografias', 'fotos', 'logotipo', 'logo'], en: ['media', 'photos', 'logo'] },
+  },
+  {
+    id: 'archive',
+    labelKey: 'archive.title',
+    run: { href: '/dashboard/arquivados' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['arquivados', 'arquivo', 'lixo', 'recuperar', 'restaurar', 'apagados'], en: ['archive', 'bin', 'restore', 'deleted'] },
+  },
+  {
+    id: 'viewApp',
+    labelKey: 'appView.menu',
+    run: { href: '/app/vista' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['ver a app', 'app', 'vista', 'telemovel', 'ver como'], en: ['see the app', 'app', 'view as', 'phone'] },
+  },
+  {
+    id: 'appViews',
+    labelKey: 'appView.history.tab',
+    run: { href: '/dashboard/profile?tab=app-views' },
+    roles: ['owner'],
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['vistas da app', 'quem viu', 'registo de vistas'], en: ['app views', 'who viewed'] },
+  },
+  {
+    id: 'supportAccess',
+    labelKey: 'support.tab',
+    run: { href: '/dashboard/profile?tab=support' },
+    roles: ['owner'],
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['suporte', 'acesso de suporte', 'ajuda poolse'], en: ['support', 'support access', 'help'] },
+  },
+  {
+    id: 'subscription',
+    labelKey: 'palette.action.subscription',
+    run: { href: '/dashboard/profile/subscription' },
+    roles: ['owner'],
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['subscricao', 'licenca', 'plano', 'pagar poolse', 'cartao'], en: ['subscription', 'licence', 'plan', 'card'] },
   },
   {
     id: 'theme',
