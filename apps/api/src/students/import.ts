@@ -1044,8 +1044,8 @@ function validateRow(
    * file with it. The same child listed twice in the file is not a clash.
    */
   if (socioNumber !== null) {
-    const holder = socios.existing.get(socioNumber);
-    const earlier = socios.seen.get(socioNumber);
+    const holder = socios.existing.get(socioNumber.toLowerCase());
+    const earlier = socios.seen.get(socioNumber.toLowerCase());
     const heldElsewhere = holder !== undefined && holder.id !== matched?.id;
     const earlierInFile =
       earlier !== undefined && !(duplicate?.kind === 'file' && duplicate.line === earlier.line);
@@ -1165,7 +1165,7 @@ function validateRow(
     if (!seen.has(nameKey)) seen.set(nameKey, row);
     if (nifKey !== null && nifKey !== '' && !seenTax.has(nifKey)) seenTax.set(nifKey, row);
   }
-  if (socioNumber !== null && !socios.seen.has(socioNumber)) socios.seen.set(socioNumber, row);
+  if (socioNumber !== null && !socios.seen.has(socioNumber.toLowerCase())) socios.seen.set(socioNumber.toLowerCase(), row);
   return row;
 }
 
@@ -1237,7 +1237,7 @@ export function validateImportRows(
     existing: new Map(
       context.existing
         .filter((student) => student.socioNumber !== null)
-        .map((student) => [student.socioNumber ?? '', student]),
+        .map((student) => [(student.socioNumber ?? '').toLowerCase(), student]),
     ),
     seen: new Map<string, ImportRow>(),
   };

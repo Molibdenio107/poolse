@@ -34,6 +34,8 @@ export interface FiledCopy {
 
 export interface StudentDocuments {
   studentName: string;
+  /** Membership, set on the same page as the boletim (Rui, 07-11-2026). */
+  socio: { isSocio: boolean; socioNumber: string | null; socioSince: string | null };
   minor: boolean | null;
   disciplines: FpnDiscipline[];
   idDocument: {
@@ -73,6 +75,9 @@ export async function readDocuments(organizationId: string, studentId: string): 
       postal_code: string | null;
       association: string | null;
       club_code: string | null;
+      is_socio: boolean;
+      socio_number: string | null;
+      socio_since: string | null;
     }>(
       `SELECT ${displayName('s')} AS name,
               CASE WHEN s.birth_date IS NULL THEN NULL
@@ -81,7 +86,8 @@ export async function readDocuments(organizationId: string, studentId: string): 
               s.id_document_type, s.id_document_number_encrypted IS NOT NULL AS has_number,
               s.id_document_issued_on::text AS issued_on, s.id_document_valid_until::text AS valid_until,
               s.address_line, s.locality, s.postal_code,
-              o.fpn_association AS association, o.fpn_club_code AS club_code
+              o.fpn_association AS association, o.fpn_club_code AS club_code,
+              s.is_socio, s.socio_number, to_char(s.socio_since, 'YYYY-MM-DD') AS socio_since
          FROM student_person s JOIN organization o ON o.id = s.organization_id
         WHERE s.id = $1 AND s.archived_at IS NULL`,
       [studentId],
@@ -139,6 +145,7 @@ export async function readDocuments(organizationId: string, studentId: string): 
       },
       templateSiteId: site.rows[0]?.id ?? null,
       studentName: row.name,
+      socio: { isSocio: row.is_socio, socioNumber: row.socio_number, socioSince: row.socio_since },
       minor: row.minor,
       disciplines: row.disciplines as FpnDiscipline[],
       idDocument: {

@@ -30,6 +30,7 @@ export function AppFrame({
   logoFileId,
   homes,
   banner = null,
+  search = null,
   children,
 }: {
   organizationName: string;
@@ -39,6 +40,8 @@ export function AppFrame({
   homes: AppHat[];
   /** POOLSE-188: whose app this is, in the sticky header so it never scrolls away. */
   banner?: React.ReactNode;
+  /** The search bar, role-filtered by the layout (Rui, 07-11-2026). */
+  search?: React.ReactNode;
   children: React.ReactNode;
 }): React.ReactElement {
   const pathname = usePathname();
@@ -63,7 +66,10 @@ export function AppFrame({
         {banner}
         <div className="mx-auto flex h-14 w-full max-w-2xl items-center justify-between gap-3 px-4">
           <span className="min-w-0 truncate text-sm font-semibold">{organizationName}</span>
-          <ClubCorner name={organizationName} logoFileId={logoFileId} />
+          <div className="flex shrink-0 items-center gap-2">
+            <Suspense fallback={null}>{search}</Suspense>
+            <ClubCorner name={organizationName} logoFileId={logoFileId} />
+          </div>
         </div>
         <Suspense fallback={null}>
           <TabBar homes={homes} placement="top" />

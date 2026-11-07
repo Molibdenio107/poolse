@@ -98,3 +98,34 @@ test('only the Owner is offered the subscription, the support access and the app
   assert.equal(ids(['instructor']).includes('siteDocuments'), false);
   assert.equal(ids(['guardian']).includes('archive'), false);
 });
+
+test('the phone app has its own search, and each role sees only its own screens', () => {
+  const ids = (roles: string[], place = {}): string[] =>
+    commandsFor({ roles, kind: 'business', modules: [...POOLSE_MODULES] }, { surface: 'app', ...place }).map(
+      (one) => one.id,
+    );
+  const family = ids(['guardian']);
+  assert.ok(family.includes('appDocuments'));
+  assert.equal(family.includes('appTeaching'), false);
+  assert.equal(family.includes('newStudent'), false);
+  assert.equal(family.some((id) => id.startsWith('page:')), false, 'no backoffice page for a family');
+
+  const coach = ids(['instructor']);
+  assert.ok(coach.includes('appTeaching'));
+  assert.equal(coach.includes('appDocuments'), false);
+
+  // Owner and teacher on the phone: their own classes, and the club.
+  const owner = ids(['owner', 'instructor']);
+  assert.ok(owner.includes('appTeaching'));
+  assert.ok(owner.includes('siteDocuments'));
+
+  // Under a view, only the person's app, whoever is looking.
+  const viewed = ids(['guardian'], { viewing: true });
+  assert.ok(viewed.includes('appFees'));
+  assert.equal(viewed.some((id) => id.startsWith('page:') || id.startsWith('site')), false);
+});
+
+test('the backoffice bar does not offer the phone app’s screens', () => {
+  const ids = commandsFor({ roles: ['owner'], kind: 'business', modules: [...POOLSE_MODULES] }).map((one) => one.id);
+  assert.equal(ids.some((id) => id.startsWith('app') && id !== 'appViews'), false);
+});

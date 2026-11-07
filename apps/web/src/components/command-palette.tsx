@@ -1,14 +1,15 @@
 'use client';
 
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { CornerDownLeft, Search, Zap } from 'lucide-react';
 import type { PoolseModule, PoolseSport } from '@poolse/rules';
 import type { OrganizationKind } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { FromLink } from '@/components/from-link';
-import { commandsFor, score, type Command } from '@/lib/commands';
+import { commandsFor, score, type Command, type CommandPlace } from '@/lib/commands';
+import { beginBusy, endBusy } from '@/lib/busy';
 import { applyTheme } from '@/lib/apply-theme';
 import { setLocaleAction, setThemeAction } from '@/app/(app)/preferences.actions';
 import { cn } from '@/lib/utils';
@@ -52,11 +53,14 @@ export function CommandPalette({
   kind,
   modules,
   sports,
+  place,
 }: {
   roles: readonly string[];
   kind: OrganizationKind;
   modules: readonly PoolseModule[];
   sports?: readonly PoolseSport[];
+  /** Where it is open; the backoffice when absent. */
+  place?: CommandPlace;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -69,9 +73,31 @@ export function CommandPalette({
   const links = useRef<Map<string, HTMLAnchorElement>>(new Map());
 
   const commands = useMemo(
-    () => commandsFor({ roles, kind, modules, ...(sports === undefined ? {} : { sports }) }),
-    [roles, kind, modules, sports],
+    () => commandsFor({ roles, kind, modules, ...(sports === undefined ? {} : { sports }) }, place),
+    [roles, kind, modules, sports, place],
   );
+
+  /*
+   * The box closes at once and takes its link's own busy mark with it, so a slow
+   * page looked like a search that did nothing (Rui, 07-11-2026). The corner says
+   * so instead, until the address changes. `read`, so nothing freezes, and with a
+   * ceiling, because going to the page already open changes no address.
+   */
+  const pathname = usePathname();
+  const search = useSearchParams();
+  const going = useRef<{ id: number; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const arrived = (): void => {
+    if (going.current === null) return;
+    clearTimeout(going.current.timer);
+    endBusy(going.current.id);
+    going.current = null;
+  };
+  const leaving = (): void => {
+    arrived();
+    going.current = { id: beginBusy('load', 'read'), timer: setTimeout(arrived, 15_000) };
+  };
+  useEffect(() => arrived, []);
+  useEffect(arrived, [pathname, search]);
 
   // Ctrl+K / ⌘K, on the window — ignored while another dialog is already open,
   // so it never opens on top of a question somebody is answering.
@@ -242,6 +268,7 @@ export function CommandPalette({
                         }}
                         onClick={() => {
                           remember(command.id);
+                          leaving();
                           setOpen(false);
                         }}
                         className={className}

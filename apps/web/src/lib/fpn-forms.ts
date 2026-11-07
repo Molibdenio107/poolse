@@ -24,6 +24,8 @@ export type StudentDocumentKind = 'fpn_declaration' | 'fpn_declaration_minor' | 
 
 /** `GET /students/:id/documents`. */
 export interface StudentDocuments {
+  /** Membership, set on the same page as the boletim (Rui, 07-11-2026). */
+  socio: { isSocio: boolean; socioNumber: string | null; socioSince: string | null };
   studentName: string;
   minor: boolean | null;
   disciplines: FpnDiscipline[];

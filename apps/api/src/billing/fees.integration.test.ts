@@ -1,3 +1,4 @@
+import { readDocuments } from '../students/documents.repository.js';
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -1025,5 +1026,29 @@ test('3.0 — a plan carries the total its periodicity actually charges', async 
       assert.equal(monthlyOnly?.periodTotalCents, null);
       assert.equal(monthlyOnly?.periodMonths, null);
     });
+  });
+});
+
+test('a membership number is one member, in any case, and the documents page reads it', async () => {
+  await withScratchTenant(async (tenant) => {
+    const rows = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name, birth_date)
+       VALUES ($1, 'Ana', 'Silva', '2015-01-01'), ($1, 'Rui', 'Costa', '2015-01-01') RETURNING id`,
+      [tenant.organizationId],
+    );
+    const [first, second] = [rows[0]!.id, rows[1]!.id];
+    const socio = new StudentSocioController();
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await socio.update(first, { isSocio: true, socioNumber: 'S-77', socioSince: '2026-01-01' });
+      await expectStatus(() => socio.update(second, { isSocio: true, socioNumber: 'S-77' }), 400);
+      await expectStatus(() => socio.update(second, { isSocio: true, socioNumber: 's-77' }), 400);
+      const documents = await readDocuments(tenant.organizationId, first);
+      assert.deepEqual(documents!.socio, { isSocio: true, socioNumber: 'S-77', socioSince: '2026-01-01' });
+    });
+    // Archived, the number is free for the next member.
+    await tenant.sql(`UPDATE student SET archived_at = now() WHERE id = $1`, [first]);
+    await actingAs(tenant, { roles: ['owner'] }, () =>
+      socio.update(second, { isSocio: true, socioNumber: 'S-77' }),
+    );
   });
 });

@@ -413,14 +413,13 @@ function Problem({ state }: { state: FormState }): React.ReactElement | null {
  * as Preços. `joining` is offered only when a season has a price to charge,
  * which the page decides from the same `seasonCharges` this block renders.
  */
-export type FeesSection = 'mensalidade' | 'joining' | 'socio';
+export type FeesSection = 'mensalidade' | 'joining';
 
 // The card headings the sections already carry, so a pill and the card it
 // opens say the same words.
 const SECTION_LABEL: Record<FeesSection, string> = {
   mensalidade: 'fees.section.mensalidade',
   joining: 'fees.seasonCharges',
-  socio: 'fees.membershipTitle',
 };
 
 /**
@@ -576,28 +575,6 @@ export function FeesBlock({
           categories={fees.categories}
           suggestedCategoryId={fees.suggestedCategoryId}
         />
-      </section>
-    )}
-
-    {section === 'socio' && (
-      /*
-        Membership, as its own card — 10.1.
-
-        It was the last block inside the fees card, which made a club's quota
-        read as one more line of what this student pays. It is not: being a
-        sócio is a fact about the person that happens to carry a fee, and the
-        form that sets it belongs beside the plans rather than under them.
-      */
-      <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
-        <div>
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('fees.membershipTitle')}
-          </h2>
-          <p className="mt-1 text-sm text-foreground-muted">{t('fees.membershipHint')}</p>
-          <p className="mt-1 text-sm text-foreground-muted">{t('fees.studentSection.linesHint')}</p>
-        </div>
-
-        <SocioForm studentId={studentId} socio={fees.socio} />
       </section>
     )}
 
@@ -1714,6 +1691,33 @@ function EditFeeForm({
  * member with a waived quota is an ordinary case, and modelling the toggle as
  * "has a quota line" would make them unrepresentable.
  */
+/**
+ * Membership, on the same page as the boletim (Rui, 07-11-2026): being a sócio is a
+ * fact about the person that happens to carry a fee, and the number and the date
+ * are what the form prints. Marking somebody a sócio still attaches the quota.
+ */
+export function SocioCard({
+  studentId,
+  socio,
+}: {
+  studentId: string;
+  socio: StudentFees['socio'];
+}): React.ReactElement {
+  const t = useTranslations();
+  return (
+    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
+      <div>
+        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+          {t('fees.membershipTitle')}
+        </h2>
+        <p className="mt-1 text-sm text-foreground-muted">{t('fees.membershipHint')}</p>
+        <p className="mt-1 text-sm text-foreground-muted">{t('fees.studentSection.linesHint')}</p>
+      </div>
+      <SocioForm studentId={studentId} socio={socio} />
+    </section>
+  );
+}
+
 function SocioForm({
   studentId,
   socio,
@@ -1794,7 +1798,8 @@ function SocioForm({
 
       <p className="text-sm text-foreground-muted">{t('fees.socioHint')}</p>
 
-      <Problem state={state} />
+      {/* The refusal is already beside the box; a save speaks once. */}
+      <Problem state={numberError === undefined ? state : { ok: false }} />
 
       <button type="submit" disabled={pending} className={cn(BUTTON, 'self-start')}>
         {t('fees.save')}

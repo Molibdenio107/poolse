@@ -37,6 +37,7 @@ import { CoverBadge, FeesBlock, type FeesSection } from './fees-block';
 import { ContactsCard } from './contacts-card';
 import { FamilyFees } from './family-fees';
 import { BoletimPanel } from './boletim-panel';
+import { SocioCard } from './fees-block';
 import { FamilyAccess, type Invitee } from './family-access';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 import type { StudentDocuments } from '@/lib/fpn-forms';
@@ -622,7 +623,10 @@ export default async function StudentPage({
                   </>
                 )}
                 {current === 'boletim' && (
-                  <BoletimPanel studentId={loaded.id} documents={docs} storageReady={storageReady} />
+                  <>
+                    <SocioCard studentId={loaded.id} socio={docs.socio} />
+                    <BoletimPanel studentId={loaded.id} documents={docs} storageReady={storageReady} />
+                  </>
                 )}
                 {current === 'fpn' && (
                   <FpnSection studentId={loaded.id} kind="fpn_declaration" documents={docs} storageReady={storageReady} />
@@ -993,7 +997,7 @@ function feesSections(
   requested: string | string[] | undefined,
 ): { offered: FeesSection[]; section: FeesSection } {
   const offered: FeesSection[] = hasSeasonCharges
-    ? ['mensalidade', 'joining', 'socio']
-    : ['mensalidade', 'socio'];
+    ? ['mensalidade', 'joining']
+    : ['mensalidade'];
   return { offered, section: pickSection(offered, requested, 'mensalidade') };
 }

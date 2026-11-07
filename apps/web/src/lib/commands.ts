@@ -1,6 +1,6 @@
 import type { PoolseModule } from '@poolse/rules';
 import type { OrganizationKind } from '@/lib/api';
-import { OFFICE, pathOf, visibleDestinations, type Viewer } from './nav-entries.ts';
+import { OFFICE, STAFF, pathOf, visibleDestinations, type Viewer } from './nav-entries.ts';
 
 /**
  * What the command palette offers — POOLSE-118.
@@ -72,7 +72,18 @@ export interface Command {
   sportKey?: string;
   /** A page from the menu, or an action. */
   kind: 'page' | 'action';
+  /** A screen of the phone app, offered only there. */
+  surface?: 'app';
 }
+
+/** Where the bar is open: the backoffice, or the phone app (Rui, 07-11-2026). */
+export interface CommandPlace {
+  surface?: 'backoffice' | 'app';
+  /** A view of somebody's app opens that app and nothing of the backoffice. */
+  viewing?: boolean;
+}
+
+const FAMILY = ['guardian', 'student'] as const;
 
 /**
  * The daily actions — one declaration each. A page that is a view of another
@@ -232,6 +243,90 @@ const ACTIONS: Omit<Command, 'kind'>[] = [
     kinds: ['business'],
     synonyms: { 'pt-PT': ['subscricao', 'licenca', 'plano', 'pagar poolse', 'cartao'], en: ['subscription', 'licence', 'plan', 'card'] },
   },
+  // The phone app's own screens: the same list, through the same role filter.
+  {
+    id: 'appHome',
+    labelKey: 'app.tabs.familia.inicio',
+    run: { href: '/app/familia' },
+    roles: FAMILY,
+    surface: 'app',
+    synonyms: { 'pt-PT': ['inicio', 'agenda', 'proxima aula', 'hoje'], en: ['home', 'today', 'next lesson'] },
+  },
+  {
+    id: 'appLessons',
+    labelKey: 'app.tabs.familia.aulas',
+    run: { href: '/app/familia/aulas' },
+    roles: FAMILY,
+    surface: 'app',
+    synonyms: { 'pt-PT': ['aulas', 'calendario', 'horario', 'semana'], en: ['lessons', 'calendar', 'schedule', 'week'] },
+  },
+  {
+    id: 'appProgress',
+    labelKey: 'app.tabs.familia.progressos',
+    run: { href: '/app/familia/progressos' },
+    roles: FAMILY,
+    surface: 'app',
+    synonyms: { 'pt-PT': ['progressos', 'marcas', 'tempos', 'recordes', 'nivel'], en: ['progress', 'times', 'records', 'level'] },
+  },
+  {
+    id: 'appFees',
+    labelKey: 'app.tabs.familia.pagamentos',
+    run: { href: '/app/familia/pagamentos' },
+    roles: FAMILY,
+    surface: 'app',
+    synonyms: { 'pt-PT': ['pagamentos', 'mensalidades', 'quotas', 'dividas', 'pagar'], en: ['payments', 'fees', 'pay'] },
+  },
+  {
+    id: 'appDocuments',
+    labelKey: 'app.documents.title',
+    run: { href: '/app/familia/documentos' },
+    roles: FAMILY,
+    surface: 'app',
+    synonyms: {
+      'pt-PT': ['documentos', 'documents', 'boletim', 'fpn', 'exame medico', 'atestado', 'cartao de cidadao'],
+      en: ['documents', 'forms', 'medical exam', 'id'],
+    },
+  },
+  {
+    id: 'appJoin',
+    labelKey: 'app.join.title',
+    run: { href: '/app/familia/inscrever' },
+    roles: FAMILY,
+    surface: 'app',
+    synonyms: { 'pt-PT': ['inscrever', 'inscricao', 'nova turma', 'pedir'], en: ['join', 'enrol', 'new class'] },
+  },
+  {
+    id: 'appTeaching',
+    labelKey: 'app.teaching.title',
+    run: { href: '/app/aulas' },
+    roles: ['instructor'],
+    surface: 'app',
+    synonyms: { 'pt-PT': ['aulas', 'hoje', 'presencas', 'chamada'], en: ['classes', 'today', 'register'] },
+  },
+  {
+    id: 'appMaintenance',
+    labelKey: 'app.maintenance.title',
+    run: { href: '/app/manutencao' },
+    roles: ['maintenance'],
+    surface: 'app',
+    synonyms: { 'pt-PT': ['manutencao', 'tarefas', 'hoje'], en: ['maintenance', 'tasks', 'today'] },
+  },
+  {
+    id: 'appRecord',
+    labelKey: 'app.tabs.manutencao.registar',
+    run: { href: '/app/manutencao/registar' },
+    roles: ['maintenance'],
+    surface: 'app',
+    synonyms: { 'pt-PT': ['registar', 'limpeza', 'avaria', 'reportar', 'analise'], en: ['record', 'cleaning', 'fault', 'report'] },
+  },
+  {
+    id: 'appProfile',
+    labelKey: 'app.tabs.perfil',
+    run: { href: '/app/perfil' },
+    roles: [...FAMILY, 'instructor', 'maintenance'],
+    surface: 'app',
+    synonyms: { 'pt-PT': ['perfil', 'conta', 'definicoes', 'palavra-passe'], en: ['profile', 'account', 'settings', 'password'] },
+  },
   {
     id: 'theme',
     labelKey: 'palette.action.theme',
@@ -253,8 +348,29 @@ function allowed(command: Omit<Command, 'kind'>, viewer: Viewer): boolean {
   return byRole && byKind && byModule;
 }
 
-/** Everything this viewer may reach from the palette: the sidebar's pages, then the actions. */
-export function commandsFor(viewer: Viewer): Command[] {
+/** A screen with no menu entry is still a page, whatever declares it; *Ação* does something. */
+function opensAPage(action: Omit<Command, 'kind'>): boolean {
+  return (
+    action.surface === 'app' ||
+    action.id.startsWith('site') ||
+    ['archive', 'appViews', 'supportAccess', 'subscription'].includes(action.id)
+  );
+}
+
+/**
+ * Everything this viewer may reach from the palette: the sidebar's pages, then the
+ * actions. On the phone app, its own screens first; the backoffice's pages only for
+ * staff, never for a family, and never under a view, which opens the person's app
+ * alone. The filter only decides what is offered: the API answers for every page.
+ */
+export function commandsFor(viewer: Viewer, place: CommandPlace = {}): Command[] {
+  const inApp = place.surface === 'app';
+  const staff = !place.viewing && viewer.roles.some((role) => (STAFF as readonly string[]).includes(role));
+  const reachable = (command: Omit<Command, 'kind'>): boolean => {
+    if (command.surface === 'app') return inApp;
+    if (!inApp || staff) return true;
+    return !('href' in command.run);
+  };
   const seen = new Set<string>();
   const pages: Command[] = [];
   for (const item of visibleDestinations(viewer)) {
@@ -272,10 +388,10 @@ export function commandsFor(viewer: Viewer): Command[] {
       ...(SYNONYMS[pathOf(item.href)] === undefined ? {} : { synonyms: SYNONYMS[pathOf(item.href)] }),
     });
   }
-  const actions = ACTIONS.filter((action) => allowed(action, viewer)).map(
-    (action): Command => ({ ...action, kind: 'action' }),
+  const actions = ACTIONS.filter((action) => allowed(action, viewer) && reachable(action)).map(
+    (action): Command => ({ ...action, kind: opensAPage(action) ? 'page' : 'action' }),
   );
-  return [...pages, ...actions];
+  return [...(!inApp || staff ? pages : []), ...actions];
 }
 
 /** Lower case, no accents: *Dívida*, *divida* and *DÍVIDA* are one word. */

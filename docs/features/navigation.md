@@ -411,3 +411,7 @@ In each sport's group *Competição* keeps its three children (Provas, Mínimos,
 meet-inbox circle stays on the parent; the palette lists Mínimos under the sport. Like every section, the
 children show while the reader is inside Competição (Rui, 04-11-2026: kept as it is). Guarded by
 `nav-entries.test.ts` and `commands.test.ts`.
+
+## The search bar
+
+Ctrl+K or the search button, on every backoffice page and in the phone app (POOLSE-118, Rui 07-11-2026). It opens pages by a word, in the reader's language, and does not search for people or records. Each role sees only what it may open: a family sees its own app screens and no backoffice page, an instructor or maintenance person their own app and the pages their role reaches, and a view only the person's app. The list decides what is offered; the API still answers for every page. The corner says it is working while a page loads. `/admin` has none: an operator has no club there. A tab of the site is reached through `/dashboard/facilities/site?tab=`.
