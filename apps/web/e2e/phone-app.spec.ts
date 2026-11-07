@@ -210,15 +210,15 @@ test.describe('as an instructor', () => {
     const { sessionId } = await poolsideTomorrow();
     await visit(page, '/app');
     await expect(page).toHaveURL(/\/app\/aulas$/);
-    // *Hoje* since POOLSE-136; tomorrow's lesson is under *Semana*.
-    await expect(page.getByRole('heading', { level: 1, name: /^(hoje|today)$/i })).toBeVisible();
-    await visit(page, '/app/aulas?semana');
-    const lesson = page.locator(`a[href^="/dashboard/calendar/sessions/${sessionId}"]`);
+    // *Início* is the next class since POOLSE-197; every lesson is under *Aulas*.
+    await expect(page.getByRole('heading', { level: 1, name: /^(início|home)$/i })).toBeVisible();
+    await visit(page, '/app/aulas/calendario');
+    const lesson = page.locator(`a[href^="/app/aulas/${sessionId}"]`);
     await expect(lesson).toContainText(/inscrit|enrolled/i);
     await noSidewaysScroll(page);
     await expect(async () => {
-      if (!page.url().includes('/calendar/sessions/')) await lesson.tap({ timeout: 5_000 });
-      await expect(page).toHaveURL(/\/calendar\/sessions\//, { timeout: 10_000 });
+      if (!page.url().includes(sessionId)) await lesson.tap({ timeout: 5_000 });
+      await expect(page).toHaveURL(new RegExp(`/app/aulas/${sessionId}`), { timeout: 10_000 });
     }).toPass({ timeout: 45_000 });
     await expect(page.getByRole('link', { name: /voltar às minhas aulas|back to my lessons/i })).toBeVisible();
   });
@@ -408,15 +408,15 @@ test.describe('POOLSE-136 — the phone shell, as an instructor', () => {
   test.skip(E2E_INSTRUCTOR_EMAIL === undefined, NO_INSTRUCTOR);
   test.use({ storageState: INSTRUCTOR_SESSION });
 
-  test('QA 3–4 — two tabs, Hoje current; O meu perfil has Abrir o backoffice and the header does not', async ({ page }) => {
+  test('QA 3–4 — three tabs, Início current; O meu perfil has Abrir o backoffice and the header does not', async ({ page }) => {
     await visit(page, '/app/aulas');
     const bar = bottomBar(page);
     await expect(bar.getByRole('link')).toHaveCount(3);
-    await expect(bar.getByRole('link', { name: /^(hoje|today)$/i })).toHaveAttribute('aria-current', 'page');
+    await expect(bar.getByRole('link', { name: /^(início|home)$/i })).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('header').getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toHaveCount(0);
 
-    await visit(page, '/app/aulas?semana');
-    await expect(bottomBar(page).getByRole('link', { name: /^(semana|week)$/i })).toHaveAttribute('aria-current', 'page');
+    await visit(page, '/app/aulas/calendario');
+    await expect(bottomBar(page).getByRole('link', { name: /^(aulas|lessons)$/i })).toHaveAttribute('aria-current', 'page');
 
     await visit(page, '/app/perfil?home=teaching');
     await expect(page.getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toBeVisible();

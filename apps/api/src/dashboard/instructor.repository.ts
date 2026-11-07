@@ -254,7 +254,17 @@ export interface WeekClass {
 export async function readMyWeek(
   organizationId: string,
   membershipId: string,
+  /** Club days, for the phone's calendar (POOLSE-197); this week when absent. */
+  window: { from: string; to: string } | null = null,
 ): Promise<WeekClass[]> {
+  // Code constants only: the two values travel as parameters.
+  const range =
+    window === null
+      ? `cs.starts_at >= now() - interval '8 days'
+          AND cs.starts_at <  now() + interval '8 days'
+          AND date_trunc('week', cs.starts_at AT TIME ZONE ${TZ})
+              = date_trunc('week', now() AT TIME ZONE ${TZ})`
+      : `(cs.starts_at AT TIME ZONE ${TZ})::date BETWEEN $2::date AND $3::date`;
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
       id: string;
@@ -291,12 +301,9 @@ export async function readMyWeek(
               ${NOT_COMING_TO_SESSION} AS not_coming
          ${JOINS}
         WHERE cs.resolved_instructor_id = $1
-          AND cs.starts_at >= now() - interval '8 days'
-          AND cs.starts_at <  now() + interval '8 days'
-          AND date_trunc('week', cs.starts_at AT TIME ZONE ${TZ})
-              = date_trunc('week', now() AT TIME ZONE ${TZ})
+          AND ${range}
         ORDER BY cs.starts_at, cs.id`,
-      [membershipId],
+      window === null ? [membershipId] : [membershipId, window.from, window.to],
     );
 
     return rows.map((row) => ({

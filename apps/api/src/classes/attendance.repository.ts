@@ -26,6 +26,8 @@ export interface RegisterEntry {
   studentId: string;
   firstName: string;
   lastName: string;
+  /** Only with a live photo consent; the file's own rule answers again on read. */
+  photoFileId: string | null;
   /** Null until somebody marks them. Not the same as `absent`. */
   status: AttendanceStatus | null;
   note: string | null;
@@ -174,6 +176,7 @@ export async function findRegister(
       last_name: string;
       display_name: string;
       short_name: string;
+      photo_file_id: string | null;
       status: AttendanceStatus | null;
       note: string | null;
       recorded_by_name: string | null;
@@ -231,6 +234,10 @@ export async function findRegister(
              s.last_name,
              ${displayName('s')} AS display_name,
              ${shortName('s')} AS short_name,
+             CASE WHEN EXISTS (SELECT 1 FROM consent pc
+                                WHERE pc.organization_id = s.organization_id AND pc.student_id = s.id
+                                  AND pc.kind = 'photo' AND pc.granted AND pc.withdrawn_at IS NULL)
+                  THEN s.photo_file_id END AS photo_file_id,
              a.status,
              a.note,
              (
@@ -281,7 +288,7 @@ export async function findRegister(
         LEFT JOIN attendance a
                ON a.student_id = s.id AND a.class_session_id = $1
        WHERE s.archived_at IS NULL
-       GROUP BY s.id, s.first_name, s.last_name, a.status, a.note,
+       GROUP BY s.id, s.organization_id, s.photo_file_id, s.first_name, s.last_name, a.status, a.note,
                 a.recorded_by_membership_id, a.recorded_at
        ORDER BY ${nameOrder('s')}
       `,
@@ -325,6 +332,7 @@ export async function findRegister(
         lastName: row.last_name,
         displayName: row.display_name,
         shortName: row.short_name,
+        photoFileId: row.photo_file_id,
         status: row.status,
         note: row.note,
         recordedByName: row.recorded_by_name,

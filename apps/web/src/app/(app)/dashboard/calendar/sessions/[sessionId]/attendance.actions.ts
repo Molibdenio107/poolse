@@ -60,6 +60,7 @@ export async function recordAttendanceAction(
   }
 
   revalidatePath(`/dashboard/calendar/sessions/${sessionId}`);
+  revalidatePath(`/app/aulas/${sessionId}`);
   revalidatePath('/dashboard/calendar');
   return { ok: true };
 }

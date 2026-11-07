@@ -261,6 +261,10 @@
       }
     },
     "teaching": {
+      "sectionsLabel": "Secções da aula",
+      "sectionStudents": "Alunos",
+      "sectionPlan": "Plano",
+      "noneComing": "Não tem aulas marcadas.",
       "title": "As minhas aulas",
       "backTo": "Voltar às minhas aulas",
       "empty": "Não tem mais aulas esta semana.",

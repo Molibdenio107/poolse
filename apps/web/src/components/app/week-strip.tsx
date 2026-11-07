@@ -26,6 +26,7 @@ export async function WeekStrip({
   child,
   lessonDays,
   closedDays,
+  base = '/app/familia/aulas',
 }: {
   /** The Monday. */
   week: string;
@@ -33,6 +34,8 @@ export async function WeekStrip({
   child: string | undefined;
   lessonDays: ReadonlySet<string>;
   closedDays: ReadonlySet<string>;
+  /** The page it steps; a teacher's *Aulas* passes its own (POOLSE-197). */
+  base?: string;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
@@ -40,7 +43,7 @@ export async function WeekStrip({
   const hrefFor = (target: string): string => {
     const query = new URLSearchParams({ week: target });
     if (child !== undefined) query.set('child', child);
-    return `/app/familia/aulas?${query.toString()}`;
+    return `${base}?${query.toString()}`;
   };
   const step = (target: string, label: string, icon: React.ReactNode, allowed: boolean): React.ReactElement =>
     allowed ? (

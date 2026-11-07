@@ -3098,6 +3098,8 @@ export type AttendanceStatus = 'present' | 'absent' | 'excused';
 
 export interface RegisterEntry {
   studentId: string;
+  /** Only with a live photo consent (POOLSE-197). */
+  photoFileId?: string | null;
   firstName: string;
   lastName: string;
   /**

@@ -459,10 +459,20 @@ export class AppController {
    * with the enrolled count and the *Não vou* count beside each.
    */
   @Get('teaching')
-  async teaching(): Promise<{ lessons: WeekClass[] }> {
+  async teaching(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ): Promise<{ lessons: WeekClass[] }> {
     requireRole('instructor');
     const { organizationId, membershipId } = currentTenant();
-    return { lessons: await readMyWeek(organizationId, membershipId) };
+    // POOLSE-197: a window is both ends, inside the calendar's reach, as for a family.
+    if (from === undefined && to === undefined) {
+      return { lessons: await readMyWeek(organizationId, membershipId) };
+    }
+    if (from === undefined || to === undefined || !agendaWindowAllowed(clubToday(), from, to)) {
+      throw new BadRequestException('No such window');
+    }
+    return { lessons: await readMyWeek(organizationId, membershipId, { from, to }) };
   }
 
   /**

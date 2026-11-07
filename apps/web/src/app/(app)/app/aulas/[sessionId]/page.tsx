@@ -1,0 +1,139 @@
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
+import { ArrowLeft, Ban } from 'lucide-react';
+import { ApiError, apiFetch, type Register } from '@/lib/api';
+import { backTarget } from '@/lib/back';
+import { formatDate } from '@/lib/date-format';
+import { describeLoad, outcome } from '@/lib/load-failure';
+import { photoUrlFor } from '@/lib/photo';
+import { FeedbackList } from '@/components/feedback-list';
+import { LinkBusy } from '@/components/link-busy';
+import { PageError } from '@/components/page-shell';
+import { PersonAvatar } from '@/components/person-avatar';
+import { SectionPills } from '@/components/section-pills';
+import type { LessonPlan } from '@/app/(app)/dashboard/calendar/lesson-plan.actions';
+import { RegisterForm } from '@/app/(app)/dashboard/calendar/sessions/[sessionId]/register-form';
+import { TeacherPlan } from './teacher-plan';
+
+type LessonRegister = Register & { organizationId: string; canRecord: boolean };
+
+/**
+ * One lesson, on the teacher's phone — POOLSE-197. Who is in it, who said they are
+ * coming, the register and the plan on one screen, through the routes the desktop
+ * already uses. The in-depth work stays there (Rui, 07-11-2026): this is the
+ * poolside.
+ */
+export default async function TeachingLesson({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ sessionId: string }>;
+  searchParams: Promise<{ from?: string; section?: string }>;
+}): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const { sessionId } = await params;
+  const { from, section } = await searchParams;
+  const back = backTarget(from, '/app/aulas/calendario');
+
+  let register: LessonRegister;
+  try {
+    register = await apiFetch<LessonRegister>(`/sessions/${sessionId}/attendance`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) notFound();
+    const failure = describeLoad(error);
+    return <PageError message={t(failure.key)} {...(failure.detail === '' ? {} : { detail: failure.detail })} />;
+  }
+
+  const plan = await outcome(apiFetch<LessonPlan>(`/sessions/${sessionId}/plan`));
+  const notices = new Map((register.notices ?? []).map((one) => [one.studentId, one.going]));
+  const cancelled = register.status === 'cancelled';
+
+  // One section at a time: fifteen students would bury the plan under the roll.
+  const showPlan = section === 'plano' && plan.state === 'ok' && !cancelled;
+  const hrefFor = (key: string): string => {
+    const query = new URLSearchParams();
+    if (key === 'plano') query.set('section', key);
+    if (from !== undefined) query.set('from', from);
+    return `/app/aulas/${sessionId}${query.size === 0 ? '' : `?${query.toString()}`}`;
+  };
+
+  return (
+    <>
+      <Link
+        href={back.href}
+        aria-label={t(back.labelKey)}
+        className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        {t('common.back')}
+        <LinkBusy />
+      </Link>
+
+      <header className="flex flex-col gap-0.5">
+        <h1 className="text-xl font-semibold tracking-tight">{register.className}</h1>
+        <p className="text-sm text-foreground-muted">
+          {[formatDate(register.localDate), register.localTime, register.poolName].filter(Boolean).join(' · ')}
+        </p>
+      </header>
+
+      {cancelled && (
+        <p className="flex items-center gap-1.5 text-sm font-medium text-danger">
+          <Ban className="size-4 shrink-0" aria-hidden />
+          {t('app.family.cancelled')}
+        </p>
+      )}
+
+      {plan.state === 'ok' && !cancelled && (
+        <SectionPills
+          label={t('app.teaching.sectionsLabel')}
+          current={showPlan ? 'plano' : 'alunos'}
+          items={[
+            { key: 'alunos', label: t('app.teaching.sectionStudents'), href: hrefFor('alunos') },
+            { key: 'plano', label: t('app.teaching.sectionPlan'), href: hrefFor('plano') },
+          ]}
+        />
+      )}
+
+      {showPlan && plan.state === 'ok' ? (
+        <TeacherPlan plan={plan.data} />
+      ) : register.started && register.canRecord && !cancelled ? (
+        <RegisterForm register={register} compact />
+      ) : (
+        <section className="flex flex-col">
+          <h2 className="app-section-label">
+            {t('app.teaching.enrolled', { enrolled: register.entries.length })}
+          </h2>
+          <ul className="flex flex-col divide-y divide-border">
+            {register.entries.map((entry) => {
+              const going = notices.get(entry.studentId);
+              return (
+                <li key={entry.studentId} className="flex min-h-[52px] items-center gap-3 py-2">
+                  <PersonAvatar
+                    id={entry.studentId}
+                    name={entry.shortName}
+                    photoUrl={photoUrlFor(entry.photoFileId ?? null)}
+                    size="sm"
+                  />
+                  <span className="min-w-0 flex-1 truncate">{entry.shortName}</span>
+                  {going !== undefined && (
+                    <span className="rounded border border-border px-2 py-0.5 text-xs text-foreground-muted">
+                      {t(going ? 'attendance.noticeGoing' : 'attendance.noticeNotGoing')}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {!showPlan && (register.feedback ?? []).length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="app-section-label">{t('feedback.tab')}</h2>
+          <FeedbackList items={register.feedback ?? []} by="student" canArchive={false} />
+        </section>
+      )}
+    </>
+  );
+}

@@ -455,6 +455,7 @@ test('a list, not a prefix: every route of the API is closed unless it was chose
     'GET /app/teaching',
     'GET /app/maintenance',
     'GET /sessions/:id/plan',
+    'GET /sessions/:id/attendance',
     'GET /files/:id',
   ]);
   const opened = new Set<string>();

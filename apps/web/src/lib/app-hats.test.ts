@@ -64,7 +64,8 @@ test("a home's own tabs carry the bar; and so does a screen deeper in", () => {
 
 test('Hoje and Semana are one page; Perfil wears the home it was opened from', () => {
   assert.deepEqual(tabFor('/app/aulas', q(), ['teaching']), { hat: 'teaching', index: 0 });
-  assert.deepEqual(tabFor('/app/aulas', q('semana'), ['teaching']), { hat: 'teaching', index: 1 });
+  assert.deepEqual(tabFor('/app/aulas/calendario', q(), ['teaching']), { hat: 'teaching', index: 1 });
+  assert.deepEqual(tabFor('/app/aulas/abc', q(), ['teaching']), { hat: 'teaching', index: 1 });
   assert.deepEqual(tabFor('/app/perfil', q('home=family'), ['teaching', 'family']), { hat: 'family', index: 3 });
   assert.deepEqual(tabFor('/app/perfil', q(), ['teaching', 'family']), { hat: 'teaching', index: 2 });
   // POOLSE-181: maintenance has its own bar, and Perfil wears it.

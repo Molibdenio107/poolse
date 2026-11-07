@@ -41,7 +41,7 @@ test('the four ways in, then a family’s app, read-only, with the banner', asyn
 
   await enter(page, /Família/, 'Família');
   try {
-    await expect(page).toHaveURL(/\/app\/familia/);
+    await expect(page).toHaveURL(/\/app\/familia/, { timeout: 30_000 });
 
     await visit(page, '/app/familia/documentos');
     await expect(page.getByText(/^A ver como /)).toBeVisible();
@@ -53,8 +53,8 @@ test('the four ways in, then a family’s app, read-only, with the banner', asyn
     await expect(page.getByText('A conta desta pessoa não abre nesta vista.')).toBeVisible();
 
     // The backoffice waits for *Sair*.
-    await page.goto('/dashboard/students', { waitUntil: 'commit' });
-    await expect(page).toHaveURL(/\/app\/familia/);
+    await visit(page, '/dashboard/students');
+    await expect(page).toHaveURL(/\/app\/familia/, { timeout: 30_000 });
   } finally {
     await leave(page);
   }

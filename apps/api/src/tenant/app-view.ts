@@ -34,6 +34,7 @@ const READS: readonly { route: string; pattern: RegExp }[] = [
   { route: '/app/teaching', pattern: /^\/app\/teaching$/ },
   { route: '/app/maintenance', pattern: /^\/app\/maintenance$/ },
   { route: '/sessions/:id/plan', pattern: new RegExp(`^/sessions/${UUID}/plan$`) },
+  { route: '/sessions/:id/attendance', pattern: new RegExp(`^/sessions/${UUID}/attendance$`) },
   { route: '/files/:id', pattern: new RegExp(`^/files/${UUID}$`) },
 ];
 

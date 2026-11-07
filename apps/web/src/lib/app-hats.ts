@@ -122,8 +122,8 @@ export const TABS: Record<TabbedHat, AppTab[]> = {
     { href: '/app/perfil?home=family', labelKey: 'app.tabs.perfil', glyph: 'diamond' },
   ],
   teaching: [
-    { href: '/app/aulas', labelKey: 'app.tabs.aulas.hoje', glyph: 'square' },
-    { href: '/app/aulas?semana', labelKey: 'app.tabs.aulas.semana', glyph: 'circle' },
+    { href: '/app/aulas', labelKey: 'app.tabs.familia.inicio', glyph: 'square' },
+    { href: '/app/aulas/calendario', labelKey: 'app.tabs.familia.aulas', glyph: 'circle' },
     { href: '/app/perfil?home=teaching', labelKey: 'app.tabs.perfil', glyph: 'diamond' },
   ],
   // POOLSE-181: square, triangle, diamond — the circle and hexagon are the family's.
@@ -154,7 +154,8 @@ export function tabFor(
   if (path === '/app/familia') return { hat: 'family', index: 0 };
   if (path === '/app/familia/aulas') return { hat: 'family', index: 1 };
   if (path === '/app/familia/progressos') return { hat: 'family', index: 2 };
-  if (path === '/app/aulas') return { hat: 'teaching', index: search.has('semana') ? 1 : 0 };
+  if (path === '/app/aulas') return { hat: 'teaching', index: 0 };
+  if (path.startsWith('/app/aulas/')) return { hat: 'teaching', index: 1 };
   if (path === '/app/manutencao') return { hat: 'maintenance', index: 0 };
   if (path === '/app/manutencao/registar') return { hat: 'maintenance', index: 1 };
   if (path === '/app/perfil') {

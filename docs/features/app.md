@@ -99,6 +99,16 @@ pre-marked on the register.
   vem*), in neutral colours with an icon so it is never read as a mark, and a count above the roll
   (*3 avisaram que não vêm*).
 
+## The teacher's app (POOLSE-197)
+
+Tabs *Início*, *Aulas*, *Perfil*. **Início** is the next class, then the registers still owed, then
+the staff board. **Aulas** (`/app/aulas/calendario`) is the family's week strip with the teacher's
+lessons, coming first and earlier after. **A lesson** (`/app/aulas/:id`) is two sections: *Alunos*,
+the roll with photos and each family's *Vou / Não vou* before it starts and the register once it
+has; and *Plano*, the training plan and the Desafio as short text. A parceria keeps the backoffice
+page. `GET /app/teaching?from=&to=` takes the family calendar's window, 31 days at most. Everything
+else in-depth stays on the desktop.
+
 ## The instructor home (`/app/aulas`, slice 2)
 
 `GET /app/teaching` (instructors) is the dashboard band's own `readMyWeek`: this week's lessons

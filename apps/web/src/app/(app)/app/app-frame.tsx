@@ -51,6 +51,7 @@ export function AppFrame({
     '/app/familia/aulas',
     '/app/familia/progressos',
     '/app/aulas',
+    '/app/aulas/calendario',
     '/app/manutencao',
     '/app/manutencao/registar',
     '/app/perfil',

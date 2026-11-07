@@ -260,6 +260,10 @@
       }
     },
     "teaching": {
+      "sectionsLabel": "Lesson sections",
+      "sectionStudents": "Students",
+      "sectionPlan": "Plan",
+      "noneComing": "You have no lessons scheduled.",
       "title": "My lessons",
       "backTo": "Back to my lessons",
       "empty": "No more lessons this week.",

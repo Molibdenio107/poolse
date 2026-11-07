@@ -14,6 +14,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Dialog } from '@/components/ui/dialog';
 import { PersonAvatar } from '@/components/person-avatar';
+import { photoUrlFor } from '@/lib/photo';
 import type { FormState } from '../../../actions';
 import { recordAttendanceAction } from './attendance.actions';
 
@@ -235,7 +236,7 @@ export function RegisterForm({
                 title={entry.displayName}
               >
                 {/* POOLSE-180 rule 2: initials only — a photo needs its consent check, and this has none. */}
-                {compact && <PersonAvatar id={entry.studentId} name={entry.shortName} size="sm" className="md:hidden" />}
+                {compact && <PersonAvatar id={entry.studentId} name={entry.shortName} photoUrl={photoUrlFor(entry.photoFileId ?? null)} size="sm" className="md:hidden" />}
                 {entry.shortName}
                 {/*
                   Why somebody unexpected is on the list — POOLSE-21 criterion 8.
