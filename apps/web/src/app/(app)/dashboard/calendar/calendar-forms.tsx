@@ -517,8 +517,10 @@ export function CancelSessionDialog({
             value={reason}
             onChange={(event) => setReason(event.target.value)}
             maxLength={200}
-            aria-label={t('calendar.cancelReason')}
-            placeholder={t('calendar.cancelReason')}
+            // POOLSE-198: a teacher says why, and the office reads it.
+            required={!management}
+            aria-label={t(management ? 'calendar.cancelReason' : 'app.teaching.cancelReason')}
+            placeholder={t(management ? 'calendar.cancelReason' : 'app.teaching.cancelReason')}
             className={CONTROL_LINE}
           />
 

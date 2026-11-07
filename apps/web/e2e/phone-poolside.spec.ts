@@ -306,6 +306,8 @@ test.describe('the lesson, as the instructor', () => {
     const dialog = await page.getByRole('dialog').boundingBox();
     expect(dialog!.width).toBeGreaterThanOrEqual(359);
 
+    // A teacher says why (POOLSE-198).
+    await page.getByRole('dialog').locator('input[name="reason"]').fill('Avaria na piscina');
     await page.getByRole('dialog').getByRole('button', { name: /cancelar esta aula|cancel this class/i }).tap();
     await expect(page.getByText(/esta aula foi cancelada|this class was cancelled/i)).toBeVisible();
 
