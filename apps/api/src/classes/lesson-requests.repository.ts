@@ -1,4 +1,4 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { personShortName } from '../people/names.js';
 
@@ -103,22 +103,38 @@ export async function closeCover(
   });
 }
 
-/** A teacher cancelled their own lesson: the office's circle, with their reason. */
-export async function tellOfficeCancelled(
+/**
+ * A lesson was called off, in the cancel's own transaction: an open request for
+ * cover closes, and a teacher's cancellation becomes the office's circle.
+ */
+export async function closeOnCancelIn(
+  tx: Tx,
   organizationId: string,
   sessionId: string,
   membershipId: string,
-  reason: string,
+  /** The teacher's reason; null when the office cancelled it. */
+  teacherReason: string | null,
 ): Promise<void> {
-  await withOrg(organizationId, async (tx) => {
-    await tx.query(
-      `INSERT INTO lesson_request (organization_id, class_session_id, kind, requested_by_membership_id, note)
-       VALUES ($1, $2, 'cancelled', $3, $4)
-       ON CONFLICT (organization_id, class_session_id, kind) WHERE closed_at IS NULL DO NOTHING`,
-      [organizationId, sessionId, membershipId, reason.slice(0, 500)],
-    );
-  });
+  await tx.query(
+    `UPDATE lesson_request
+        SET closed_at = now(), closed_by_membership_id = $2, outcome = 'withdrawn'
+      WHERE class_session_id = $1 AND kind = 'substitute' AND closed_at IS NULL`,
+    [sessionId, membershipId],
+  );
+  if (teacherReason === null) return;
+  await tx.query(
+    `INSERT INTO lesson_request (organization_id, class_session_id, kind, requested_by_membership_id, note)
+     VALUES ($1, $2, 'cancelled', $3, $4)
+     ON CONFLICT (organization_id, class_session_id, kind) WHERE closed_at IS NULL DO NOTHING`,
+    [organizationId, sessionId, membershipId, teacherReason.slice(0, 500)],
+  );
 }
+
+/** SQL: an open row still asks something of somebody. Cover for a lesson that is gone does not. */
+export const REQUEST_WAITING = `r.closed_at IS NULL AND (r.kind = 'cancelled' OR EXISTS (
+  SELECT 1 FROM class_session live
+   WHERE live.id = r.class_session_id AND live.organization_id = r.organization_id
+     AND live.status <> 'cancelled' AND live.ends_at > now()))`;
 
 /** The office has read a cancellation. A request for cover closes by assigning. */
 export async function markSeen(organizationId: string, id: string, membershipId: string): Promise<boolean> {
@@ -159,7 +175,7 @@ export async function openRequests(organizationId: string): Promise<LessonReques
          LEFT JOIN class_group cg ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
          LEFT JOIN pool p ON p.id = cs.pool_id AND p.organization_id = cs.organization_id
          LEFT JOIN facility f ON f.id = p.facility_id AND f.organization_id = cs.organization_id
-        WHERE r.closed_at IS NULL
+        WHERE ${REQUEST_WAITING}
         ORDER BY r.created_at`,
     );
     return rows.map((row) => ({

@@ -54,6 +54,9 @@ export default async function TeachingLesson({
     return <PageError message={t(failure.key)} {...(failure.detail === '' ? {} : { detail: failure.detail })} />;
   }
 
+  // The phone is the reader's own lessons. A colleague's register stays a desktop read.
+  if (!register.canRecord) notFound();
+
   const plan = await outcome(apiFetch<LessonPlan>(`/sessions/${sessionId}/plan`));
   const notices = new Map((register.notices ?? []).map((one) => [one.studentId, one.going]));
   const cancelled = register.status === 'cancelled';

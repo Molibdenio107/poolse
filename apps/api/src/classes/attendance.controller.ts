@@ -101,8 +101,23 @@ export class AttendanceController {
     const management = hasRole('owner', 'admin');
     const mine = await isMySession(id);
     const state = await cancelState(organizationId, id);
+    const own = await isOwnClass(organizationId, id, membershipId);
+    const familyNotes = management || mine;
+    const viewing = currentTenant().viewing != null;
+    const cover = familyNotes ? await coverRequestOf(organizationId, id) : null;
     return {
       ...register,
+      /*
+       * A colleague may still read a register, so they keep the names and marks.
+       * A face and what the family said are for whoever teaches it (POOLSE-197).
+       * Under a view the exam and insurance go too, because `expired` is also how
+       * an unfit result reads, and so do the notes: POOLSE-188 rule 8.
+       */
+      entries: register.entries.map((entry) => ({
+        ...entry,
+        photoFileId: familyNotes ? entry.photoFileId : null,
+        ...(viewing ? { examState: 'none' as const, insured: true, note: null } : {}),
+      })),
       organizationId,
       canRecord: mine,
       // Until it ends, marks or not; after, the office and only unmarked (02-11-2026).
@@ -112,10 +127,11 @@ export class AttendanceController {
       canEndSeries: management,
       // POOLSE-198: the lesson's teacher, before it ends and while it is on.
       canRequestCover:
-        mine && hasRole('instructor') && state !== null && !state.ended && register.status !== 'cancelled',
-      coverRequest: await coverRequestOf(organizationId, id),
+        own && hasRole('instructor') && state !== null && !state.ended && register.status !== 'cancelled',
+      coverRequest:
+        cover === null ? null : viewing ? { note: null, requestedBy: cover.requestedBy } : cover,
       feedback: management || mine ? await sessionFeedback(organizationId, id, management ? null : membershipId) : [],
-      notices: await sessionNotices(organizationId, id),
+      notices: familyNotes ? await sessionNotices(organizationId, id) : [],
     };
   }
 

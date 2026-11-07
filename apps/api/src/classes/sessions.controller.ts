@@ -1,4 +1,4 @@
-import { closeCover, tellOfficeCancelled } from './lesson-requests.repository.js';
+import { closeCover, closeOnCancelIn } from './lesson-requests.repository.js';
 import {
   BadRequestException,
   Body,
@@ -612,6 +612,7 @@ export class SessionsCalendarController {
     @Param('id') id: string,
     @Body() body: Record<string, unknown>,
   ): Promise<{ cancelled: true; removed?: number; keptMarked?: number }> {
+    requireRole('owner', 'admin', 'instructor');
     const { organizationId, membershipId } = currentTenant();
 
     /*
@@ -695,12 +696,11 @@ export class SessionsCalendarController {
     try {
       const cancelled = await cancelSession(organizationId, id, reason || null, async (tx) => {
         notice = await recordNoticeIn(tx, organizationId, membershipId, id, 'cancelled', reason || null);
+        await closeOnCancelIn(tx, organizationId, id, membershipId, byTeacher ? reason : null);
       });
       if (!cancelled) {
         throw new NotFoundException('No such class, or it is already cancelled');
       }
-      await closeCover(organizationId, id, membershipId, 'withdrawn');
-      if (byTeacher) await tellOfficeCancelled(organizationId, id, membershipId, reason);
     } catch (error) {
       // Backlog round 3, story 5's last rule, now that attendance exists: a
       // class somebody marked cannot be called off, and the interface explains

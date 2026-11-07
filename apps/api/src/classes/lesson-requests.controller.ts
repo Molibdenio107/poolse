@@ -3,6 +3,7 @@ import {
   Body,
   ConflictException,
   Controller,
+  ForbiddenException,
   Get,
   HttpCode,
   NotFoundException,
@@ -11,7 +12,6 @@ import {
   Post,
 } from '@nestjs/common';
 import { CoreRoute } from '../tenant/modules.js';
-import { requireMySession } from '../tenant/assignment.js';
 import { requireRole } from '../tenant/roles.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import {
@@ -21,6 +21,7 @@ import {
   withdrawCover,
   type LessonRequest,
 } from './lesson-requests.repository.js';
+import { isOwnClass } from './sessions.repository.js';
 
 const MAX_NOTE = 500;
 
@@ -37,12 +38,16 @@ export class CoverRequestsController {
     @Body() body: Record<string, unknown>,
   ): Promise<{ requested: true }> {
     requireRole('instructor');
-    await requireMySession(id);
+    // Who is teaching this one lesson, a stand-in included: `requireMySession` also
+    // answers the turma's own instructor after somebody else was named.
+    const { organizationId, membershipId } = currentTenant();
+    if (!(await isOwnClass(organizationId, id, membershipId))) {
+      throw new ForbiddenException({ code: 'not_your_class', message: 'Only the lesson’s teacher asks' });
+    }
     const note = typeof body['note'] === 'string' ? body['note'].trim() : '';
     if (note.length > MAX_NOTE) {
       throw new BadRequestException({ fields: { note: 'app.teaching.noteTooLong' } });
     }
-    const { organizationId, membershipId } = currentTenant();
     const outcome = await requestCover(organizationId, id, membershipId, note === '' ? null : note);
     if (outcome === 'over') {
       throw new ConflictException({ code: 'lesson_over', message: 'This lesson needs no cover' });

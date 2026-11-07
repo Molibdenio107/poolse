@@ -1,6 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { attentionForReader } from '../attention/attention.controller.js';
+import { currentTenant, tenantStorage } from '../tenant/tenant.context.js';
 import {
   actingAs,
   addMember,
@@ -131,5 +132,74 @@ test('the office’s list is the office’s', async () => {
         expectStatus(() => new CoverRequestsController().request(sessionId, {}), 403),
       );
     });
+  });
+});
+
+test('a colleague reads the roll, never the faces, what families said or the cover note', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { sessionId, ana, bruno } = await lesson(tenant);
+    await tenant.sql(
+      `INSERT INTO student (organization_id, first_name, last_name, birth_date) VALUES ($1, 'Alice', 'Silva', '2016-01-01')`,
+      [tenant.organizationId],
+    );
+    await actingAs(tenant, { membershipId: ana, roles: ['instructor'] }, () =>
+      new CoverRequestsController().request(sessionId, { note: 'Consulta médica' }),
+    );
+    await actingAs(tenant, { membershipId: bruno, roles: ['instructor'] }, async () => {
+      const register = await new AttendanceController().register(sessionId);
+      assert.equal(register.canRecord, false);
+      assert.equal(register.coverRequest, null);
+      assert.deepEqual(register.notices, []);
+      assert.equal(register.canRequestCover, false);
+    });
+  });
+});
+
+test('under a view the register carries no exam, insurance, note or cover note (POOLSE-188 rule 8)', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { sessionId, ana } = await lesson(tenant);
+    const [group] = await tenant.sql<{ id: string }>(
+      `SELECT class_group_id AS id FROM class_session WHERE id = $1`,
+      [sessionId],
+    );
+    const [student] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name, birth_date)
+       VALUES ($1, 'Alice', 'Silva', '2016-01-01') RETURNING id`,
+      [tenant.organizationId],
+    );
+    await tenant.sql(
+      `INSERT INTO enrollment (organization_id, class_group_id, student_id, status, joined_on)
+       VALUES ($1, $2, $3, 'active', club_today() - 10)`,
+      [tenant.organizationId, group!.id, student!.id],
+    );
+    await actingAs(tenant, { membershipId: ana, roles: ['instructor'] }, async () => {
+      await new CoverRequestsController().request(sessionId, { note: 'Consulta médica' });
+      const plain = await new AttendanceController().register(sessionId);
+      assert.equal(plain.coverRequest?.note, 'Consulta médica');
+      const viewed = await tenantStorage.run({ ...currentTenant(), viewing: { id: 'v', hat: 'teaching' } }, () =>
+        new AttendanceController().register(sessionId),
+      );
+      assert.equal(viewed.coverRequest?.note, null);
+      assert.equal(viewed.entries[0]!.examState, 'none');
+      assert.equal(viewed.entries[0]!.note, null);
+    });
+  });
+});
+
+test('after a stand-in is named, only they may ask; cover for a lesson that is gone stops waiting', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { sessionId, ana, bruno } = await lesson(tenant);
+    const cover = new CoverRequestsController();
+    await actingAs(tenant, { membershipId: ana, roles: ['instructor'] }, () => cover.request(sessionId, {}));
+    await tenant.sql(`UPDATE class_session SET starts_at = now() - interval '2 hours' WHERE id = $1`, [sessionId]);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      assert.equal((await new LessonRequestsController().open()).requests.length, 0);
+      assert.equal((await attentionForReader()).menu['calendar'], undefined);
+    });
+    await tenant.sql(`UPDATE class_session SET starts_at = now() + interval '1 day' WHERE id = $1`, [sessionId]);
+    await actingAs(tenant, { roles: ['owner'] }, () => new SessionsCalendarController().standIn(sessionId, { membershipId: bruno }));
+    await actingAs(tenant, { membershipId: ana, roles: ['instructor'] }, () =>
+      expectStatus(() => cover.request(sessionId, {}), 403),
+    );
   });
 });

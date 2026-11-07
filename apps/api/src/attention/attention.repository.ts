@@ -1,3 +1,4 @@
+import { REQUEST_WAITING } from '../classes/lesson-requests.repository.js';
 import { withOrg } from '@poolse/db';
 import { excursions, gradeLabResult, isMultiSport, resolveBands } from '@poolse/rules';
 import { readPoolWater } from '../dashboard/management.repository.js';
@@ -197,8 +198,8 @@ export async function readAttention(organizationId: string, scope: AttentionScop
       const asked = await withOrg(organizationId, async (tx) =>
         (
           await tx.query<{ session_id: string; n: number }>(
-            `SELECT class_session_id AS session_id, count(*)::int AS n
-               FROM lesson_request WHERE closed_at IS NULL GROUP BY 1`,
+            `SELECT r.class_session_id AS session_id, count(*)::int AS n
+               FROM lesson_request r WHERE ${REQUEST_WAITING} GROUP BY 1`,
           )
         ).rows,
       );

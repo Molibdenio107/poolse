@@ -13,3 +13,9 @@ Rui: *"if the teacher cannot attend the class it should click on a button to 're
 5. **Cancel stays with the teacher,** any time, folded under *Mais opções*, with a required reason and a confirmation saying families will be told (Rui). The office's circle blinks too. The existing notice and its rules hold: a lesson that ended is the office's.
 
 **Not in scope:** several lessons in one request (Rui); a long absence goes through the office, medical leave or holidays.
+
+### Security review of the code (07-11-2026)
+
+Fixed: under a view the register carries no exam state, insurance, note or cover note, closing a POOLSE-188 rule 8 gap on `/sessions/:id/attendance`. A colleague reads the roll and marks, with no photo, family notice or cover note, and the phone opens only the reader's own lesson. Only the teacher of that lesson asks for cover (`isOwnClass`). `cancel` refuses by role on its first line, and closing the request joins the cancel's transaction. Cover on a lesson that ended or was cancelled stops waiting.
+
+**Open:** whether a colleague, in any sport, should still read a register on the desktop (an existing rule); `lesson_request.note` is free text and `apply_retention` does not reach it; a merge leaves `requested_by` on the absorbed membership, so that person cannot withdraw; a stand-in sees the *Mensagem* pill and is refused, since a stand-in does not own the turma.
