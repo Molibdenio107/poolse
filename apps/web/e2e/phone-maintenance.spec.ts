@@ -103,14 +103,15 @@ test('QA 2 — Registar › Concluir tarefa lists it, and done, it leaves Hoje',
   }
 });
 
-test('QA 3 — Reportar has no bar, and Voltar returns to Registar', async ({ page }) => {
+test('QA 3 — Reportar keeps the bar, and Voltar returns to Registar', async ({ page }) => {
   await open(page, '/app/manutencao/registar');
   const report = page.getByRole('link', { name: /reportar avaria/i });
   const href = await report.getAttribute('href');
   expect(href).toBe('/app/manutencao/reportar?from=registar');
 
   await open(page, href!);
-  await expect(page.getByRole('link', { name: 'Registar', exact: true })).toHaveCount(0);
+  // The menu stays on every screen (Rui, 06-11-2026, reversing POOLSE-181's QA 3).
+  await expect(page.getByRole('link', { name: 'Registar', exact: true })).toBeVisible();
 
   const back = page.getByRole('link', { name: /voltar a registar/i });
   await expect(back).toHaveAttribute('href', '/app/manutencao/registar');
