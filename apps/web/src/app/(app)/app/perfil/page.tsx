@@ -2,7 +2,10 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { SignOutButton } from '@clerk/nextjs';
-import { Eye, ChevronRight, FileText, LayoutDashboard, LogOut, Settings, Wallet } from 'lucide-react';
+import {
+  Award,
+  IdCard,
+  Eye, ChevronRight, FileText, LayoutDashboard, LogOut, Settings, Wallet } from 'lucide-react';
 import { apiFetch, type ActiveSession, type Me } from '@/lib/api';
 import { hatsOf, isHat } from '@/lib/app-hats';
 import { outcome } from '@/lib/load-failure';
@@ -131,6 +134,35 @@ export default async function AppProfilePage({
           <span className="flex items-center gap-3">
             <FileText className="size-5 text-primary" aria-hidden />
             {t('app.documents.title')}
+          </span>
+          <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
+          <LinkBusy />
+        </Link>
+      )}
+
+      {/* POOLSE-200: a teacher's papers. The contract and holidays stay on the desktop (Rui). */}
+      {hats.homes.includes('teaching') && (
+        <Link
+          href="/app/perfil/qualificacoes"
+          className={`${row} rounded bg-surface px-4 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+        >
+          <span className="flex items-center gap-3">
+            <Award className="size-5 text-primary" aria-hidden />
+            {t('qualifications.title')}
+          </span>
+          <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
+          <LinkBusy />
+        </Link>
+      )}
+
+      {hats.homes.includes('teaching') && (
+        <Link
+          href="/app/perfil/dados"
+          className={`${row} rounded bg-surface px-4 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+        >
+          <span className="flex items-center gap-3">
+            <IdCard className="size-5 text-primary" aria-hidden />
+            {t('app.profile.myDetails')}
           </span>
           <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
           <LinkBusy />

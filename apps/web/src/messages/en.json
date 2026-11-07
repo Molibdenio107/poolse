@@ -260,6 +260,14 @@
       }
     },
     "teaching": {
+      "sectionMessage": "Message",
+      "messageHint": "It shows in this class’s app for 7 days and goes by email.",
+      "messageSubject": "Subject",
+      "messageBody": "Message",
+      "messageSend": "Send to the class",
+      "messageSent": "Message sent.",
+      "messageAvisoOnly": "It is in the app, but the email did not go.",
+      "messageFailed": "The message could not be sent.",
       "coverRequest": "Request a substitute",
       "coverExplain": "The owner or the office chooses who covers this lesson.",
       "coverNote": "Note (optional)",
@@ -448,6 +456,7 @@
       "perfil": "Profile"
     },
     "profile": {
+      "myDetails": "My details",
       "edit": "Edit details",
       "settings": "Settings",
       "backTo": "Back to my profile",

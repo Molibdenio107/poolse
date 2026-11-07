@@ -261,6 +261,14 @@
       }
     },
     "teaching": {
+      "sectionMessage": "Mensagem",
+      "messageHint": "Aparece na app desta turma durante 7 dias e segue por email.",
+      "messageSubject": "Assunto",
+      "messageBody": "Mensagem",
+      "messageSend": "Enviar à turma",
+      "messageSent": "Mensagem enviada.",
+      "messageAvisoOnly": "Ficou na app, mas o email não seguiu.",
+      "messageFailed": "Não foi possível enviar a mensagem.",
       "coverRequest": "Pedir substituição",
       "coverExplain": "O proprietário ou a administração escolhe quem o substitui nesta aula.",
       "coverNote": "Nota (opcional)",
@@ -449,6 +457,7 @@
       "perfil": "Perfil"
     },
     "profile": {
+      "myDetails": "Os meus dados",
       "edit": "Editar dados",
       "settings": "Definições",
       "backTo": "Voltar ao perfil",

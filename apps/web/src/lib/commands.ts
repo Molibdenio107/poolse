@@ -304,6 +304,22 @@ const ACTIONS: Omit<Command, 'kind'>[] = [
     synonyms: { 'pt-PT': ['aulas', 'hoje', 'presencas', 'chamada'], en: ['classes', 'today', 'register'] },
   },
   {
+    id: 'appQualifications',
+    labelKey: 'qualifications.title',
+    run: { href: '/app/perfil/qualificacoes' },
+    roles: ['instructor'],
+    surface: 'app',
+    synonyms: { 'pt-PT': ['qualificacoes', 'certificados', 'validade', 'tptd', 'sbv'], en: ['qualifications', 'certificates'] },
+  },
+  {
+    id: 'appDetails',
+    labelKey: 'app.profile.myDetails',
+    run: { href: '/app/perfil/dados' },
+    roles: ['instructor'],
+    surface: 'app',
+    synonyms: { 'pt-PT': ['os meus dados', 'morada', 'documento', 'contacto de emergencia'], en: ['my details', 'address', 'emergency contact'] },
+  },
+  {
     id: 'appMaintenance',
     labelKey: 'app.maintenance.title',
     run: { href: '/app/manutencao' },

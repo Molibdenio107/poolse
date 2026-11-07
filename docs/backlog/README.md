@@ -218,8 +218,8 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-194](./POOLSE-194-photos-classmates-and-the-instructor-in-the-app.md) | A student's photo shows wherever they appear, and the app shows who is in the class and who teaches it | Mobile app / Students / Interface | Medium (pilot) | 174 | 0 |
 | [POOLSE-197](./POOLSE-197-the-teacher-has-a-simple-app.md) | **Built 07-11-2026.** A teacher's phone is a simple everyday app: next class, lessons, one lesson screen | Mobile app / Classes | High (pre go-live) | 90, 136, 195 | 0 |
 | [POOLSE-198](./POOLSE-198-a-teacher-asks-for-a-substitute.md) | **Built 07-11-2026.** A teacher asks for a substitute and the office assigns one; cancelling is folded away | Mobile app / Classes | High (pre go-live) | 197 | 0 |
-| [POOLSE-199](./POOLSE-199-a-teacher-writes-to-their-class.md) | A teacher writes to their own class, as an aviso and an email | Mobile app / Messages | Medium (pilot) | 197 | 0 |
-| [POOLSE-200](./POOLSE-200-a-teacher-profile-on-the-phone.md) | A teacher's profile on the phone: qualifications and their own details | Mobile app / Staff | Medium (pilot) | 197 | 0 |
+| [POOLSE-199](./POOLSE-199-a-teacher-writes-to-their-class.md) | **Built 07-11-2026.** A teacher writes to their own class, as an aviso and an email | Mobile app / Messages | Medium (pilot) | 197 | 0 |
+| [POOLSE-200](./POOLSE-200-a-teacher-profile-on-the-phone.md) | **Built 07-11-2026, one point open.** A teacher's profile on the phone: qualifications and their own details | Mobile app / Staff | Medium (pilot) | 197 | 0 |
 | [POOLSE-196](./POOLSE-196-the-owner-can-do-anything-in-the-club.md) | **Built 07-11-2026.** The Owner can do anything in their club, an Admin some things, and the search bar reaches the site's tabs | Roles / Search | High (pre go-live) | 39, 118 | 0 |
 | [POOLSE-195](./POOLSE-195-desafio-in-the-training-plan.md) | **Built 06-11-2026.** The instructor sets a *Desafio* in the training plan, and the student says after class whether they did it | Classes / Mobile app | Medium (pilot) | 116, 194 | 0 |
 

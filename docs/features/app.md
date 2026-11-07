@@ -117,6 +117,13 @@ top of it; naming a stand-in closes the request and tells whoever asked. A teach
 their own stand-in. *Cancelar esta aula* is under *Mais opções*, needs a reason, says the families
 will be told, and tells the office until it presses *Visto*.
 
+### A word to the class, and the teacher's profile (POOLSE-199, 200)
+
+*Mensagem* on a lesson posts an aviso to the turma for 7 days, then the same words by email, and
+says so if the email did not go. Only a turma the teacher teaches; a stand-in for one night does not
+own it. *Perfil* adds *Qualificações*, read-only, and *Os meus dados*: address, emergency contact and
+ID document, with the NIF and NISS read-only. The contract and holidays stay on the desktop.
+
 ## The instructor home (`/app/aulas`, slice 2)
 
 `GET /app/teaching` (instructors) is the dashboard band's own `readMyWeek`: this week's lessons

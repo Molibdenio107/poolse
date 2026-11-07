@@ -6,6 +6,7 @@ import { ApiError, apiFetch, type Register } from '@/lib/api';
 import { backTarget } from '@/lib/back';
 import { formatDate } from '@/lib/date-format';
 import { describeLoad, outcome } from '@/lib/load-failure';
+import { moduleIsOn } from '@/lib/modules';
 import { photoUrlFor } from '@/lib/photo';
 import { FeedbackList } from '@/components/feedback-list';
 import { LinkBusy } from '@/components/link-busy';
@@ -15,6 +16,7 @@ import { SectionPills } from '@/components/section-pills';
 import type { LessonPlan } from '@/app/(app)/dashboard/calendar/lesson-plan.actions';
 import { RegisterForm } from '@/app/(app)/dashboard/calendar/sessions/[sessionId]/register-form';
 import { LessonActions } from './lesson-actions';
+import { TeacherMessage } from './teacher-message';
 import { TeacherPlan } from './teacher-plan';
 
 type LessonRegister = Register & {
@@ -58,9 +60,14 @@ export default async function TeachingLesson({
 
   // One section at a time: fifteen students would bury the plan under the roll.
   const showPlan = section === 'plano' && plan.state === 'ok' && !cancelled;
+  // POOLSE-199: a parceria has no families here, and the module may be off.
+  const classGroupId = register.classGroupId;
+  const mayWrite = !cancelled && register.canRecord && classGroupId !== null && (await moduleIsOn('messages'));
+  const showMessage = section === 'mensagem' && mayWrite;
+  const onRoll = !showPlan && !showMessage;
   const hrefFor = (key: string): string => {
     const query = new URLSearchParams();
-    if (key === 'plano') query.set('section', key);
+    if (key !== 'alunos') query.set('section', key);
     if (from !== undefined) query.set('from', from);
     return `/app/aulas/${sessionId}${query.size === 0 ? '' : `?${query.toString()}`}`;
   };
@@ -104,16 +111,21 @@ export default async function TeachingLesson({
       {plan.state === 'ok' && !cancelled && (
         <SectionPills
           label={t('app.teaching.sectionsLabel')}
-          current={showPlan ? 'plano' : 'alunos'}
+          current={showPlan ? 'plano' : showMessage ? 'mensagem' : 'alunos'}
           items={[
             { key: 'alunos', label: t('app.teaching.sectionStudents'), href: hrefFor('alunos') },
             { key: 'plano', label: t('app.teaching.sectionPlan'), href: hrefFor('plano') },
+            ...(mayWrite
+              ? [{ key: 'mensagem', label: t('app.teaching.sectionMessage'), href: hrefFor('mensagem') }]
+              : []),
           ]}
         />
       )}
 
       {showPlan && plan.state === 'ok' ? (
         <TeacherPlan plan={plan.data} />
+      ) : showMessage ? (
+        <TeacherMessage classGroupId={classGroupId} />
       ) : register.started && register.canRecord && !cancelled ? (
         <RegisterForm register={register} compact />
       ) : (
@@ -145,7 +157,7 @@ export default async function TeachingLesson({
         </section>
       )}
 
-      {!showPlan && !cancelled && register.canRecord && (
+      {onRoll && !cancelled && register.canRecord && (
         <LessonActions
           part="cancel"
           sessionId={register.sessionId}
@@ -155,7 +167,7 @@ export default async function TeachingLesson({
         />
       )}
 
-      {!showPlan && (register.feedback ?? []).length > 0 && (
+      {onRoll && (register.feedback ?? []).length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="app-section-label">{t('feedback.tab')}</h2>
           <FeedbackList items={register.feedback ?? []} by="student" canArchive={false} />
