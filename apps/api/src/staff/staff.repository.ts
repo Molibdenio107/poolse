@@ -259,6 +259,8 @@ export async function updateStaff(
   membershipId: string,
   edit: StaffEdit,
   clerkHandled: boolean,
+  /** The name before Clerk: by now the cache already holds the new one. */
+  nameWas: { firstName: string | null; lastName: string | null } | null = null,
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
     const { rows: before } = await tx.query<{
@@ -317,8 +319,8 @@ export async function updateStaff(
       if ((from ?? null) !== (to ?? null)) changes[field] = { from, to };
     };
 
-    note('firstName', was.cached_first_name ?? was.first_name, edit.firstName);
-    note('lastName', was.cached_last_name ?? was.last_name, edit.lastName);
+    note('firstName', nameWas === null ? (was.cached_first_name ?? was.first_name) : nameWas.firstName, edit.firstName);
+    note('lastName', nameWas === null ? (was.cached_last_name ?? was.last_name) : nameWas.lastName, edit.lastName);
     note('phone', was.contact_phone ?? was.phone, edit.phone);
     note('notes', was.notes, edit.notes);
 
@@ -446,5 +448,31 @@ export async function cancelReinvite(
       data: { toEmail: rows[0].email },
     });
     return true;
+  });
+}
+
+/** A Poolse support session in the club: a login that is nobody's to correct here. */
+export async function isSupportMembership(organizationId: string, membershipId: string): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query(
+      `SELECT 1 FROM membership WHERE id = $1 AND support_grant_id IS NOT NULL`,
+      [membershipId],
+    );
+    return rows.length > 0;
+  });
+}
+
+/** Whether this login is a student whose photograph has no live consent. */
+export async function studentLacksPhotoConsent(organizationId: string, membershipId: string): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query(
+      `SELECT 1 FROM student s
+        WHERE s.membership_id = $1 AND s.archived_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM consent c
+                           WHERE c.organization_id = s.organization_id AND c.student_id = s.id
+                             AND c.kind = 'photo' AND c.granted AND c.withdrawn_at IS NULL)`,
+      [membershipId],
+    );
+    return rows.length > 0;
   });
 }

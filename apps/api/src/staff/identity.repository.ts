@@ -121,7 +121,8 @@ export async function writeIdentity(
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ login: boolean }>(
-      `SELECT app_user_id IS NOT NULL AS login FROM membership WHERE id = $1 FOR UPDATE`,
+      `SELECT app_user_id IS NOT NULL AS login FROM membership
+        WHERE id = $1 AND archived_at IS NULL AND support_grant_id IS NULL FOR UPDATE`,
       [membershipId],
     );
     const row = rows[0];

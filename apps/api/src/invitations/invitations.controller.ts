@@ -9,6 +9,7 @@ import {
   Post,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { hasRole } from '../tenant/roles.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import {
   canInvite,
@@ -213,6 +214,16 @@ export class InvitationsController {
         code: 'already_invited',
         message: 'This person already has a pending invitation',
         fields: { email: 'invite.duplicate' },
+      });
+    }
+
+    // Accepting adds the role and ties a login to that record, so this is a staff
+    // change on an existing person: the Owner's (POOLSE-196). New people stay open.
+    if (known !== null && !hasRole('owner')) {
+      throw new ForbiddenException({
+        code: 'known_person_owner_only',
+        message: 'Only the owner invites somebody the club already has',
+        fields: { email: 'invite.knownOwnerOnly' },
       });
     }
 

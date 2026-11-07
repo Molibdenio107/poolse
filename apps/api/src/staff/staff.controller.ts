@@ -1,3 +1,4 @@
+import { isSupportMembership, studentLacksPhotoConsent } from './staff.repository.js';
 import {
   BadRequestException,
   Body,
@@ -246,8 +247,12 @@ export class StaffController {
     if (type === null || !type.startsWith('image/')) {
       throw new BadRequestException({ code: 'file_type', message: 'This needs an image' });
     }
-    await updateClerkPhoto(await loginOf(membershipId), body, type);
-    await recordLoginPhoto(membershipId);
+    const clerkUserId = await loginOf(membershipId);
+    // A face reaches Clerk on the same terms as the club's own copy.
+    if (await studentLacksPhotoConsent(currentTenant().organizationId, membershipId)) {
+      throw new ConflictException({ code: 'photo_no_consent', message: 'There is no live photo consent' });
+    }
+    await onTheRecord(membershipId, () => updateClerkPhoto(clerkUserId, body, type));
     return { saved: true };
   }
 
@@ -256,8 +261,8 @@ export class StaffController {
     @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
   ): Promise<{ removed: true }> {
     requireRole('owner');
-    await removeClerkPhoto(await loginOf(membershipId));
-    await recordLoginPhoto(membershipId);
+    const clerkUserId = await loginOf(membershipId);
+    await onTheRecord(membershipId, () => removeClerkPhoto(clerkUserId));
     return { removed: true };
   }
 
@@ -474,10 +479,15 @@ export class StaffController {
     }
 
     if (clerkHandled && renamed) {
+      // A Poolse operator's account is not the club's to correct.
+      if (await isSupportMembership(organizationId, membershipId)) {
+        throw new NotFoundException('No such staff member');
+      }
       await updateClerkName(staff.clerkUserId as string, edit.firstName, edit.lastName);
     }
 
-    if (!(await updateStaff(organizationId, membershipId, edit, clerkHandled))) {
+    const nameWas = clerkHandled ? { firstName: staff.firstName, lastName: staff.lastName } : null;
+    if (!(await updateStaff(organizationId, membershipId, edit, clerkHandled, nameWas))) {
       throw new NotFoundException('No such staff member');
     }
 
@@ -570,15 +580,23 @@ function text(value: unknown, field: string, max: number): string | null {
 
 /** The Clerk id behind a member of the club; a person with no login has no such photo. */
 async function loginOf(membershipId: string): Promise<string> {
-  const staff = await findStaff(currentTenant().organizationId, membershipId);
+  const { organizationId } = currentTenant();
+  const staff = await findStaff(organizationId, membershipId);
   if (staff === null || staff.clerkUserId === null) throw new NotFoundException('No such login');
+  if (await isSupportMembership(organizationId, membershipId)) throw new NotFoundException('No such login');
   return staff.clerkUserId;
 }
 
-async function recordLoginPhoto(membershipId: string): Promise<void> {
-  await withOrg(currentTenant().organizationId, (tx) =>
-    recordAudit(tx, { action: 'membership.login_photo_changed', entityType: 'membership', entityId: membershipId }),
-  );
+/** Logged first and inside the call, so Clerk failing leaves no row and no change goes unlogged. */
+async function onTheRecord(membershipId: string, change: () => Promise<unknown>): Promise<void> {
+  await withOrg(currentTenant().organizationId, async (tx) => {
+    await recordAudit(tx, {
+      action: 'membership.login_photo_changed',
+      entityType: 'membership',
+      entityId: membershipId,
+    });
+    await change();
+  });
 }
 
 /** What only the Owner writes for somebody else; anybody may still write their own. */

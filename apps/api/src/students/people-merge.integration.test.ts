@@ -18,13 +18,13 @@ import { actingAs, addMember, closeHarness, expectStatus, removeAppUser, withScr
 
 after(closeHarness);
 
-test('an admin merges two records of one person, as the app login', async () => {
+test('the owner merges two staff records of one person, as the app login', async () => {
   await withScratchTenant(async (tenant) => {
     const admin = await addMember(tenant, 'Carla', 'Admin', ['admin']);
     const keep = await addMember(tenant, 'Ana', 'Ribeiro', ['instructor']);
     const absorb = await addMember(tenant, 'Ana', 'Ribeiro', ['maintenance']);
 
-    await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, async () => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
       const result = await new PeopleDedupController().merge({ keepId: keep, absorbId: absorb });
       assert.equal(result.merged, true);
     });
@@ -45,7 +45,7 @@ test("an admin cannot absorb the Owner's record and become Owner", async () => {
     await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, async () => {
       await expectStatus(
         () => new PeopleDedupController().merge({ keepId: admin, absorbId: tenant.ownerMembershipId }),
-        409,
+        403,
       );
     });
 
@@ -80,7 +80,7 @@ test('two records that each have their own login are not a duplicate to merge', 
       );
     }
 
-    await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, async () => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
       await expectStatus(() => new PeopleDedupController().merge({ keepId: admin, absorbId: other }), 409);
     });
 

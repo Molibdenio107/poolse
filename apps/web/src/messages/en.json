@@ -3021,6 +3021,7 @@
     "emergencySearchHint": "Type at least two letters of the name. If the person is not in the club, leave this empty and type their name and phone below."
   },
   "invite": {
+    "knownOwnerOnly": "This person is already in the club. Only the owner can invite them to the staff.",
     "open": "Invite user",
     "title": "Invite someone",
     "emailLabel": "Email",

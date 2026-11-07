@@ -22,6 +22,10 @@ A real case started it: a student becomes an employee. One person, one login, an
 6. **A student with a login becomes staff on their record.** The invitation refuses (`person_in_app`), says why and links to the record, which opens for somebody who is not staff yet.
 7. **The search bar reaches the site's tabs by a plain word,** in the reader's language, and *documents* works in pt-PT as well. `/dashboard/facilities/site?tab=` finds the site; a club with several goes to Instalações.
 
+8. **The same rule through the side doors** (security review, 07-11-2026). A merge with staff on either side is the Owner's, and names who did it. Somebody the club already has is invited to the staff by the Owner only (Rui); an Admin still invites new addresses. A guardian form does not fill a staff member's NIF or address unless the Owner sends it.
+9. **Poolse support changes no account** (Rui, 07-11-2026). Owner and Admin may change an adult student's date of birth and phone from the student page, as the office confirms dates; support is refused (`support_no_account`). A support login is nobody's to correct, and an archived membership is not corrected.
+10. **A student's photo through their account needs a live photo consent,** as the club's own copy does.
+
 ### Dev notes
 
 `requireOwnerOrSelf` in `staff/staff.controller.ts`; `refuseStaffRoleByNonOwner` in `students/students.controller.ts`. Support holds `admin`, so every Owner rule refuses it without a line of its own. A contract's write refuses with 403 before the Owner's concealment rule, which still answers 404 on read. Search entries are `ACTIONS` in `lib/commands.ts`.

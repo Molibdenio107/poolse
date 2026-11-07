@@ -1,3 +1,5 @@
+import { ForbiddenException } from '@nestjs/common';
+import { currentTenant } from '../tenant/tenant.context.js';
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { describeChange, type ChangeContext, type ChangeSpec } from '../audit/change.js';
@@ -1655,6 +1657,7 @@ export async function confirmBirthDateIn(
 
   const login = await readLoginOwned(tx, studentId);
   if (login !== null) {
+    refuseSupportOnAccount(login.birthDate !== date);
     await tx.query(`UPDATE app_user SET birth_date = $2::date WHERE id = $1 AND birth_date IS DISTINCT FROM $2::date`, [
       login.appUserId,
       date,
@@ -1683,6 +1686,17 @@ export async function confirmBirthDate(
   birthDate: string | null,
 ): Promise<'done' | 'not_found' | 'no_date'> {
   return withOrg(organizationId, (tx) => confirmBirthDateIn(tx, membershipId, studentId, birthDate));
+}
+
+/**
+ * A student's account is one row in every club, and the office may write it
+ * (POOLSE-177), but Poolse support may not (Rui, 07-11-2026). Only what would
+ * change is refused, so support can still save an untouched form.
+ */
+function refuseSupportOnAccount(changes: boolean): void {
+  if (changes && currentTenant().support === true) {
+    throw new ForbiddenException({ code: 'support_no_account', message: 'Support does not change a person’s account' });
+  }
 }
 
 async function readLoginOwned(
@@ -1750,6 +1764,9 @@ async function updateStudentIn(
       if (input.firstName !== login.firstName || input.lastName !== login.lastName || !sameEmail) {
         return 'owned_by_login';
       }
+      refuseSupportOnAccount(
+        login.birthDate !== input.birthDate || (login.contactPhone ?? null) !== (input.contactPhone ?? null),
+      );
       await tx.query(
         `UPDATE app_user
             SET birth_date = $2::date, contact_phone = $3
@@ -2293,13 +2310,29 @@ async function syncGuardians(
       await tx.query(
         `UPDATE membership
             SET phone      = coalesce(phone, $2),
-                tax_number = coalesce(tax_number, $3),
-                address    = coalesce(address, $4),
+                -- POOLSE-196: on a member of staff, the NIF and address are the Owner's.
+                tax_number = CASE WHEN $6 AND EXISTS (
+                               SELECT 1 FROM membership_role r
+                                WHERE r.membership_id = membership.id AND r.archived_at IS NULL
+                                  AND r.role IN ('owner', 'admin', 'instructor', 'maintenance'))
+                             THEN tax_number ELSE coalesce(tax_number, $3) END,
+                address    = CASE WHEN $6 AND EXISTS (
+                               SELECT 1 FROM membership_role r
+                                WHERE r.membership_id = membership.id AND r.archived_at IS NULL
+                                  AND r.role IN ('owner', 'admin', 'instructor', 'maintenance'))
+                             THEN address ELSE coalesce(address, $4) END,
                 email      = CASE WHEN app_user_id IS NULL
                                   THEN coalesce(email, $5::citext)
                                   ELSE email END
           WHERE id = $1 AND archived_at IS NULL`,
-        [membershipId, guardian.phone, guardian.taxNumber, guardian.address, guardian.email],
+        [
+          membershipId,
+          guardian.phone,
+          guardian.taxNumber,
+          guardian.address,
+          guardian.email,
+          !currentTenant().roles.includes('owner'),
+        ],
       );
     }
 
@@ -2954,7 +2987,22 @@ export async function mergePeople(
       `SELECT merge_memberships($1, $2, $3)`,
       [organizationId, keepId, absorbId],
     );
-    return rows[0]?.merge_memberships ?? 0;
+    const merged = rows[0]?.merge_memberships ?? 0;
+    // The function's own row has no actor and reads as *Sistema*; this one names
+    // them. Asked of the record, because two empty records move no rows.
+    const { rows: absorbed } = await tx.query(
+      `SELECT 1 FROM membership WHERE id = $1 AND archived_at IS NOT NULL`,
+      [absorbId],
+    );
+    if (absorbed.length > 0) {
+      await recordAudit(tx, {
+        action: 'person.merge_requested',
+        entityType: 'membership',
+        entityId: keepId,
+        data: { absorbId },
+      });
+    }
+    return merged;
   });
 }
 

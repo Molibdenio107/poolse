@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import pg from 'pg';
 import { PeopleDedupController } from '../students/students.controller.js';
 import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant, type ScratchTenant } from '../test/harness.js';
+import { withOrg } from '@poolse/db';
+import { InvitationsController } from '../invitations/invitations.controller.js';
+import { confirmBirthDateIn } from '../students/students.repository.js';
 import { StaffController } from './staff.controller.js';
+import { updateStaff } from './staff.repository.js';
 
 /**
  * What only the Owner changes on somebody else's record (Rui, 07-11-2026): the NIF,
@@ -20,6 +24,7 @@ after(async () => {
 });
 
 const PNG = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
+const JPEG = Buffer.from('ffd8ffe000104a464946000101', 'hex');
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n');
 
 async function people(tenant: ScratchTenant): Promise<{ admin: string; coach: string }> {
@@ -162,6 +167,120 @@ test('a login’s photo: only the Owner, and only somebody with a login', async 
       await expectStatus(() => staff.setLoginPhoto(coach, Buffer.from('not an image')), 400);
       await expectStatus(() => staff.setLoginPhoto(coach, PNG), 404);
     });
+  });
+});
+
+test('a merge with staff on either side is the Owner’s, and names who did it', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { admin, coach } = await people(tenant);
+    const placeholder = await addMember(tenant, 'Nova', 'Admin', ['admin']);
+    const parent = await addMember(tenant, 'Marta', 'Silva', ['guardian']);
+    const twin = await addMember(tenant, 'Marta', 'Silva', ['guardian']);
+    const roles = new PeopleDedupController();
+    await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, async () => {
+      await expectStatus(() => roles.merge({ keepId: coach, absorbId: placeholder }), 403);
+      await expectStatus(() => roles.merge({ keepId: parent, absorbId: placeholder }), 403);
+      await roles.merge({ keepId: parent, absorbId: twin });
+    });
+    await actingAs(tenant, { roles: ['admin'], support: true }, () =>
+      expectStatus(() => roles.merge({ keepId: coach, absorbId: placeholder }), 403),
+    );
+    const [row] = await tenant.sql<{ actor: string }>(
+      `SELECT actor_membership_id AS actor FROM audit_log WHERE action = 'person.merge_requested'`,
+    );
+    assert.equal(row!.actor, admin);
+  });
+});
+
+test('support changes no account: a student’s date, an operator’s name or photo stay', async () => {
+  await withScratchTenant(async (tenant) => {
+    const person = await addMember(tenant, 'Carlos', 'Silva', ['student']);
+    await giveLogin(person);
+    const [row] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name, birth_date, membership_id)
+       VALUES ($1, 'Carlos', 'Silva', '1990-01-01', $2) RETURNING id`,
+      [tenant.organizationId, person],
+    );
+    await owner.query(
+      `UPDATE app_user SET birth_date = '1990-01-01' WHERE id = (SELECT app_user_id FROM membership WHERE id = $1)`,
+      [person],
+    );
+    await actingAs(tenant, { roles: ['admin'], support: true }, () =>
+      withOrg(tenant.organizationId, (tx) =>
+        expectStatus(() => confirmBirthDateIn(tx, tenant.ownerMembershipId, row!.id, '1991-02-02'), 403),
+      ),
+    );
+    await actingAs(tenant, { roles: ['admin'] }, () =>
+      withOrg(tenant.organizationId, async (tx) => {
+        assert.equal(await confirmBirthDateIn(tx, tenant.ownerMembershipId, row!.id, '1991-02-02'), 'done');
+      }),
+    );
+  });
+});
+
+test('an archived or support membership is not the Owner’s to correct', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { coach } = await people(tenant);
+    await giveLogin(coach);
+    await tenant.sql(`UPDATE membership SET archived_at = now() WHERE id = $1`, [coach]);
+    await actingAs(tenant, { roles: ['owner'] }, () =>
+      expectStatus(() => new StaffController().editIdentity(coach, { birthDate: '1990-05-17' }), 404),
+    );
+  });
+});
+
+test('a student’s face needs consent before it reaches their account', async () => {
+  await withScratchTenant(async (tenant) => {
+    const person = await addMember(tenant, 'Alice', 'Silva', ['student']);
+    await giveLogin(person);
+    await tenant.sql(
+      `INSERT INTO student (organization_id, first_name, last_name, birth_date, membership_id)
+       VALUES ($1, 'Alice', 'Silva', club_today() - interval '10 years', $2)`,
+      [tenant.organizationId, person],
+    );
+    await actingAs(tenant, { roles: ['owner'] }, () =>
+      expectStatus(() => new StaffController().setLoginPhoto(person, JPEG), 409),
+    );
+  });
+});
+
+test('somebody the club already has is invited to the staff by the Owner, a new address by anyone who may', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { admin } = await people(tenant);
+    const parent = await addMember(tenant, 'Marta', 'Silva', ['guardian']);
+    const [row] = await tenant.sql<{ email: string }>(`SELECT email FROM membership WHERE id = $1`, [parent]);
+    await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, async () => {
+      await expectStatus(
+        () => new InvitationsController().create({ email: row!.email, roles: ['instructor'] } as never),
+        403,
+      );
+      const made = await new InvitationsController().create({ email: 'nova@example.test', roles: ['instructor'] } as never);
+      assert.equal(made.email, 'nova@example.test');
+    });
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const made = await new InvitationsController().create({ email: row!.email, roles: ['instructor'] } as never);
+      assert.equal(made.email, row!.email);
+    });
+  });
+});
+
+test('a rename is on the record with the name as it was', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { coach } = await people(tenant);
+    await actingAs(tenant, { roles: ['owner'] }, () =>
+      updateStaff(
+        tenant.organizationId,
+        coach,
+        { firstName: 'Anabela', lastName: 'Ribeiro', phone: null, notes: null },
+        false,
+        { firstName: 'Ana', lastName: 'Ribeiro' },
+      ),
+    );
+    const [entry] = await tenant.sql<{ data: { changes: Record<string, { from: string; to: string }> } }>(
+      `SELECT data FROM audit_log WHERE action = 'staff.updated' AND entity_id = $1`,
+      [coach],
+    );
+    assert.deepEqual(entry!.data.changes['firstName'], { from: 'Ana', to: 'Anabela' });
   });
 });
 

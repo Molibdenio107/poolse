@@ -408,19 +408,19 @@ test('staff invitations — by email or mobile, to the person the club already h
     const invitations = new InvitationsController();
 
     // Mobile only, a new person: a link, with the number kept on the placeholder.
-    const byPhone = await asAdmin(tenant, f, () =>
+    const byPhone = await actingAs(tenant, { roles: ['owner'] }, () =>
       invitations.create({ phone: '+351 916 000 111', roles: ['instructor'] }),
     );
     assert.equal(byPhone.email, null);
     assert.equal(byPhone.emailed, false);
     // The same number written another way is the same person, already invited.
-    await asAdmin(tenant, f, () =>
+    await actingAs(tenant, { roles: ['owner'] }, () =>
       expectStatus(() => invitations.create({ phone: '916000111', roles: ['maintenance'] }), 409),
     );
 
     // The mother, by her email: the invitation names her record, and she is not
     // an instructor until she accepts.
-    const mother = await asAdmin(tenant, f, () =>
+    const mother = await actingAs(tenant, { roles: ['owner'] }, () =>
       invitations.create({ email: 'eva@familia.test', roles: ['instructor'] }),
     );
     const [named] = await tenant.sql<{ membership_id: string }>('SELECT membership_id FROM invitation WHERE id = $1', [
@@ -434,7 +434,7 @@ test('staff invitations — by email or mobile, to the person the club already h
     assert.deepEqual(roles.map((r) => r.role), ['guardian']);
 
     // The father by his mobile: the same.
-    const father = await asAdmin(tenant, f, () => invitations.create({ phone: '913 000 222', roles: ['maintenance'] }));
+    const father = await actingAs(tenant, { roles: ['owner'] }, () => invitations.create({ phone: '913 000 222', roles: ['maintenance'] }));
     const [byNumber] = await tenant.sql<{ membership_id: string }>('SELECT membership_id FROM invitation WHERE id = $1', [
       father.id,
     ]);
@@ -444,12 +444,12 @@ test('staff invitations — by email or mobile, to the person the club already h
     const [owner] = await tenant.sql<{ email: string }>('SELECT person_email($1)::text AS email', [
       tenant.ownerMembershipId,
     ]);
-    await asAdmin(tenant, f, () =>
+    await actingAs(tenant, { roles: ['owner'] }, () =>
       expectStatus(() => invitations.create({ email: owner!.email, roles: ['instructor'] }), 409),
     );
 
     // Neither contact: refused before anything is written.
-    await asAdmin(tenant, f, () => expectStatus(() => invitations.create({ roles: ['instructor'] }), 400));
+    await actingAs(tenant, { roles: ['owner'] }, () => expectStatus(() => invitations.create({ roles: ['instructor'] }), 400));
   });
 });
 

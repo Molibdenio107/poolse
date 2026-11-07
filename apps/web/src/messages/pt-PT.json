@@ -3023,6 +3023,7 @@
     "emergencySearchHint": "Escreva pelo menos duas letras do nome. Se a pessoa não estiver no clube, deixe em branco e escreva o nome e o telefone abaixo."
   },
   "invite": {
+    "knownOwnerOnly": "Esta pessoa já está no clube. Só o proprietário a pode convidar para a equipa.",
     "open": "Convidar utilizador",
     "title": "Convidar alguém",
     "emailLabel": "Email",

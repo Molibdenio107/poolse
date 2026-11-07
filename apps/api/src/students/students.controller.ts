@@ -350,6 +350,15 @@ export class PeopleDedupController {
       throw new BadRequestException('A person cannot be merged into themselves');
     }
 
+    // A merge carries roles and the NIF to the survivor, so with staff on either
+    // side it is a staff change: the Owner's (POOLSE-196).
+    if (
+      !hasRole('owner') &&
+      ((await holdsStaffRole(organizationId, keepId)) || (await holdsStaffRole(organizationId, absorbId)))
+    ) {
+      throw new ForbiddenException({ code: 'owner_only', message: 'Only the owner merges staff' });
+    }
+
     // Zero means one of them was not live in this tenant — which is also the
     // answer for another tenant's id, because RLS hid it. The caller learns
     // nothing either way.

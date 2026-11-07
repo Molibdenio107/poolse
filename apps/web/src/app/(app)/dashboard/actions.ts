@@ -183,6 +183,9 @@ export async function inviteAction(
         ...(typeof record['membershipId'] === 'string' ? { existingMembershipId: record['membershipId'] } : {}),
       };
     }
+    if (error instanceof ApiError && error.code === 'known_person_owner_only') {
+      return { ok: false, attempt, fields: { email: 'invite.knownOwnerOnly' } };
+    }
     if (error instanceof ApiError && error.status === 409) {
       return { ok: false, attempt, fields: { email: 'invite.duplicate' } };
     }
