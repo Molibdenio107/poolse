@@ -260,6 +260,24 @@
       }
     },
     "teaching": {
+      "coverRequest": "Request a substitute",
+      "coverExplain": "The owner or the office chooses who covers this lesson.",
+      "coverNote": "Note (optional)",
+      "coverSend": "Send request",
+      "coverRequested": "Request sent.",
+      "coverWithdrawn": "Request withdrawn.",
+      "coverWithdraw": "Withdraw request",
+      "coverWaiting": "You asked for a substitute. Waiting for the club.",
+      "coverFailed": "The request could not be sent.",
+      "noteTooLong": "The note is longer than 500 characters.",
+      "moreOptions": "More options",
+      "cancelReason": "Reason for cancelling",
+      "reasonRequired": "Write the reason.",
+      "cancelButton": "Cancel this lesson",
+      "cancelTitle": "Cancel this lesson?",
+      "cancelMessage": "The families are told and the club gets the reason.",
+      "cancelConfirm": "Cancel the lesson",
+      "cancelled": "Lesson cancelled.",
       "sectionsLabel": "Lesson sections",
       "sectionStudents": "Students",
       "sectionPlan": "Plan",
@@ -3602,6 +3620,14 @@
     }
   },
   "calendar": {
+    "requests": {
+      "title": "Requests from teachers",
+      "cover": "{name} asked for a substitute",
+      "cancelled": "{name} cancelled the lesson",
+      "assign": "Choose a substitute",
+      "seen": "Seen",
+      "failed": "This could not be saved."
+    },
     "resizeLanes": "Drag to change how many lanes it uses",
     "lanesChanged": "{count, plural, one {It will use 1 lane.} other {It will use # lanes.}}",
     "placeHere": "Put a class here",

@@ -1,3 +1,4 @@
+import { coverRequestOf } from './lesson-requests.repository.js';
 import {
   BadRequestException,
   Body,
@@ -36,6 +37,9 @@ const MAX_MARKS = 200;
 interface RegisterResponse extends Register {
   organizationId: string;
   canRecord: boolean;
+  /** POOLSE-198: this teacher may ask for cover, and what is already asked. */
+  canRequestCover: boolean;
+  coverRequest: { note: string | null; requestedBy: string } | null;
   /**
    * Cancelar aula, asked the way `POST /sessions/:id/cancel` asks it — owner,
    * admin, or the instructor teaching it (POOLSE-88 slice 2: the session page is
@@ -106,6 +110,10 @@ export class AttendanceController {
         state !== null &&
         mayCancel(state, management, management || (await isOwnClass(organizationId, id, membershipId))),
       canEndSeries: management,
+      // POOLSE-198: the lesson's teacher, before it ends and while it is on.
+      canRequestCover:
+        mine && hasRole('instructor') && state !== null && !state.ended && register.status !== 'cancelled',
+      coverRequest: await coverRequestOf(organizationId, id),
       feedback: management || mine ? await sessionFeedback(organizationId, id, management ? null : membershipId) : [],
       notices: await sessionNotices(organizationId, id),
     };

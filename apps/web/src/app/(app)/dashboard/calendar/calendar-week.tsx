@@ -177,10 +177,10 @@ export function CalendarWeek({
   const teacherFor = useCallback(
     (booking: GridBooking, compact: boolean): React.ReactNode => {
       const session = controlsFor(booking);
-      if (session?.sessionId === undefined) return undefined;
+      if (session?.sessionId === undefined || !canManage) return undefined;
       return <StandInPicker sessionId={session.sessionId} compact={compact} />;
     },
-    [controlsFor],
+    [controlsFor, canManage],
   );
 
   /**

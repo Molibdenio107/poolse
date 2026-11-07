@@ -242,6 +242,18 @@ export async function pushMessage(
  * the assignment on the session and its audit entry; the stand-in also sees it
  * on their home. Opens the lesson's page.
  */
+/** POOLSE-198: the teacher who asked hears that the office has named somebody. */
+export async function pushCoverAssigned(organizationId: string, sessionId: string, teacherId: string): Promise<number> {
+  const lesson = await withOrg(organizationId, (tx) => lessonIn(tx, sessionId));
+  if (lesson === null) return 0;
+  const english = lesson.locale === 'en';
+  return pushTo(organizationId, [teacherId], {
+    title: english ? 'Your lesson is covered' : 'A sua aula tem substituto',
+    body: `${lesson.turma}, ${lesson.local_date} ${english ? 'at' : 'às'} ${lesson.local_time}.`,
+    url: '/app/aulas',
+  });
+}
+
 export async function pushStandIn(organizationId: string, sessionId: string, standInMembershipId: string): Promise<number> {
   const lesson = await withOrg(organizationId, (tx) => lessonIn(tx, sessionId));
   if (lesson === null) return 0;
@@ -249,6 +261,6 @@ export async function pushStandIn(organizationId: string, sessionId: string, sta
   return pushTo(organizationId, [standInMembershipId], {
     title: words.title,
     body: words.body(lesson.turma, lesson.local_date, lesson.local_time),
-    url: `/dashboard/calendar/sessions/${sessionId}?from=${encodeURIComponent('/app/aulas')}`,
+    url: `/app/aulas/${sessionId}`,
   });
 }

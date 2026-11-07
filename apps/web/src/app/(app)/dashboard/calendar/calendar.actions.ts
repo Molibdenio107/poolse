@@ -248,3 +248,14 @@ export async function restoreSessionAction(
   revalidatePath('/dashboard/calendar');
   return { ok: true };
 }
+
+/** *Visto*: the office has read that a teacher cancelled a lesson — POOLSE-198. */
+export async function lessonRequestSeenAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  try {
+    await apiPost(`/lesson-requests/${String(formData.get('id') ?? '')}/seen`, {});
+  } catch (error) {
+    return describeFailure(error, 'calendar.requests.failed');
+  }
+  revalidateCalendar();
+  return { ok: true };
+}

@@ -302,10 +302,10 @@ test('the register says who may call the lesson off, and the endpoint agrees', a
 
       const his = await attendance.register(fix.nunosSession);
       assert.equal(his.canCancel, false);
-      await expectStatus(() => sessions.cancel(fix.nunosSession, {}), 403);
+      await expectStatus(() => sessions.cancel(fix.nunosSession, { reason: 'Avaria' }), 403);
 
-      await expectStatus(() => sessions.cancel(fix.sandrasSession, { scope: 'future' }), 403);
-      await sessions.cancel(fix.sandrasSession, {});
+      await expectStatus(() => sessions.cancel(fix.sandrasSession, { scope: 'future', reason: 'Avaria' }), 403);
+      await sessions.cancel(fix.sandrasSession, { reason: 'Avaria' });
       // Putting it back stays management's (round 5) — hence no Anular for her.
       await expectStatus(() => sessions.restore(fix.sandrasSession), 403);
     });

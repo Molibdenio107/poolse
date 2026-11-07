@@ -1,3 +1,4 @@
+import { closeCover, tellOfficeCancelled } from './lesson-requests.repository.js';
 import {
   BadRequestException,
   Body,
@@ -49,7 +50,6 @@ import {
   type GenerationResult,
   type Session,
 } from './sessions.repository.js';
-import { requireMySession } from '../tenant/assignment.js';
 import {
   readLessonPlan,
   familyMayReadPlan,
@@ -64,6 +64,7 @@ import {
   deliverNotice,
   lessonMoment,
   moveIsNearIn,
+  pushCoverAssigned,
   pushStandIn,
   recordNoticeIn,
   wasAnnouncedIn,
@@ -448,8 +449,9 @@ export class SessionsCalendarController {
     candidates: Candidate[];
   }> {
     // Security review, 12 October 2026: this answered any member, a guardian
-    // included, and it names a colleague's medical leave.
-    requireRole('owner', 'admin', 'instructor');
+    // included, and it names a colleague's medical leave. The office's since
+    // POOLSE-198: a teacher asks, and the office names who covers.
+    requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
     const found = await candidatesFor(organizationId, id);
     if (found === null) throw new NotFoundException({ message: 'sessionNotFound' });
@@ -470,11 +472,8 @@ export class SessionsCalendarController {
     @Param('id') id: string,
     @Body() body: { membershipId?: unknown },
   ): Promise<{ ok: true }> {
-    requireRole('owner', 'admin', 'instructor');
-    // The row half of the rule the comment above states — 13-10-2026 sweep:
-    // an instructor arranges cover for *their own* lesson, not a colleague's.
-    await requireMySession(id);
-    const { organizationId } = currentTenant();
+    requireRole('owner', 'admin');
+    const { organizationId, membershipId: actor } = currentTenant();
 
     const raw = body?.membershipId;
     const membershipId = typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null;
@@ -492,6 +491,13 @@ export class SessionsCalendarController {
     }
     // POOLSE-90 4b: "you are the stand-in" — push only, on the assignment's own record.
     if (membershipId !== null) void pushStandIn(organizationId, id, membershipId).catch(() => undefined);
+    // POOLSE-198: naming somebody answers the request, and whoever asked is told.
+    if (membershipId !== null) {
+      const asked = await closeCover(organizationId, id, actor, 'assigned');
+      if (asked !== null && asked !== membershipId) {
+        void pushCoverAssigned(organizationId, id, asked).catch(() => undefined);
+      }
+    }
     return { ok: true };
   }
 
@@ -626,6 +632,11 @@ export class SessionsCalendarController {
     if (reason.length > MAX_REASON) {
       throw new BadRequestException(`reason may be at most ${MAX_REASON} characters`);
     }
+    // POOLSE-198: a teacher says why, and it reaches the office.
+    const byTeacher = !hasRole('owner', 'admin');
+    if (byTeacher && reason === '') {
+      throw new BadRequestException({ fields: { reason: 'app.teaching.reasonRequired' } });
+    }
 
     // A lesson that has ended is the office's to cancel, and only unmarked
     // (Rui, 02-11-2026); until it ends, whoever may cancel it, marks or not.
@@ -688,6 +699,8 @@ export class SessionsCalendarController {
       if (!cancelled) {
         throw new NotFoundException('No such class, or it is already cancelled');
       }
+      await closeCover(organizationId, id, membershipId, 'withdrawn');
+      if (byTeacher) await tellOfficeCancelled(organizationId, id, membershipId, reason);
     } catch (error) {
       // Backlog round 3, story 5's last rule, now that attendance exists: a
       // class somebody marked cannot be called off, and the interface explains

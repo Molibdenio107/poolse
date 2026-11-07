@@ -11,6 +11,7 @@ import pg from 'pg';
 import assert from 'node:assert/strict';
 import { ArchiveController } from '../archive/archive.controller.js';
 import { ActivityController } from '../activity/activity.controller.js';
+import { CoverRequestsController, LessonRequestsController } from '../classes/lesson-requests.controller.js';
 import { AppViewController } from '../app-view/app-view.controller.js';
 import { SupportGrantsController } from '../support/support.controller.js';
 import {
@@ -1139,6 +1140,10 @@ test('a view of a person refuses a guardian and a student (403)', async () => {
     await refused('GET app-view/people', 403, () => view.people('family'));
     await refused('POST app-view', 403, () => view.start({ hat: 'family', membershipId: NO_SUCH_ID }));
     await refused('POST app-view/leave', 403, () => view.leave());
+    await refused('POST sessions/:id/cover-request', 403, () => new CoverRequestsController().request(NO_SUCH_ID, {}));
+    await refused('POST sessions/:id/cover-request/withdraw', 403, () => new CoverRequestsController().withdraw(NO_SUCH_ID));
+    await refused('GET lesson-requests', 403, () => new LessonRequestsController().open());
+    await refused('POST lesson-requests/:id/seen', 403, () => new LessonRequestsController().seen(NO_SUCH_ID));
     const staff = new StaffController();
     await refused('PUT staff/:id/login-photo', 403, () => staff.setLoginPhoto(NO_SUCH_ID, Buffer.from('x')));
     await refused('DELETE staff/:id/login-photo', 403, () => staff.removeLoginPhoto(NO_SUCH_ID));

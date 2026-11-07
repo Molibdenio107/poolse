@@ -192,6 +192,21 @@ export async function readAttention(organizationId: string, scope: AttentionScop
       out.sessions[row.session_id] = row.n;
       total += row.n;
     }
+    // POOLSE-198: what teachers have asked of the office, until it is answered.
+    if (scope.families === 'all') {
+      const asked = await withOrg(organizationId, async (tx) =>
+        (
+          await tx.query<{ session_id: string; n: number }>(
+            `SELECT class_session_id AS session_id, count(*)::int AS n
+               FROM lesson_request WHERE closed_at IS NULL GROUP BY 1`,
+          )
+        ).rows,
+      );
+      for (const row of asked) {
+        out.sessions[row.session_id] = (out.sessions[row.session_id] ?? 0) + row.n;
+        total += row.n;
+      }
+    }
     if (total > 0) out.menu['calendar'] = total;
   }
 

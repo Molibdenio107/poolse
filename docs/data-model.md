@@ -3936,6 +3936,8 @@ CHECK), `reason` (required for a request or override, at most 500), `starts_at`,
 - **Grants.** `poolse_app` holds SELECT and INSERT, and UPDATE on `ended_at` and `ended_by`
   only, with no DELETE. `poolse_platform` reads it through a `FOR SELECT` policy.
 
+`lesson_request` (POOLSE-198): `class_session_id`, `kind` (`substitute | cancelled`), `requested_by_membership_id`, `note`, and the closing `closed_at`, `closed_by_membership_id`, `outcome` (`assigned | withdrawn | seen`). One open of each kind per lesson. A record: only the closing columns update, and no DELETE grant.
+
 `app_view` (POOLSE-188): `organization_id`, `viewer_membership_id`, `viewed_membership_id` (composite FKs), `hat` (`app_view_hat`: `family | teaching | maintenance`), `viewer_support_grant_id`, `reason` (required for support, 500 characters), `started_at`, `expires_at` (an hour at most, by CHECK), `ended_at`. One open row per reader, a partial unique index. `app_view_hat_roles()` says which roles a home is. `resolve_memberships` returns the live view on every request (`o_view_*`, `o_viewed_*`). `poolse_app` may only INSERT, SELECT and UPDATE `ended_at`; `poolse_platform` holds no grant and reads the audit log instead. Personal data: who looked at whom, kept as the audit log is.
 
 `membership.support_grant_id` (composite FK) marks a support membership. It always has a login,

@@ -14,9 +14,16 @@ import { PersonAvatar } from '@/components/person-avatar';
 import { SectionPills } from '@/components/section-pills';
 import type { LessonPlan } from '@/app/(app)/dashboard/calendar/lesson-plan.actions';
 import { RegisterForm } from '@/app/(app)/dashboard/calendar/sessions/[sessionId]/register-form';
+import { LessonActions } from './lesson-actions';
 import { TeacherPlan } from './teacher-plan';
 
-type LessonRegister = Register & { organizationId: string; canRecord: boolean };
+type LessonRegister = Register & {
+  organizationId: string;
+  canRecord: boolean;
+  canCancel: boolean;
+  canRequestCover: boolean;
+  coverRequest: { note: string | null } | null;
+};
 
 /**
  * One lesson, on the teacher's phone — POOLSE-197. Who is in it, who said they are
@@ -84,6 +91,16 @@ export default async function TeachingLesson({
         </p>
       )}
 
+      {!cancelled && register.canRecord && (
+        <LessonActions
+          part="cover"
+          sessionId={register.sessionId}
+          request={register.coverRequest}
+          canRequest={register.canRequestCover}
+          canCancel={register.canCancel}
+        />
+      )}
+
       {plan.state === 'ok' && !cancelled && (
         <SectionPills
           label={t('app.teaching.sectionsLabel')}
@@ -126,6 +143,16 @@ export default async function TeachingLesson({
             })}
           </ul>
         </section>
+      )}
+
+      {!showPlan && !cancelled && register.canRecord && (
+        <LessonActions
+          part="cancel"
+          sessionId={register.sessionId}
+          request={register.coverRequest}
+          canRequest={register.canRequestCover}
+          canCancel={register.canCancel}
+        />
       )}
 
       {!showPlan && (register.feedback ?? []).length > 0 && (

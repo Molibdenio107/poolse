@@ -65,6 +65,8 @@ const TENANT_TABLES = [
   'audit_log',
   // POOLSE-188. Names two memberships and a support grant.
   'app_view',
+  // POOLSE-198. Names a lesson and two memberships.
+  'lesson_request',
   // POOLSE-84. A recipient may name a lead or a partner, so it goes before both.
   // Before `message` and `medical_exam`, which it points at: POOLSE-192.
   'medical_exam_schedule',

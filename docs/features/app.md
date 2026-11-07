@@ -109,6 +109,14 @@ has; and *Plano*, the training plan and the Desafio as short text. A parceria ke
 page. `GET /app/teaching?from=&to=` takes the family calendar's window, 31 days at most. Everything
 else in-depth stays on the desktop.
 
+### Cover and cancelling (POOLSE-198)
+
+*Pedir substituição* on a lesson opens a `lesson_request`, one lesson at a time, with an optional
+note, and the teacher may withdraw it. The Owner and Admin see a circle on *Calendário* and a card on
+top of it; naming a stand-in closes the request and tells whoever asked. A teacher no longer picks
+their own stand-in. *Cancelar esta aula* is under *Mais opções*, needs a reason, says the families
+will be told, and tells the office until it presses *Visto*.
+
 ## The instructor home (`/app/aulas`, slice 2)
 
 `GET /app/teaching` (instructors) is the dashboard band's own `readMyWeek`: this week's lessons

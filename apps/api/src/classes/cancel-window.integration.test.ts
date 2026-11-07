@@ -74,7 +74,7 @@ test('a lesson still running cancels, marks and all, for its instructor', async 
 
     await actingAs(tenant, { membershipId: f.instructor, roles: ['instructor'] }, async () => {
       assert.equal((await new AttendanceController().register(running)).canCancel, true);
-      await new SessionsCalendarController().cancel(running, {});
+      await new SessionsCalendarController().cancel(running, { reason: 'Avaria' });
     });
     assert.equal(await statusOf(tenant, running), 'cancelled');
     const [marks] = await tenant.sql<{ n: number }>(
@@ -92,7 +92,7 @@ test('an ended lesson is not the instructor’s to cancel, marked or not', async
 
     await actingAs(tenant, { membershipId: f.instructor, roles: ['instructor'] }, async () => {
       assert.equal((await new AttendanceController().register(ended)).canCancel, false);
-      await expectStatus(() => new SessionsCalendarController().cancel(ended, {}), 403);
+      await expectStatus(() => new SessionsCalendarController().cancel(ended, { reason: 'Avaria' }), 403);
     });
     assert.equal(await statusOf(tenant, ended), 'scheduled');
   });
@@ -126,7 +126,7 @@ test('a future lesson cancels as before, for its instructor and for the office',
     const theirs = await f.lesson('4 days', false);
 
     await actingAs(tenant, { membershipId: f.instructor, roles: ['instructor'] }, () =>
-      new SessionsCalendarController().cancel(mine, {}),
+      new SessionsCalendarController().cancel(mine, { reason: 'Avaria' }),
     );
     await actingAs(tenant, { roles: ['admin'] }, () => new SessionsCalendarController().cancel(theirs, {}));
     assert.equal(await statusOf(tenant, mine), 'cancelled');

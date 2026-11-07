@@ -25,6 +25,7 @@ import {
 } from '@/lib/dates';
 import type { SessionControls } from '../classes/schedule-board';
 import { CalendarWeek } from './calendar-week';
+import { LessonRequests } from './lesson-requests';
 import { CalendarAgenda } from './calendar-agenda';
 import { bookingKey, slotKey } from '@/lib/slot-key';
 import { GenerateSeason } from './calendar-forms';
@@ -474,6 +475,8 @@ export default async function CalendarPage({
         )
       }
     >
+      {/* POOLSE-198: what teachers asked of the office; the API refuses anybody else. */}
+      <LessonRequests />
 
       {noOrganization && (
         <section className="rounded bg-surface p-5 shadow-card">

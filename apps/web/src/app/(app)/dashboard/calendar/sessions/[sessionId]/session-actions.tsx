@@ -80,7 +80,8 @@ export function SessionActions({
       </div>
 
       {/* Who is teaching it. The picker loads its own options and says its own refusals. */}
-      {!cancelled && <StandInPicker sessionId={sessionId} />}
+      {/* The office's since POOLSE-198: a teacher asks on the phone. */}
+      {!cancelled && management && <StandInPicker sessionId={sessionId} />}
 
       {planning && (
         <LessonPlanPanel sessionId={sessionId} onClose={() => setPlanning(false)} className={className} />

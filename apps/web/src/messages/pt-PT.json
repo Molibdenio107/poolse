@@ -261,6 +261,24 @@
       }
     },
     "teaching": {
+      "coverRequest": "Pedir substituição",
+      "coverExplain": "O proprietário ou a administração escolhe quem o substitui nesta aula.",
+      "coverNote": "Nota (opcional)",
+      "coverSend": "Enviar pedido",
+      "coverRequested": "Pedido enviado.",
+      "coverWithdrawn": "Pedido retirado.",
+      "coverWithdraw": "Retirar pedido",
+      "coverWaiting": "Pediu substituição. À espera da resposta do clube.",
+      "coverFailed": "Não foi possível enviar o pedido.",
+      "noteTooLong": "A nota tem mais de 500 caracteres.",
+      "moreOptions": "Mais opções",
+      "cancelReason": "Motivo do cancelamento",
+      "reasonRequired": "Escreva o motivo.",
+      "cancelButton": "Cancelar esta aula",
+      "cancelTitle": "Cancelar esta aula?",
+      "cancelMessage": "As famílias são avisadas e o clube recebe o motivo.",
+      "cancelConfirm": "Cancelar a aula",
+      "cancelled": "Aula cancelada.",
       "sectionsLabel": "Secções da aula",
       "sectionStudents": "Alunos",
       "sectionPlan": "Plano",
@@ -3604,6 +3622,14 @@
     }
   },
   "calendar": {
+    "requests": {
+      "title": "Pedidos dos professores",
+      "cover": "{name} pediu substituição",
+      "cancelled": "{name} cancelou a aula",
+      "assign": "Escolher substituto",
+      "seen": "Visto",
+      "failed": "Não foi possível guardar."
+    },
     "resizeLanes": "Arraste para alterar as pistas ocupadas",
     "lanesChanged": "{count, plural, one {Passa a ocupar 1 pista.} other {Passa a ocupar # pistas.}}",
     "placeHere": "Colocar turma aqui",
