@@ -39,6 +39,8 @@ export interface QualificationRecord {
   createdAt: string;
   /** The scanned certificate, attached once — served at `/files/:id`. */
   documentFileId: string | null;
+  /** Sent by the person and not yet confirmed by the office: it counts for nothing (Rui, 07-11-2026). */
+  pending: boolean;
 }
 
 export interface Standing {
@@ -56,6 +58,8 @@ export interface PersonQualifications {
   standings: Standing[];
   /** Every record, newest first, archived included — the history. */
   history: QualificationRecord[];
+  /** The club's live types, so the person can say which one they are sending. */
+  types: { id: string; name: string }[];
 }
 
 export interface ExpiringRow extends Standing {
@@ -317,9 +321,11 @@ export async function personQualifications(
       archived_at: Date | null;
       created_at: Date;
       document_file_id: string | null;
+      pending: boolean;
     }>(
       `SELECT q.id, t.id AS type_id, t.name AS type_name, q.issuing_body, q.issued_on,
-              q.expires_on, q.archived_at, q.created_at, q.document_file_id
+              q.expires_on, q.archived_at, q.created_at, q.document_file_id,
+              q.confirmed_at IS NULL AS pending
          FROM qualification q
          JOIN qualification_type t ON t.id = q.qualification_type_id
         WHERE q.membership_id = $1
@@ -346,8 +352,83 @@ export async function personQualifications(
         archived: row.archived_at !== null,
         documentFileId: row.document_file_id,
         createdAt: row.created_at.toISOString(),
+        pending: row.pending,
       })),
+      types: (
+        await tx.query<{ id: string; name: string }>(
+          `SELECT id, name FROM qualification_type WHERE archived_at IS NULL ORDER BY lower(name)`,
+        )
+      ).rows,
     };
+  });
+}
+
+/** A certificate file this person did not upload, or one of another purpose. */
+export class NotYourFileError extends Error {}
+
+/**
+ * A qualification the person sends themselves, from the phone (Rui, 07-11-2026).
+ * Unconfirmed until the office says so, so it changes no colour, alert or block.
+ * The scan must be one they uploaded, as a qualification certificate: attaching a
+ * colleague's file to their own record would open it to them.
+ */
+export async function submitOwnQualification(
+  organizationId: string,
+  membershipId: string,
+  input: QualificationInput,
+  fileId: string | null,
+): Promise<string> {
+  return withOrg(organizationId, async (tx) => {
+    const type = await tx.query('SELECT 1 FROM qualification_type WHERE id = $1 AND archived_at IS NULL', [
+      input.typeId,
+    ]);
+    if ((type.rowCount ?? 0) === 0) throw new UnknownReferenceError();
+    if (fileId !== null) {
+      const file = await tx.query(
+        `SELECT 1 FROM stored_file
+          WHERE id = $1 AND purpose = 'qualification_document' AND uploaded_by = $2 AND archived_at IS NULL
+            AND NOT EXISTS (SELECT 1 FROM qualification q WHERE q.document_file_id = stored_file.id)`,
+        [fileId, membershipId],
+      );
+      if ((file.rowCount ?? 0) === 0) throw new NotYourFileError();
+    }
+    const { rows } = await tx.query<{ id: string }>(
+      `INSERT INTO qualification (organization_id, membership_id, qualification_type_id, issuing_body,
+                                  issued_on, expires_on, created_by_membership_id, document_file_id, confirmed_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $2, $7, NULL) RETURNING id`,
+      [organizationId, membershipId, input.typeId, input.issuingBody, input.issuedOn, input.expiresOn, fileId],
+    );
+    await recordAudit(tx, {
+      action: 'qualification.submitted',
+      entityType: 'membership',
+      entityId: membershipId,
+      data: { typeId: input.typeId, expiresOn: input.expiresOn, fileId },
+    });
+    return rows[0]!.id;
+  });
+}
+
+/** The office confirms a record the person sent. Null when there is none waiting. */
+export async function confirmQualification(
+  organizationId: string,
+  actorMembershipId: string | null,
+  qualificationId: string,
+): Promise<string | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ membership_id: string }>(
+      `UPDATE qualification SET confirmed_at = now(), confirmed_by_membership_id = $2
+        WHERE id = $1 AND confirmed_at IS NULL AND archived_at IS NULL
+      RETURNING membership_id`,
+      [qualificationId, actorMembershipId],
+    );
+    if (rows[0] === undefined) return null;
+    await recordAudit(tx, {
+      action: 'qualification.confirmed',
+      entityType: 'qualification',
+      entityId: qualificationId,
+      data: { membershipId: rows[0].membership_id },
+    });
+    return rows[0].membership_id;
   });
 }
 

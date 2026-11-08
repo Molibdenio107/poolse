@@ -125,7 +125,7 @@ function PhotoSide({
   }, [removed]);
 
   return (
-    <div className="flex flex-col items-start gap-2 rounded-sm border border-border p-4">
+    <div className="flex flex-col items-start gap-2 rounded border border-border p-4">
       <span className="text-sm font-medium">{t(`staffIdentity.photo.side.${side}`)}</span>
       {photo === null ? (
         <span className="text-sm text-foreground-muted">{t('staffIdentity.photo.none')}</span>

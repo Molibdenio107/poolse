@@ -40,15 +40,24 @@ import {
 import {
   familyFeedback,
   FeedbackRefusedError,
+  recentTaughtFeedback,
   saveFeedback,
   type FamilyFeedback,
   type LessonFeedback,
+  type TaughtLessonFeedback,
 } from '../feedback/feedback.repository.js';
 import { listMedicalLeave, type CertificateFile } from '../students/medical-leave.repository.js';
 import { agendaWindowAllowed } from '@poolse/rules';
 import { clubToday } from '../common/club-day.js';
 import { readMyWeek, type WeekClass } from '../dashboard/instructor.repository.js';
 import { readMaintenanceHome, type MaintenanceHome } from './maintenance-home.repository.js';
+import {
+  teachingStudentCard,
+  teachingStudents,
+  type TeachingStudent,
+  type TeachingStudentCard,
+} from './teaching-students.repository.js';
+import { readRegistrationSettings } from '../leads/leads.repository.js';
 import {
   appRequestOptions,
   AppRequestRefused,
@@ -473,6 +482,53 @@ export class AppController {
       throw new BadRequestException('No such window');
     }
     return { lessons: await readMyWeek(organizationId, membershipId, { from, to }) };
+  }
+
+  /**
+   * What families said about the reader's last seven lessons (Rui, 07-11-2026).
+   * The lesson's teacher only, as on the lesson's own page; not on the view list,
+   * so a view does not open it.
+   */
+  @Get('teaching/feedback')
+  async teachingFeedback(): Promise<{ lessons: TaughtLessonFeedback[] }> {
+    requireRole('instructor');
+    const { organizationId, membershipId } = currentTenant();
+    return { lessons: await recentTaughtFeedback(organizationId, membershipId) };
+  }
+
+  /**
+   * The teacher's *Alunos* tab (Rui, 07-11-2026): the students of the turmas they
+   * teach. Not on the view list: a view does not open a family's numbers.
+   */
+  @Get('teaching/students')
+  async teachingStudentList(): Promise<{ students: TeachingStudent[] }> {
+    requireRole('instructor');
+    const { organizationId, membershipId } = currentTenant();
+    return { students: await teachingStudents(organizationId, membershipId) };
+  }
+
+  /**
+   * The club's pre-registration address, for a teacher at the pool or a family
+   * inviting friends to show as a QR or send (Rui, 07-11-2026). Public already (it
+   * is on the posters); null while the club has pre-registration closed, so
+   * nothing is offered that would refuse.
+   */
+  @Get('join-link')
+  async joinLink(): Promise<{ slug: string | null }> {
+    requireRole('instructor', 'guardian', 'student');
+    const settings = await readRegistrationSettings(currentTenant().organizationId);
+    return { slug: settings.open ? settings.slug : null };
+  }
+
+  /** One student's card: level, turmas, bests, insurance and who to call. 404 outside their turmas. */
+  @Get('teaching/students/:studentId')
+  async teachingStudent(@Param('studentId') studentId: string): Promise<TeachingStudentCard> {
+    requireRole('instructor');
+    if (!UUID.test(studentId)) throw new NotFoundException('No such student');
+    const { organizationId, membershipId } = currentTenant();
+    const card = await teachingStudentCard(organizationId, membershipId, studentId);
+    if (card === null) throw new NotFoundException('No such student');
+    return card;
   }
 
   /**

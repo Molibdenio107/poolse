@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Plus } from 'lucide-react';
+import { Archive, Plus } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { ConfirmButton } from '@/components/confirm-action';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextField } from '@/components/ui/field';
@@ -129,8 +130,9 @@ function EntryRow({ entry }: { entry: CostEntry }): React.ReactElement {
             confirmLabel={t(recurring ? 'costs.record.stop' : 'costs.record.remove')}
             tone="danger"
             disabled={pending}
-            className="text-sm text-danger hover:underline"
+            className={ARCHIVE_TRIGGER}
           >
+            <Archive aria-hidden className={ARCHIVE_ICON} />
             {t(recurring ? 'costs.record.stop' : 'costs.record.remove')}
           </ConfirmButton>
         </form>

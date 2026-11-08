@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { Archive } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { SelectField, TextField } from '@/components/ui/field';
 import { SportChip } from '@/components/sport-chip';
 import { sportNameKey } from '@/components/sport-icon';
@@ -243,10 +245,11 @@ export function TypesPanel({
                 </button>
                 <button
                   type="button"
-                  className={BUTTON}
+                  className={ARCHIVE_TRIGGER}
                   disabled={pending}
                   onClick={() => setArchiving(type)}
                 >
+                  <Archive aria-hidden className={ARCHIVE_ICON} />
                   {t('qualifications.archive')}
                 </button>
               </span>

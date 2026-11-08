@@ -999,6 +999,8 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
   --note-paper: var(--note-yellow);
   background: rgb(var(--note-paper));
   color: rgb(var(--note-ink));
+  /* A fixed corner: the `rounded-*` tokens turn into pills on a phone. */
+  border-radius: 3px;
   box-shadow:
     0 1px 1px rgb(0 0 0 / 0.08),
     0 8px 14px -8px rgb(0 0 0 / 0.35);

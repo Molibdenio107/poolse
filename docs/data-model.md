@@ -3705,7 +3705,8 @@ delivery retry (rows with an email) never reads one. `message_quota_respected()`
 
 **`staff_note` is the staff board's post-it** (POOLSE-169, 4 November 2026): `author_membership_id`
 (composite FK to `membership`), `body` (1–500 characters), `colour` (`yellow | orange | green | blue`,
-a CHECK — a display choice, not an enum), `archived_at`. Not a `message`: no audience, window or
+a CHECK — a display choice, not an enum; since 07-11-2026 written from the author's role and read live
+from it, `ROLE_PAPER` in `staff-notes.repository.ts`), `archived_at`. Not a `message`: no audience, window or
 recipients. `poolse_app` holds SELECT and INSERT and `UPDATE (archived_at)` only — written once,
 taken down and put back, never edited. `tenant-isolation.sql` test 28 asserts its key and its policy.
 
@@ -3747,6 +3748,8 @@ qualification                                               -- on the person (me
   id, organization_id, membership_id, qualification_type_id
   issuing_body, issued_on date, expires_on date             -- null expiry = never expires
   created_by_membership_id, archived_at ...                 -- archived, never edited (column grant)
+  confirmed_at timestamptz default now(), confirmed_by_membership_id   -- 07-11-2026: null while a
+                                                            -- record the person sent waits for the office
 
 qualification_alert                                         -- one per (record, threshold), no DELETE
   id, organization_id, qualification_id, threshold ('amber'|'red'),
@@ -3759,6 +3762,9 @@ trigger qualification_assignment_allowed on class_group, class_schedule (instruc
 trigger organization_qualification_types (AFTER INSERT, business) -> seed_qualification_types()
 ```
 
+**A record the person sent is unconfirmed** (`confirmed_at` null, migration
+`1794654200000_qualification-confirmed`): `qualification_current` skips it, so it reaches no status, alert
+or block until the office confirms; `confirmed_at`/`confirmed_by_membership_id` are the only new column grant.
 **The status is the function and nothing else**; the view, the list, the dashboard, the alert job
 and the block all read it. **The block is a BEFORE trigger on a new instructor value only**, for a
 type with `blocks_assignment`, raising `qualification_blocked|<type>|<expired on>` in DETAIL.

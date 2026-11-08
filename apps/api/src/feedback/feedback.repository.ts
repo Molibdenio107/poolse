@@ -320,6 +320,55 @@ export async function sessionFeedback(
   });
 }
 
+export interface TaughtLessonFeedback {
+  sessionId: string;
+  className: string | null;
+  lessonDate: string;
+  localTime: string;
+  feedback: LessonFeedback[];
+}
+
+/**
+ * What families said about the teacher's last seven lessons, for the phone's
+ * *Início* (Rui, 07-11-2026). Lessons this person taught (`resolved_instructor_id`,
+ * so a stand-in's night is theirs), not cancelled, already started, newest first.
+ * A lesson nobody wrote about is still listed, so the teacher sees it was asked.
+ */
+export async function recentTaughtFeedback(
+  organizationId: string,
+  instructorMembershipId: string,
+): Promise<TaughtLessonFeedback[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows: lessons } = await tx.query<Omit<TaughtLessonFeedback, 'feedback'>>(
+      `SELECT cs.id AS "sessionId", cg.name AS "className",
+              to_char(cs.starts_at AT TIME ZONE ${TZ}, 'YYYY-MM-DD') AS "lessonDate",
+              to_char(cs.starts_at AT TIME ZONE ${TZ}, 'HH24:MI') AS "localTime"
+         FROM class_session cs
+         JOIN class_group cg ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
+         LEFT JOIN pool p ON p.id = cs.pool_id AND p.organization_id = cs.organization_id
+         LEFT JOIN facility f ON f.id = coalesce(p.facility_id, cg.facility_id) AND f.organization_id = cs.organization_id
+        WHERE cs.resolved_instructor_id = $1
+          AND cs.status <> 'cancelled'
+          AND cs.starts_at <= now()
+        ORDER BY cs.starts_at DESC
+        LIMIT 7`,
+      [instructorMembershipId],
+    );
+    if (lessons.length === 0) return [];
+    const { rows } = await tx.query<LessonFeedback>(
+      `SELECT ${FEEDBACK_COLUMNS} ${FROM_FEEDBACK}
+        WHERE fb.class_session_id = ANY($1::uuid[]) AND fb.archived_at IS NULL
+          AND cs.resolved_instructor_id = $2
+        ORDER BY ${displayName('s')}, fb.id`,
+      [lessons.map((one) => one.sessionId), instructorMembershipId],
+    );
+    return lessons.map((lesson) => ({
+      ...lesson,
+      feedback: rows.filter((one) => one.sessionId === lesson.sessionId),
+    }));
+  });
+}
+
 /** One student's feedback, newest lesson first — the record's list, under the same rule. */
 export async function studentFeedback(
   organizationId: string,

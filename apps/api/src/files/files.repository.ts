@@ -68,7 +68,10 @@ export const RULES: Record<FilePurpose, { write: readonly MemberRole[] | null; r
   // Staff may read the signed contract (Rui, 23-10-2026, POOLSE-105): a coach
   // needs the paper the school signed; the typed terms stay the office's.
   agreement_document: { write: OFFICE, read: STAFF },
-  qualification_document: { write: OFFICE, read: OFFICE },
+  // A person sends their own certificate from the phone (Rui, 07-11-2026); the
+  // route that attaches it checks it is theirs, and reading stays the office's
+  // and the holder's (`own_certificate`).
+  qualification_document: { write: STAFF, read: OFFICE },
   // Every member since 15 October 2026 (Rui): the Instalações list is
   // everybody's, families included, and the picture of the place is part of
   // the card. A tank's photographs sit on its page, which is staff only.

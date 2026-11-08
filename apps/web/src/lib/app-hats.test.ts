@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TABS, appHome, familyOnly, hatsOf, homeChoice, rememberedHome, tabFor } from './app-hats.ts';
+import { TABS, appHome, familyOnly, hatsOf, homeChoice, landsInTeaching, phoneBrowser, rememberedHome, tabFor } from './app-hats.ts';
 
 /**
  * Who lands where in app mode — POOLSE-90, QA 1 and 2. The router, the switcher
@@ -38,6 +38,28 @@ test('an instructor lands on their lessons, maintenance on the to-do list (slice
   assert.equal(appHome(['maintenance']), '/app/manutencao');
 });
 
+test('the server tells a phone from a computer or a tablet', () => {
+  const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+  const android = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36';
+  const tablet = 'Mozilla/5.0 (Linux; Android 14; SM-X710) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
+  const desktop = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
+  assert.equal(phoneBrowser(iphone, null), true);
+  assert.equal(phoneBrowser(android, '?1'), true);
+  assert.equal(phoneBrowser(desktop, '?1'), true);
+  assert.equal(phoneBrowser(tablet, '?0'), false);
+  assert.equal(phoneBrowser(desktop, '?0'), false);
+  assert.equal(phoneBrowser(null, null), false);
+});
+
+test('a teacher who does not run the club arrives in their app on a phone', () => {
+  assert.equal(landsInTeaching(['instructor']), true);
+  assert.equal(landsInTeaching(['instructor', 'guardian']), true);
+  assert.equal(landsInTeaching(['owner', 'instructor']), false);
+  assert.equal(landsInTeaching(['admin', 'instructor']), false);
+  assert.equal(landsInTeaching(['maintenance']), false);
+  assert.equal(landsInTeaching(['guardian']), false);
+});
+
 test('a family and nothing else is family-only', () => {
   assert.equal(familyOnly(['guardian']), true);
   assert.equal(familyOnly(['guardian', 'student']), true);
@@ -67,19 +89,22 @@ test('Hoje and Semana are one page; Perfil wears the home it was opened from', (
   assert.deepEqual(tabFor('/app/aulas/calendario', q(), ['teaching']), { hat: 'teaching', index: 1 });
   assert.deepEqual(tabFor('/app/aulas/abc', q(), ['teaching']), { hat: 'teaching', index: 1 });
   assert.deepEqual(tabFor('/app/perfil', q('home=family'), ['teaching', 'family']), { hat: 'family', index: 3 });
-  assert.deepEqual(tabFor('/app/perfil', q(), ['teaching', 'family']), { hat: 'teaching', index: 2 });
+  assert.deepEqual(tabFor('/app/perfil', q(), ['teaching', 'family']), { hat: 'teaching', index: 3 });
+  // Alunos (Rui, 07-11-2026): the list and a student's card.
+  assert.deepEqual(tabFor('/app/alunos', q(), ['teaching']), { hat: 'teaching', index: 2 });
+  assert.deepEqual(tabFor('/app/alunos/abc', q(), ['teaching']), { hat: 'teaching', index: 2 });
   // POOLSE-181: maintenance has its own bar, and Perfil wears it.
   assert.deepEqual(tabFor('/app/perfil', q(), ['maintenance']), { hat: 'maintenance', index: 2 });
   assert.deepEqual(tabFor('/app/perfil', q('home=maintenance'), ['teaching', 'maintenance']), { hat: 'maintenance', index: 2 });
   assert.deepEqual(tabFor('/app/manutencao', q(), ['maintenance']), { hat: 'maintenance', index: 0 });
   assert.deepEqual(tabFor('/app/manutencao/registar', q(), ['maintenance']), { hat: 'maintenance', index: 1 });
   // A home the reader does not have is ignored, never drawn.
-  assert.deepEqual(tabFor('/app/perfil', q('home=family'), ['teaching']), { hat: 'teaching', index: 2 });
+  assert.deepEqual(tabFor('/app/perfil', q('home=family'), ['teaching']), { hat: 'teaching', index: 3 });
 });
 
-test('the family has four tabs and the instructor three, Perfil last (Rui, 31-10-2026)', () => {
+test('the family and the instructor have four tabs each, Perfil last (Rui, 31-10 and 07-11-2026)', () => {
   assert.equal(TABS.family.length, 4);
-  assert.equal(TABS.teaching.length, 3);
+  assert.equal(TABS.teaching.length, 4);
   assert.equal(TABS.family.at(-1)?.labelKey, 'app.tabs.perfil');
   assert.equal(TABS.teaching.at(-1)?.labelKey, 'app.tabs.perfil');
   assert.deepEqual(TABS.maintenance.map((tab) => tab.glyph), ['square', 'triangle', 'diamond']);

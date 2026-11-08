@@ -301,6 +301,12 @@ export default async function StaffMemberPage({
               grantable={viewer.grantableRoles.filter(
                 (role) => viewer.canTransferOwnership || !['admin', 'instructor', 'maintenance'].includes(role),
               )}
+              removable={
+                viewer.canTransferOwnership
+                  ? [...viewer.grantableRoles, 'student', 'guardian']
+                  : viewer.grantableRoles.filter((role) => !['admin', 'instructor', 'maintenance'].includes(role))
+              }
+              canArchive={viewer.canTransferOwnership && !record.roles.includes('owner')}
             />
           ),
         },

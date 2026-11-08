@@ -21,6 +21,8 @@ import {
 } from './classes.actions';
 import { Dialog } from '@/components/ui/dialog';
 import { ConfirmButton } from '@/components/confirm-action';
+import { Archive } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 
 const INITIAL: FormState = { ok: false };
 
@@ -639,8 +641,9 @@ export function ArchiveClassButton({
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger bg-surface shadow-card"
+        className={ARCHIVE_TRIGGER}
       >
+        <Archive aria-hidden className={ARCHIVE_ICON} />
         {t('classes.archive')}
       </button>
 

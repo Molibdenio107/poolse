@@ -12,6 +12,8 @@ import { CommandPalette } from '@/components/command-palette';
 import { readAttention } from '@/lib/attention';
 import { readShell } from '@/lib/shell';
 import { SuspendedNotice } from './suspended-notice';
+import { PhoneLanding } from './phone-landing';
+import { landsInTeaching } from '@/lib/app-hats';
 import { ClubSupportStrip, SupportEndedNotice, SupportSessionBanner } from './support-strip';
 
 /**
@@ -203,6 +205,7 @@ export default async function DashboardLayout({
   return (
     // POOLSE-88: clear of a landscape phone's rounded corners and notch.
     <div className="flex min-h-dvh flex-col pl-safe-left pr-safe-right">
+      {landsInTeaching(roles) && <PhoneLanding />}
       {/*
         The handoff's shell — POOLSE-139: the top bar spans the window and the
         sidebar starts beneath it. Still sticky at the top, still `h-app-bar`,

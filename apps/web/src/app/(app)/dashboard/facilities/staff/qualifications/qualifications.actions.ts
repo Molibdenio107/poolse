@@ -108,6 +108,22 @@ export async function dropCertificateAction(_previous: CertificateState, formDat
   return { ...filed, toastKey: 'qualifications.certificate.read', draft: read.draft };
 }
 
+/** The office confirms a qualification the person sent from the phone (Rui, 07-11-2026). */
+export async function confirmQualificationAction(
+  organizationId: string,
+  membershipId: string,
+  qualificationId: string,
+): Promise<FormState> {
+  try {
+    await apiPost(`/qualifications/${qualificationId}/confirm`, {}, { organizationId });
+  } catch (error) {
+    return describeFailure(error, 'qualifications.error.saveFailed');
+  }
+  revalidatePath(`/dashboard/facilities/staff/${membershipId}`);
+  revalidatePath(LIST);
+  return { ok: true };
+}
+
 export async function archiveQualificationAction(
   organizationId: string,
   membershipId: string,

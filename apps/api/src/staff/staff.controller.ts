@@ -65,6 +65,7 @@ import { MAX_FILE_BYTES, sniffType } from '../files/storage.js';
 import { invitationExpiry, issueToken, normaliseEmail } from '../invitations/invitations.service.js';
 import { deliver } from '../invitations/invitations.controller.js';
 import {
+  archiveStaffAccount,
   cancelReinvite,
   findStaff,
   reinvite,
@@ -552,6 +553,19 @@ export class StaffController {
     const delivered = await deliver(organizationId, id, email, staff.roles, token, expiresAt);
 
     return { reinvited: true, delivered };
+  }
+
+  /** A staff login stops here (Rui, 07-11-2026): the Owner's, and history stays. */
+  @Post(':membershipId/archive')
+  async archive(@Param('membershipId', ParseUUIDPipe) membershipId: string): Promise<{ archived: true }> {
+    requireRole('owner');
+    const outcome = await archiveStaffAccount(currentTenant().organizationId, membershipId);
+    if (outcome.state === 'not_found') throw new NotFoundException('No such staff member');
+    if (outcome.state === 'refused') {
+      const { state: _state, ...refusal } = outcome;
+      throw new ConflictException({ ...refusal, message: 'This account cannot be archived yet' });
+    }
+    return { archived: true };
   }
 
   @Post(':membershipId/reinvite/cancel')

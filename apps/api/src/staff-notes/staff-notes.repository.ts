@@ -15,12 +15,34 @@ export type NoteColour = (typeof NOTE_COLOURS)[number];
 /** The most the board draws: a wall, not an archive. */
 export const BOARD_LIMIT = 24;
 
+/**
+ * A note's paper is its author's role (Rui, 07-11-2026), the Owner included, so a
+ * glance says who wrote it; the byline names the role too, so colour never says it alone.
+ */
+export type NoteAuthorRole = 'owner' | 'admin' | 'instructor' | 'maintenance';
+export const ROLE_PAPER: Record<NoteAuthorRole, NoteColour> = {
+  owner: 'blue',
+  admin: 'green',
+  instructor: 'yellow',
+  maintenance: 'orange',
+};
+
+/** The author's most senior live staff role, or null once they hold none. */
+const AUTHOR_ROLE = (membership: string): string => `(
+  SELECT CASE WHEN bool_or(r.role = 'owner') THEN 'owner'
+              WHEN bool_or(r.role = 'admin') THEN 'admin'
+              WHEN bool_or(r.role = 'instructor') THEN 'instructor'
+              WHEN bool_or(r.role = 'maintenance') THEN 'maintenance' END
+    FROM membership_role r
+   WHERE r.membership_id = ${membership} AND r.archived_at IS NULL)`;
+
 export interface StaffNote {
   id: string;
   body: string;
   colour: NoteColour;
   createdAt: string;
   authorName: string | null;
+  authorRole: NoteAuthorRole | null;
   /** Whether this reader may take it down: their own, or the office's any. */
   canRemove: boolean;
 }
@@ -38,10 +60,12 @@ export async function listStaffNotes(
       colour: NoteColour;
       created_at: Date;
       author_name: string | null;
+      author_role: NoteAuthorRole | null;
       mine: boolean;
     }>(
       `SELECT n.id, n.body, n.colour, n.created_at,
               person_name(n.author_membership_id) AS author_name,
+              ${AUTHOR_ROLE('n.author_membership_id')} AS author_role,
               n.author_membership_id = $1 AS mine
          FROM staff_note n
         WHERE n.archived_at IS NULL
@@ -52,9 +76,11 @@ export async function listStaffNotes(
     return rows.map((row) => ({
       id: row.id,
       body: row.body,
-      colour: row.colour,
+      // Read live: an author who changes role changes paper. Somebody who left keeps theirs.
+      colour: row.author_role === null ? row.colour : ROLE_PAPER[row.author_role],
       createdAt: row.created_at.toISOString(),
       authorName: row.author_name,
+      authorRole: row.author_role,
       canRemove: office || row.mine,
     }));
   });
@@ -64,9 +90,13 @@ export async function pinStaffNote(
   organizationId: string,
   authorMembershipId: string,
   body: string,
-  colour: NoteColour,
 ): Promise<{ id: string }> {
   return withOrg(organizationId, async (tx) => {
+    // The paper is the author's role, not a choice (Rui, 07-11-2026).
+    const role = (
+      await tx.query<{ role: NoteAuthorRole | null }>(`SELECT ${AUTHOR_ROLE('$1::uuid')} AS role`, [authorMembershipId])
+    ).rows[0]?.role;
+    const colour: NoteColour = role === null || role === undefined ? 'yellow' : ROLE_PAPER[role];
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO staff_note (organization_id, author_membership_id, body, colour)
        VALUES ($1, $2, $3, $4) RETURNING id`,

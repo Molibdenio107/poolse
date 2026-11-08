@@ -816,6 +816,7 @@ test('lesson feedback: staff routes refuse families (403), a stranger and staff 
 test('Vou / Não vou and the instructor home: families only write their own, staff only read — POOLSE-90 slice 2', async () => {
   await asEach(async () => {
     await refused('GET app/teaching as a family', 403, () => new AppController().teaching());
+    await refused('GET app/teaching/feedback as a family', 403, () => new AppController().teachingFeedback());
   });
   await as(fixture.instructorId, ['instructor'], async () => {
     await refused('PUT sessions/:id/notices/:studentId as staff', 403, () =>
@@ -824,6 +825,7 @@ test('Vou / Não vou and the instructor home: families only write their own, sta
   });
   await as(fixture.maintenanceId, ['maintenance'], async () => {
     await refused('GET app/teaching as maintenance', 403, () => new AppController().teaching());
+    await refused('GET app/teaching/feedback as maintenance', 403, () => new AppController().teachingFeedback());
   });
   await as(fixture.instructorId, ['instructor'], async () => {
     await refused('GET app/maintenance as an instructor', 403, () => new AppController().maintenance());
@@ -1555,6 +1557,9 @@ test("POOLSE-157 rule 1: Funções and Acesso are the office's — a worker cann
       );
       await refused(`POST staff/:id/reinvite/cancel as ${who.label}`, 403, () =>
         new StaffController().cancel(fixture.awayInstructorId),
+      );
+      await refused(`POST staff/:id/archive as ${who.label}`, 403, () =>
+        new StaffController().archive(fixture.awayInstructorId),
       );
     });
   }

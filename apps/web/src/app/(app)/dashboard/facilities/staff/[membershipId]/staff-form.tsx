@@ -3,12 +3,14 @@
 import { useRef, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import { Lock, Mail } from 'lucide-react';
+import { Archive, Lock, Mail } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import type { StaffRecord } from '@/lib/api';
 import { TextField, TextAreaField, useFocusFirstError } from '@/components/ui/field';
 import { RoleBadge } from '@/components/role-badge';
 import type { FormState } from '../../../actions';
 import {
+  archiveAccountAction,
   cancelReinviteAction,
   reinviteAction,
   saveStaffAction,
@@ -172,13 +174,20 @@ export function RoleEditor({
   organizationId,
   staff,
   grantable,
+  removable,
+  canArchive,
 }: {
   organizationId: string;
   staff: StaffRecord;
   grantable: string[];
+  /** Wider than `grantable` for the Owner: a student or family role from the past. */
+  removable: string[];
+  /** The Owner, on anybody but themselves. */
+  canArchive: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(setRoleAction, INITIAL);
+  const [, archive, archiving] = useSavedAction(archiveAccountAction, INITIAL);
   const who = staff.shortName ?? staff.email ?? '';
 
   return (
@@ -192,7 +201,7 @@ export function RoleEditor({
           <p className="text-sm text-foreground-muted">{t('staff.noRoles')}</p>
         ) : (
           staff.roles.map((role) => {
-            const mine = grantable.includes(role);
+            const mine = removable.includes(role);
             const says = mine
               ? t('staff.removeRole', { role: t(`roles.${role}`) })
               : t('staff.roleNotYours');
@@ -241,7 +250,7 @@ export function RoleEditor({
         fire. Shown once for the row rather than once per chip: the sentence is
         the same for every one of them.
       */}
-      {staff.roles.some((role) => !grantable.includes(role)) && (
+      {staff.roles.some((role) => !removable.includes(role)) && (
         <p className="text-sm text-foreground-muted">{t('staff.roleNotYours')}</p>
       )}
 
@@ -269,6 +278,24 @@ export function RoleEditor({
           ))}
       </div>
 
+      {canArchive && (
+        <form action={archive} className="flex flex-col items-start gap-2 border-t border-border pt-3">
+          <input type="hidden" name="organizationId" value={organizationId} />
+          <input type="hidden" name="membershipId" value={staff.membershipId} />
+          <p className="text-sm text-foreground-muted">{t('staff.archiveHint')}</p>
+          <ConfirmButton
+            title={t('confirm.equipa.archiveAccountTitle', { name: who })}
+            message={t('confirm.equipa.archiveAccountMessage', { name: who })}
+            confirmLabel={t('staff.archiveAccount')}
+            tone="danger"
+            disabled={archiving}
+            className={ARCHIVE_TRIGGER}
+          >
+            <Archive aria-hidden className={ARCHIVE_ICON} />
+            {t('staff.archiveAccount')}
+          </ConfirmButton>
+        </form>
+      )}
     </section>
   );
 }

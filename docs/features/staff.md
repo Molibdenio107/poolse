@@ -253,6 +253,14 @@ on the server, before paging, to records with no certificate; *em falta* rows ar
 
 ## Who writes what on a staff record
 
+**Past roles and leaving.** On *Funções* the Owner removes a past *Aluno* or *Encarregado* role; an Admin does not remove *Aluno* from staff. Staff do not become students on the same login: adding *Aluno* to staff, or removing the last staff role from somebody who is a student, is refused with `new_account_needed`. *Arquivar conta*, Owner only, `POST /staff/:id/archive`: the login stops at this club, its roles and open invitations close, and lessons, registers and pay stay. Refused for the Owner and support, and while they have a turma, a coming lesson or children they answer for, saying how many. A student record on the login stays, keeps the name and contacts, and loses the link, so it can be invited again. Not in the bin: coming back is an invitation.
+
 POOLSE-196. The Owner writes everything. An Admin reads the NIF, NISS, ID document, contract, notes and staff roles of somebody else, and writes phone, address, sports and family roles. The person writes their own identity. The Owner may correct the name, date of birth and photo of somebody who signs in; each changes on their account, in every club. The email stays locked.
 
 A student with a login becomes staff on their record: the invitation refuses and links there. Archive the student record before removing the Aluno role, or the removal is refused.
+
+**Qualifications a person sends (07-11-2026).** An instructor or maintenance member may
+`POST /staff/:ownId/qualifications` for themselves, with an optional `fileId` that must be a
+`qualification_document` they uploaded and nobody's record holds. It is filed with `confirmed_at` null,
+shown as *Por confirmar*, and counts for nothing until an Owner or Admin presses *Confirmar*
+(`POST /qualifications/:id/confirm`, audited `qualification.confirmed`). Anybody else's record is 403.

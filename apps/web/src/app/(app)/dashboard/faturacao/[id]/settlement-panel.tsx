@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Plus, Trash2 } from 'lucide-react';
+import { Archive, Plus } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { useSavedAction } from '@/lib/saved';
 import { Dialog } from '@/components/ui/dialog';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, TextAreaField, TextField, useSeeded } from '@/components/ui/field';
@@ -113,9 +114,9 @@ export function SettlementPanel({
                   type="button"
                   onClick={() => setRemoving(payment.id)}
                   aria-label={t('invoices.removePayment')}
-                  className={BUTTON_QUIET}
+                  className={`${ARCHIVE_TRIGGER} w-control`}
                 >
-                  <Trash2 aria-hidden className="size-3.5" />
+                  <Archive aria-hidden className={ARCHIVE_ICON} />
                 </button>
               </li>
             ))}

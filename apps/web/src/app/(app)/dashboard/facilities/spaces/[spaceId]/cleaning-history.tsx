@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Trash2 } from 'lucide-react';
+import { Archive } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import type { Cleaning } from '@/lib/api';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { Dialog } from '@/components/ui/dialog';
@@ -23,11 +24,6 @@ import { useToast } from '@/components/ui/toast';
  * bites hardest, but a cleaning at 23:40 on the 5th must not read as the 6th
  * either.
  */
-
-const BUTTON =
-  'inline-flex items-center gap-1 rounded p-1 text-foreground-muted transition-colors ' +
-  'hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ' +
-  'focus-visible:outline-primary';
 
 export function CleaningHistory({
   spaceId,
@@ -87,10 +83,10 @@ export function CleaningHistory({
                 <button
                   type="button"
                   onClick={() => setRemoving(cleaning)}
-                  className={BUTTON}
+                  className={`${ARCHIVE_TRIGGER} w-control`}
                   aria-label={t('spaces.deleteCleaning')}
                 >
-                  <Trash2 className="size-4" aria-hidden="true" />
+                  <Archive aria-hidden className={ARCHIVE_ICON} />
                 </button>
               )}
             </li>

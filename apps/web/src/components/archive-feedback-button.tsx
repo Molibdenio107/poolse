@@ -4,6 +4,8 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useSavedAction } from '@/lib/saved';
 import { ConfirmButton } from '@/components/confirm-action';
+import { Archive } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import type { FormState } from '@/app/(app)/dashboard/actions';
 import { archiveFeedbackAction } from '@/app/(app)/dashboard/feedback.actions';
 
@@ -36,8 +38,9 @@ export function ArchiveFeedbackButton({
         tone="danger"
         disabled={pending}
         ariaLabel={label}
-        className="inline-flex h-control items-center justify-center rounded-sm px-4 text-control text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60 bg-surface shadow-card"
+        className={ARCHIVE_TRIGGER}
       >
+        <Archive aria-hidden className={ARCHIVE_ICON} />
         {t('feedback.archive')}
       </ConfirmButton>
     </form>

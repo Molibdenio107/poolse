@@ -896,7 +896,7 @@ const STUDENT_TURMAS = `
  * today, there were seguro lines but none covers today, or there never was one.
  * "Today" is the club's, as everywhere.
  */
-const INSURANCE_STATE = `
+export const INSURANCE_STATE = `
   (CASE WHEN EXISTS (SELECT 1 FROM student_fee sf
                       WHERE sf.student_id = s.id AND sf.organization_id = s.organization_id
                         AND sf.archived_at IS NULL AND sf.kind = 'seguro'
@@ -2849,6 +2849,17 @@ export async function holdsStaffRole(organizationId: string, membershipId: strin
   });
 }
 
+/** The live roles one person holds. */
+export async function rolesOf(organizationId: string, membershipId: string): Promise<string[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ role: string }>(
+      `SELECT role::text AS role FROM membership_role WHERE membership_id = $1 AND archived_at IS NULL`,
+      [membershipId],
+    );
+    return rows.map((row) => row.role);
+  });
+}
+
 export async function grantRole(
   organizationId: string,
   membershipId: string,
@@ -3028,5 +3039,80 @@ export async function listTurmaOptions(
       [sport, within === null ? null : [...within]],
     );
     return rows;
+  });
+}
+
+export interface LessonContactPerson {
+  kind: 'guardian' | 'emergency' | 'self';
+  name: string;
+  relationship: string | null;
+  primary: boolean;
+  phone: string;
+}
+
+export interface LessonContact {
+  insurance: 'insured' | 'lapsed' | 'never';
+  people: LessonContactPerson[];
+}
+
+/**
+ * Who to call about one student, for the teacher at the pool (Rui, 07-11-2026).
+ * Names, relationships, phones and the insurance's state, and nothing else from
+ * the record. Each read is on the record: these are a family's numbers.
+ */
+export async function lessonContact(organizationId: string, studentId: string): Promise<LessonContact | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      insurance: LessonContact['insurance'];
+      own_phone: string | null;
+      guardians: { name: string; relationship: string | null; primary: boolean; phone: string | null }[];
+      emergency_name: string | null;
+      emergency_phone: string | null;
+      emergency_relationship: string | null;
+    }>(
+      `SELECT ${INSURANCE_STATE} AS insurance,
+              s.contact_phone AS own_phone,
+              (SELECT coalesce(jsonb_agg(jsonb_build_object(
+                        'name', ${personName('gl.guardian_membership_id')},
+                        'relationship', gl.relationship,
+                        'primary', gl.is_primary,
+                        'phone', person_phone(gl.guardian_membership_id))
+                        ORDER BY gl.is_primary DESC), '[]'::jsonb)
+                 FROM guardian_link gl
+                WHERE gl.student_id = s.id AND gl.organization_id = s.organization_id
+                  AND gl.archived_at IS NULL) AS guardians,
+              CASE WHEN s.emergency_contact_membership_id IS NOT NULL
+                   THEN ${personName('s.emergency_contact_membership_id')}
+                   ELSE s.emergency_contact_name END AS emergency_name,
+              CASE WHEN s.emergency_contact_membership_id IS NOT NULL
+                   THEN person_phone(s.emergency_contact_membership_id)
+                   ELSE s.emergency_contact_phone END AS emergency_phone,
+              s.emergency_contact_relationship AS emergency_relationship
+         FROM student_person s
+        WHERE s.id = $1 AND s.archived_at IS NULL`,
+      [studentId],
+    );
+    const row = rows[0];
+    if (row === undefined) return null;
+
+    const people: LessonContactPerson[] = [];
+    for (const guardian of row.guardians) {
+      if (guardian.phone !== null) people.push({ ...guardian, kind: 'guardian', phone: guardian.phone });
+    }
+    if (row.emergency_phone !== null && !people.some((one) => one.phone === row.emergency_phone)) {
+      people.push({
+        kind: 'emergency',
+        name: row.emergency_name ?? '',
+        relationship: row.emergency_relationship,
+        primary: false,
+        phone: row.emergency_phone,
+      });
+    }
+    if (row.own_phone !== null && !people.some((one) => one.phone === row.own_phone)) {
+      people.push({ kind: 'self', name: '', relationship: null, primary: false, phone: row.own_phone });
+    }
+
+    await recordAudit(tx, { action: 'student.contact_read', entityType: 'student', entityId: studentId });
+    return { insurance: row.insurance, people };
   });
 }

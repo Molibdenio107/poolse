@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Archive } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { Dialog } from '@/components/ui/dialog';
 import { useSavedAction } from '@/lib/saved';
 import type { FormState } from '../../actions';
@@ -31,8 +33,9 @@ export function ArchiveMeetButton({
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger bg-surface shadow-card"
+        className={ARCHIVE_TRIGGER}
       >
+        <Archive aria-hidden className={ARCHIVE_ICON} />
         {t('meets.archive')}
       </button>
       <Dialog

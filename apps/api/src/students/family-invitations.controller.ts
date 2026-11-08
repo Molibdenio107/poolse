@@ -79,6 +79,44 @@ async function requireMayInviteFor(studentId: string): Promise<void> {
   }
 }
 
+/**
+ * Everybody on a student's record who can have the app and has not been asked:
+ * each guardian, or the adult student, with an address and no login. Sent by
+ * email through the one invitation path (Rui, 07-11-2026): accepting a request
+ * into a turma ends with the family invited, without a second trip to the record.
+ * Returns the addresses written to; a failure to send is the delivery retry's.
+ */
+export async function inviteRecordByEmail(
+  organizationId: string,
+  invitedByMembershipId: string,
+  studentId: string,
+): Promise<string[]> {
+  const found = await listInvitees(organizationId, studentId);
+  if (found === null) return [];
+  const sent: string[] = [];
+  for (const invitee of found.invitees) {
+    if (invitee.state !== 'none' || invitee.email === null) continue;
+    const { token, tokenHash } = issueToken();
+    const expiresAt = invitationExpiry();
+    const outcome = await withOrg(organizationId, (tx) =>
+      createFamilyInvitationIn(tx, {
+        organizationId,
+        invitedByMembershipId,
+        studentId,
+        membershipId: invitee.membershipId,
+        channel: 'email',
+        email: null,
+        tokenHash,
+        expiresAt,
+      }),
+    );
+    if (outcome.kind !== 'created' || outcome.email === null) continue;
+    await deliver(organizationId, outcome.invitationId, outcome.email, outcome.roles, token, expiresAt);
+    sent.push(outcome.email);
+  }
+  return sent;
+}
+
 @CoreRoute()
 @Controller('students/:studentId/invitations')
 export class StudentInvitationsController {

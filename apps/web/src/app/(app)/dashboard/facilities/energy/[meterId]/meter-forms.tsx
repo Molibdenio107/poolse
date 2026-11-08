@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Check, Trash2 } from 'lucide-react';
+import { Archive, Check } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { useSavedAction } from '@/lib/saved';
 import type { EnergyMeter } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
@@ -133,9 +134,9 @@ export function RemoveReading({
         tone="danger"
         disabled={pending}
         ariaLabel={t('energy.removeReading')}
-        className="text-foreground-muted transition-colors hover:text-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className={`${ARCHIVE_TRIGGER} w-control`}
       >
-        <Trash2 className="size-4" aria-hidden="true" />
+        <Archive aria-hidden className={ARCHIVE_ICON} />
       </ConfirmButton>
     </form>
   );
@@ -234,8 +235,8 @@ export function MeterAdmin({
           <button type="submit" disabled={pending} className={PRIMARY}>
             {t('common.save')}
           </button>
-          <button type="button" onClick={() => setConfirming(true)} className={BUTTON}>
-            <Trash2 className="size-4" aria-hidden="true" />
+          <button type="button" onClick={() => setConfirming(true)} className={ARCHIVE_TRIGGER}>
+            <Archive aria-hidden className={ARCHIVE_ICON} />
             {t('energy.retire')}
           </button>
         </div>

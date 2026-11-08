@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus, Trash2, Users } from 'lucide-react';
+import { Archive, Plus, Users } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { useSavedAction } from '@/lib/saved';
 import type { PartnerGroup, StudentLevel } from '@/lib/api';
 import { SelectField, TextField } from '@/components/ui/field';
@@ -318,9 +319,9 @@ function RemoveGroup({
         tone="danger"
         disabled={pending}
         ariaLabel={t('partners.removeGroupNamed', { name: group.name })}
-        className="rounded p-1 text-foreground-muted hover:text-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className={`${ARCHIVE_TRIGGER} w-control`}
       >
-        <Trash2 className="size-4" aria-hidden />
+        <Archive aria-hidden className={ARCHIVE_ICON} />
       </ConfirmButton>
     </form>
   );

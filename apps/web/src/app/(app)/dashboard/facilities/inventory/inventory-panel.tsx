@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SearchInput, SearchStatus } from '@/components/search-input';
 import { useTranslations } from 'next-intl';
-import { ChevronRight, FileSpreadsheet, Trash2, Upload, X } from 'lucide-react';
+import { Archive, ChevronRight, FileSpreadsheet, Upload, X } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { useSavedAction } from '@/lib/saved';
 import type { InventoryItem, InventoryPlaces, InventoryScope } from '@/lib/api';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded, useSuccessKey } from '@/components/ui/field';
@@ -740,9 +741,9 @@ function ItemRow({
                   onClick={() => setConfirming(true)}
                   disabled={archiving}
                   aria-label={t('inventory.removeLabel', { name: item.name })}
-                  className="rounded text-foreground-muted hover:text-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  className={`${ARCHIVE_TRIGGER} w-control`}
                 >
-                  <Trash2 className="size-4" />
+                  <Archive aria-hidden className={ARCHIVE_ICON} />
                 </button>
                 <Dialog
                   open={confirming}

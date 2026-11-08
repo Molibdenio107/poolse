@@ -154,3 +154,20 @@ or turma. A pool-only club's form and its answer are exactly as before.
   the ticket's condition for offering it is not met.
 - **The public form's footer.** `PublicNotices compact`: the complaints-book link and each regulation in force as
   one small muted line under the form; the water page keeps the full version.
+
+**After the request (07-11-2026).** Accepting a request into a turma (`POST /leads/:id/convert`) ends with the
+family invited into the app: every guardian, or the adult student, with an address and no login gets the
+record's own invitation by email (`inviteRecordByEmail`), and the toast names the addresses. The waiting list
+invites nobody. On the public page, the browser that sent a request remembers the day for 30 days
+(`localStorage`, `poolse.inscricao.<slug>`, the date and nothing else) and a reload shows *Pedido enviado em
+dd-MM-yyyy* with *Enviar outro pedido*, because the server answers every send the same and cannot tell.
+
+**A guardian is a minor's (07-11-2026, Rui).** On the public form the guardian section disappears once the
+birth date is of age; the API stores no guardian on an adult's request; and accepting a request makes a guardian
+only for a swimmer under the club's age of majority (`isMinorOn`), so an adult's email and phone are their own
+and their invitation is a student's. An adult who typed their own name there used to become their own guardian.
+
+**Grau de parentesco is a list (07-11-2026, Rui).** On the public page and on the family app's *Pedir inscrição*
+for a new child, the relationship is chosen from *Mãe, Pai, Avó, Avô, Tutor legal, Outro* (`lib/kinship.ts`),
+labelled in the reader's language and saved as the Portuguese word, as `guardian_link.relationship` always held.
+The office's own student form keeps free text.

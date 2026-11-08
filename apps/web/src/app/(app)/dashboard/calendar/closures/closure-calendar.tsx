@@ -4,7 +4,8 @@ import { today } from '@/lib/dates';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
-import { AlertTriangle, Pencil, X } from 'lucide-react';
+import { AlertTriangle, Archive, Pencil } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { Dialog } from '@/components/ui/dialog';
 import { ConfirmButton } from '@/components/confirm-action';
 import { useToast } from '@/components/ui/toast';
@@ -1183,9 +1184,9 @@ function RemoveClosure({
         tone="danger"
         disabled={pending}
         ariaLabel={t('calendar.removeClosure', { reason })}
-        className="rounded p-1 text-foreground-muted hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
+        className={`${ARCHIVE_TRIGGER} w-control`}
       >
-        <X className="size-4" aria-hidden />
+        <Archive aria-hidden className={ARCHIVE_ICON} />
       </ConfirmButton>
     </form>
   );

@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus, X } from 'lucide-react';
+import { Archive, Plus } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { ConfirmButton } from '@/components/confirm-action';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextField } from '@/components/ui/field';
@@ -153,9 +154,9 @@ export function RemoveTime({ studentId, entry, name }: { studentId: string; entr
         tone="danger"
         disabled={pending}
         ariaLabel={t('app.records.removeTitle', { name })}
-        className="inline-flex h-control w-control items-center justify-center text-foreground-muted"
+        className={`${ARCHIVE_TRIGGER} w-control`}
       >
-        <X className="size-4" aria-hidden />
+        <Archive aria-hidden className={ARCHIVE_ICON} />
       </ConfirmButton>
     </form>
   );

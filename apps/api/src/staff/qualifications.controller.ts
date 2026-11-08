@@ -20,6 +20,9 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import {
   addQualification,
+  confirmQualification,
+  NotYourFileError,
+  submitOwnQualification,
   archiveQualification,
   archiveType,
   createType,
@@ -143,8 +146,25 @@ export class QualificationsController {
     @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
     @Body() body: Record<string, unknown>,
   ): Promise<{ id: string }> {
-    requireRole(...MANAGERS);
+    requireRole(...MANAGERS, 'instructor', 'maintenance');
     const { organizationId, membershipId: me } = currentTenant();
+    // The office files and it counts. A person sends their own and it waits for
+    // the office (Rui, 07-11-2026); anybody else's record is not theirs to send.
+    if (!hasRole(...MANAGERS)) {
+      if (me !== membershipId) {
+        throw new ForbiddenException({ code: 'not_your_record', message: 'Only your own qualifications' });
+      }
+      const raw = body['fileId'];
+      const fileId = typeof raw === 'string' && /^[0-9a-f-]{36}$/i.test(raw) ? raw : null;
+      try {
+        return { id: await submitOwnQualification(organizationId, me, readRecord(body), fileId) };
+      } catch (error) {
+        if (error instanceof NotYourFileError) {
+          throw new BadRequestException({ code: 'wrong_file', message: 'Not a certificate you uploaded' });
+        }
+        throw asHttp(error);
+      }
+    }
     try {
       return {
         id: await addQualification(organizationId, me ?? null, membershipId, readRecord(body)),
@@ -152,6 +172,15 @@ export class QualificationsController {
     } catch (error) {
       throw asHttp(error);
     }
+  }
+
+  /** The office confirms what a person sent; until then it counts for nothing. */
+  @Post('qualifications/:id/confirm')
+  async confirm(@Param('id', new ParseUUIDPipe()) id: string): Promise<{ confirmed: true }> {
+    requireRole(...MANAGERS);
+    const { organizationId, membershipId: me } = currentTenant();
+    if ((await confirmQualification(organizationId, me ?? null, id)) === null) throw new NotFoundException();
+    return { confirmed: true };
   }
 
   @Delete('qualifications/:id')

@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/dialog';
+import { Archive } from 'lucide-react';
+import { ConfirmButton } from '@/components/confirm-action';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
 import { centsToInput, formatCents } from '@/lib/money';
@@ -450,10 +453,9 @@ function RateForm({
 /**
  * Remove a rate — archived, never deleted.
  *
- * Two presses rather than a second `Dialog`: this one is already a dialog, and
- * nesting two focus traps to ask one question is how the two stop agreeing about
- * which of them Escape belongs to. The second press is labelled with what it
- * does, so nothing is confirmed by a button that says the same as the first.
+ * Asks first, like every archive (Rui, 07-11-2026): a second `Dialog` over the
+ * sheet, which the shared `Dialog` stacks — only the topmost answers Escape and
+ * Tab — so the question no longer has to be two presses in the row.
  */
 function ArchiveButton({
   organizationId,
@@ -465,43 +467,27 @@ function ArchiveButton({
   onDone: () => void;
 }): React.ReactElement {
   const t = useTranslations();
-  const [armed, setArmed] = useState(false);
   const [state, dispatch, pending] = useSavedAction(archiveRateAction, EMPTY);
 
   useEffect(() => {
     if (state.ok) onDone();
   }, [state, onDone]);
 
-  if (!armed) {
-    return (
-      <button
-        type="button"
-        onClick={() => setArmed(true)}
-        className="rounded text-sm text-danger hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-      >
-        {t('common.remove')}
-      </button>
-    );
-  }
-
   return (
-    <form action={dispatch} className="flex items-center gap-2">
+    <form action={dispatch}>
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="rateId" value={rateId} />
-      <button
-        type="submit"
+      <ConfirmButton
+        title={t('confirm.equipa.rateRemoveTitle')}
+        message={t('confirm.equipa.rateRemoveMessage')}
+        confirmLabel={t('salaries.confirmRemove')}
+        tone="danger"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm border border-danger/40 bg-danger/10 text-danger hover:border-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className={ARCHIVE_TRIGGER}
       >
-        {t('salaries.confirmRemove')}
-      </button>
-      <button
-        type="button"
-        onClick={() => setArmed(false)}
-        className="rounded text-sm text-foreground-muted hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-      >
-        {t('common.cancel')}
-      </button>
+        <Archive aria-hidden className={ARCHIVE_ICON} />
+        {t('common.remove')}
+      </ConfirmButton>
     </form>
   );
 }

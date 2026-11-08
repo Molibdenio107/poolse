@@ -2,7 +2,8 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { TextAreaField, TextField, useFocusFirstError, useSuccessKey } from '@/components/ui/field';
+import { SelectField, TextAreaField, TextField, useFocusFirstError, useSuccessKey } from '@/components/ui/field';
+import { KINSHIP } from '@/lib/kinship';
 import { TurmaPicker, type TurmaOption } from '@/components/turma-picker';
 import type { AppJoinOptions } from '@/lib/api';
 import { useSavedAction } from '@/lib/saved';
@@ -104,12 +105,14 @@ function Fields({
           <TextField name="firstName" label={t('app.join.firstName')} maxLength={100} required error={error('firstName')} />
           <TextField name="lastName" label={t('app.join.lastName')} maxLength={100} required error={error('lastName')} />
           <TextField name="birthDate" type="date" label={t('app.join.birthDate')} required error={error('birthDate')} />
-          <TextField
+          <SelectField
             name="relationship"
-            label={t('app.join.relationship')}
-            hint={t('app.join.relationshipHint')}
-            maxLength={80}
+            label={t('kinship.label')}
             required
+            options={[
+              { value: '', label: t('kinship.choose'), disabled: true },
+              ...KINSHIP.map((one) => ({ value: one.value, label: t(`kinship.${one.key}`) })),
+            ]}
             error={error('relationship')}
           />
         </fieldset>

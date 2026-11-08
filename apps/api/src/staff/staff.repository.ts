@@ -476,3 +476,91 @@ export async function studentLacksPhotoConsent(organizationId: string, membershi
     return rows.length > 0;
   });
 }
+
+export type ArchiveAccountOutcome =
+  | { state: 'archived' }
+  | { state: 'not_found' }
+  | { state: 'refused'; code: 'owner_account' | 'support_account' }
+  | { state: 'refused'; code: 'staff_still_teaches'; turmas: number; lessons: number }
+  | { state: 'refused'; code: 'staff_answers_for_children'; children: number };
+
+/**
+ * The Owner archives a staff login (Rui, 07-11-2026): somebody who stops working
+ * and becomes a student starts on a fresh account. The registers, pay and audit
+ * still name them; the login stops working here at once, and they stay out of the
+ * bin, so coming back is a new invitation.
+ *
+ * Refused while somebody depends on it: classes they teach, children they answer
+ * for. A student record on this login stays and is unlinked, keeping the name and
+ * contacts it was reading through the login, so the club can invite it again.
+ */
+export async function archiveStaffAccount(
+  organizationId: string,
+  membershipId: string,
+): Promise<ArchiveAccountOutcome> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows: found } = await tx.query<{ support: boolean; owner: boolean; name: string | null }>(
+      `SELECT m.support_grant_id IS NOT NULL AS support, person_name(m.id) AS name,
+              EXISTS (SELECT 1 FROM membership_role r
+                       WHERE r.membership_id = m.id AND r.role = 'owner' AND r.archived_at IS NULL) AS owner
+         FROM membership m
+        WHERE m.id = $1 AND m.archived_at IS NULL
+          FOR UPDATE OF m`,
+      [membershipId],
+    );
+    const person = found[0];
+    if (person === undefined) return { state: 'not_found' };
+    if (person.owner) return { state: 'refused', code: 'owner_account' };
+    if (person.support) return { state: 'refused', code: 'support_account' };
+
+    const { rows: teaching } = await tx.query<{ turmas: number; lessons: number }>(
+      `SELECT (SELECT count(*)::int FROM class_group
+                WHERE instructor_membership_id = $1 AND archived_at IS NULL) AS turmas,
+              (SELECT count(*)::int FROM class_session
+                WHERE resolved_instructor_id = $1 AND status <> 'cancelled' AND starts_at > now()) AS lessons`,
+      [membershipId],
+    );
+    const { turmas, lessons } = teaching[0]!;
+    if (turmas > 0 || lessons > 0) return { state: 'refused', code: 'staff_still_teaches', turmas, lessons };
+
+    const { rows: family } = await tx.query<{ children: number }>(
+      `SELECT count(*)::int AS children FROM guardian_link
+        WHERE guardian_membership_id = $1 AND archived_at IS NULL`,
+      [membershipId],
+    );
+    const children = family[0]!.children;
+    if (children > 0) return { state: 'refused', code: 'staff_answers_for_children', children };
+
+    // `student_person` reads these through the login, so they are copied before it goes.
+    await tx.query(
+      `UPDATE student s
+          SET first_name = p.first_name, last_name = p.last_name, birth_date = p.birth_date,
+              contact_email = p.contact_email, contact_phone = p.contact_phone, membership_id = NULL
+         FROM student_person p
+        WHERE p.id = s.id AND p.organization_id = s.organization_id AND s.membership_id = $1`,
+      [membershipId],
+    );
+    await tx.query(
+      `UPDATE invitation SET revoked_at = now()
+        WHERE membership_id = $1 AND accepted_at IS NULL AND revoked_at IS NULL`,
+      [membershipId],
+    );
+    await tx.query(
+      `UPDATE app_view SET ended_at = now()
+        WHERE (viewed_membership_id = $1 OR viewer_membership_id = $1) AND ended_at IS NULL`,
+      [membershipId],
+    );
+    await tx.query(
+      `UPDATE membership_role SET archived_at = now() WHERE membership_id = $1 AND archived_at IS NULL`,
+      [membershipId],
+    );
+    await tx.query(`UPDATE membership SET archived_at = now() WHERE id = $1`, [membershipId]);
+    await recordAudit(tx, {
+      action: 'staff.account_archived',
+      entityType: 'membership',
+      entityId: membershipId,
+      data: { name: person.name },
+    });
+    return { state: 'archived' };
+  });
+}

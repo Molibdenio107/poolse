@@ -11,6 +11,7 @@ import { StaffBoardHome } from '@/components/staff-notes';
 import { NewNoteButton } from '@/components/staff-board-forms';
 import { endTime } from '../familia/agenda-parts';
 import { LessonCard, lessonHref } from './lesson-card';
+import { PastFeedback } from './past-feedback';
 
 const HOME = '/app/aulas';
 
@@ -45,8 +46,11 @@ export default async function TeachingHome(): Promise<React.ReactElement> {
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1>{t('app.tabs.familia.inicio')}</h1>
-        <NewNoteButton />
+        <NewNoteButton short />
       </div>
+
+      {/* On top when something is pinned, and nothing at all when not (Rui, 07-11-2026). */}
+      <StaffBoardHome title="staffNotes.clubTitle" />
 
       {next === undefined ? (
         <p className="text-foreground-muted">{t('app.teaching.noneComing')}</p>
@@ -93,7 +97,7 @@ export default async function TeachingHome(): Promise<React.ReactElement> {
         </section>
       )}
 
-      <StaffBoardHome />
+      <PastFeedback />
     </>
   );
 }

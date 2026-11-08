@@ -1,8 +1,9 @@
 'use client';
 
-import { useActionState, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { SelectField, TextAreaField, TextField, useFocusFirstError } from '@/components/ui/field';
+import { formatDate } from '@/lib/date-format';
 import { submitRegistrationAction, type RegistrationState } from './registration.actions';
 
 const INITIAL: RegistrationState = { status: 'idle' };
@@ -14,8 +15,8 @@ export type RegistrationLabels = Record<
   | 'guardian' | 'guardianHint' | 'guardianName' | 'guardianRelationship'
   | 'guardianRelationshipHint' | 'guardianTaxNumber' | 'contact' | 'email' | 'emailHint'
   | 'phone' | 'preferences' | 'facility' | 'level' | 'sport' | 'noPreference' | 'days' | 'daysHint'
-  | 'note' | 'noteHint' | 'consent' | 'submit' | 'sending' | 'sentTitle' | 'sentBody'
-  | 'failed' | 'optional' | 'honeypot',
+  | 'note' | 'noteHint' | 'consent' | 'submit' | 'sending' | 'sentTitle' | 'sentBody' | 'sentOn' | 'another'
+  | 'failed' | 'optional' | 'honeypot' | 'kinshipChoose',
   string
 >;
 
@@ -30,7 +31,10 @@ export function RegistrationForm({
   weekdays,
   labels,
   errors,
+  kinship,
 }: {
+  /** *Grau de parentesco*: the saved word and its label in the reader's language. */
+  kinship: { value: string; label: string }[];
   slug: string;
   locale: 'pt-PT' | 'en';
   stamp: string;
@@ -59,13 +63,54 @@ export function RegistrationForm({
   const [sport, setSport] = useState('');
   const shownLevels = sport === '' ? levels : levels.filter((level) => level.sportId === sport);
   const [consent, setConsent] = useState(false);
+  // An adult signs themself up: no guardian section (Rui, 07-11-2026). The API
+  // drops one for an adult anyway; this only stops asking for it.
+  const [birthDate, setBirthDate] = useState('');
+  const adult = (() => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthDate);
+    if (match === null) return false;
+    const now = new Date();
+    const [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
+    const age = now.getFullYear() - y - (now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d) ? 1 : 0);
+    return age >= majority;
+  })();
 
   const error = (field: string): string | undefined => {
     const key = state.fields?.[field];
     return key === undefined ? undefined : (errors[key] ?? key);
   };
 
-  if (state.status === 'sent') {
+  /*
+   * A reload used to show the empty form again, as if nothing had been sent (Rui,
+   * 07-11-2026). The server cannot say — it answers every send the same, so a
+   * stranger learns nothing about who is registered — so this browser remembers
+   * the day it sent one to this club, for 30 days, and nothing else.
+   */
+  const memoryKey = `poolse.inscricao.${slug}`;
+  const [rememberedOn, setRememberedOn] = useState<string | null>(null);
+  const [another, setAnother] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(memoryKey);
+      if (saved !== null && Date.now() - new Date(saved).getTime() < 30 * 86_400_000) setRememberedOn(saved);
+      else if (saved !== null) window.localStorage.removeItem(memoryKey);
+    } catch {
+      // A browser that keeps nothing simply shows the form.
+    }
+  }, [memoryKey]);
+  useEffect(() => {
+    if (state.status !== 'sent') return;
+    const now = new Date().toISOString();
+    setRememberedOn(now);
+    setAnother(false);
+    try {
+      window.localStorage.setItem(memoryKey, now);
+    } catch {
+      // Nothing to remember it in; the sent screen still shows until a reload.
+    }
+  }, [state, memoryKey]);
+
+  if ((state.status === 'sent' || rememberedOn !== null) && !another) {
     return (
       <section
         role="status"
@@ -75,7 +120,17 @@ export function RegistrationForm({
           <CheckCircle2 aria-hidden className="size-5 text-success" />
           {labels.sentTitle}
         </p>
+        {rememberedOn !== null && (
+          <p className="text-sm">{labels.sentOn.replace('{date}', formatDate(rememberedOn))}</p>
+        )}
         <p className="text-foreground-muted">{labels.sentBody}</p>
+        <button
+          type="button"
+          onClick={() => setAnother(true)}
+          className="self-start text-sm text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          {labels.another}
+        </button>
       </section>
     );
   }
@@ -106,20 +161,20 @@ export function RegistrationForm({
           <TextField name="swimmerLastName" label={labels.swimmerLastName} required
             autoComplete="off" maxLength={100} error={error('swimmerLastName')} />
           <TextField name="swimmerBirthDate" type="date" label={labels.swimmerBirthDate}
-            required error={error('swimmerBirthDate')} />
+            required onValueChange={setBirthDate} error={error('swimmerBirthDate')} />
           <TextField inputMode="numeric" name="swimmerTaxNumber" label={labels.swimmerTaxNumber}
             hint={labels.optional} maxLength={20} error={error('swimmerTaxNumber')} />
         </div>
       </fieldset>
 
-      <fieldset className={section}>
+      <fieldset className={adult ? 'hidden' : section} disabled={adult}>
         <legend className={legend}>{labels.guardian}</legend>
         <p className="text-sm text-foreground-muted">{labels.guardianHint}</p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TextField name="guardianName" label={labels.guardianName} autoComplete="name"
             maxLength={200} error={error('guardianName')} />
-          <TextField name="guardianRelationship" label={labels.guardianRelationship}
-            hint={labels.guardianRelationshipHint} maxLength={80}
+          <SelectField name="guardianRelationship" label={labels.guardianRelationship}
+            options={[{ value: '', label: labels.kinshipChoose, disabled: true }, ...kinship]}
             error={error('guardianRelationship')} />
           <TextField inputMode="numeric" name="guardianTaxNumber" label={labels.guardianTaxNumber}
             hint={labels.optional} maxLength={20} error={error('guardianTaxNumber')} />

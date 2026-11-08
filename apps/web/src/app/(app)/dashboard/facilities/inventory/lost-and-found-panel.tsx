@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { Archive, ChevronDown, Plus } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { cn } from '@/lib/utils';
 import { useSavedAction } from '@/lib/saved';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded, useSuccessKey } from '@/components/ui/field';
@@ -231,9 +232,9 @@ function FoundRow({
               disabled={removing}
               onClick={() => setAsking('archive')}
               aria-label={t('inventory.lostAndFound.archiveLabel', { name: item.description })}
-              className="rounded text-danger hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className={`${ARCHIVE_TRIGGER} w-control`}
             >
-              <Trash2 aria-hidden className="size-4" />
+              <Archive aria-hidden className={ARCHIVE_ICON} />
             </button>
           )}
 

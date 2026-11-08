@@ -271,9 +271,18 @@ test('converting writes the student, the guardian and the enrolment; waitlisting
 
     await actingAs(tenant, { roles: ['owner'] }, async () => {
       const api = new LeadsController();
-      await api.convert(tomas!.id, { classGroupId: groupId });
+      // Enrolled: the guardian is invited into the app by email (Rui, 07-11-2026).
+      const placed = await api.convert(tomas!.id, { classGroupId: groupId });
+      assert.equal(placed.invited.length, 1);
+      assert.match(placed.invited[0]!, /^marta\./);
+      // The waiting list promises nothing, so it invites nobody.
       await api.waitlist(rita!.id, { classGroupId: groupId });
     });
+    const invitations = await tenant.sql<{ email: string }>(
+      `SELECT email::text FROM invitation WHERE organization_id = $1 AND revoked_at IS NULL`,
+      [tenant.organizationId],
+    );
+    assert.equal(invitations.length, 1);
 
     const rows = await tenant.sql<{ first_name: string; status: string; guardians: number }>(
       `SELECT s.first_name, e.status::text AS status,
@@ -617,5 +626,39 @@ test("sweep: a trial into another club's session is not found", async () => {
         expectStatus(() => new LeadsController().trial(leadId, { sessionId: sessionOfB }), 404),
       );
     });
+  });
+});
+
+test('an adult who signs themself up is the student, never their own guardian (Rui, 07-11-2026)', async () => {
+  await withScratchTenant(async (tenant) => {
+    const slug = await openClub(tenant);
+    const { groupId } = await turma(tenant, 10);
+    // Inês filled the guardian section with her own name; at 46 it means nothing.
+    const email = `ines.${visitor}.${Date.now()}@example.pt`;
+    await publicApi.submit(
+      slug,
+      minor(slug, { swimmerFirstName: 'Inês', swimmerBirthDate: '1979-11-18', guardianName: 'Inês Oliveira', email }),
+      from(),
+    );
+    const [lead] = await tenant.sql<{ id: string; guardian_name: string | null }>(`SELECT id, guardian_name FROM lead`);
+    assert.equal(lead!.guardian_name, null, 'an adult’s request keeps no guardian');
+
+    // A request already in the queue with a guardian name is read by age too.
+    await tenant.sql(`UPDATE lead SET guardian_name = 'Inês Oliveira' WHERE id = $1`, [lead!.id]);
+    const placed = await actingAs(tenant, { roles: ['owner'] }, () =>
+      new LeadsController().convert(lead!.id, { classGroupId: groupId }),
+    );
+    const [student] = await tenant.sql<{ guardians: number; contact_email: string | null }>(
+      `SELECT (SELECT count(*)::int FROM guardian_link g WHERE g.student_id = s.id) AS guardians, s.contact_email::text
+         FROM student s WHERE s.id = $1`,
+      [placed.studentId],
+    );
+    assert.deepEqual(student, { guardians: 0, contact_email: email });
+    // The invitation is the student's own: a student login, not an Encarregado.
+    const [invitation] = await tenant.sql<{ roles: string[] }>(
+      `SELECT roles::text[] AS roles FROM invitation WHERE email = $1`,
+      [email],
+    );
+    assert.deepEqual(invitation?.roles, ['student']);
   });
 });

@@ -244,7 +244,14 @@ export async function archiveStudentAction(
   }
 
   revalidatePath('/dashboard/students');
-  return { ok: true, undo: archived.archiveEntryId, toastKey: 'archive.archived.student' };
+  // From the record itself, back to the list: the record is gone from it (Rui, 07-11-2026).
+  const leave = formData.get('leave') === '1';
+  return {
+    ok: true,
+    undo: archived.archiveEntryId,
+    toastKey: 'archive.archived.student',
+    ...(leave ? { redirectTo: '/dashboard/students' } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------

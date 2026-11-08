@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Trash2 } from 'lucide-react';
+import { Archive } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { useSavedAction } from '@/lib/saved';
 import { Dialog } from '@/components/ui/dialog';
 import type { FormState } from '../../../../../actions';
@@ -35,8 +36,8 @@ export function ArchiveInvoice({
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={BUTTON}>
-        <Trash2 className="size-4" aria-hidden="true" />
+      <button type="button" onClick={() => setOpen(true)} className={ARCHIVE_TRIGGER}>
+        <Archive aria-hidden className={ARCHIVE_ICON} />
         {t('energy.invoice.remove')}
       </button>
       <Dialog open={open} onClose={() => setOpen(false)} title={t('energy.invoice.remove')} closeLabel={t('common.close')}>

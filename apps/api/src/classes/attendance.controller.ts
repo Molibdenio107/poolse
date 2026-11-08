@@ -3,9 +3,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   ConflictException,
@@ -25,6 +27,7 @@ import {
   RegisterRefusedError,
 } from './attendance.repository.js';
 import { CoreRoute } from '../tenant/modules.js';
+import { lessonContact, type LessonContact } from '../students/students.repository.js';
 import { sessionFeedback, type LessonFeedback } from '../feedback/feedback.repository.js';
 import { sessionNotices, type SessionNotice } from '../notices/notices.repository.js';
 
@@ -133,6 +136,30 @@ export class AttendanceController {
       feedback: management || mine ? await sessionFeedback(organizationId, id, management ? null : membershipId) : [],
       notices: familyNotes ? await sessionNotices(organizationId, id) : [],
     };
+  }
+
+  /**
+   * Who to call about a child on this lesson (Rui, 07-11-2026): whoever is teaching
+   * it tonight, a stand-in included, and only for somebody on its roll. Not on the
+   * view list, so a view of somebody's app never opens a family's numbers.
+   */
+  @Get(':id/contacts/:studentId')
+  async contact(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+  ): Promise<LessonContact> {
+    requireRole('instructor');
+    const { organizationId, membershipId } = currentTenant();
+    const register = await findRegister(organizationId, id);
+    if (!register) throw new NotFoundException('No such class');
+    if (!(await isOwnClass(organizationId, id, membershipId))) {
+      throw new ForbiddenException({ code: 'not_your_class', message: 'Only the lesson’s teacher reads this' });
+    }
+    const contact = register.entries.some((entry) => entry.studentId === studentId)
+      ? await lessonContact(organizationId, studentId)
+      : null;
+    if (contact === null) throw new NotFoundException('No such student on this lesson');
+    return contact;
   }
 
   /**

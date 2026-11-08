@@ -20,6 +20,7 @@ import { archiveStudentAction, createStudentAction, updateStudentAction } from '
 import { Dialog } from '@/components/ui/dialog';
 import { Hint } from '@/components/ui/tooltip';
 import { Archive } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 
 const INITIAL: FormState = { ok: false };
 
@@ -325,10 +326,16 @@ export function ArchiveStudentButton({
   organizationId,
   studentId,
   name,
+  fromRecord = false,
 }: {
   organizationId: string;
   studentId: string;
   name: string;
+  /**
+   * Pressed on the record itself (Rui, 07-11-2026): the word, not a square, and
+   * the screen goes back to *Alunos*, since the record leaves every list.
+   */
+  fromRecord?: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const [confirming, setConfirming] = useState(false);
@@ -344,16 +351,27 @@ export function ArchiveStudentButton({
         word on a phone's card. The word stays for screen readers, and the hint
         repeats what the control does.
       */}
+      {fromRecord ? (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className={`${ARCHIVE_TRIGGER} self-start`}
+        >
+          <Archive aria-hidden className={ARCHIVE_ICON} />
+          {t('students.archive')}
+        </button>
+      ) : (
       <Hint text={t('students.archive')}>
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-surface px-4 text-control text-foreground-muted shadow-card hover:border-danger/50 hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary md:aspect-square md:px-0"
+          className={`${ARCHIVE_TRIGGER} md:w-control md:px-0`}
         >
-          <Archive aria-hidden className="hidden size-4 md:block" />
+          <Archive aria-hidden className={ARCHIVE_ICON} />
           <span className="md:sr-only">{t('students.archive')}</span>
         </button>
       </Hint>
+      )}
 
       <Dialog
         open={confirming}
@@ -364,6 +382,7 @@ export function ArchiveStudentButton({
         <form action={action} className="flex flex-col gap-4">
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="studentId" value={studentId} />
+          {fromRecord && <input type="hidden" name="leave" value="1" />}
           <p className="text-sm">
             {t('students.confirmArchive', { name })}
           </p>

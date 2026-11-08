@@ -8,10 +8,13 @@ import { apiFetch, type Me, type PersonQualifications } from '@/lib/api';
 import { outcome } from '@/lib/load-failure';
 import { storageConfigured } from '@/lib/storage-status';
 import { QualificationsPanel } from '@/app/(app)/dashboard/facilities/staff/[membershipId]/qualifications-panel';
+import { SendQualification } from './send-qualification';
 
 /**
- * A teacher's own qualifications — POOLSE-200: the desktop's panel, read-only here
- * as there, because a valid certificate decides who may teach and the office files it.
+ * A teacher's own qualifications — POOLSE-200: the desktop's panel, read-only. Since
+ * 07-11-2026 (Rui) the teacher may send one from here, with the certificate; it
+ * waits as *Por confirmar* until the office confirms it, because a valid
+ * certificate decides who may teach.
  */
 export default async function MyQualifications(): Promise<React.ReactElement> {
   const t = await getTranslations();
@@ -35,6 +38,7 @@ export default async function MyQualifications(): Promise<React.ReactElement> {
         <LinkBusy />
       </Link>
       <h1 className="text-xl font-semibold tracking-tight">{t('qualifications.title')}</h1>
+      {loaded.state === 'ok' && loaded.data.types.length > 0 && <SendQualification types={loaded.data.types} />}
       {loaded.state === 'ok' ? (
         <QualificationsPanel
           organizationId={membership.organizationId}

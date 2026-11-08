@@ -141,7 +141,7 @@ export function DetailsCard({
           )}
         </div>
 
-        <fieldset className="flex flex-col gap-3 rounded-sm border border-border p-4">
+        <fieldset className="flex flex-col gap-3 rounded border border-border p-4">
           <legend className="px-1 text-sm font-medium">{t('staffDetails.emergency')}</legend>
           <div className="grid gap-3 sm:grid-cols-3">
             <TextField

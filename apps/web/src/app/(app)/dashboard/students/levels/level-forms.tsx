@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
+import { Archive } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import type { StudentLevel } from '@/lib/api';
 import { overlapping } from '@/lib/levels';
 import { CONTROL_LINE, SelectField, TextField, useSeeded, useSuccessKey } from '@/components/ui/field';
@@ -602,8 +604,9 @@ export function ArchiveLevelButton({
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger bg-surface shadow-card"
+        className={ARCHIVE_TRIGGER}
       >
+        <Archive aria-hidden className={ARCHIVE_ICON} />
         {t('students.archive')}
       </button>
 

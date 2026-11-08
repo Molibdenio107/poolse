@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useBlocking, useCurrentBusy, type BusyKind } from '@/lib/busy';
 
@@ -29,6 +30,11 @@ import { useBlocking, useCurrentBusy, type BusyKind } from '@/lib/busy';
  * pending stays on top; it is `aria-hidden` and never takes focus, so the
  * keyboard is untouched. It fades in over `--reveal-ms` (not under reduced
  * motion) and is gone the moment the work ends. A read never raises it.
+ *
+ * **In the phone app it is centred** (Rui, 07-11-2026): every `/app` screen shows
+ * a translucent square in the middle of the screen, the page blurred behind it,
+ * as a phone app does. Same timing, same live region; the back office keeps the
+ * corner.
  */
 
 const SHOW_AFTER_MS = 400;
@@ -42,6 +48,7 @@ export function BusyIndicator(): React.ReactElement {
   const [washed, setWashed] = useState(false);
   const shownAt = useRef(0);
   const [lift, setLift] = useState(0);
+  const centred = usePathname().startsWith('/app');
 
   useEffect(() => {
     if (busy !== null) {
@@ -80,6 +87,52 @@ export function BusyIndicator(): React.ReactElement {
       .filter((rect) => rect.height > 0 && rect.bottom >= window.innerHeight - 2);
     setLift(bars.length === 0 ? 0 : Math.max(...bars.map((rect) => rect.height)));
   }, [shown]);
+
+  if (centred) {
+    return (
+      <>
+        {/* Under the dialogs, as in the back office: a sheet whose save is pending stays on top. */}
+        {washed && (
+          <div
+            aria-hidden
+            data-busy-wash
+            className="busy-wash fixed inset-0"
+            style={{ background: 'rgb(0 0 0 / 0.12)' }}
+          />
+        )}
+        <div
+          role="status"
+          aria-live="polite"
+          data-busy-indicator
+          className="pointer-events-none fixed inset-0 z-[55] flex items-center justify-center"
+        >
+          {shown !== null && (
+            <span
+              data-busy={shown}
+              className="flex size-28 flex-col items-center justify-center gap-3 text-white shadow-lg"
+              // Safari still wants its own prefix for the blur behind a translucent card.
+              style={{
+                borderRadius: 20,
+                background: 'rgb(20 24 28 / 0.86)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+              }}
+            >
+              <span
+                aria-hidden
+                className="size-9 rounded-full border-[3px] border-white/30 border-t-white motion-safe:animate-spin motion-reduce:hidden"
+              />
+              <span
+                aria-hidden
+                className="hidden size-4 rounded-full bg-white motion-reduce:inline-block motion-reduce:animate-pulse"
+              />
+              <span className="text-xs font-medium">{t(`busy.${shown}`)}</span>
+            </span>
+          )}
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

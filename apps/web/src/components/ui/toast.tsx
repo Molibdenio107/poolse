@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { CircleAlert, CircleCheck, TriangleAlert, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
+import { useBlocking } from '@/lib/busy';
 
 /**
  * The short message that says a save landed — round 7.
@@ -169,10 +170,14 @@ function ToastCard({
 
   // A toast with a button stays as long as a refusal: 8 s.
   const dwell = toast.action === undefined ? DWELL[toast.tone] : DWELL.danger;
+  // The clock waits while a save or a page is still on its way (Rui, 07-11-2026):
+  // a new turma's *Guardado.* faded before its page arrived, and looked like nothing.
+  const waiting = useBlocking();
   useEffect(() => {
+    if (waiting) return;
     const timer = window.setTimeout(() => onDismiss(toast.id), dwell);
     return () => window.clearTimeout(timer);
-  }, [toast.id, dwell, onDismiss]);
+  }, [toast.id, dwell, onDismiss, waiting]);
 
   return (
     <div

@@ -50,6 +50,9 @@ colour, an icon per tone so colour never carries the meaning alone, 4s for a suc
 for a refusal, and `w-auto` up to `max-w-md` so the box hugs its words. A saturated fill was
 offered and declined twice — these appear dozens of times an afternoon. **The calendar's move
 refusals go here too**, rather than into a bar above a grid that is taller than the window.
+A save that returns `redirectTo` stays busy (button and corner) until the next page is drawn,
+and a toast's clock does not run while the page is busy (`useBlocking`): a new turma's
+*Guardado.* used to fade on an unchanged form while its page was still loading (Rui, 07-11-2026).
 
 **A section that opens and closes moves smoothly** (Rui, 28-10-2026). A native `<details>` is animated by `DetailsAnimator` (`components/details-animator.tsx`, mounted once per root layout; `data-instant` opts one out), because the CSS route moved only in Chromium; a hand-built toggle is `<Reveal open={…}>`, and both share `REVEAL_MS` / `REVEAL_EASING` (650 ms, eased at both ends — Rui, 29-10-2026; `--reveal-ms` in globals.css turns the summary chevrons in step) (`components/ui/reveal.tsx`) instead of `{open && …}` — closed still means unmounted, and a table edit row takes `<Reveal open appear>` inside its `<td>`. Its grid is `minmax(0,1fr)` with a `min-w-0` item, so a wide table inside scrolls in its own box instead of widening the page (sweep 31-10-2026). **A warning icon that needs attention carries `attention`** (globals.css): three gentle pulses as it appears, then still, and none under reduced motion. **A warning dot is `.attention-dot`, everywhere** (Rui, 28-10-2026, after first choosing three pulses). It is a 6 px ball in the primary colour that blinks gently for as long as it is there: one breath every 2.4 s, still and half-strong under reduced motion, never a number. Don't style a dot by hand.
 
@@ -156,3 +159,13 @@ nothing was looking.
 **A page that fails unexpectedly lands in `dashboard/error.tsx`**, which keeps the sidebar and says so in the reader's language with *Tentar de novo*. It is the net, not the answer: a page that expects a failure still renders `PageError` itself.
 
 **The family app is soft on a phone** (POOLSE-173): under a finger and below `md`, `body:has([data-surface='app'])` retunes `--radius`, `--radius-control`, `--radius-hero` and `--radius-sheet`, so a component restyles nothing by hand; a laptop and the backoffice stay sharp. The tab bar's shapes never change. Decoration is a pseudo-element with no text under its edge, and one colour block is `.app-hero`. `docs/features/app.md`.
+
+In the phone app (every `/app` screen) the same signal is a centred translucent card, the page dimmed behind
+it, like a phone app's loading view; the back office keeps the corner (Rui, 07-11-2026).
+
+**An *Arquivar* is quiet, and it always asks** (Rui, 07-11-2026). Every control that starts an archive uses
+`ARCHIVE_TRIGGER` and the `Archive` icon (`ARCHIVE_ICON`) from `lib/archive-trigger.ts`: muted, smaller words,
+no fill, border or shadow, red only on hover or focus; `h-control` tall so a deliberate tap still lands. In a
+tight row it is the icon alone in a square with an accessible name. It opens a question first, `ConfirmButton`
+or a `Dialog` that names the consequence; the button inside that question keeps its danger style. The sweep
+that set this found three that archived without asking (pay rates, a lifeguard shift, a calendar closure).

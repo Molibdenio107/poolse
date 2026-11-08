@@ -2,18 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Check, StickyNote, X } from 'lucide-react';
+import { Plus, StickyNote, X } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { TextAreaField, useSuccessKey } from '@/components/ui/field';
 import { ConfirmButton } from '@/components/confirm-action';
 import { useSavedAction } from '@/lib/saved';
-import { cn } from '@/lib/utils';
-import type { NoteColour } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
 import { pinStaffNoteAction, removeStaffNoteAction } from '@/app/(app)/dashboard/staff-notes.actions';
 
 const INITIAL: FormState = { ok: false };
-const COLOURS: readonly NoteColour[] = ['yellow', 'orange', 'green', 'blue'];
 
 /**
  * *Novo recado* — POOLSE-169 (Rui, 04-11-2026: "collapse the creation to the
@@ -21,7 +18,7 @@ const COLOURS: readonly NoteColour[] = ['yellow', 'orange', 'green', 'blue'];
  * header opening the form in a dialog (a bottom sheet on a phone), so the top
  * of the page is the notes and nothing else. It closes after a pin that worked.
  */
-export function NewNoteButton(): React.ReactElement {
+export function NewNoteButton({ short = false }: { short?: boolean } = {}): React.ReactElement {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
   return (
@@ -31,8 +28,8 @@ export function NewNoteButton(): React.ReactElement {
         onClick={() => setOpen(true)}
         className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-surface px-4 text-control font-medium shadow-card hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
-        <StickyNote aria-hidden className="size-4" />
-        {t('staffNotes.new')}
+        {short ? <Plus aria-hidden className="size-4" /> : <StickyNote aria-hidden className="size-4" />}
+        {short ? t('staffNotes.newShort') : t('staffNotes.new')}
       </button>
       <Dialog
         open={open}
@@ -49,15 +46,13 @@ export function NewNoteButton(): React.ReactElement {
 }
 
 /**
- * Writing a post-it — POOLSE-169. The text and one of four papers; the colour
- * is a row of swatches carrying a hidden input, so a reset after a refused save
- * cannot put it back to another one. Cleared after a pin that worked.
+ * Writing a post-it — POOLSE-169. Just the words: the paper is the author's role
+ * (Rui, 07-11-2026), decided by the server. Cleared after a pin that worked.
  */
 function PinNoteForm({ onPinned }: { onPinned: () => void }): React.ReactElement {
   const t = useTranslations();
   const [state, pin, pinning] = useSavedAction(pinStaffNoteAction, INITIAL);
   const fresh = useSuccessKey(state);
-  const [colour, setColour] = useState<NoteColour>('yellow');
 
   // A pin that worked closes the dialog, once; the toast says so and the page refreshes.
   const seen = useRef(fresh);
@@ -83,29 +78,6 @@ function PinNoteForm({ onPinned }: { onPinned: () => void }): React.ReactElement
         required
       />
       <div className="flex flex-wrap items-center gap-3">
-        <input type="hidden" name="colour" value={colour} />
-        <fieldset className="flex items-center gap-2">
-          <legend className="sr-only">{t('staffNotes.colourLabel')}</legend>
-          <span aria-hidden className="text-sm text-foreground-muted">
-            {t('staffNotes.colourLabel')}
-          </span>
-          {COLOURS.map((one) => (
-            <button
-              key={one}
-              type="button"
-              onClick={() => setColour(one)}
-              aria-pressed={colour === one}
-              aria-label={t(`staffNotes.colour.${one}`)}
-              className={cn(
-                'post-it-swatch inline-flex size-8 items-center justify-center rounded-sm border border-border-strong',
-                `post-it-${one}`,
-                colour === one && 'ring-2 ring-primary ring-offset-2 ring-offset-surface',
-              )}
-            >
-              {colour === one && <Check aria-hidden className="size-4" />}
-            </button>
-          ))}
-        </fieldset>
         <button
           type="submit"
           disabled={pinning}

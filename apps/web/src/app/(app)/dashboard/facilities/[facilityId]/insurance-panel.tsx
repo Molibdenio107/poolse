@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { AttachedDocument } from '@/components/file-upload';
 import { useLocale, useTranslations } from 'next-intl';
-import { AlertTriangle, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import { AlertTriangle, Archive, Pencil, Plus, ShieldCheck } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { useSavedAction } from '@/lib/saved';
 import { PremiumForm } from '../../faturacao/custos/cost-forms';
 import { Dialog } from '@/components/ui/dialog';
@@ -166,9 +167,9 @@ export function InsurancePanel({
                       <button
                         type="button"
                         onClick={() => setDropping(policy)}
-                        className={BUTTON_QUIET}
+                        className={`${ARCHIVE_TRIGGER} w-control`}
                       >
-                        <Trash2 aria-hidden className="size-4" />
+                        <Archive aria-hidden className={ARCHIVE_ICON} />
                         <span className="sr-only">{t('insurance.archive')}</span>
                       </button>
                     </>

@@ -7,13 +7,12 @@ import { POOL_METRICS } from '@/lib/pool-metrics';
 import { ORGANISMS, ORGANISM_UNITS } from '@/lib/water';
 import { useSavedAction } from '@/lib/saved';
 import { ConfirmButton } from '@/components/confirm-action';
+import { Archive } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import type { FormState } from '../actions';
 import { archiveLabResultAction, recordLabResultAction } from './lab.actions';
 
 const INITIAL: FormState = { ok: false };
-
-const BUTTON =
-  'inline-flex h-control items-center justify-center rounded-sm px-4 text-control hover:bg-surface-muted disabled:opacity-60 bg-surface shadow-card';
 
 /**
  * Record a laboratory report — POOLSE-72.
@@ -153,8 +152,9 @@ export function ArchiveLabResultButton({
         confirmLabel={t('labResults.archive')}
         tone="danger"
         disabled={pending}
-        className={BUTTON}
+        className={ARCHIVE_TRIGGER}
       >
+        <Archive aria-hidden className={ARCHIVE_ICON} />
         {t('labResults.archive')}
       </ConfirmButton>
     </form>

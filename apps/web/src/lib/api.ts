@@ -3096,6 +3096,18 @@ export interface CalendarSession {
 /** Late arrival is deliberately not recorded — POOLSE-13. */
 export type AttendanceStatus = 'present' | 'absent' | 'excused';
 
+/** Who to call about a child on a lesson (Rui, 07-11-2026). */
+export interface LessonContact {
+  insurance: 'insured' | 'lapsed' | 'never';
+  people: {
+    kind: 'guardian' | 'emergency' | 'self';
+    name: string;
+    relationship: string | null;
+    primary: boolean;
+    phone: string;
+  }[];
+}
+
 export interface RegisterEntry {
   studentId: string;
   /** Only with a live photo consent (POOLSE-197). */
@@ -5237,6 +5249,8 @@ export interface StaffNote {
   colour: NoteColour;
   createdAt: string;
   authorName: string | null;
+  /** The author's role, which is also the paper's colour (Rui, 07-11-2026). Null once they left. */
+  authorRole: 'owner' | 'admin' | 'instructor' | 'maintenance' | null;
   /** Its author, or the office: the reader may take it down. */
   canRemove: boolean;
 }
@@ -5305,12 +5319,16 @@ export interface QualificationRecord {
   createdAt: string;
   /** The scanned certificate, attached once — read at `/files/:id`. */
   documentFileId: string | null;
+  /** Sent by the person, waiting for the office (Rui, 07-11-2026). */
+  pending: boolean;
 }
 
 export interface PersonQualifications {
   standings: Standing[];
   history: QualificationRecord[];
   canManage: boolean;
+  /** The club's live types, for the person's own *Enviar qualificação*. */
+  types: { id: string; name: string }[];
 }
 
 export interface ExpiringQualification extends Standing {
@@ -5993,6 +6011,33 @@ export interface AppLesson {
  * A student's feedback after a lesson — POOLSE-116. `authoredBy` is derived
  * from who wrote it; null once anonymised.
  */
+/** A student in one of the teacher's turmas — the *Alunos* tab (Rui, 07-11-2026). */
+export interface TeachingStudent {
+  id: string;
+  shortName: string;
+  photoFileId: string | null;
+  turmas: string[];
+}
+
+/** One student's card on the teacher's phone. */
+export interface TeachingStudentCard extends TeachingStudent {
+  name: string;
+  birthDate: string | null;
+  levelName: string | null;
+  favouriteStroke: string | null;
+  bests: { stroke: string; distanceM: number; timeMs: number; swumOn: string }[];
+  contact: LessonContact;
+}
+
+/** A teacher's recent lesson and what families said about it (Rui, 07-11-2026). */
+export interface TaughtLessonFeedback {
+  sessionId: string;
+  className: string | null;
+  lessonDate: string;
+  localTime: string;
+  feedback: LessonFeedback[];
+}
+
 export interface LessonFeedback {
   id: string;
   sessionId: string;

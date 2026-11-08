@@ -7,6 +7,8 @@ import { useTranslations } from 'next-intl';
 import { formatSwimTime, INDIVIDUAL_EVENTS, parseSwimTime, type SwimEvent } from '@poolse/rules';
 import { Dialog } from '@/components/ui/dialog';
 import { ConfirmButton } from '@/components/confirm-action';
+import { Archive } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { SelectField, TextField, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
 import type { Course, EntryTime, FederationAgeGroup } from '@/lib/api';
@@ -38,8 +40,6 @@ const PRIMARY =
   'inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground hover:bg-primary/90 disabled:opacity-60 font-semibold';
 const SECONDARY =
   'inline-flex h-control items-center justify-center rounded px-4 text-control hover:bg-surface-muted bg-surface shadow-card';
-const DANGER =
-  'inline-flex h-control items-center justify-center rounded px-4 text-control text-foreground-muted hover:border-danger/50 hover:text-danger bg-surface shadow-card';
 const COURSES: Course[] = ['scm', 'lcm'];
 
 function fieldError(t: ReturnType<typeof useTranslations>, state: FormState, field: string): string | undefined {
@@ -200,7 +200,8 @@ export function ArchiveButton({
   }, [state]);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={DANGER}>
+      <button type="button" onClick={() => setOpen(true)} className={ARCHIVE_TRIGGER}>
+        <Archive aria-hidden className={ARCHIVE_ICON} />
         {t('qualifying.archive')}
       </button>
       <Dialog

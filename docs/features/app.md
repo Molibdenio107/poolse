@@ -109,6 +109,22 @@ has; and *Plano*, the training plan and the Desafio as short text. A parceria ke
 page. `GET /app/teaching?from=&to=` takes the family calendar's window, 31 days at most. Everything
 else in-depth stays on the desktop.
 
+### Arriving on a phone
+
+A teacher who is not an Owner or Admin has only the app on a phone. Every back office address sends a
+narrow window on to `/app`, and *Abrir o backoffice* shows only on a wide window. A computer keeps the back
+office. The one exception is a parceria's lesson, which has no phone screen of its own. `/dashboard` itself, where sign-in lands, redirects a phone
+on the server (`phoneBrowser`: the mobile client hint or a phone's user agent), so no script has to load
+first; elsewhere the cover falls back to a full page load after 3 s. This is a door and
+not a permission: the API answers a teacher the same on any screen. *Perfil* shows *Pagamentos* and
+*Documentos* only in the family home, never in the teacher's.
+
+*Contactos* on a lesson is who to call about a child: the insurance's state, the guardians, the emergency
+contact and the student's own phone, each with a call button. One student at a time, on a tap. Only for
+whoever teaches that lesson, stand-in included, and only somebody on its roll
+(`GET /sessions/:id/contacts/:studentId`). Each read is audited as `student.contact_read`, and it is closed
+under a view.
+
 ### Cover and cancelling (POOLSE-198)
 
 *Pedir substituição* on a lesson opens a `lesson_request`, one lesson at a time, with an optional
@@ -327,3 +343,26 @@ On *Documentos* the FPN row opens *Declaração FPN* (`/app/familia/documentos/:
 ## The menu is on every screen — 06-11-2026
 
 Rui: the bar is always visible, to make moving around easy. `tabFor` lights the tab a deeper screen is reached from (*Documentos* and *Pagamentos* under *Perfil*, a lesson under *Aulas*), which keep their own *Voltar*. A sticky Save bar stands on `--app-bar-clear`. It stays off paper.
+
+**The teacher's app, 07-11-2026.** Four tabs: *Início*, *Aulas*, *Alunos*, *Perfil*; no search bar.
+*Início* shows the *Quadro do clube* first when a note is pinned (*+ Nota* adds one), the next lesson, owed
+registers and *Como correram as últimas aulas*: the last seven lessons taught, each folding open to what
+families wrote (`GET /app/teaching/feedback`). *Alunos* lists the students of the turmas the person teaches
+(`GET /app/teaching/students`), filtered by name; a card (`GET /app/teaching/students/:id`, 404 outside their
+turmas) shows age, level, turmas, favourite stroke, best times, insurance and who to call, and each opening
+is audited as `student.contact_read`. All three routes are closed under a view. On a lesson, *Pedir
+substituição* and *Cancelar aula* sit under *Mais opções*. *Perfil → Qualificações* has *Enviar
+qualificação*: type, issuer, dates and the certificate, filed as *Por confirmar*.
+
+**Inviting from the phone (07-11-2026).** A student's card in *Alunos* ends with *App da família*: one
+*Convidar* per guardian (or the adult student) not yet in the app, by email when the club has one, otherwise a
+link to share. It is the student record's own invitation (`POST /students/:id/invitations`), which allows a
+teacher only for their own turmas.
+
+**Inviting to the club (07-11-2026).** The club's pre-registration page, in `InviteToClub`
+(`components/invite-to-club.tsx`, drawn by `lib/club-invite.ts`): a square QR, *Partilhar*, WhatsApp and SMS
+(to a typed or picked number, or the app's own contact chooser), and an email. Sending opens the phone's own
+app with the words ready; Poolse sends nothing. A teacher opens it from a small QR icon beside *Alunos*; a
+student or family from *Perfil → Convidar amigos* (`/app/perfil/convidar`), to the club, never "to Poolse".
+`GET /app/join-link` (instructor, guardian, student) is null while pre-registration is closed, and then
+neither is drawn. A newcomer's request reaches the secretaria's queue; nobody is created.

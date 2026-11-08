@@ -242,9 +242,9 @@ test.describe('the lesson, as the instructor', () => {
 
   test('flow 1 — a lesson in my week opens on its own page', async ({ page }) => {
     const lesson = await poolsideLesson();
-    await visit(page, '/dashboard', 'domcontentloaded');
-    const link = page.locator(`a[href^="/dashboard/calendar/sessions/${lesson.sessionId}"]`).first();
-    await tapToNavigate(page, link, new RegExp(`/sessions/${lesson.sessionId}`));
+    await visit(page, '/app/aulas', 'domcontentloaded');
+    const link = page.locator(`a[href^="/app/aulas/${lesson.sessionId}"]`).first();
+    await tapToNavigate(page, link, new RegExp(`/app/aulas/${lesson.sessionId}`));
     await page.getByRole('button', { name: /guardar presenças|save the register/i }).waitFor();
   });
 
@@ -317,19 +317,18 @@ test.describe('the lesson, as the instructor', () => {
     await expect(page.getByRole('button', { name: /^(anular|undo)$/i })).toHaveCount(0);
   });
 
-  test('flow 5, QA 7 — a student is found by name and home is one tap away', async ({ page }) => {
-    await poolsideLesson();
-    await visit(page, '/dashboard/students?search=Ana%20Poolside', 'domcontentloaded');
-    const ana = page.getByRole('link', { name: /^Ana Poolside$/ }).first();
-    await tapToNavigate(page, ana, /\/dashboard\/students\/[0-9a-f-]{36}/);
-    await expect(page.getByRole('heading', { level: 1, name: /Ana Poolside/ })).toBeVisible();
+  test('flow 5, QA 7 — a family is one tap from the lesson, one student at a time', async ({ page }) => {
+    const lesson = await poolsideLesson();
+    await visit(page, `/app/aulas/${lesson.sessionId}?section=contactos`, 'domcontentloaded');
+    // Nobody's number is on the screen until a student is tapped.
+    await expect(page.locator('a[href^="tel:"]')).toHaveCount(0);
+    await tapToNavigate(page, page.getByRole('link', { name: /Ana P/ }).first(), /student=/);
 
     const call = page.locator(`a[href="tel:${POOLSIDE_GUARDIAN_PHONE.replace(/\s/g, '')}"]`);
     await expect(call).toBeVisible();
     await expect(call).toContainText(POOLSIDE_GUARDIAN_PHONE);
     await expectTouchSized(call);
-    // The seguro, in words on the record — an instructor has no Pagamentos tab.
-    await expect(page.getByText(/sem seguro registado|no insurance on record/i)).toBeVisible();
+    await expect(page.getByText(/^(sem seguro|no insurance)$/i)).toBeVisible();
   });
 });
 

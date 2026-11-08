@@ -1,4 +1,5 @@
 import { isPoolseSport } from '@poolse/rules';
+import { KINSHIP } from '@/lib/kinship';
 import { sportNameKey } from '@/components/sport-icon';
 import Link from 'next/link';
 import { createTranslator } from 'next-intl';
@@ -88,8 +89,9 @@ export default async function RegistrationPage({
     guardian: label('guardian'),
     guardianHint: t('leads.public.guardianHint', { age: loaded.form.ageOfMajority }),
     guardianName: label('guardianName'),
-    guardianRelationship: label('guardianRelationship'),
+    guardianRelationship: t('kinship.label'),
     guardianRelationshipHint: label('guardianRelationshipHint'),
+    kinshipChoose: t('kinship.choose'),
     guardianTaxNumber: label('guardianTaxNumber'),
     contact: label('contact'),
     email: label('email'),
@@ -109,6 +111,9 @@ export default async function RegistrationPage({
     sending: label('sending'),
     sentTitle: label('sentTitle'),
     sentBody: t('leads.public.sentBody', { club }),
+    // {date} is filled in the browser, which is the one that remembers the day.
+    sentOn: t('leads.public.sentOn', { date: '{date}' }),
+    another: label('another'),
     failed: label('failed'),
     optional: label('optional'),
     honeypot: label('honeypot'),
@@ -150,6 +155,7 @@ export default async function RegistrationPage({
           label: t(sportNameKey(sport)),
         }))}
         weekdays={weekdays}
+        kinship={KINSHIP.map((one) => ({ value: one.value, label: t(`kinship.${one.key}`) }))}
         labels={labels}
         errors={errors}
       />

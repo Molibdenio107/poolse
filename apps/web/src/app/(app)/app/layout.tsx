@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { apiFetch, type Me } from '@/lib/api';
-import { hatsOf, viewRoles, type AppHat } from '@/lib/app-hats';
+import { hatsOf, landsInTeaching, viewRoles, type AppHat } from '@/lib/app-hats';
 import { readShell } from '@/lib/shell';
 import { SuspendedNotice } from '../dashboard/suspended-notice';
 import { CommandPalette } from '@/components/command-palette';
@@ -62,7 +62,9 @@ export default async function AppModeLayout({
       organizationName={membership.organizationName}
       logoFileId={(await readShell()).logoFileId}
       homes={homes}
+      // A teacher's app has no search (Rui, 07-11-2026): three tabs are the whole app.
       search={
+        landsInTeaching(viewRoles(membership)) ? null : (
         <CommandPalette
           roles={[...viewRoles(membership)]}
           kind={membership.organizationKind}
@@ -70,6 +72,7 @@ export default async function AppModeLayout({
           sports={readableSports(membership)}
           place={APP_PLACES[view === null ? 'own' : 'view']}
         />
+        )
       }
       banner={
         me.viewing == null ? null : (

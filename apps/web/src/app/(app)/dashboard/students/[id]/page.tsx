@@ -30,7 +30,7 @@ import { PersonAvatar } from '@/components/person-avatar';
 import { IdPhoto } from '@/components/id-photo';
 import { storageConfigured } from '@/lib/storage-status';
 import { photoUrlFor } from '@/lib/photo';
-import { StudentForm } from '../student-forms';
+import { ArchiveStudentButton, StudentForm } from '../student-forms';
 import { CreditBooking } from './credit-booking';
 import { StudentWeek } from './student-week';
 import { CoverBadge, FeesBlock, type FeesSection } from './fees-block';
@@ -964,12 +964,23 @@ export default async function StudentPage({
           labelKey: 'activity.tab',
           visible: reg.canManage,
           content: () => (
-            <ActivityPanel
-              kind="student"
-              id={loaded.id}
-              page={readPage(page)}
-              basePath={`/dashboard/students/${loaded.id}`}
-            />
+            <div className="flex flex-col gap-4">
+              <ActivityPanel
+                kind="student"
+                id={loaded.id}
+                page={readPage(page)}
+                basePath={`/dashboard/students/${loaded.id}`}
+              />
+              {/* The record's own end, for the office (Rui, 07-11-2026); undone from the toast or the bin. */}
+              {reg.canManage && reg.organizationId !== '' && (
+                <ArchiveStudentButton
+                  organizationId={reg.organizationId}
+                  studentId={loaded.id}
+                  name={loaded.displayName}
+                  fromRecord
+                />
+              )}
+            </div>
           ),
         },
       ]}

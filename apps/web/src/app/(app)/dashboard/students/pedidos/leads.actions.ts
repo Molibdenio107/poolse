@@ -23,16 +23,21 @@ async function place(kind: 'waitlist' | 'convert', formData: FormData): Promise<
   const classGroupId = String(formData.get('classGroupId') ?? '');
   if (classGroupId === '') return { ok: false, fields: { classGroupId: 'leads.pickRequired' } };
   let turma = '';
+  let invited: string[] = [];
   try {
-    const placed = await apiPost<{ classGroupName: string | null }>(`/leads/${leadId}/${kind}`, { classGroupId });
+    const placed = await apiPost<{ classGroupName: string | null; invited?: string[] }>(`/leads/${leadId}/${kind}`, {
+      classGroupId,
+    });
     turma = placed?.classGroupName ?? '';
+    invited = placed?.invited ?? [];
   } catch (error) {
     return describeFailure(error, kind === 'waitlist' ? 'leads.waitlistFailed' : 'leads.convertFailed');
   }
   return {
     ok: true,
-    toastKey: kind === 'waitlist' ? 'leads.waitlistedIn' : 'leads.convertedIn',
-    values: { turma },
+    // Enrolled and invited (Rui, 07-11-2026): the toast says who got the app's email.
+    toastKey: kind === 'waitlist' ? 'leads.waitlistedIn' : invited.length > 0 ? 'leads.convertedInvited' : 'leads.convertedIn',
+    values: { turma, emails: invited.join(', ') },
   };
 }
 

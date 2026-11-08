@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { AlertTriangle, Pencil, Trash2 } from 'lucide-react';
+import { AlertTriangle, Archive, Pencil } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { useArchiveUndo, useSavedAction } from '@/lib/saved';
 import { timeAgo } from '@/lib/relative-time';
 import type { Space } from '@/lib/api';
@@ -103,9 +104,9 @@ export function SpaceHeader({
             <button
               type="button"
               onClick={() => setConfirmingDelete(true)}
-              className={BUTTON}
+              className={ARCHIVE_TRIGGER}
             >
-              <Trash2 className="size-4" aria-hidden="true" />
+              <Archive aria-hidden className={ARCHIVE_ICON} />
               {t('common.remove')}
             </button>
           </div>

@@ -408,19 +408,57 @@ test.describe('POOLSE-136 — the phone shell, as an instructor', () => {
   test.skip(E2E_INSTRUCTOR_EMAIL === undefined, NO_INSTRUCTOR);
   test.use({ storageState: INSTRUCTOR_SESSION });
 
-  test('QA 3–4 — three tabs, Início current; O meu perfil has Abrir o backoffice and the header does not', async ({ page }) => {
+  test('a teacher has only the app on a phone, and a computer keeps the back office', async ({ page, browser }) => {
+    await visit(page, '/dashboard', 'domcontentloaded');
+    await expect(page).toHaveURL(/\/app\/aulas$/);
+    await expect(bottomBar(page).getByRole('link')).toHaveCount(4);
+
+    // Any back office address, and no way to it from Perfil.
+    await visit(page, '/dashboard/students', 'domcontentloaded');
+    await expect(page).toHaveURL(/\/app\/aulas$/);
+    await visit(page, '/app/perfil?home=teaching');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /^(pagamentos|payments)$/i })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /^(documentos|documents)$/i })).toHaveCount(0);
+
+    // A computer, not a wide phone: the server reads the user agent first.
+    const computer = await browser.newContext({
+      storageState: INSTRUCTOR_SESSION,
+      viewport: { width: 1280, height: 800 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
+    });
+    const desk = await computer.newPage();
+    await visit(desk, '/dashboard', 'domcontentloaded');
+    await expect(desk.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(desk).toHaveURL(/\/dashboard$/);
+    await visit(desk, '/app/perfil?home=teaching');
+    await expect(desk.getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toBeVisible();
+    await computer.close();
+  });
+
+  test('QA 3–4 — four tabs, Início current; no Abrir o backoffice on a phone', async ({ page }) => {
     await visit(page, '/app/aulas');
     const bar = bottomBar(page);
-    await expect(bar.getByRole('link')).toHaveCount(3);
+    await expect(bar.getByRole('link')).toHaveCount(4);
     await expect(bar.getByRole('link', { name: /^(início|home)$/i })).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('header').getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toHaveCount(0);
+    // No search in a teacher's app (Rui, 07-11-2026).
+    await expect(page.getByRole('button', { name: /procurar uma página|search for a page/i })).toHaveCount(0);
+
+    // Alunos: the students of their turmas, and a card with who to call.
+    await visit(page, '/app/alunos');
+    await expect(bottomBar(page).getByRole('link', { name: /^(alunos|students)$/i })).toHaveAttribute('aria-current', 'page');
+    await page.locator('a[href^="/app/alunos/"]').first().click();
+    await expect(page).toHaveURL(/\/app\/alunos\/[0-9a-f-]{36}$/);
+    await expect(page.getByRole('heading', { name: /melhores marcas|best times/i })).toBeVisible();
 
     await visit(page, '/app/aulas/calendario');
     await expect(bottomBar(page).getByRole('link', { name: /^(aulas|lessons)$/i })).toHaveAttribute('aria-current', 'page');
 
     await visit(page, '/app/perfil?home=teaching');
-    await expect(page.getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toBeVisible();
-    await expect(bottomBar(page).getByRole('link')).toHaveCount(3);
+    await expect(page.getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toHaveCount(0);
+    await expect(bottomBar(page).getByRole('link')).toHaveCount(4);
   });
 });
 

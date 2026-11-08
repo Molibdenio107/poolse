@@ -112,3 +112,24 @@ test('169 — words and colour are checked; a note is never edited', async () =>
     );
   });
 });
+
+test('a note wears its author’s role, the Owner included, and the role is named beside it (Rui, 07-11-2026)', async () => {
+  await withScratchTenant(async (tenant) => {
+    const ana = await addMember(tenant, 'Ana', 'Admin', ['admin']);
+    const prof = await addMember(tenant, 'Pedro', 'Prof', ['instructor']);
+    const [owner] = await tenant.sql<{ id: string }>(
+      `SELECT membership_id AS id FROM membership_role WHERE organization_id = $1 AND role = 'owner' AND archived_at IS NULL`,
+      [tenant.organizationId],
+    );
+    // A colour sent by an older form is checked and then ignored.
+    await as(tenant, owner!.id, ['owner'], () => notes.pin({ body: 'Reunião sexta.', colour: 'yellow' }));
+    await as(tenant, ana, ['admin'], () => notes.pin({ body: 'Faturas prontas.' }));
+    await as(tenant, prof, ['instructor'], () => notes.pin({ body: 'Pista 3 sem cordas.' }));
+
+    const board = await as(tenant, prof, ['instructor'], () => notes.list());
+    const paper = Object.fromEntries(board.notes.map((one) => [one.body, [one.colour, one.authorRole]]));
+    assert.deepEqual(paper['Reunião sexta.'], ['blue', 'owner']);
+    assert.deepEqual(paper['Faturas prontas.'], ['green', 'admin']);
+    assert.deepEqual(paper['Pista 3 sem cordas.'], ['yellow', 'instructor']);
+  });
+});

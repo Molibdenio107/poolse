@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import { ChevronDown, ChevronRight, Video, X } from 'lucide-react';
+import { Archive, ChevronDown, ChevronRight, Video } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import type { Skill } from '@/lib/api';
 import { TextField } from '@/components/ui/field';
 import { Reorderable } from '@/components/reorderable';
@@ -301,9 +302,9 @@ function RemoveSkill({
         tone="danger"
         disabled={pending}
         ariaLabel={t('skills.removeSkill', { name })}
-        className="rounded p-1 hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
+        className={`${ARCHIVE_TRIGGER} w-control`}
       >
-        <X className="size-4" aria-hidden />
+        <Archive aria-hidden className={ARCHIVE_ICON} />
       </ConfirmButton>
     </form>
   );

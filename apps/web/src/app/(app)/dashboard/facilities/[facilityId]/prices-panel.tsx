@@ -3,7 +3,8 @@
 import { Fragment, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
-import { Pencil, Plus, Trash2, Wallet } from 'lucide-react';
+import { Archive, Pencil, Plus, Wallet } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { centsToInput, formatCents, parseCents } from '@/lib/money';
@@ -610,10 +611,10 @@ function ArchiveForm({
         confirmLabel={t('confirm.instalacoes.archive')}
         tone="danger"
         disabled={pending}
-        className={BUTTON_QUIET}
+        className={`${ARCHIVE_TRIGGER} w-control`}
         ariaLabel={label}
       >
-        <Trash2 aria-hidden className="size-3.5" />
+        <Archive aria-hidden className={ARCHIVE_ICON} />
       </ConfirmButton>
     </form>
   );

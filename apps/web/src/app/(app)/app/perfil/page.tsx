@@ -5,9 +5,9 @@ import { SignOutButton } from '@clerk/nextjs';
 import {
   Award,
   IdCard,
-  Eye, ChevronRight, FileText, LayoutDashboard, LogOut, Settings, Wallet } from 'lucide-react';
+  Eye, ChevronRight, FileText, LayoutDashboard, LogOut, Settings, UserPlus, Wallet } from 'lucide-react';
 import { apiFetch, type ActiveSession, type Me } from '@/lib/api';
-import { hatsOf, isHat } from '@/lib/app-hats';
+import { hatsOf, isHat, landsInTeaching } from '@/lib/app-hats';
 import { outcome } from '@/lib/load-failure';
 import { formatDate, formatStamp } from '@/lib/date-format';
 import { LinkBusy } from '@/components/link-busy';
@@ -65,11 +65,14 @@ export default async function AppProfilePage({
     );
   }
 
-  const [locale, sessionsLoad, familyLoad] = await Promise.all([
+  const [locale, sessionsLoad, familyLoad, joinLink] = await Promise.all([
     getLocale(),
     outcome(apiFetch<{ sessions: ActiveSession[] }>('/me/sessions')),
     outcome(apiFetch<{ students: { name: string; self: boolean }[] }>('/family')),
+    outcome(apiFetch<{ slug: string | null }>('/app/join-link')),
   ]);
+  // *Convidar amigos* (Rui, 07-11-2026): only while the club takes pre-registrations.
+  const mayInvite = joinLink.state === 'ok' && joinLink.data.slug !== null;
   const sessions = sessionsLoad.state === 'ok' ? sessionsLoad.data.sessions : [];
 
   // Whose profile this is (POOLSE-177): editing it never changes a child's record.
@@ -83,6 +86,11 @@ export default async function AppProfilePage({
       : family.length > 0
         ? t('app.profile.ownAccount')
         : null;
+  // A teacher's profile is a teacher's (Rui, 07-11-2026): payments and documents
+  // belong to the family home, for somebody who has one.
+  const familyRows = hats.homes.includes('family') && (home === 'family' || !hats.homes.includes('teaching'));
+  // Nothing to switch to and no back office on a phone: the section has no rows there.
+  const onlyTeaches = landsInTeaching(membership.roles);
   const fullName = [me.user.firstName, me.user.lastName].filter(Boolean).join(' ');
   const row = 'flex min-h-[52px] items-center justify-between gap-3 py-2';
   const label = 'pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted';
@@ -112,7 +120,7 @@ export default async function AppProfilePage({
       </section>
 
 
-      {hats.homes.includes('family') && (
+      {familyRows && (
         <Link
           href="/app/familia/pagamentos"
           className={`${row} rounded bg-surface px-4 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}
@@ -126,7 +134,21 @@ export default async function AppProfilePage({
         </Link>
       )}
 
-      {hats.homes.includes('family') && (
+      {familyRows && mayInvite && (
+        <Link
+          href="/app/perfil/convidar"
+          className={`${row} rounded bg-surface px-4 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}
+        >
+          <span className="flex items-center gap-3">
+            <UserPlus className="size-5 text-primary" aria-hidden />
+            {t('invite.friendsTitle')}
+          </span>
+          <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
+          <LinkBusy />
+        </Link>
+      )}
+
+      {familyRows && (
         <Link
           href="/app/familia/documentos"
           className={`${row} rounded bg-surface px-4 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}
@@ -182,13 +204,13 @@ export default async function AppProfilePage({
       </Link>
 
       {(hats.homes.length > 1 || hats.staff) && (
-        <section className="flex flex-col gap-2">
+        <section className={onlyTeaches && hats.homes.length < 2 ? 'flex flex-col gap-2 max-md:hidden' : 'flex flex-col gap-2'}>
           <h2 className={label}>{t('app.profile.homes')}</h2>
           <AppSwitcher homes={hats.homes} />
           {hats.staff && (
             <Link
               href="/dashboard"
-              className={`${row} rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+              className={`${row} rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${onlyTeaches ? 'max-md:hidden' : ''}`}
             >
               <span className="flex items-center gap-3">
                 <LayoutDashboard className="size-5 text-primary" aria-hidden />

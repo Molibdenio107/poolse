@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, Archive, Check, Plus } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { useSavedAction } from '@/lib/saved';
 import type { Issue, Severity } from '@/lib/api';
 import { useToast } from '@/components/ui/toast';
@@ -35,11 +36,6 @@ const INITIAL: FormState = { ok: false };
 
 const BUTTON =
    'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';
-
-const ICON_BUTTON =
-  'inline-flex items-center gap-1 rounded p-1 text-foreground-muted transition-colors ' +
-  'hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ' +
-  'focus-visible:outline-primary';
 
 function IssueRow({
   issue,
@@ -126,10 +122,10 @@ function IssueRow({
             <button
               type="button"
               onClick={() => setRemoving(true)}
-              className={ICON_BUTTON}
+              className={`${ARCHIVE_TRIGGER} w-control`}
               aria-label={t('spaces.deleteIssue')}
             >
-              <Trash2 className="size-4" aria-hidden="true" />
+              <Archive aria-hidden className={ARCHIVE_ICON} />
             </button>
           )}
         </div>

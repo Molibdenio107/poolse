@@ -1,4 +1,14 @@
 {
+  "kinship": {
+    "label": "Relationship",
+    "choose": "Choose",
+    "mother": "Mother",
+    "father": "Father",
+    "grandmother": "Grandmother",
+    "grandfather": "Grandfather",
+    "legalGuardian": "Legal guardian",
+    "other": "Other"
+  },
   "busy": {
     "load": "Loading…",
     "save": "Saving…",
@@ -260,6 +270,40 @@
       }
     },
     "teaching": {
+      "familyApp": "Family app",
+      "familyInvite": "Invite",
+      "familyInvited": "Invitation sent",
+      "joinTitle": "Join the club",
+      "coverConfirmTitle": "Ask for cover for this lesson?",
+      "going": "Coming",
+      "notGoing": "Not coming",
+      "notComingShort": "{count, plural, one {# not coming} other {# not coming}}",
+      "qualificationSend": "Send a qualification",
+      "qualificationSendHint": "It waits until the office confirms it. Attach a photo or the PDF of the certificate.",
+      "qualificationFile": "Certificate",
+      "qualificationChoose": "Choose a photo or PDF",
+      "qualificationSubmit": "Send",
+      "qualificationSent": "Sent. The office will confirm it.",
+      "studentsNone": "No students in your class groups yet.",
+      "studentsNoMatch": "No student with that name.",
+      "studentsFilter": "Search by name",
+      "studentAge": "Age",
+      "studentYears": "{age, plural, one {# year} other {# years}}",
+      "studentLevel": "Level",
+      "studentTurmas": "Class groups",
+      "studentFavourite": "Favourite stroke",
+      "studentBests": "Best times",
+      "studentNoBests": "No times recorded yet.",
+      "backToStudents": "Back to students",
+      "pastFeedback": "How the last lessons went",
+      "pastFeedbackNone": "No lessons taught yet.",
+      "pastFeedbackFailed": "The feedback could not be opened.",
+      "feedbackNone": "No feedback",
+      "feedbackCount": "{count, plural, one {# reply} other {# replies}}",
+      "sectionContacts": "Contacts",
+      "contactEmergency": "Emergency contact",
+      "contactNone": "No phone on the record. Ask the office.",
+      "contactFailed": "The contacts could not be opened.",
       "sectionMessage": "Message",
       "messageHint": "It shows in this class’s app for 7 days and goes by email.",
       "messageSubject": "Subject",
@@ -358,8 +402,6 @@
       "firstName": "First name",
       "lastName": "Last name",
       "birthDate": "Date of birth",
-      "relationship": "Your relationship",
-      "relationshipHint": "For example: son, daughter, grandson.",
       "class": "Class",
       "noClasses": "No classes with room right now.",
       "note": "Notes for the club",
@@ -438,6 +480,7 @@
       "official": "Official"
     },
     "tabs": {
+      "alunos": "Students",
       "label": "Tabs",
       "familia": {
         "inicio": "Home",
@@ -780,6 +823,12 @@
     "birthdayToday": "Birthday today"
   },
   "staff": {
+    "newAccountNeeded": "Staff do not become students on the same account. If the student record is already archived, remove the Student role first. If not, archive this account and invite the person again from the student record.",
+    "archiveAccount": "Archive account",
+    "archiveHint": "For somebody who no longer works here. They can no longer sign in to this club; lessons, registers and pay stay in the history.",
+    "archiveStillTeaches": "This person still has {turmas, plural, =0 {} one {# class and } other {# classes and }}{lessons, plural, one {# upcoming lesson} other {# upcoming lessons}}. Assign another teacher first.",
+    "archiveAnswersForChildren": "This person is the guardian of {children, plural, one {# student} other {# students}} and needs this account. Remove that link on the student record first.",
+    "archiveFailed": "The account could not be archived.",
     "nameOwnerCorrects": "This person has an account. Correcting the name or the photo changes it on their account, in every club.",
     "ownerEdits": "Only the owner changes this.",
     "studentStillActive": "This person is still a student. Archive the student record first.",
@@ -3052,6 +3101,16 @@
     "emergencySearchHint": "Type at least two letters of the name. If the person is not in the club, leave this empty and type their name and phone below."
   },
   "invite": {
+    "qrAlt": "QR code for the club's registration page",
+    "qrHint": "They scan it and send the request to the office.",
+    "share": "Share",
+    "byEmail": "Send by email",
+    "byPhone": "Mobile number (optional)",
+    "send": "Send",
+    "fromContacts": "Choose from contacts",
+    "friendsTitle": "Invite friends",
+    "friendMessage": "Come and train with me at {club}! Sign up here:",
+    "clubMessage": "Sign up at {club}:",
     "knownOwnerOnly": "This person is already in the club. Only the owner can invite them to the staff.",
     "open": "Invite user",
     "title": "Invite someone",
@@ -5535,6 +5594,9 @@
     }
   },
   "qualifications": {
+    "pendingLabel": "Awaiting confirmation",
+    "confirm": "Confirm",
+    "confirmed": "Qualification confirmed.",
     "certificate": {
       "filterLabel": "Certificates",
       "allFilter": "All",
@@ -6113,6 +6175,7 @@
     "overrideFailedConflict": "Access is already open: enter through it."
   },
   "leads": {
+    "convertedInvited": "Student placed in {turma}. App invitation sent to {emails}.",
     "title": "Registration requests",
     "subtitle": "What families sent through the club's public form.",
     "notPermitted": "Only the owner and admins handle registration requests.",
@@ -6196,6 +6259,8 @@
       "ownerOnly": "Only the owner can open, close or change the address of the form."
     },
     "public": {
+      "sentOn": "Request sent on {date}.",
+      "another": "Send another request (for a sibling, say)",
       "title": "Pre-registration",
       "intro": "Fill in this request and the club will contact you. It is not a confirmed enrolment and there is nothing to pay now.",
       "unavailable": "The form could not be opened",
@@ -7757,6 +7822,8 @@
       "fpnConfirm": "Create"
     },
     "equipa": {
+      "archiveAccountTitle": "Archive {name}’s account?",
+      "archiveAccountMessage": "{name} can no longer sign in to this club and leaves the people list. To return they must be invited again. A student record, if there is one, stays without an account.",
       "remove": "Remove",
       "copy": "Copy",
       "grant": "Grant",
@@ -7789,6 +7856,8 @@
       "contractRemoveMessage": "There is no longer a current contract, and the document taken off stays under earlier versions.",
       "qualificationArchiveTitle": "Archive “{name}”?",
       "qualificationArchiveMessage": "The record no longer counts towards validity and stays in the history as archived, with no way to restore it.",
+      "rateRemoveTitle": "Remove this rate?",
+      "rateRemoveMessage": "The rate no longer counts in the totals and stays in the history as removed.",
       "withdrawVacationTitle": "Withdraw the request for {count, plural, one {# day} other {# days}}?",
       "withdrawVacationMessage": "The request no longer awaits a decision; to take those days, you will need to make a new request.",
       "endSessionTitle": "End the session on this other device?",
@@ -7823,6 +7892,7 @@
       "contactRemoveMessage": "The contact no longer appears on this partnership; it does not go to Archived to be restored.",
       "groupRemoveTitle": "Remove the group “{name}”?",
       "groupRemoveMessage": "The group no longer appears on this partnership; it does not go to Archived to be restored.",
+      "dutyRemoveTitle": "Remove {name}'s duty?",
       "publicPageOnTitle": "Turn on the public page for {pool}?",
       "publicPageOnMessage": "Anyone with the link or the QR code will see this pool's latest readings, without signing in; you can turn it off here at any time.",
       "feedbackArchiveTitle": "Archive this comment?",
@@ -7907,8 +7977,11 @@
     "violet": "Ocean blue"
   },
   "staffNotes": {
+    "bylineRole": "{name} \u00b7 {role}, {date}",
+    "clubTitle": "Club board",
+    "newShort": "Note",
     "title": "Staff board",
-    "hint": "A note for the people who work here. It stays up until whoever wrote it, or the office, takes it down.",
+    "hint": "Work note for organization staff members.",
     "empty": "No notes yet. Write the first one.",
     "field": "Note",
     "colourLabel": "Colour",

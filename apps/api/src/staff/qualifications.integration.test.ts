@@ -268,7 +268,9 @@ test('27.7 — a person reads their own; an instructor may not read a colleague'
       const mine = await controller.person(me);
       assert.equal(mine.canManage, false);
       await expectStatus(() => controller.person(colleague), 403);
-      await expectStatus(() => controller.add(me, { typeId: '00000000-0000-0000-0000-000000000000' }), 403);
+      // Their own they may send, for the office to confirm (Rui, 07-11-2026); a colleague's, never.
+      await expectStatus(() => controller.add(colleague, { typeId: '00000000-0000-0000-0000-000000000000' }), 403);
+      await expectStatus(() => controller.add(me, { typeId: '00000000-0000-0000-0000-000000000000' }), 404);
       await expectStatus(() => controller.types(), 403);
       await expectStatus(() => controller.expiring(), 403);
     });

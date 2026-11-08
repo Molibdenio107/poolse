@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useCallback, useEffect, useRef } from 'react';
+import { useActionState, useCallback, useEffect, useRef, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/toast';
@@ -52,8 +52,13 @@ export function useSavedAction<State extends { ok?: boolean }, Payload>(
   permalink?: string,
 ): [state: Awaited<State>, dispatch: (payload: Payload) => void, isPending: boolean] {
   const [state, dispatch, isPending] = useActionState(action, initialState, permalink);
+  // A save that moves to another page stays busy until that page is drawn (Rui,
+  // 07-11-2026). Without it the button came back and the toast faded while the
+  // next page was still loading, and a new turma looked like nothing happened.
+  const [navigating, startNavigation] = useTransition();
+  const busy = isPending || navigating;
   // The corner's "A guardar…" for every form that saves — POOLSE-98.
-  useBusyWhile(isPending, 'save');
+  useBusyWhile(busy, 'save');
   const router = useRouter();
   const toast = useToast();
   const t = useTranslations();
@@ -71,9 +76,12 @@ export function useSavedAction<State extends { ok?: boolean }, Payload>(
     if (state.ok === true) {
       const done = state as { undo?: string; redirectTo?: string };
       // A success that removed this page goes where the action said; the
-      // toast lives above the route, so it survives the navigation.
-      if (done.redirectTo !== undefined) router.push(done.redirectTo);
-      else router.refresh();
+      // toast lives above the route, so it survives the navigation, and it does
+      // not start to fade while the next page is still on its way.
+      if (done.redirectTo !== undefined) {
+        const to = done.redirectTo;
+        startNavigation(() => router.push(to));
+      } else router.refresh();
 
       const message = successMessage(t, state);
       if (done.undo !== undefined) offerUndo(done.undo, message);
@@ -85,7 +93,7 @@ export function useSavedAction<State extends { ok?: boolean }, Payload>(
     if (message !== null) toast.show('danger', message);
   }, [state, router, toast, t, offerUndo]);
 
-  return [state, dispatch, isPending];
+  return [state, dispatch, busy];
 }
 
 type Translator = ReturnType<typeof useTranslations>;

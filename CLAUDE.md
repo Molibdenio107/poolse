@@ -238,6 +238,7 @@ Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before tou
 - The menu's entries live in `lib/nav-entries.ts`
 - A document on paper is a route with print styles; the one PDF library is `lib/form-pdf.ts`, for a club's forms on the phone
 - A decision asks first
+- An *Arquivar* is quiet (`ARCHIVE_TRIGGER` in `lib/archive-trigger.ts`) and always asks before it archives (Rui, 07-11-2026).
 - A question asked in the middle of the page uses `components/ui/dialog.tsx`.
 - A refusal that needs numbers carries them as structure, never as prose.
 - Light and dark mode in every app

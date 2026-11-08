@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
-import { familyOnly } from '@/lib/app-hats';
+import { headers } from 'next/headers';
+import { familyOnly, landsInTeaching, phoneBrowser } from '@/lib/app-hats';
 import Link from 'next/link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -85,6 +86,13 @@ export default async function DashboardPage({
   // A family and nothing else has its own home now — POOLSE-90 AC 1. Staff
   // who are also parents keep this page, and reach the family agenda by switching.
   if (membership !== null && familyOnly(membership.roles)) redirect('/app');
+  // A teacher's phone is the app (Rui, 07-11-2026). Sign-in, *Entrar* and a
+  // bookmark land here, so the server sends a phone on before any script has to
+  // load; the layout's `PhoneLanding` covers every other address, by width.
+  if (membership !== null && landsInTeaching(membership.roles)) {
+    const request = await headers();
+    if (phoneBrowser(request.get('user-agent'), request.get('sec-ch-ua-mobile'))) redirect('/app');
+  }
   const personal = membership?.organizationKind === 'personal';
 
   /*

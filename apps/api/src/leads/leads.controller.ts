@@ -41,6 +41,8 @@ import {
   type TrialOption,
 } from './leads.repository.js';
 import { CoreRoute } from '../tenant/modules.js';
+import { inviteRecordByEmail } from '../students/family-invitations.controller.js';
+import { clubToday } from '../common/club-day.js';
 
 /** Who works the queue: the people who already enrol students. */
 const CAN_WORK_LEADS = ['owner', 'admin'] as const;
@@ -133,9 +135,14 @@ export class LeadsController {
   async convert(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ studentId: string; attached: boolean; classGroupName: string | null }> {
+  ): Promise<{ studentId: string; attached: boolean; classGroupName: string | null; invited: string[] }> {
     requireRole(...CAN_WORK_LEADS);
-    return this.place(id, requiredId(body, 'classGroupId'), false);
+    const placed = await this.place(id, requiredId(body, 'classGroupId'), false);
+    // Enrolled: the family is invited into the app straight away (Rui, 07-11-2026).
+    // Not from the waiting list, where nothing has been promised yet.
+    const { organizationId, membershipId } = currentTenant();
+    const invited = await inviteRecordByEmail(organizationId, membershipId, placed.studentId);
+    return { ...placed, invited };
   }
 
   @Post(':id/trial')
@@ -208,7 +215,10 @@ export class LeadsController {
     // An app request for a child the club has names that child — no student form (POOLSE-121).
     const input = lead.existingStudent
       ? null
-      : parseStudent(studentBodyFor(lead), await ageOfMajority(organizationId));
+      : await (async () => {
+          const majority = await ageOfMajority(organizationId);
+          return parseStudent(studentBodyFor(lead, majority, clubToday()), majority);
+        })();
 
     try {
       const outcome = await placeLead(organizationId, id, classGroupId, input, waiting, membershipId);

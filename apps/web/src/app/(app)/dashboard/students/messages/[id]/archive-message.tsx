@@ -3,6 +3,8 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { Archive } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { Dialog } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { archiveMessageAction } from '../messages.actions';
@@ -34,8 +36,9 @@ export function ArchiveMessage({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted bg-surface shadow-card"
+        className={ARCHIVE_TRIGGER}
       >
+        <Archive aria-hidden className={ARCHIVE_ICON} />
         {t('messages.archive')}
       </button>
       <Dialog

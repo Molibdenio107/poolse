@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { ApiError, apiPatch, apiPost } from '../../../../../../lib/api';
 import type { FormState } from '../../../actions';
 
@@ -126,6 +127,9 @@ export async function setRoleAction(
     if (error instanceof ApiError && error.code === 'student_still_active') {
       return { ok: false, errorKey: 'staff.studentStillActive' };
     }
+    if (error instanceof ApiError && error.code === 'new_account_needed') {
+      return { ok: false, errorKey: 'staff.newAccountNeeded' };
+    }
     if (error instanceof ApiError && error.status === 403) {
       return { ok: false, errorKey: 'staff.roleRefused' };
     }
@@ -135,4 +139,25 @@ export async function setRoleAction(
   revalidatePath(`/dashboard/facilities/staff/${membershipId}`);
   revalidatePath('/dashboard/facilities/staff');
   return { ok: true };
+}
+
+/** The Owner archives a staff login. The API says what is still in the way. */
+export async function archiveAccountAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const membershipId = String(formData.get('membershipId') ?? '');
+  try {
+    await apiPost(`/staff/${membershipId}/archive`, {}, { organizationId });
+  } catch (error) {
+    if (error instanceof ApiError && error.code === 'staff_still_teaches') {
+      const { turmas, lessons } = error.details as { turmas: number; lessons: number };
+      return { ok: false, errorKey: 'staff.archiveStillTeaches', values: { turmas, lessons } };
+    }
+    if (error instanceof ApiError && error.code === 'staff_answers_for_children') {
+      const { children } = error.details as { children: number };
+      return { ok: false, errorKey: 'staff.archiveAnswersForChildren', values: { children } };
+    }
+    return { ok: false, errorKey: 'staff.archiveFailed' };
+  }
+  revalidatePath('/dashboard/facilities/staff');
+  redirect('/dashboard/facilities/staff');
 }

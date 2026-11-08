@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { FileUp } from 'lucide-react';
+import { Archive, Clock, FileUp } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { AttachedDocument, DocumentLink } from '@/components/file-upload';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import { ConfirmButton } from '@/components/confirm-action';
@@ -19,6 +20,7 @@ import type { FormState } from '../../../actions';
 import {
   addQualificationAction,
   archiveQualificationAction,
+  confirmQualificationAction,
   dropCertificateAction,
   type CertificateState,
 } from '../qualifications/qualifications.actions';
@@ -143,6 +145,18 @@ export function QualificationsPanel({
         router.refresh();
       } else {
         toast.show('danger', t((result.errorKey ?? 'qualifications.error.archiveFailed') as never));
+      }
+    });
+  };
+
+  const confirmSent = (qualificationId: string): void => {
+    startTransition(async () => {
+      const result = await confirmQualificationAction(organizationId, membershipId, qualificationId);
+      if (result.ok) {
+        toast.show('success', t('qualifications.confirmed'));
+        router.refresh();
+      } else {
+        toast.show('danger', t((result.errorKey ?? 'qualifications.error.saveFailed') as never));
       }
     });
   };
@@ -308,6 +322,13 @@ export function QualificationsPanel({
                         })}
                     {record.archived && ` · ${t('qualifications.archivedLabel')}`}
                   </span>
+                  {/* Sent by the person and not yet confirmed: it counts for nothing (Rui, 07-11-2026). */}
+                  {record.pending && !record.archived && (
+                    <span className="mt-1 inline-flex items-center gap-1 self-start rounded-chip border border-warning/50 px-2 py-0.5 text-xs font-medium">
+                      <Clock className="size-3.5" aria-hidden />
+                      {t('qualifications.pendingLabel')}
+                    </span>
+                  )}
                   {/* The certificate — attached once (12 October 2026). The
                       person it certifies sees the link too. */}
                   <span className="mt-1">
@@ -320,6 +341,16 @@ export function QualificationsPanel({
                     />
                   </span>
                 </span>
+                {data.canManage && record.pending && !record.archived && (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => confirmSent(record.id)}
+                    className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control font-medium text-primary-foreground disabled:opacity-60"
+                  >
+                    {t('qualifications.confirm')}
+                  </button>
+                )}
                 {data.canManage && !record.archived && (
                   // Asks first (Rui, 04-11-2026).
                   <ConfirmButton
@@ -329,8 +360,9 @@ export function QualificationsPanel({
                     tone="danger"
                     disabled={pending}
                     onConfirm={() => archive(record.id)}
-                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm hover:bg-surface-muted disabled:opacity-60 bg-surface shadow-card"
+                    className={ARCHIVE_TRIGGER}
                   >
+                    <Archive aria-hidden className={ARCHIVE_ICON} />
                     {t('qualifications.archive')}
                   </ConfirmButton>
                 )}

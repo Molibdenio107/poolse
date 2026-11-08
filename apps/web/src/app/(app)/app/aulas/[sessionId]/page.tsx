@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ArrowLeft, Ban } from 'lucide-react';
-import { ApiError, apiFetch, type Register } from '@/lib/api';
+import { ApiError, apiFetch, type Me, type Register } from '@/lib/api';
 import { backTarget } from '@/lib/back';
 import { formatDate } from '@/lib/date-format';
 import { describeLoad, outcome } from '@/lib/load-failure';
@@ -16,6 +16,7 @@ import { SectionPills } from '@/components/section-pills';
 import type { LessonPlan } from '@/app/(app)/dashboard/calendar/lesson-plan.actions';
 import { RegisterForm } from '@/app/(app)/dashboard/calendar/sessions/[sessionId]/register-form';
 import { LessonActions } from './lesson-actions';
+import { TeacherContacts } from './teacher-contacts';
 import { TeacherMessage } from './teacher-message';
 import { TeacherPlan } from './teacher-plan';
 
@@ -38,11 +39,11 @@ export default async function TeachingLesson({
   searchParams,
 }: {
   params: Promise<{ sessionId: string }>;
-  searchParams: Promise<{ from?: string; section?: string }>;
+  searchParams: Promise<{ from?: string; section?: string; student?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { sessionId } = await params;
-  const { from, section } = await searchParams;
+  const { from, section, student } = await searchParams;
   const back = backTarget(from, '/app/aulas/calendario');
 
   let register: LessonRegister;
@@ -67,10 +68,14 @@ export default async function TeachingLesson({
   const classGroupId = register.classGroupId;
   const mayWrite = !cancelled && register.canRecord && classGroupId !== null && (await moduleIsOn('messages'));
   const showMessage = section === 'mensagem' && mayWrite;
-  const onRoll = !showPlan && !showMessage;
-  const hrefFor = (key: string): string => {
+  // Who to call (Rui, 07-11-2026). The API refuses a view, so a view is not offered it.
+  const mayCall = !cancelled && (await apiFetch<Me>('/me')).viewing == null;
+  const showContacts = section === 'contactos' && mayCall;
+  const onRoll = !showPlan && !showMessage && !showContacts;
+  const hrefFor = (key: string, chosen?: string): string => {
     const query = new URLSearchParams();
     if (key !== 'alunos') query.set('section', key);
+    if (chosen !== undefined) query.set('student', chosen);
     if (from !== undefined) query.set('from', from);
     return `/app/aulas/${sessionId}${query.size === 0 ? '' : `?${query.toString()}`}`;
   };
@@ -114,12 +119,15 @@ export default async function TeachingLesson({
       {plan.state === 'ok' && !cancelled && (
         <SectionPills
           label={t('app.teaching.sectionsLabel')}
-          current={showPlan ? 'plano' : showMessage ? 'mensagem' : 'alunos'}
+          current={showPlan ? 'plano' : showMessage ? 'mensagem' : showContacts ? 'contactos' : 'alunos'}
           items={[
             { key: 'alunos', label: t('app.teaching.sectionStudents'), href: hrefFor('alunos') },
             { key: 'plano', label: t('app.teaching.sectionPlan'), href: hrefFor('plano') },
             ...(mayWrite
               ? [{ key: 'mensagem', label: t('app.teaching.sectionMessage'), href: hrefFor('mensagem') }]
+              : []),
+            ...(mayCall
+              ? [{ key: 'contactos', label: t('app.teaching.sectionContacts'), href: hrefFor('contactos') }]
               : []),
           ]}
         />
@@ -129,6 +137,13 @@ export default async function TeachingLesson({
         <TeacherPlan plan={plan.data} />
       ) : showMessage ? (
         <TeacherMessage classGroupId={classGroupId} />
+      ) : showContacts ? (
+        <TeacherContacts
+          sessionId={register.sessionId}
+          entries={register.entries}
+          chosen={student}
+          hrefFor={(id) => hrefFor('contactos', id === student ? undefined : id)}
+        />
       ) : register.started && register.canRecord && !cancelled ? (
         <RegisterForm register={register} compact />
       ) : (
@@ -150,7 +165,7 @@ export default async function TeachingLesson({
                   <span className="min-w-0 flex-1 truncate">{entry.shortName}</span>
                   {going !== undefined && (
                     <span className="rounded border border-border px-2 py-0.5 text-xs text-foreground-muted">
-                      {t(going ? 'attendance.noticeGoing' : 'attendance.noticeNotGoing')}
+                      {t(going ? 'app.teaching.going' : 'app.teaching.notGoing')}
                     </span>
                   )}
                 </li>

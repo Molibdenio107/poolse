@@ -95,6 +95,26 @@ export function familyOnly(roles: readonly string[]): boolean {
   return !hats.staff && hats.homes.includes('family');
 }
 
+/**
+ * A teacher who does not run the club: on a phone the app is all there is, and
+ * the back office is for a computer (Rui, 07-11-2026). An owner or admin who
+ * teaches keeps `/app/vista`.
+ */
+export function landsInTeaching(roles: readonly string[]): boolean {
+  const hats = hatsOf(roles);
+  return !hats.manages && hats.homes.includes('teaching');
+}
+
+/**
+ * A phone, as the server can tell before any script runs (Rui, 07-11-2026): the
+ * client hint Chrome sends, or the words every phone browser puts in its user
+ * agent. A tablet says neither and is decided by its width, in the browser. A
+ * convenience for the way in, never a permission.
+ */
+export function phoneBrowser(userAgent: string | null, mobileHint: string | null): boolean {
+  if (mobileHint === '?1') return true;
+  return /iPhone|iPod|Android.+Mobile|Windows Phone|Mobile.+Firefox/i.test(userAgent ?? '');
+}
 
 /**
  * The bottom tabs of each home — POOLSE-136. Static, beside `HOME_PATH`, so
@@ -124,6 +144,8 @@ export const TABS: Record<TabbedHat, AppTab[]> = {
   teaching: [
     { href: '/app/aulas', labelKey: 'app.tabs.familia.inicio', glyph: 'square' },
     { href: '/app/aulas/calendario', labelKey: 'app.tabs.familia.aulas', glyph: 'circle' },
+    // The students of their turmas (Rui, 07-11-2026).
+    { href: '/app/alunos', labelKey: 'app.tabs.alunos', glyph: 'triangle' },
     { href: '/app/perfil?home=teaching', labelKey: 'app.tabs.perfil', glyph: 'diamond' },
   ],
   // POOLSE-181: square, triangle, diamond — the circle and hexagon are the family's.
@@ -156,6 +178,7 @@ export function tabFor(
   if (path === '/app/familia/progressos') return { hat: 'family', index: 2 };
   if (path === '/app/aulas') return { hat: 'teaching', index: 0 };
   if (path.startsWith('/app/aulas/')) return { hat: 'teaching', index: 1 };
+  if (path === '/app/alunos' || path.startsWith('/app/alunos/')) return { hat: 'teaching', index: 2 };
   if (path === '/app/manutencao') return { hat: 'maintenance', index: 0 };
   if (path === '/app/manutencao/registar') return { hat: 'maintenance', index: 1 };
   if (path === '/app/perfil') {

@@ -3,15 +3,15 @@
 import { useRef, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { TriangleAlert } from 'lucide-react';
+import { Archive, TriangleAlert } from 'lucide-react';
+import { ConfirmButton } from '@/components/confirm-action';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { Dialog } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { removeDutyAction } from './roster.actions';
 
 const QUIET =
   'inline-flex h-control items-center justify-center gap-2 rounded-sm px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';
-const DANGER =
-  'inline-flex h-control items-center justify-center gap-2 rounded-sm border border-danger/50 px-4 text-control text-danger hover:bg-danger/10 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 export interface DutyView {
   id: string;
@@ -71,10 +71,15 @@ export function DutyDialog({
               {t('common.close')}
             </button>
             {canManage && (
-              <button
-                type="button"
+              // Asks first, like every archive (Rui, 07-11-2026): a second
+              // question over this one, which the shared Dialog stacks.
+              <ConfirmButton
+                title={t('confirm.instalacoes.dutyRemoveTitle', { name: duty.name })}
+                message={t('roster.removeKeepsHistory')}
+                confirmLabel={t('roster.removeDuty')}
+                tone="danger"
                 disabled={pending}
-                onClick={() =>
+                onConfirm={() =>
                   startTransition(async () => {
                     const result = await removeDutyAction(duty.id);
                     onClose();
@@ -86,10 +91,11 @@ export function DutyDialog({
                     }
                   })
                 }
-                className={DANGER}
+                className={ARCHIVE_TRIGGER}
               >
+                <Archive aria-hidden className={ARCHIVE_ICON} />
                 {pending ? t('common.working') : t('roster.removeDuty')}
-              </button>
+              </ConfirmButton>
             )}
           </div>
         </div>

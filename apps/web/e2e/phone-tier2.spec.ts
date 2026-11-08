@@ -133,15 +133,7 @@ test('a family link is made and shared from the student record, on a phone', asy
   await expect(row.getByText('Sem convite')).toBeVisible({ timeout: 15_000 });
 });
 
-test.describe('as the instructor', () => {
-  test.use({ storageState: INSTRUCTOR_SESSION });
-
-  test('tier 2, as the instructor — nothing scrolls sideways, no field is squeezed', async ({ page }) => {
-    test.setTimeout(180_000);
-    const lesson = await poolsideLesson();
-    for (const path of tier2(lesson)) await plainly(page, path);
-  });
-});
+// A teacher has no back office on a phone (Rui, 07-11-2026), so there is nothing to walk.
 
 // POOLSE-113 QA 5: the queue's picker, one-handed. The list closes on a pick,
 // so Confirmar sits under the choice and is never pushed below the fold.

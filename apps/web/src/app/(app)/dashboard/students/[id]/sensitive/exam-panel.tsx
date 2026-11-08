@@ -2,7 +2,8 @@
 
 import { startTransition, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { CircleSlash, Paperclip, ShieldAlert, ShieldCheck, Trash2 } from 'lucide-react';
+import { Archive, CircleSlash, Paperclip, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { DocumentLink } from '@/components/file-upload';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import { SelectField, TextAreaField, TextField, useSuccessKey } from '@/components/ui/field';
@@ -322,9 +323,9 @@ function ArchiveExam({
         confirmLabel={t('exams.archive')}
         tone="danger"
         disabled={pending}
-        className={BUTTON_QUIET}
+        className={ARCHIVE_TRIGGER}
       >
-        <Trash2 aria-hidden className="size-4" />
+        <Archive aria-hidden className={ARCHIVE_ICON} />
         {t('exams.archive')}
       </ConfirmButton>
     </form>

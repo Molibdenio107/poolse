@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
-import { AlertTriangle, Check, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { AlertTriangle, Archive, Check, Plus, RefreshCw, ShieldCheck } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { sportNameKey } from '@/components/sport-icon';
@@ -955,10 +956,10 @@ function FeeRow({
               confirmLabel={t('confirm.alunos.feeLineConfirm')}
               tone="danger"
               disabled={archiving}
-              className={BUTTON_QUIET}
+              className={`${ARCHIVE_TRIGGER} w-control`}
               ariaLabel={t('fees.removeLine')}
             >
-              <Trash2 aria-hidden className="size-3.5" />
+              <Archive aria-hidden className={ARCHIVE_ICON} />
             </ConfirmButton>
           </form>
         </span>
@@ -1839,8 +1840,9 @@ function ExternalCharges({ studentId, line }: { studentId: string; line: Student
             confirmLabel={t('fees.external.archive')}
             tone="danger"
             disabled={archiving}
-            className="rounded text-primary hover:underline"
+            className={ARCHIVE_TRIGGER}
           >
+            <Archive aria-hidden className={ARCHIVE_ICON} />
             {t('fees.external.archive')}
           </ConfirmButton>
         </form>

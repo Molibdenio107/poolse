@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Pencil, Plus, Ticket, Trash2 } from 'lucide-react';
+import { Archive, Pencil, Plus, Ticket } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { useSavedAction } from '@/lib/saved';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextField } from '@/components/ui/field';
@@ -104,8 +105,8 @@ export function PassesPanel({
                     <Pencil aria-hidden className="size-4" />
                     <span className="sr-only">{t('passes.edit')}</span>
                   </button>
-                  <button type="button" onClick={() => setDropping(product)} className={BUTTON_QUIET}>
-                    <Trash2 aria-hidden className="size-4" />
+                  <button type="button" onClick={() => setDropping(product)} className={`${ARCHIVE_TRIGGER} w-control`}>
+                    <Archive aria-hidden className={ARCHIVE_ICON} />
                     <span className="sr-only">{t('passes.archive')}</span>
                   </button>
                 </div>

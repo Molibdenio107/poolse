@@ -18,7 +18,6 @@ import {
   NOTE_COLOURS,
   pinStaffNote,
   removeStaffNote,
-  type NoteColour,
   type StaffNote,
 } from './staff-notes.repository.js';
 
@@ -51,6 +50,7 @@ export class StaffNotesController {
     if (!membershipId) throw new ForbiddenException();
 
     const text = typeof body['body'] === 'string' ? body['body'].trim() : '';
+    // A colour sent by an older form is still checked, and then the role decides (Rui, 07-11-2026).
     const colour = body['colour'] ?? 'yellow';
     const fields: Record<string, string> = {};
     if (text.length === 0) fields['body'] = 'staffNotes.error.bodyRequired';
@@ -61,7 +61,7 @@ export class StaffNotesController {
     if (Object.keys(fields).length > 0) {
       throw new BadRequestException({ message: 'body is 1 to 500 characters; colour is one of four', fields });
     }
-    return pinStaffNote(organizationId, membershipId, text, colour as NoteColour);
+    return pinStaffNote(organizationId, membershipId, text);
   }
 
   /**

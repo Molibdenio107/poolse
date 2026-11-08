@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
-import { Trash2 } from 'lucide-react';
+import { Archive } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { ConfirmButton } from '@/components/confirm-action';
 import { POOL_METRICS, type PoolMetric } from '@/lib/pool-metrics';
 import { describeBand, type BandMap, type BandOverride } from '@/lib/water';
@@ -149,9 +150,9 @@ export function ArchiveAnalysisButton({
         tone="danger"
         disabled={pending}
         ariaLabel={t('facilities.archiveAnalysis')}
-        className="rounded p-1 text-foreground-muted transition-colors hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
+        className={`${ARCHIVE_TRIGGER} w-control`}
       >
-        <Trash2 aria-hidden className="size-4" />
+        <Archive aria-hidden className={ARCHIVE_ICON} />
       </ConfirmButton>
     </form>
   );

@@ -58,6 +58,7 @@ import {
   archiveLevel,
   archiveStudent,
   hasLiveStudentRecord,
+  rolesOf,
   countOutsideRange,
   createLevel,
   createStudent,
@@ -235,6 +236,20 @@ function refuseStaffRoleByNonOwner(role: string): void {
   }
 }
 
+const STAFF_ROLES = ['admin', 'instructor', 'maintenance'];
+
+/**
+ * Staff do not become students on the same login (Rui, 07-11-2026): the Owner
+ * archives the account and the person starts on a new one. The Owner is outside
+ * this, and a student who becomes staff is the other direction, which stays.
+ */
+function refuseDowngrade(): never {
+  throw new ConflictException({
+    code: 'new_account_needed',
+    message: 'Archive this account and invite the person again as a student',
+  });
+}
+
 /**
  * Duplicates and merges — POOLSE-17 AC8, AC9, AC10.
  *
@@ -289,6 +304,11 @@ export class PeopleDedupController {
       throw new ForbiddenException('Only an owner or admin may change a staff member’s roles');
     }
 
+    if (role === 'student') {
+      const held = await rolesOf(organizationId, membershipId);
+      if (!held.includes('owner') && held.some((one) => STAFF_ROLES.includes(one))) refuseDowngrade();
+    }
+
     if (!(await grantRole(organizationId, membershipId, role, actor))) {
       throw new NotFoundException('No such person');
     }
@@ -316,6 +336,18 @@ export class PeopleDedupController {
         code: 'student_still_active',
         message: 'Archive the student record before removing this role',
       });
+    }
+
+    const held = await rolesOf(organizationId, membershipId);
+    // On a staff record the student role is the Owner's, like the staff roles.
+    if (role === 'student' && !hasRole('owner') && held.some((one) => STAFF_ROLES.includes(one))) {
+      throw new ForbiddenException({ code: 'owner_only', message: 'Only the owner changes this role' });
+    }
+    // The last staff role going would leave a student on a staff login.
+    if (STAFF_ROLES.includes(role)) {
+      const staffLeft = held.some((one) => one !== role && (one === 'owner' || STAFF_ROLES.includes(one)));
+      const student = held.includes('student') || (await hasLiveStudentRecord(organizationId, membershipId));
+      if (!staffLeft && student) refuseDowngrade();
     }
 
     if (!(await revokeRole(organizationId, membershipId, role))) {

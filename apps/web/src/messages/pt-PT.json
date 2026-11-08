@@ -1,4 +1,14 @@
 {
+  "kinship": {
+    "label": "Grau de parentesco",
+    "choose": "Escolha",
+    "mother": "Mãe",
+    "father": "Pai",
+    "grandmother": "Avó",
+    "grandfather": "Avô",
+    "legalGuardian": "Tutor legal",
+    "other": "Outro"
+  },
   "busy": {
     "load": "A carregar…",
     "save": "A guardar…",
@@ -261,6 +271,40 @@
       }
     },
     "teaching": {
+      "familyApp": "App da família",
+      "familyInvite": "Convidar",
+      "familyInvited": "Convite enviado",
+      "joinTitle": "Inscrever no clube",
+      "coverConfirmTitle": "Pedir substituição para esta aula?",
+      "going": "Vem",
+      "notGoing": "Não vem",
+      "notComingShort": "{count, plural, one {# não vem} other {# não vêm}}",
+      "qualificationSend": "Enviar qualificação",
+      "qualificationSendHint": "Fica por confirmar até a secretaria a confirmar. Junte uma fotografia ou o PDF do certificado.",
+      "qualificationFile": "Certificado",
+      "qualificationChoose": "Escolher fotografia ou PDF",
+      "qualificationSubmit": "Enviar",
+      "qualificationSent": "Enviada. A secretaria vai confirmar.",
+      "studentsNone": "Ainda não tem alunos nas suas turmas.",
+      "studentsNoMatch": "Nenhum aluno com esse nome.",
+      "studentsFilter": "Procurar pelo nome",
+      "studentAge": "Idade",
+      "studentYears": "{age, plural, one {# ano} other {# anos}}",
+      "studentLevel": "Nível",
+      "studentTurmas": "Turmas",
+      "studentFavourite": "Estilo preferido",
+      "studentBests": "Melhores marcas",
+      "studentNoBests": "Ainda sem marcas registadas.",
+      "backToStudents": "Voltar aos alunos",
+      "pastFeedback": "Como correram as últimas aulas",
+      "pastFeedbackNone": "Ainda não deu aulas.",
+      "pastFeedbackFailed": "Não foi possível abrir as opiniões.",
+      "feedbackNone": "Sem opiniões",
+      "feedbackCount": "{count, plural, one {# opinião} other {# opiniões}}",
+      "sectionContacts": "Contactos",
+      "contactEmergency": "Contacto de emergência",
+      "contactNone": "Sem telefone na ficha. Fale com a secretaria.",
+      "contactFailed": "Não foi possível abrir os contactos.",
       "sectionMessage": "Mensagem",
       "messageHint": "Aparece na app desta turma durante 7 dias e segue por email.",
       "messageSubject": "Assunto",
@@ -359,8 +403,6 @@
       "firstName": "Nome próprio",
       "lastName": "Apelido",
       "birthDate": "Data de nascimento",
-      "relationship": "O que é seu?",
-      "relationshipHint": "Por exemplo: filho, filha, neto.",
       "class": "Turma",
       "noClasses": "Sem turmas com vagas de momento.",
       "note": "Observações para o clube",
@@ -439,6 +481,7 @@
       "official": "Oficial"
     },
     "tabs": {
+      "alunos": "Alunos",
       "label": "Separadores",
       "familia": {
         "inicio": "Início",
@@ -781,6 +824,12 @@
     "birthdayToday": "Faz anos hoje"
   },
   "staff": {
+    "newAccountNeeded": "Quem é funcionário não passa a aluno na mesma conta. Se a ficha de aluno já está arquivada, remova primeiro a função Aluno. Se não, arquive esta conta e convide a pessoa de novo a partir da ficha de aluno.",
+    "archiveAccount": "Arquivar conta",
+    "archiveHint": "Para quem deixou de trabalhar aqui. A pessoa deixa de entrar neste clube; aulas, presenças e pagamentos ficam no histórico.",
+    "archiveStillTeaches": "Esta pessoa ainda tem {turmas, plural, =0 {} one {# turma e } other {# turmas e }}{lessons, plural, one {# aula futura} other {# aulas futuras}}. Atribua outro professor primeiro.",
+    "archiveAnswersForChildren": "Esta pessoa é encarregado de educação de {children, plural, one {# aluno} other {# alunos}} e precisa desta conta. Retire primeiro essa ligação na ficha do aluno.",
+    "archiveFailed": "Não foi possível arquivar a conta.",
     "nameOwnerCorrects": "Esta pessoa tem conta. Se corrigir o nome ou a fotografia, muda na conta dela e em todos os clubes.",
     "ownerEdits": "Só o proprietário altera isto.",
     "studentStillActive": "Esta pessoa ainda é aluna. Arquive primeiro a ficha de aluno.",
@@ -3054,6 +3103,16 @@
     "emergencySearchHint": "Escreva pelo menos duas letras do nome. Se a pessoa não estiver no clube, deixe em branco e escreva o nome e o telefone abaixo."
   },
   "invite": {
+    "qrAlt": "Código QR da página de inscrição do clube",
+    "qrHint": "A pessoa lê o código e envia o pedido à secretaria.",
+    "share": "Partilhar",
+    "byEmail": "Enviar por email",
+    "byPhone": "Telemóvel (opcional)",
+    "send": "Enviar",
+    "fromContacts": "Escolher dos contactos",
+    "friendsTitle": "Convidar amigos",
+    "friendMessage": "Vem treinar comigo no {club}! Inscreve-te aqui:",
+    "clubMessage": "Inscrição no {club}:",
     "knownOwnerOnly": "Esta pessoa já está no clube. Só o proprietário a pode convidar para a equipa.",
     "open": "Convidar utilizador",
     "title": "Convidar alguém",
@@ -5537,6 +5596,9 @@
     }
   },
   "qualifications": {
+    "pendingLabel": "Por confirmar",
+    "confirm": "Confirmar",
+    "confirmed": "Qualificação confirmada.",
     "certificate": {
       "filterLabel": "Certificados",
       "allFilter": "Todas",
@@ -6115,6 +6177,7 @@
     "overrideFailedConflict": "Já há um acesso aberto: entre por ele."
   },
   "leads": {
+    "convertedInvited": "Aluno colocado em {turma}. Convite para a app enviado para {emails}.",
     "title": "Pedidos de inscrição",
     "subtitle": "O que as famílias enviaram pelo formulário público do clube.",
     "notPermitted": "Só o proprietário e os administradores tratam os pedidos de inscrição.",
@@ -6198,6 +6261,8 @@
       "ownerOnly": "Só o proprietário pode abrir, fechar ou mudar o endereço do formulário."
     },
     "public": {
+      "sentOn": "Pedido enviado em {date}.",
+      "another": "Enviar outro pedido (por exemplo, para um irmão)",
       "title": "Pré-inscrição",
       "intro": "Preencha este pedido e o clube entra em contacto consigo. Não é uma inscrição confirmada nem há nada a pagar agora.",
       "unavailable": "Não foi possível abrir o formulário",
@@ -7759,6 +7824,8 @@
       "fpnConfirm": "Criar"
     },
     "equipa": {
+      "archiveAccountTitle": "Arquivar a conta de {name}?",
+      "archiveAccountMessage": "{name} deixa de entrar neste clube e sai da lista de pessoas. Para voltar, terá de ser convidado de novo. A ficha de aluno, se existir, mantém-se sem conta.",
       "remove": "Remover",
       "copy": "Copiar",
       "grant": "Atribuir",
@@ -7791,6 +7858,8 @@
       "contractRemoveMessage": "Deixa de haver contrato atual, e o documento retirado fica nas versões anteriores.",
       "qualificationArchiveTitle": "Arquivar «{name}»?",
       "qualificationArchiveMessage": "O registo deixa de contar para a validade e fica no histórico como arquivado, sem forma de o restaurar.",
+      "rateRemoveTitle": "Remover este valor?",
+      "rateRemoveMessage": "O valor deixa de contar nos totais e fica no histórico como removido.",
       "withdrawVacationTitle": "Retirar o pedido de {count, plural, one {# dia} other {# dias}}?",
       "withdrawVacationMessage": "O pedido deixa de aguardar decisão; para gozar esses dias, terá de fazer um pedido novo.",
       "endSessionTitle": "Terminar a sessão neste outro dispositivo?",
@@ -7825,6 +7894,7 @@
       "contactRemoveMessage": "O contacto deixa de aparecer nesta parceria; não fica em Arquivados para restaurar.",
       "groupRemoveTitle": "Remover o grupo «{name}»?",
       "groupRemoveMessage": "O grupo deixa de aparecer nesta parceria; não fica em Arquivados para restaurar.",
+      "dutyRemoveTitle": "Remover o turno de {name}?",
       "publicPageOnTitle": "Ligar a página pública de {pool}?",
       "publicPageOnMessage": "Qualquer pessoa com o link ou o código QR passa a ver as últimas medições desta piscina, sem login; pode desligá-la aqui quando quiser.",
       "feedbackArchiveTitle": "Arquivar este comentário?",
@@ -7909,8 +7979,11 @@
     "violet": "Azul-oceano"
   },
   "staffNotes": {
+    "bylineRole": "{name} \u00b7 {role}, {date}",
+    "clubTitle": "Quadro do clube",
+    "newShort": "Nota",
     "title": "Quadro da equipa",
-    "hint": "Um recado para quem trabalha aqui. Fica afixado até quem o escreveu, ou o escritório, o tirar.",
+    "hint": "Nota de trabalho para a equipa da organização.",
     "empty": "Ainda não há recados. Escreva o primeiro.",
     "field": "Recado",
     "colourLabel": "Cor",

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { Check, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Archive, Check, Pencil, Plus } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { useSavedAction } from '@/lib/saved';
 import { formatDate } from '@/lib/date-format';
 import type { EnergyMeter, Tariff, TariffProvenance } from '@/lib/api';
@@ -169,9 +170,9 @@ export function TariffPanel({
                     onClick={() => setRemoving(tariff)}
                     aria-label={t('energy.tariff.remove')}
                     title={t('energy.tariff.remove')}
-                    className="text-foreground-muted transition-colors hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    className={`${ARCHIVE_TRIGGER} w-control`}
                   >
-                    <Trash2 className="size-4" aria-hidden="true" />
+                    <Archive aria-hidden className={ARCHIVE_ICON} />
                   </button>
                 </span>
               )}

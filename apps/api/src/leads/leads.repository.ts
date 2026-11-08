@@ -462,6 +462,15 @@ export class TrialUnavailableError extends Error {}
 /** An app request names a student archived since it was sent. */
 export class StudentArchivedError extends Error {}
 
+/** Under the club's age of majority on `today` (`YYYY-MM-DD`); no birth date counts as a minor. */
+export function isMinorOn(birthDate: string | null, majority: number, today: string): boolean {
+  if (birthDate === null) return true;
+  const [by, bm, bd] = birthDate.slice(0, 10).split('-').map(Number) as [number, number, number];
+  const [ty, tm, td] = today.split('-').map(Number) as [number, number, number];
+  const age = ty - by - (tm < bm || (tm === bm && td < bd) ? 1 : 0);
+  return age < majority;
+}
+
 /**
  * The student the lead describes, as the student form would post it.
  *
@@ -471,8 +480,11 @@ export class StudentArchivedError extends Error {}
  * a parent writes "he has asthma" in it, and a student's notes are not the
  * sensitive-fields path.
  */
-export function studentBodyFor(lead: Lead): Record<string, unknown> {
-  const hasGuardian = lead.guardianName !== null;
+export function studentBodyFor(lead: Lead, majority: number, today: string): Record<string, unknown> {
+  // Only a minor has a guardian (Rui, 07-11-2026). An adult who filled the section
+  // in anyway is still the student: their address is their own, and no second
+  // person is made — a request already in the queue included.
+  const hasGuardian = lead.guardianName !== null && isMinorOn(lead.swimmerBirthDate, majority, today);
   return {
     firstName: lead.swimmerFirstName,
     lastName: lead.swimmerLastName,

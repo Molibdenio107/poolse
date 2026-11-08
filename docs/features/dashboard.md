@@ -371,9 +371,13 @@ dates, no family ever sees it.
   student holds none of them, so it is absent from their payload (asserted on the raw JSON). **With no note
   pinned nothing is drawn** — no card and no heading — so when there is one, it is the first thing on the page.
 - **Pinning is apart from the notes** (Rui, 04-11-2026): *Novo recado*, a small button at the top right of the
-  page's header, opens the form in a dialog (a bottom sheet on a phone) — the text (1–500 characters) and one
-  of four papers, yellow, orange, green, blue (`POST /staff-notes`). Shown to whoever the widget was sent to.
-  The board lists the live notes newest first, at most 24, each with its author and date.
+  page's header, opens the form in a dialog (a bottom sheet on a phone) — the text (1–500 characters)
+  (`POST /staff-notes`). Shown to whoever the widget was sent to. The board lists the live notes newest first,
+  at most 24, each with its author, their role and the date.
+- **The paper is the author's role** (Rui, 07-11-2026): Owner blue, Admin green, Instructor yellow,
+  Maintenance orange, read live from the author's most senior role (somebody who left keeps the stored one).
+  No colour picker; a `colour` an older form sends is checked and ignored. The role is in the byline, so the
+  colour never says it alone. The teacher's phone calls the board *Quadro do clube* and the button *+ Nota*.
 - **Taking down.** Its author, or the office for any (`DELETE /staff-notes/:id`; anybody else 403
   `not_your_note`). It asks first. The office's toast offers *Anular*; an author who is not the office has no
   undo, because the bin is the office's — and the office can put it back from *Arquivados* (`staff_note` in

@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { SelectField, TextAreaField, TextField, useFocusFirstError } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
-import { Plus } from 'lucide-react';
+import { Archive, Plus } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { Dialog } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
@@ -126,8 +127,9 @@ export function WithdrawRegulationButton({
         type="button"
         onClick={() => setConfirming(true)}
         aria-label={t('regulation.withdrawLabel', { date: versionDate })}
-        className={BUTTON}
+        className={ARCHIVE_TRIGGER}
       >
+        <Archive aria-hidden className={ARCHIVE_ICON} />
         {t('regulation.withdraw')}
       </button>
       <Dialog

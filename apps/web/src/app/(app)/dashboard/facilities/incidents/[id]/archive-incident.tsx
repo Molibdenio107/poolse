@@ -3,7 +3,9 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { Archive } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { useToast } from '@/components/ui/toast';
 import { archiveIncidentAction } from '../incidents.actions';
 
@@ -36,7 +38,8 @@ export function ArchiveIncident({
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={QUIET}>
+      <button type="button" onClick={() => setOpen(true)} className={ARCHIVE_TRIGGER}>
+        <Archive aria-hidden className={ARCHIVE_ICON} />
         {t('incidents.archive')}
       </button>
       <Dialog

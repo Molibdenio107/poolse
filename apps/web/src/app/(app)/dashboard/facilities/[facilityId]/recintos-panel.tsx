@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { PoolseSport } from '@poolse/rules';
+import { Archive } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { SelectField, TextField, useSuccessKey } from '@/components/ui/field';
 import type { PlayingArea } from '@/lib/api';
 import { useSavedAction } from '@/lib/saved';
@@ -108,8 +110,9 @@ function Row({
           <button
             type="button"
             onClick={() => setAsking(true)}
-            className={`${BUTTON} text-foreground-muted hover:border-danger/50 hover:text-danger`}
+            className={ARCHIVE_TRIGGER}
           >
+            <Archive aria-hidden className={ARCHIVE_ICON} />
             {t('recintos.archive')}
           </button>
           <Dialog

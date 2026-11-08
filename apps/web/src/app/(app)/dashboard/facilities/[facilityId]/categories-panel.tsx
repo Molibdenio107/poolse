@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Pencil, Plus, Tag, Trash2 } from 'lucide-react';
+import { Archive, Pencil, Plus, Tag } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { useSavedAction } from '@/lib/saved';
 import { Dialog } from '@/components/ui/dialog';
 import { Reorderable } from '@/components/reorderable';
@@ -340,9 +341,9 @@ function Row({
                 type="button"
                 onClick={onDrop}
                 aria-label={t('categories.archive')}
-                className={BUTTON_QUIET}
+                className={`${ARCHIVE_TRIGGER} w-control`}
               >
-                <Trash2 aria-hidden className="size-3.5" />
+                <Archive aria-hidden className={ARCHIVE_ICON} />
               </button>
             </span>
           )}

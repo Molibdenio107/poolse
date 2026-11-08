@@ -747,3 +747,7 @@ Reading through costs the Alunos list its sort index, about 14 ms on 400 student
 - **Retention:** the schedule and the words of its reminders go with the student's health data, a year after leaving.
 
 Routes: `GET` and `POST /students/:id/medical-exam-schedule`, `POST …/:scheduleId/remind` and `…/cancel`.
+
+**Archiving from the record (07-11-2026, Rui).** The Owner and an Admin also archive a student from the bottom
+of the record's *Atividade* tab: the same question and route as the list's button, then back to *Alunos* with
+*Anular* in the toast.

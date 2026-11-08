@@ -173,7 +173,8 @@ export function RegisterForm({
       {notComing > 0 && (
         <p className="flex items-center gap-1.5 text-sm font-medium" aria-live="polite">
           <CalendarX aria-hidden className="size-4" />
-          {t('attendance.notComingCount', { count: notComing })}
+          {/* The phone says it short (Rui, 07-11-2026): Vem / Não vem. */}
+          {compact ? t('app.teaching.notComingShort', { count: notComing }) : t('attendance.notComingCount', { count: notComing })}
         </p>
       )}
 
@@ -284,7 +285,9 @@ export function RegisterForm({
                     ) : (
                       <CalendarX aria-hidden className="size-3.5" />
                     )}
-                    {notices.get(entry.studentId) ? t('attendance.noticeGoing') : t('attendance.noticeNotGoing')}
+                    {notices.get(entry.studentId)
+                      ? t(compact ? 'app.teaching.going' : 'attendance.noticeGoing')
+                      : t(compact ? 'app.teaching.notGoing' : 'attendance.noticeNotGoing')}
                   </span>
                 )}
                 {!entry.insured && (

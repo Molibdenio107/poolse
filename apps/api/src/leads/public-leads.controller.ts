@@ -255,9 +255,11 @@ export function parseSubmission(
     swimmerLastName: swimmerLastName!,
     swimmerBirthDate: swimmerBirthDate!,
     swimmerTaxNumber,
-    guardianName: minor || guardianName !== null ? guardianName : null,
-    guardianRelationship: guardianName !== null ? guardianRelationship : null,
-    guardianTaxNumber: guardianName !== null ? guardianTaxNumber : null,
+    // A guardian is a minor's (Rui, 07-11-2026): an adult signing themself up is
+    // the student, and a name typed in that section is not a second person.
+    guardianName: minor ? guardianName : null,
+    guardianRelationship: minor ? guardianRelationship : null,
+    guardianTaxNumber: minor ? guardianTaxNumber : null,
     email: email!,
     phone,
     note,

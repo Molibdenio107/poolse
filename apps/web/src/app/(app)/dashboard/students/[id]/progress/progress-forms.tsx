@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import type { Course, MeetChoice, Stroke } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { ConfirmButton } from '@/components/confirm-action';
+import { Archive } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import type { FormState } from '../../../actions';
 import {
   addRecordAction,
@@ -370,8 +372,9 @@ export function ArchiveRecordButton({
         confirmLabel={t('progress.remove')}
         tone="danger"
         disabled={pending}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60 bg-surface shadow-card"
+        className={ARCHIVE_TRIGGER}
       >
+        <Archive aria-hidden className={ARCHIVE_ICON} />
         {pending ? t('common.working') : t('progress.remove')}
       </ConfirmButton>
     </form>

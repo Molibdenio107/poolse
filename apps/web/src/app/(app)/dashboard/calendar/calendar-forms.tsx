@@ -8,6 +8,8 @@ import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded, useSuccessKey } fro
 import { Feedback, type FeedbackMessage } from '@/components/feedback';
 import { Dialog } from '@/components/ui/dialog';
 import { ConfirmButton } from '@/components/confirm-action';
+import { Archive } from 'lucide-react';
+import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { formatDate } from '@/lib/date-format';
 import type { Closure } from '@/lib/api';
 import type { FormState } from '../actions';
@@ -273,13 +275,18 @@ export function RemoveClosure({
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="closureId" value={closure.id} />
-      <button
-        type="submit"
+      {/* Asks first, like every archive (Rui, 07-11-2026). */}
+      <ConfirmButton
+        title={t('confirm.equipa.closureTitle', { reason: closure.reason })}
+        message={t('confirm.equipa.closureMessage')}
+        confirmLabel={t('confirm.equipa.remove')}
+        tone="danger"
         disabled={pending}
-        className="text-sm text-danger hover:underline disabled:opacity-60"
+        className={ARCHIVE_TRIGGER}
       >
+        <Archive aria-hidden className={ARCHIVE_ICON} />
         {t('calendar.remove')}
-      </button>
+      </ConfirmButton>
     </form>
   );
 }
