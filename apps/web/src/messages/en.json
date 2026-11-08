@@ -52,6 +52,17 @@
       "teaching": "My lessons",
       "maintenance": "Maintenance"
     },
+    "invoices": {
+      "title": "Statements",
+      "document": "Statement",
+      "empty": "No statements yet.",
+      "older": "Older",
+      "newer": "Newer",
+      "creditNoteOf": "Credit note for {documentNo}",
+      "savePdf": "Save as PDF",
+      "seeAll": "See statements",
+      "backTo": "Back to statements"
+    },
     "fees": {
       "overdue": "Overdue",
       "overdueCount": "{count, plural, one {# period overdue} other {# periods overdue}}",

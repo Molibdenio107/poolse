@@ -3,9 +3,9 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { LinkBusy } from '@/components/link-busy';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type AppChildFees, type AppFeeCharge, type AppFeeItem } from '@/lib/api';
+import { ApiError, apiFetch, type AppChildFees, type AppFeeCharge, type AppFeeItem, type AppInvoiceList } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
-import { describeLoad } from '@/lib/load-failure';
+import { describeLoad, outcome } from '@/lib/load-failure';
 import { formatCents } from '@/lib/money';
 import { PageError } from '@/components/page-shell';
 import { PaymentDestinations } from '@/components/payment-destinations';
@@ -39,6 +39,11 @@ export default async function FamilyPayments({
     const failure = describeLoad(error);
     return <PageError message={t(failure.key)} {...(failure.detail === '' ? {} : { detail: failure.detail })} />;
   }
+
+  // *Ver extratos* (POOLSE-201) only for somebody who pays: a second guardian
+  // would open an empty list.
+  const invoices = await outcome(apiFetch<AppInvoiceList>('/app/invoices'));
+  const pays = invoices.state === 'ok' && invoices.data.payer;
 
   const several = answer.children.length > 1;
   const title = (one: AppFeeItem): string =>
@@ -139,6 +144,17 @@ export default async function FamilyPayments({
           </details>
         </section>
       ))}
+
+      {/* The documents live on *Extratos*, so the money is never in two lists (POOLSE-201). */}
+      {pays && (
+        <Link
+          href="/app/perfil/extratos"
+          className="inline-flex items-center gap-1.5 self-start text-sm font-semibold text-primary hover:underline coarse:-my-3 coarse:py-3"
+        >
+          {t('app.invoices.seeAll')}
+          <LinkBusy />
+        </Link>
+      )}
 
       {destinations !== null && (
         <PaymentDestinations

@@ -1437,3 +1437,5 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-07** — **The phone app's loading signal is a centred card, and a student is archived from their own Atividade too** (Rui). The back office keeps its corner indicator. *Arquivar* on the record's *Atividade* tab is the Owner's and Admin's, returns to *Alunos*, and offers *Anular*.
 
 - **2026-11-07** — **Every *Arquivar* is quiet and asks first** (Rui). One style for every archive trigger across the app (`ARCHIVE_TRIGGER`); a question before every archive. Three that archived straight away now ask: a pay rate, a lifeguard shift, a calendar closure.
+
+- **2026-11-08** — **A payment document reaches the app as an *Extrato*, and only its payer reads it** (Rui, POOLSE-201). Internal records come to *Perfil* now, labelled as internal; *Faturas* waits for certified invoicing (7b.7). A second guardian who is not the payer sees no documents: the paper carries the payer's NIF and address. POOLSE-202 to 205 written the same evening (person categories, pass prices per category, family packs, entry QR).

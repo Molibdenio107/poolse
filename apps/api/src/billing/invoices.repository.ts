@@ -788,7 +788,7 @@ export const TOTALS_SQL = `
        AND c.archived_at IS NULL
   ) ch ON true`;
 
-const INVOICE_COLUMNS = `
+export const INVOICE_COLUMNS = `
   i.id, i.kind, i.document_no, i.number, i.series_id,
   i.facility_id, f.name AS facility_name,
   to_char(i.issued_on, 'YYYY-MM-DD') AS issued_on,
@@ -828,7 +828,7 @@ const INVOICE_COLUMNS = `
   to_char(ch.last_chased_on, 'YYYY-MM-DD') AS last_chased_on,
   ch.chase_count`;
 
-interface InvoiceRow {
+export interface InvoiceRow {
   id: string;
   kind: InvoiceDocumentKind;
   document_no: string;
@@ -860,7 +860,7 @@ interface InvoiceRow {
   chase_count: number;
 }
 
-function toInvoice(row: InvoiceRow): Invoice {
+export function toInvoice(row: InvoiceRow): Invoice {
   return {
     id: row.id,
     kind: row.kind,
@@ -984,7 +984,7 @@ export async function readInvoice(
   });
 }
 
-async function readLines(tx: Tx, invoiceId: string): Promise<InvoiceLine[]> {
+export async function readLines(tx: Tx, invoiceId: string): Promise<InvoiceLine[]> {
   const { rows } = await tx.query<{
     id: string;
     student_id: string | null;

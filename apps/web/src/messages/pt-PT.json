@@ -52,6 +52,17 @@
       "teaching": "As minhas aulas",
       "maintenance": "Manutenção"
     },
+    "invoices": {
+      "title": "Extratos",
+      "document": "Extrato",
+      "empty": "Ainda não há extratos.",
+      "older": "Mais antigos",
+      "newer": "Mais recentes",
+      "creditNoteOf": "Nota de crédito de {documentNo}",
+      "savePdf": "Guardar PDF",
+      "seeAll": "Ver extratos",
+      "backTo": "Voltar aos extratos"
+    },
     "fees": {
       "overdue": "Em dívida",
       "overdueCount": "{count, plural, one {# período em atraso} other {# períodos em atraso}}",

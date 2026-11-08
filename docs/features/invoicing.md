@@ -259,3 +259,12 @@ family on every page (*Limpar seleção* undoes it). The selection's count and t
 documentos* sit at the top of the card. Every family ticked goes to the API as the whole run.
 
 *Em dívida* in the family app and a student's fee block count older unpaid periods (POOLSE-187, `docs/features/students.md`). Faturação's *Em dívida* stays document-based. The monthly run is unchanged.
+
+## *Extratos* in the app — POOLSE-201 (08-11-2026)
+
+The person a document is **addressed to** reads it on the phone under *Perfil › Extratos*: a guardian who is the payer, or an adult-path student who pays for themselves. A second guardian who is not the payer sees none (Rui). Called *Extratos*, never *Faturas*, until certified invoicing (7b.7); the internal-record notice is the first thing on the screen and on the A4 paper (`invoice-paper.tsx`, shared with the office's print page).
+
+- `GET /app/invoices?offset=` (20 a page, no NIF or address on the list) and `GET /app/invoices/:id` (audited as `invoice.read_by_payer`). Both `Cache-Control: private, no-store`. Anybody else's id, another club's or a made-up one is the same 404; staff tokens get 403.
+- With the club's invoicing module off, the list says `payer: false` (the row hides) and a document is a 404.
+- Not opened by a *ver como* view (`tenant/app-view.ts` does not list it).
+- *Pagamentos* carries a *Ver extratos* link for a payer; it lists no documents itself.

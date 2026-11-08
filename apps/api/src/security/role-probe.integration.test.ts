@@ -1316,6 +1316,9 @@ test("app mode: a family reads its own agenda and lessons, and nobody else's (PO
     await refused('GET app/lessons/:id as a stranger', 404, () => new AppController().lesson(fixture.sessionId));
     await refused('GET app/lessons/not-a-uuid', 404, () => new AppController().lesson('not-a-uuid'));
     await refused('GET app/fees for a stranger', 404, () => new AppController().fees(fixture.aliceId));
+    // POOLSE-201: pays for nobody, so no documents and none to open.
+    assert.equal((await new AppController().invoices()).payer, false);
+    await refused('GET app/invoices/:id as a stranger', 404, () => new AppController().invoice(NO_SUCH_ID));
     // POOLSE-121: nobody to ask for but a new child, and never somebody else's.
     assert.deepEqual((await new AppController().enrolmentOptions()).people, []);
     await refused('POST app/enrolment-requests for a stranger', 404, () =>
@@ -1348,6 +1351,8 @@ test("app mode: a family reads its own agenda and lessons, and nobody else's (PO
       await refused('GET app/agenda as staff', 403, () => new AppController().agenda());
       await refused('GET app/lessons/:id as staff', 403, () => new AppController().lesson(fixture.sessionId));
       await refused('GET app/medical-leave as staff', 403, () => new AppController().medicalLeave());
+      await refused('GET app/invoices as staff', 403, () => new AppController().invoices());
+      await refused('GET app/invoices/:id as staff', 403, () => new AppController().invoice(NO_SUCH_ID));
     });
   }
 });

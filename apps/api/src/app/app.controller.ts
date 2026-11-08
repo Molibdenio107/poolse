@@ -2,12 +2,19 @@ import { familyFees, type FamilyChildFees } from '../billing/family-fees.reposit
 import { familyDocuments, familyFpnReview, type FamilyDocumentRow, type FpnReview } from '../students/family-documents.repository.js';
 import { payToFor, type PayTo } from '../billing/payment-destinations.js';
 import {
+  listPayerInvoices,
+  readPayerInvoice,
+  type PayerInvoice,
+  type PayerInvoiceItem,
+} from '../billing/payer-invoices.repository.js';
+import {
   BadRequestException,
   Body,
   ConflictException,
   Controller,
   ForbiddenException,
   Get,
+  Header,
   NotFoundException,
   Param,
   Patch,
@@ -199,6 +206,42 @@ export class AppController {
       children: await Promise.all(chosen.map((one) => familyFees(organizationId, one, mine))),
       family: mine.map((one) => ({ id: one.id, name: one.name })),
     };
+  }
+
+  /**
+   * *Extratos* — POOLSE-201: the documents the reader pays, newest first, 20 at
+   * a time. `payer: false` says to hide the row on *Perfil*. The list carries
+   * no NIF or address; only the document read does, and only to its payer.
+   */
+  @Get('invoices')
+  @Header('Cache-Control', 'private, no-store')
+  async invoices(
+    @Query('offset') offset?: string,
+  ): Promise<{ payer: boolean; documents: PayerInvoiceItem[]; next: number | null }> {
+    requireRole('guardian', 'student');
+    // Invoicing switched off for the club: no documents, and no row on *Perfil*.
+    if (!moduleIsOn('invoicing')) return { payer: false, documents: [], next: null };
+    const { organizationId, membershipId } = currentTenant();
+    const from = offset === undefined ? 0 : Number(offset);
+    if (!Number.isInteger(from) || from < 0 || from > 100_000) {
+      throw new BadRequestException('offset must be a whole number');
+    }
+    return listPayerInvoices(organizationId, membershipId, from);
+  }
+
+  /**
+   * One document, for its payer — POOLSE-201. Anybody else's, another tenant's
+   * or a number that does not exist is the same 404. Audited.
+   */
+  @Get('invoices/:id')
+  @Header('Cache-Control', 'private, no-store')
+  async invoice(@Param('id') id: string): Promise<PayerInvoice> {
+    requireRole('guardian', 'student');
+    if (!UUID.test(id) || !moduleIsOn('invoicing')) throw new NotFoundException('No such document');
+    const { organizationId, membershipId } = currentTenant();
+    const found = await readPayerInvoice(organizationId, membershipId, id);
+    if (found === null) throw new NotFoundException('No such document');
+    return found;
   }
 
   /**

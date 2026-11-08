@@ -5,8 +5,8 @@ import { SignOutButton } from '@clerk/nextjs';
 import {
   Award,
   IdCard,
-  Eye, ChevronRight, FileText, LayoutDashboard, LogOut, Settings, UserPlus, Wallet } from 'lucide-react';
-import { apiFetch, type ActiveSession, type Me } from '@/lib/api';
+  Eye, ChevronRight, FileText, LayoutDashboard, LogOut, Receipt, Settings, UserPlus, Wallet } from 'lucide-react';
+import { apiFetch, type ActiveSession, type AppInvoiceList, type Me } from '@/lib/api';
 import { hatsOf, isHat, landsInTeaching } from '@/lib/app-hats';
 import { outcome } from '@/lib/load-failure';
 import { formatDate, formatStamp } from '@/lib/date-format';
@@ -65,12 +65,15 @@ export default async function AppProfilePage({
     );
   }
 
-  const [locale, sessionsLoad, familyLoad, joinLink] = await Promise.all([
+  const [locale, sessionsLoad, familyLoad, joinLink, invoicesLoad] = await Promise.all([
     getLocale(),
     outcome(apiFetch<{ sessions: ActiveSession[] }>('/me/sessions')),
     outcome(apiFetch<{ students: { name: string; self: boolean }[] }>('/family')),
     outcome(apiFetch<{ slug: string | null }>('/app/join-link')),
+    // *Extratos* (POOLSE-201): only somebody who pays has the row.
+    hats.homes.includes('family') ? outcome(apiFetch<AppInvoiceList>('/app/invoices')) : Promise.resolve(null),
   ]);
+  const pays = invoicesLoad !== null && invoicesLoad.state === 'ok' && invoicesLoad.data.payer;
   // *Convidar amigos* (Rui, 07-11-2026): only while the club takes pre-registrations.
   const mayInvite = joinLink.state === 'ok' && joinLink.data.slug !== null;
   const sessions = sessionsLoad.state === 'ok' ? sessionsLoad.data.sessions : [];
@@ -128,6 +131,20 @@ export default async function AppProfilePage({
           <span className="flex items-center gap-3">
             <Wallet className="size-5 text-primary" aria-hidden />
             {t('app.tabs.familia.pagamentos')}
+          </span>
+          <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
+          <LinkBusy />
+        </Link>
+      )}
+
+      {familyRows && pays && (
+        <Link
+          href="/app/perfil/extratos"
+          className={`${row} rounded bg-surface px-4 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}
+        >
+          <span className="flex items-center gap-3">
+            <Receipt className="size-5 text-primary" aria-hidden />
+            {t('app.invoices.title')}
           </span>
           <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
           <LinkBusy />

@@ -5957,6 +5957,35 @@ export interface AppFeeCharge extends AppFeeItem {
   sharedWith: string[];
 }
 
+/** One row on *Extratos* — POOLSE-201. No NIF, address or e-mail on the list. */
+export interface AppInvoiceItem {
+  id: string;
+  kind: InvoiceDocumentKind;
+  documentNo: string;
+  issuedOn: string;
+  dueOn: string;
+  totalCents: number;
+  outstandingCents: number;
+  status: InvoiceStatus;
+  daysOverdue: number | null;
+  correctsDocumentNo: string | null;
+  students: string[];
+}
+
+export interface AppInvoiceList {
+  /** False: the reader pays for nothing, and *Perfil* shows no row. */
+  payer: boolean;
+  documents: AppInvoiceItem[];
+  /** The offset of the next 20, or null at the end. */
+  next: number | null;
+}
+
+/** One document for its payer: the office's read without the office's own parts. */
+export type AppInvoice = Omit<
+  Invoice,
+  'payments' | 'chases' | 'lastChasedOn' | 'chaseCount' | 'payerMembershipId' | 'payerStudentId'
+>;
+
 export interface AppChildFees {
   id: string;
   name: string;
