@@ -58,6 +58,7 @@ work being awkward:
 | Pending invitations | A queue worked down, not a register kept. Paging it would hide the invite somebody came to chase. |
 | Turmas › Sobreposições (`GET /class-groups/clashes`) | A queue worked down — POOLSE-144. Paging it would hide the child somebody came to move. |
 | Receção › *Categorias a expirar* (`GET /person-categories/expiring`) | A queue worked down — POOLSE-202. A window of 30 days; paging it would hide the proof somebody came to renew. |
+| *Natação livre* in the app (`GET /app/passes`) | One family's live passes and the club's handful of products sold on the phone — POOLSE-204. |
 | Ownership-transfer candidates | Every admin — a picker must be complete, or it tells the owner their colleague is not an admin. |
 | A form's dropdown options | Everything the form can express. A half-filled `<select>` is a form that silently cannot say what somebody means. |
 | One student's record history | One swimmer's career, and the chart above it needs every point. |

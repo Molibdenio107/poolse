@@ -43,6 +43,32 @@
     "toAvisos": "Back to notices"
   },
   "app": {
+    "passes": {
+      "title": "Free swim",
+      "none": "No packs or passes.",
+      "left": "{left} of {total} entries",
+      "until": "valid until {date}",
+      "unpaid": "Not paid",
+      "buyTitle": "Buy a pack",
+      "product": "Pack",
+      "forWhom": "For whom",
+      "forMe": "For me",
+      "familyHint": "For you and your children, one entry per person.",
+      "priceFor": "{amount} ({categories} price)",
+      "payFirst": "It stays owed until the club records the payment. It lets you in once paid.",
+      "buy": "Buy",
+      "bought": "Pack bought. It is in Payments until it is paid.",
+      "owedTitle": "Free swim to pay",
+      "owedHint": "Packs bought in the app. They let you in once paid.",
+      "errors": {
+        "productRequired": "Choose a pack.",
+        "unpaid": "You already have a pack to pay ({documentNo}). Pay it before buying another.",
+        "minor": "A pack is bought by a guardian.",
+        "gone": "This pack or this person is no longer available. Refresh the page.",
+        "buyFailed": "Could not buy the pack.",
+        "familyPackSelf": "A family pack is yours and your children's; buy it for yourself."
+      }
+    },
     "name": "Poolse",
     "tagline": "Pool management",
     "openBackoffice": "Open the backoffice",
@@ -4948,6 +4974,9 @@
     "externalCount": "{count, plural, one {# period was left out, invoiced outside Poolse} other {# periods were left out, invoiced outside Poolse}}."
   },
   "reception": {
+    "heldBy": "for {name}",
+    "unpaidAppPack": "Bought in the app and not paid yet: it does not let anyone in.",
+    "whoSwims": "Who goes in",
     "priceUnknown": "Could not read this person's price. The sale charges the price the system works out.",
     "priceBase": "Price: {amount} (base price)",
     "priceFor": "Price: {amount} ({categories} price)",
@@ -5019,6 +5048,9 @@
       "inWater": "in the water now"
     },
     "refused": {
+      "whoRequired": "Choose who is going in on this family pack.",
+      "notFamily": "This person may not use this pack.",
+      "unpaid": "This pack is not paid yet.",
       "poolFull": "The pool holds {capacity} people and {occupied} are already in the water.",
       "usedUp": "All {entries} entries on this pass have been used.",
       "expired": "This pass ended on {date}.",
@@ -5042,6 +5074,11 @@
     "closedOption": "{pool}: closed now"
   },
   "passes": {
+    "shareable": "Family pack",
+    "shareableShort": "Family pack",
+    "shareableHint": "Used by the buyer and the children they are the guardian of, one entry per person. Always sold at the base price.",
+    "soldInApp": "Sold in the app",
+    "soldInAppShort": "sold in the app",
     "prices": {
       "toggle": "{count, plural, =0 {Prices by category} one {Prices by category (#)} other {Prices by category (#)}}",
       "hint": "Each person pays the price of their highest-priority category that has one, or of a combination they hold entirely. With none, they pay the base price. Passes already sold do not change.",

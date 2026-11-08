@@ -393,8 +393,23 @@ export class ReceptionController {
       });
     }
 
+    // POOLSE-204: who swims. Optional; the trigger makes a personal pass its
+    // holder's and refuses a family pack with nobody named.
+    const swimmerMembership = text(body['membershipId']);
+    const swimmerStudent = text(body['studentId']);
+    if (
+      (swimmerMembership !== null && !UUID.test(swimmerMembership)) ||
+      (swimmerStudent !== null && !UUID.test(swimmerStudent)) ||
+      (swimmerMembership !== null && swimmerStudent !== null)
+    ) {
+      throw new BadRequestException({ message: 'Name one swimmer, by membershipId or studentId' });
+    }
+
     try {
-      const id = await checkIn(organizationId, facilityId, passId, poolId);
+      const id = await checkIn(organizationId, facilityId, passId, poolId, {
+        membershipId: swimmerMembership,
+        studentId: swimmerStudent,
+      });
       if (id === null) throw new NotFoundException('No such pass');
       return { id };
     } catch (error) {
@@ -486,6 +501,9 @@ function readProduct(body: Record<string, unknown>): PassProductInput {
     amountCents: amountCents as number,
     vatRate,
     vatExempt,
+    // POOLSE-204: a Pack família, and whether the app sells it.
+    shareable: body['shareable'] === true,
+    soldInApp: body['soldInApp'] === true,
   };
 }
 
@@ -542,6 +560,22 @@ export function checkInRefusal(error: unknown): unknown {
       });
     case 'pass_void':
       return new ConflictException({ code: 'pass_void', message: 'This pass was credited' });
+    // POOLSE-204.
+    case 'pass_who_required':
+      return new ConflictException({
+        code: 'pass_who_required',
+        message: 'Say who is swimming on this family pack',
+      });
+    case 'pass_not_family':
+      return new ConflictException({
+        code: 'pass_not_family',
+        message: 'This person may not use this pass',
+      });
+    case 'pass_unpaid':
+      return new ConflictException({
+        code: 'pass_unpaid',
+        message: 'This pack is not paid yet',
+      });
     case 'pass_in_water':
       return new ConflictException({
         code: 'pass_in_water',

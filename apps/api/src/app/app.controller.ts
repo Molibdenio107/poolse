@@ -9,6 +9,18 @@ import {
 } from '../billing/payer-invoices.repository.js';
 import { myCategories } from '../billing/person-categories.repository.js';
 import {
+  buyInApp,
+  FamilyPackIsTheHoldersError,
+  MinorMayNotBuyError,
+  NoSuchAppProductError,
+  NotYourChildError,
+  PurchaseKeyTakenError,
+  readAppPasses,
+  UnpaidAppPackError,
+  type AppPasses,
+} from './app-passes.repository.js';
+import { NoSeriesError } from '../reception/passes.repository.js';
+import {
   BadRequestException,
   Body,
   ConflictException,
@@ -24,7 +36,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { requireRole } from '../tenant/roles.js';
+import { hasRole, requireRole } from '../tenant/roles.js';
 import { CoreRoute, moduleIsOn } from '../tenant/modules.js';
 import { familyStudents } from '../students/students.repository.js';
 import { studentFees } from '../billing/fees.repository.js';
@@ -322,6 +334,84 @@ export class AppController {
           }),
     });
     return { saved: true };
+  }
+
+  /**
+   * *Natação livre* — POOLSE-204: the passes the reader may use, what the club
+   * sells on the phone and at what price for whom, and the phone packs they owe.
+   * Nothing when the club's reception or invoicing is off.
+   */
+  @Get('passes')
+  @Header('Cache-Control', 'private, no-store')
+  async passes(): Promise<AppPasses> {
+    requireRole('guardian', 'student');
+    const { organizationId, membershipId } = currentTenant();
+    if (!moduleIsOn('reception') || !moduleIsOn('invoicing')) {
+      return { passes: [], forSale: [], people: [], canBuy: false, owed: [] };
+    }
+    return readAppPasses(organizationId, membershipId, hasRole('guardian'));
+  }
+
+  /**
+   * Buy a pack on the phone — POOLSE-204, rule 5. The body names a product, who
+   * it is for (`studentId`, or nobody for the reader) and an idempotency key;
+   * never a price. Owed until the office records it paid, and refused at the
+   * door until then. Ten an hour per person, the family write limit.
+   */
+  @Throttle(FAMILY_UPLOAD)
+  @Post('passes')
+  async buyPass(
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ passId: string; invoiceId: string; documentNo: string; repeated: boolean }> {
+    requireRole('guardian', 'student');
+    const { organizationId, membershipId } = currentTenant();
+    if (!moduleIsOn('reception') || !moduleIsOn('invoicing')) throw new NotFoundException('No such product');
+    if (body['amountCents'] !== undefined) {
+      throw new BadRequestException({ message: 'The price is the club\'s; send none' });
+    }
+    const productId = typeof body['productId'] === 'string' ? body['productId'] : '';
+    const purchaseKey = typeof body['purchaseKey'] === 'string' ? body['purchaseKey'] : '';
+    const rawStudent = body['studentId'];
+    const studentId = typeof rawStudent === 'string' && rawStudent !== '' ? rawStudent : null;
+    if (!UUID.test(productId)) throw new NotFoundException('No such product');
+    if (!UUID.test(purchaseKey)) throw new BadRequestException({ message: 'purchaseKey must be a uuid' });
+    if (studentId !== null && !UUID.test(studentId)) throw new NotFoundException('No such person');
+
+    try {
+      const sale = await buyInApp(organizationId, membershipId, hasRole('guardian'), {
+        productId,
+        studentId,
+        purchaseKey,
+      });
+      return { passId: sale.passId, invoiceId: sale.invoiceId, documentNo: sale.documentNo, repeated: sale.repeated };
+    } catch (error) {
+      if (error instanceof MinorMayNotBuyError) {
+        throw new ForbiddenException({ code: 'minor_may_not_buy', message: 'A pack is bought by a guardian' });
+      }
+      if (error instanceof NoSuchAppProductError) throw new NotFoundException('No such product');
+      if (error instanceof NotYourChildError) throw new NotFoundException('No such person');
+      if (error instanceof FamilyPackIsTheHoldersError) {
+        throw new BadRequestException({
+          code: 'family_pack_is_the_holders',
+          message: 'A family pack is bought for the family, not for one child',
+          fields: { studentId: 'app.passes.errors.familyPackSelf' },
+        });
+      }
+      if (error instanceof UnpaidAppPackError) {
+        throw new ConflictException({
+          code: 'app_pass_unpaid',
+          message: 'An unpaid phone pack is waiting',
+          values: { documentNo: error.documentNo },
+        });
+      }
+      if (error instanceof PurchaseKeyTakenError) {
+        throw new ConflictException({ code: 'purchase_key_taken', message: 'Try again' });
+      }
+      if (error instanceof NoSeriesError) {
+        throw new ConflictException({ code: 'no_invoice_series', message: 'The club cannot issue a document yet' });
+      }
+      throw error;
+    }
   }
 
   /**

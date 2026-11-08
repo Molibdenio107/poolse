@@ -63,6 +63,8 @@ export async function saveProductAction(
     amountCents: Number(cents),
     vatRate: wholeOrNull(formData, 'vatRate') ?? 0,
     vatExempt: formData.get('vatExempt') === 'on',
+    shareable: formData.get('shareable') === 'on',
+    soldInApp: formData.get('soldInApp') === 'on',
   };
 
   try {

@@ -4,6 +4,18 @@
 
 **Type:** Feature · **Area:** Reception / Mobile app / Billing · **Priority:** Medium (pilot) · **Depends on** [POOLSE-68](./POOLSE-68-free-swim-passes-and-check-in.md), [POOLSE-203](./POOLSE-203-a-pass-price-per-category.md) · **Absorbs** the free-swim half of [POOLSE-121](./POOLSE-121-free-swim-and-enrolment-from-the-phone.md) (its open points answered here)
 
+### As built (08-11-2026) — wins over what follows
+
+- **A child may hold a pass** (Rui, 08-11-2026): `pass.student_id`, one holder by CHECK. A guardian buys a child their own personal pack, priced by the child's categories; at the desk it shows in the guardian's panel (*de Tomás*), where the child is checked in.
+- **Owed phone packs** have their own block on *Pagamentos*, *Natação livre por pagar* (Rui, 08-11-2026), with the document number linking to *Extratos*; the fee lists are untouched.
+- **A family pack sells at its base price**: `pass_price_for()` ignores categories for a shareable product, because a category-priced pass is personal (POOLSE-203). It is bought for oneself only (400 otherwise).
+- **Schema** (migration `1794654500000_family-packs.sql`): `pass_product.shareable`, `sold_in_app`; `pass.student_id`, `shared`, `sold_via`, `purchase_key`; who swam on `pass_check_in` (backfilled to the holder); `pass_family()`; `pass_current.paid`; the check-in trigger's three additions; `pass_price_for` with an optional student.
+- **API**: reception's check-in takes an optional `membershipId` / `studentId`; `GET /facilities/:id/reception/people/:id/passes` adds the holder, `shared`, `soldVia`, `paid` and `family`. `GET /app/passes` and `POST /app/passes` (`app/app-passes.repository.ts`), on the sale's own body (`sellPassIn`). Minor: 403. Unpaid: 409 naming the document. Same key: the same sale, `repeated: true`; another buyer's key: 409. A typed amount: 400.
+- **Who may buy for a child**: any live guardian of that child, who then pays. Not only the payer of the child's fees.
+- **The monthly free-swim figure on Receção counts a phone sale when it is sold**, unpaid or not, as it counts any document line. Proposal: count it once paid. Not built.
+- **Security review** (08-11-2026, diff): no S1 to S3. Two probes added as tests (another buyer's key, an archived guardian link). Every new route has role-probe lines.
+- **Tests**: `packages/db/test/family-packs.sql` (QA 1, 2, 5, isolation), `apps/api/src/app/app-passes.integration.test.ts` (QA 1, 3, 4, 6, 7, the child's own pack, the two probes). Walked in a browser: the phone purchase, the second purchase refused, the *Pagamentos* block, and the desk (the unpaid line, *Quem entra*, the refusal).
+
 ### Decided (Rui, 08-11-2026)
 
 - **A family pack is used by the payer's family**: the payer, plus the children they are a live guardian of, worked out from `guardian_link`.

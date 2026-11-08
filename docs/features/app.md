@@ -366,3 +366,9 @@ app with the words ready; Poolse sends nothing. A teacher opens it from a small 
 student or family from *Perfil → Convidar amigos* (`/app/perfil/convidar`), to the club, never "to Poolse".
 `GET /app/join-link` (instructor, guardian, student) is null while pre-registration is closed, and then
 neither is drawn. A newcomer's request reaches the secretaria's queue; nobody is created.
+
+## Natação livre — POOLSE-204 (08-11-2026)
+
+- **Where**: *Perfil › Natação livre* (shown when the reader has a pass or the club sells a pack in the app). It lists each live pass the reader may use: their own, their children's, and a family pack of the guardian who holds it. Each pass says *7 de 10 entradas · válido até dd-MM-yyyy · Pack família*, or *Por pagar*. No list of anybody's entries.
+- **Buying**: a guardian (for themselves, or for a child they guard, who then holds the pack) or an adult student (for themselves). A minor's own login sees passes and never buys (403). A family pack is bought for oneself only. The price is the server's (`pass_price_for`), shown before buying. The document is addressed to the buyer and is **owed**: it appears on *Pagamentos* under *Natação livre por pagar* (its own block, not mixed into the fees; Rui) and in *Extratos*. The pack opens the door once paid. **One unpaid phone pack at a time** per payer: a second purchase is refused, naming the unpaid document.
+- **API**: `GET /app/passes`, `POST /app/passes` (`productId`, optional `studentId`, `purchaseKey`; never an amount). Ten purchases an hour per person (`FAMILY_UPLOAD`). The same key twice is the same sale. Nothing when the club's reception or invoicing is off; a *ver como* view opens neither.

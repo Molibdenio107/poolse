@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { LinkBusy } from '@/components/link-busy';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type AppChildFees, type AppFeeCharge, type AppFeeItem, type AppInvoiceList } from '@/lib/api';
+import { ApiError, apiFetch, type AppChildFees, type AppFeeCharge, type AppFeeItem, type AppInvoiceList, type AppPasses } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { describeLoad, outcome } from '@/lib/load-failure';
 import { formatCents } from '@/lib/money';
@@ -44,6 +44,9 @@ export default async function FamilyPayments({
   // would open an empty list.
   const invoices = await outcome(apiFetch<AppInvoiceList>('/app/invoices'));
   const pays = invoices.state === 'ok' && invoices.data.payer;
+  // Phone packs owed (POOLSE-204): their own block, beside the fees, never mixed in.
+  const passes = await outcome(apiFetch<AppPasses>('/app/passes'));
+  const owedPacks = passes.state === 'ok' ? passes.data.owed : [];
 
   const several = answer.children.length > 1;
   const title = (one: AppFeeItem): string =>
@@ -144,6 +147,31 @@ export default async function FamilyPayments({
           </details>
         </section>
       ))}
+
+      {owedPacks.length > 0 && (
+        <section aria-labelledby="owed-packs" className="flex flex-col gap-2 rounded bg-surface p-4 shadow-card">
+          <h2 id="owed-packs" className="text-base font-semibold">
+            {t('app.passes.owedTitle')}
+          </h2>
+          <p className="text-sm text-foreground-muted">{t('app.passes.owedHint')}</p>
+          <ul className="flex flex-col divide-y divide-border">
+            {owedPacks.map((one) => (
+              <li key={one.passId} className="flex items-center justify-between gap-3 py-2">
+                <span className="flex flex-col">
+                  <span className="font-semibold">{one.productName}</span>
+                  <Link
+                    href={`/app/perfil/extratos/${one.invoiceId}`}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    {one.documentNo}
+                  </Link>
+                </span>
+                <span className="font-semibold tabular-nums">{formatCents(locale, one.amountCents)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* The documents live on *Extratos*, so the money is never in two lists (POOLSE-201). */}
       {pays && (

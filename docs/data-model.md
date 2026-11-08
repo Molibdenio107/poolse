@@ -2697,6 +2697,16 @@ A free swimmer has no enrolment, so a category also sits on the **person**. For 
 - **`pass_price_for(org, product, membership)`** → `amount_cents`, `category_ids`, `category_names` (*Sénior + Sócio*, rank order). Of the price rows whose whole set the person holds (`person_categories()`), the largest set wins, ties to the higher-ranked categories. A category with no price is skipped, never a reason to fall to the base (Rui, 08-11-2026). None held, or no person: the base price, with null names.
 - **The sale snapshots it** on `invoice_line.amount_cents` and `invoice_line.fee_category_name`; the payment is the same figure. The office may sell at the base price instead (audited with what it overrode), never at a typed amount (422).
 
+### Family packs, who swam, and packs bought on the phone — POOLSE-204, 8 November 2026
+
+- **`pass_product.shareable`** (a *Pack família*; never a single entry) and **`pass_product.sold_in_app`**.
+- **`pass.student_id`**: a child may hold a personal pass (Rui, 08-11-2026). A pass has one holder, a login **or** a student (CHECK), or none for an anonymous single entry. **`pass.shared`** (a family pack held by a login), **`pass.sold_via`** (`pass_sold_via`: `reception` | `app`) and **`pass.purchase_key`** (unique per club; required on an `app` sale) are snapshotted at the sale.
+- **`pass_check_in.membership_id` / `student_id`**: who swam, at most one (CHECK), composite FKs. Existing entries were backfilled to the holder. Entries left stay derived.
+- **`pass_family(org, pass)`**: the holder, plus on a shared pass every child the holder is a live guardian of today (`guardian_link.archived_at IS NULL`, student not archived). The one definition of who may use a pass.
+- **`pass_current`** gains `student_id`, `shared`, `sold_via` and **`paid`** (payments on the sale's document cover its lines).
+- **Check-in trigger** additions: no swimmer named means the holder on a personal pass and a refusal on a shared one (`pass_who_required`); a named swimmer must be in `pass_family()` (`pass_not_family`); an `app` pass not `paid` is refused (`pass_unpaid`); the in-water test is per person on a shared pass.
+- **`pass_price_for(org, product, membership, student DEFAULT NULL)`** replaces the three-argument form: a child is priced by their own categories, and a shareable product always sells at its base.
+
 ### The trial ladder — POOLSE-61 slice B1, 14 September 2026
 
 ```

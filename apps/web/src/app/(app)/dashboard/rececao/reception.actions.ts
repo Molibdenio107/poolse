@@ -35,6 +35,9 @@ const REFUSALS: Record<string, string> = {
   pass_not_yet: 'reception.refused.notYet',
   pass_void: 'reception.refused.void',
   pass_in_water: 'reception.refused.inWater',
+  pass_who_required: 'reception.refused.whoRequired',
+  pass_not_family: 'reception.refused.notFamily',
+  pass_unpaid: 'reception.refused.unpaid',
   pass_wrong_site: 'reception.refused.wrongSite',
   pool_closed: 'reception.refused.poolClosed',
   no_invoice_series: 'reception.refused.noSeries',
@@ -156,6 +159,9 @@ export async function checkInAction(
     await apiPost(`/facilities/${facilityId}/reception/check-ins`, {
       passId: field(formData, 'passId'),
       poolId,
+      // POOLSE-204: who swims, on a family pack.
+      membershipId: field(formData, 'membershipId'),
+      studentId: field(formData, 'studentId'),
     });
   } catch (error) {
     return failure(error, 'reception.checkInFailed');

@@ -1779,6 +1779,11 @@ test('person categories are the office’s; a family reads only its own — POOL
       await refused(`POST pass-products/:id/prices/:priceId/archive as ${role}`, 403, () =>
         new PassProductsController().archivePrice(NO_SUCH_ID, NO_SUCH_ID, NO_SUCH_ID),
       );
+      // POOLSE-204: the family's passes and the phone purchase are not staff's.
+      await refused(`GET app/passes as ${role}`, 403, () => new AppController().passes());
+      await refused(`POST app/passes as ${role}`, 403, () =>
+        new AppController().buyPass({ productId: NO_SUCH_ID, purchaseKey: NO_SUCH_ID }),
+      );
       await refused(`GET reception/people/:id/prices as ${role}`, 403, () =>
         new ReceptionController().prices(NO_SUCH_ID, fixture.martaId),
       );

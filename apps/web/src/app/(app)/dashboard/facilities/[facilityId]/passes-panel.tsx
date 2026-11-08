@@ -98,6 +98,8 @@ export function PassesPanel({
                       : t('passes.vatShort', { rate: product.vatRate })}
                     {' · '}
                     {t('passes.sold', { count: product.soldCount })}
+                    {product.shareable && ` · ${t('passes.shareableShort')}`}
+                    {product.soldInApp && ` · ${t('passes.soldInAppShort')}`}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
@@ -173,6 +175,8 @@ function ProductForm({
   const [kind, setKind] = useState<PassKind>(product?.kind ?? 'single');
   const [price, setPrice] = useState(product === null ? '' : centsToInput(product.amountCents));
   const [exempt, setExempt] = useState(product?.vatExempt ?? false);
+  const [shareable, setShareable] = useState(product?.shareable ?? false);
+  const [inApp, setInApp] = useState(product?.soldInApp ?? false);
   const [state, submit, pending] = useSavedAction(
     async (previous: FormState, formData: FormData) => {
       const next = await saveProductAction(previous, formData);
@@ -271,6 +275,33 @@ function ProductForm({
           className="size-4"
         />
         {t('passes.vatExempt')}
+      </label>
+
+      {/* POOLSE-204: a family pack (not a single entry), and the phone. */}
+      {kind !== 'single' && (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="shareable"
+            checked={shareable}
+            onChange={(event) => setShareable(event.target.checked)}
+            className="size-4"
+          />
+          {t('passes.shareable')}
+        </label>
+      )}
+      {kind !== 'single' && shareable && (
+        <p className="text-sm text-foreground-muted">{t('passes.shareableHint')}</p>
+      )}
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="soldInApp"
+          checked={inApp}
+          onChange={(event) => setInApp(event.target.checked)}
+          className="size-4"
+        />
+        {t('passes.soldInApp')}
       </label>
 
       <div className="flex gap-2">

@@ -43,6 +43,10 @@ export interface PassProduct {
   soldCount: number;
   /** The price per category set — POOLSE-203. The base is `amountCents`. */
   prices: PassPrice[];
+  /** A *Pack família* — POOLSE-204: used by the holder and the children they guard. */
+  shareable: boolean;
+  /** Offered for purchase in the family app — POOLSE-204. */
+  soldInApp: boolean;
 }
 
 /** One price for one set of categories (a single one, or a typed combination) — POOLSE-203. */
@@ -71,6 +75,8 @@ export interface PassProductInput {
   amountCents: number;
   vatRate: number;
   vatExempt: boolean;
+  shareable: boolean;
+  soldInApp: boolean;
 }
 
 export interface PoolOccupancy {
@@ -120,7 +126,39 @@ export interface Pass {
   inWater: boolean;
   documentNo: string | null;
   invoiceId: string | null;
+  /** POOLSE-204: who holds it — the person at the desk, or a child they guard. */
+  holderName: string | null;
+  holderStudentId: string | null;
+  /** A family pack: anybody in `family` may check in on it. */
+  shared: boolean;
+  soldVia: 'reception' | 'app';
+  /** A phone pack works once paid. */
+  paid: boolean;
+  /** Who may check in on it, from `pass_family()`. */
+  family: Swimmer[];
 }
+
+/** One person who may swim on a pass — a login or a student, never both. */
+export interface Swimmer {
+  membershipId: string | null;
+  studentId: string | null;
+  name: string;
+}
+
+/** A student's name as the club reads it (`student_person`). */
+export const STUDENT_NAME = (idExpression: string): string =>
+  `(SELECT btrim(sp.first_name || ' ' || sp.last_name) FROM student_person sp WHERE sp.id = ${idExpression})`;
+
+/** `pass_family()` as a JSON list of swimmers with names, for one pass alias. */
+export const FAMILY_JSON = (passAlias: string): string => `
+  (SELECT coalesce(json_agg(json_build_object(
+            'membershipId', fam.membership_id,
+            'studentId', fam.student_id,
+            'name', coalesce(${STUDENT_NAME('fam.student_id')},
+                             CASE WHEN fam.membership_id IS NULL THEN NULL
+                                  ELSE person_name(fam.membership_id) END, ''))
+          ORDER BY fam.membership_id IS NULL, fam.student_id), '[]'::json)
+     FROM pass_family(${passAlias}.organization_id, ${passAlias}.id) fam)`;
 
 export interface Reception {
   stayMinutes: number;
@@ -195,7 +233,8 @@ const PRODUCT_COLUMNS = `
           ORDER BY cardinality(pp.category_ids), pp.amount_cents), '[]'::json)
      FROM pass_product_price pp
     WHERE pp.product_id = p.id AND pp.organization_id = p.organization_id
-      AND pp.archived_at IS NULL) AS prices`;
+      AND pp.archived_at IS NULL) AS prices,
+  p.shareable, p.sold_in_app`;
 
 interface ProductRow {
   id: string;
@@ -209,6 +248,8 @@ interface ProductRow {
   provenance: MoneyProvenance;
   sold_count: number;
   prices: PassPrice[];
+  shareable: boolean;
+  sold_in_app: boolean;
 }
 
 function toProduct(row: ProductRow): PassProduct {
@@ -225,6 +266,8 @@ function toProduct(row: ProductRow): PassProduct {
     provenance: row.provenance,
     soldCount: row.sold_count,
     prices: row.prices,
+    shareable: row.shareable,
+    soldInApp: row.sold_in_app,
   };
 }
 
@@ -263,6 +306,8 @@ function shaped(input: PassProductInput): PassProductInput {
     entries: input.kind === 'pack' ? input.entries : null,
     validityDays: input.kind === 'single' ? null : input.validityDays,
     vatRate: input.vatExempt ? 0 : input.vatRate,
+    // A single entry is one person on one day: nothing to share (CHECK too).
+    shareable: input.kind !== 'single' && input.shareable,
   };
 }
 
@@ -277,8 +322,8 @@ export async function createProduct(
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO pass_product
          (organization_id, facility_id, kind, name, entries, validity_days, amount_cents,
-          vat_rate, vat_exempt)
-       VALUES ($1, $2, $3::pass_kind, $4, $5, $6, $7, $8, $9)
+          vat_rate, vat_exempt, shareable, sold_in_app)
+       VALUES ($1, $2, $3::pass_kind, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id`,
       [
         organizationId,
@@ -290,6 +335,8 @@ export async function createProduct(
         product.amountCents,
         product.vatRate,
         product.vatExempt,
+        product.shareable,
+        product.soldInApp,
       ],
     );
     const id = rows[0]!.id;
@@ -319,7 +366,8 @@ export async function updateProduct(
     const { rowCount } = await tx.query(
       `UPDATE pass_product
           SET kind = $3::pass_kind, name = $4, entries = $5, validity_days = $6,
-              amount_cents = $7, vat_rate = $8, vat_exempt = $9
+              amount_cents = $7, vat_rate = $8, vat_exempt = $9,
+              shareable = $10, sold_in_app = $11
         WHERE id = $2 AND facility_id = $1 AND archived_at IS NULL`,
       [
         facilityId,
@@ -331,6 +379,8 @@ export async function updateProduct(
         product.amountCents,
         product.vatRate,
         product.vatExempt,
+        product.shareable,
+        product.soldInApp,
       ],
     );
     if (rowCount === 0) return false;
@@ -542,9 +592,11 @@ export async function readReception(
       checked_in_at: string;
       leaves_at: string;
     }>(
-      `SELECT c.id AS check_in_id, c.pass_id, c.pool_id, s.membership_id,
-              CASE WHEN s.membership_id IS NULL THEN NULL
-                   ELSE ${personName('s.membership_id')} END AS person_name,
+      // Who swam (POOLSE-204), not who holds the pass: on a family pack they differ.
+      `SELECT c.id AS check_in_id, c.pass_id, c.pool_id, c.membership_id,
+              coalesce(${STUDENT_NAME('c.student_id')},
+                       CASE WHEN c.membership_id IS NULL THEN NULL
+                            ELSE ${personName('c.membership_id')} END) AS person_name,
               pr.name AS product_name, s.kind::text AS kind,
               c.checked_in_at, leaves.at AS leaves_at
          FROM pass_check_in c
@@ -610,6 +662,12 @@ export async function passesOf(
       in_water: boolean;
       document_no: string | null;
       invoice_id: string | null;
+      holder_name: string | null;
+      student_id: string | null;
+      shared: boolean;
+      sold_via: 'reception' | 'app';
+      paid: boolean;
+      family: Swimmer[];
     }>(
       `SELECT pc.id, pr.name AS product_name, pc.kind::text AS kind, pc.entries,
               pc.entries_used, pc.entries_left,
@@ -626,12 +684,23 @@ export async function passesOf(
                                 c.checked_in_at
                                   + make_interval(mins => f.free_swim_stay_minutes)) > now()
               ) AS in_water,
-              i.document_no, i.id AS invoice_id
+              i.document_no, i.id AS invoice_id,
+              coalesce(${STUDENT_NAME('pc.student_id')},
+                       CASE WHEN pc.membership_id IS NULL THEN NULL
+                            ELSE person_name(pc.membership_id) END) AS holder_name,
+              pc.student_id, pc.shared, pc.sold_via::text AS sold_via, pc.paid,
+              ${FAMILY_JSON('pc')} AS family
          FROM pass_current pc
          JOIN pass_product pr ON pr.id = pc.product_id AND pr.organization_id = pc.organization_id
          JOIN facility f ON f.id = pc.facility_id AND f.organization_id = pc.organization_id
          LEFT JOIN invoice i ON i.id = pc.sale_invoice_id AND i.organization_id = pc.organization_id
-        WHERE pc.facility_id = $1 AND pc.membership_id = $2
+        -- The person's own, and their children's (POOLSE-204): a child's pack
+        -- is checked in from the guardian at the desk.
+        WHERE pc.facility_id = $1
+          AND (pc.membership_id = $2
+               OR pc.student_id IN (
+                    SELECT g.student_id FROM guardian_link g
+                     WHERE g.guardian_membership_id = $2 AND g.archived_at IS NULL))
         ORDER BY pc.sold_at DESC, pc.id`,
       [facilityId, membershipId],
     );
@@ -652,6 +721,12 @@ export async function passesOf(
       inWater: row.in_water,
       documentNo: row.document_no,
       invoiceId: row.invoice_id,
+      holderName: row.holder_name,
+      holderStudentId: row.student_id,
+      shared: row.shared,
+      soldVia: row.sold_via,
+      paid: row.paid,
+      family: row.family,
     }));
   });
 }
@@ -787,6 +862,17 @@ export interface SaleInput {
   basePrice: boolean;
 }
 
+/**
+ * What a phone purchase adds to a sale — POOLSE-204. The pass may be a child's
+ * (`studentId`, then `membershipId` is null), the document is addressed to the
+ * buyer, nothing is taken at a counter, and the key makes a double tap one sale.
+ */
+export interface AppSaleExtras {
+  studentId: string | null;
+  payerMembershipId: string;
+  purchaseKey: string;
+}
+
 export interface Sale {
   passId: string;
   invoiceId: string;
@@ -799,12 +885,14 @@ async function insertCheckIn(
   organizationId: string,
   passId: string,
   poolId: string,
+  swimmer: { membershipId: string | null; studentId: string | null } = { membershipId: null, studentId: null },
 ): Promise<string> {
+  // Nobody named: the trigger makes it the holder's, or refuses a family pack.
   const { rows } = await tx.query<{ id: string }>(
-    `INSERT INTO pass_check_in (organization_id, pass_id, pool_id, checked_in_by)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO pass_check_in (organization_id, pass_id, pool_id, checked_in_by, membership_id, student_id)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING id`,
-    [organizationId, passId, poolId, currentTenant().membershipId],
+    [organizationId, passId, poolId, currentTenant().membershipId, swimmer.membershipId, swimmer.studentId],
   );
   return rows[0]!.id;
 }
@@ -822,7 +910,21 @@ export async function sellPass(
   facilityId: string,
   input: SaleInput,
 ): Promise<Sale> {
-  return withOrg(organizationId, async (tx) => {
+  return withOrg(organizationId, (tx) => sellPassIn(tx, organizationId, facilityId, input, null));
+}
+
+/**
+ * The sale's body, for the desk (`app` null) and for the phone (POOLSE-204),
+ * inside the caller's transaction.
+ */
+export async function sellPassIn(
+  tx: Tx,
+  organizationId: string,
+  facilityId: string,
+  input: SaleInput,
+  app: AppSaleExtras | null,
+): Promise<Sale> {
+  {
     const { rows: found } = await tx.query<{
       kind: PassKind;
       name: string;
@@ -831,10 +933,11 @@ export async function sellPass(
       amount_cents: number;
       vat_rate: string;
       vat_exempt: boolean;
+      shareable: boolean;
       today: string;
     }>(
       `SELECT p.kind::text AS kind, p.name, p.entries, p.validity_days, p.amount_cents,
-              p.vat_rate, p.vat_exempt,
+              p.vat_rate, p.vat_exempt, p.shareable,
               to_char((now() AT TIME ZONE f.timezone)::date, 'YYYY-MM-DD') AS today
          FROM pass_product p
          JOIN facility f ON f.id = p.facility_id AND f.organization_id = p.organization_id
@@ -844,7 +947,17 @@ export async function sellPass(
     );
     const product = found[0];
     if (product === undefined) throw new NoSuchProductError();
-    if (product.kind !== 'single' && input.membershipId === null) throw new OwnerRequiredError();
+    const studentId = app?.studentId ?? null;
+    if (product.kind !== 'single' && input.membershipId === null && studentId === null) {
+      throw new OwnerRequiredError();
+    }
+    if (studentId !== null) {
+      const { rows: child } = await tx.query(
+        `SELECT 1 FROM student WHERE id = $1 AND archived_at IS NULL`,
+        [studentId],
+      );
+      if (child.length === 0) throw new NoSuchPersonError();
+    }
     if (input.membershipId !== null) {
       // RLS hides another club's person, so this is also the cross-tenant answer.
       const { rows: person } = await tx.query(
@@ -860,8 +973,8 @@ export async function sellPass(
      * never at a number it typed, and that choice is audited below.
      */
     const { rows: priced } = await tx.query<{ amount_cents: number; category_names: string | null }>(
-      `SELECT amount_cents, category_names FROM pass_price_for($1, $2, $3::uuid)`,
-      [organizationId, input.productId, input.membershipId],
+      `SELECT amount_cents, category_names FROM pass_price_for($1, $2, $3::uuid, $4::uuid)`,
+      [organizationId, input.productId, input.membershipId, studentId],
     );
     const resolved = priced[0] ?? { amount_cents: product.amount_cents, category_names: null };
     const amountCents = input.basePrice ? product.amount_cents : resolved.amount_cents;
@@ -872,15 +985,17 @@ export async function sellPass(
       product.kind === 'single' ? product.today : (input.validFrom ?? product.today);
 
     const { rows: passRows } = await tx.query<{ id: string; valid_until: string | null }>(
+      // A family pack is shared when a login holds it (POOLSE-204); sold_via and
+      // the key are snapshotted with the rest.
       `INSERT INTO pass
          (organization_id, facility_id, product_id, membership_id, kind, entries,
-          valid_from, valid_until, sold_by)
+          valid_from, valid_until, sold_by, student_id, shared, sold_via, purchase_key)
        VALUES ($1, $2, $3, $4, $5::pass_kind, $6, $7::date,
                CASE $5::pass_kind
                  WHEN 'single' THEN $7::date
                  ELSE $7::date + ($8::int - 1)
                END,
-               $9)
+               $9, $10, $11, $12::pass_sold_via, $13)
        RETURNING id, to_char(valid_until, 'YYYY-MM-DD') AS valid_until`,
       [
         organizationId,
@@ -892,6 +1007,10 @@ export async function sellPass(
         validFrom,
         product.validity_days,
         currentTenant().membershipId,
+        studentId,
+        product.shareable && input.membershipId !== null,
+        app === null ? 'reception' : 'app',
+        app?.purchaseKey ?? null,
       ],
     );
     const passId = passRows[0]!.id;
@@ -919,7 +1038,7 @@ export async function sellPass(
          FROM (SELECT $4::uuid AS id) wanted
          LEFT JOIN membership m ON m.id = wanted.id AND m.archived_at IS NULL
        RETURNING id, document_no`,
-      [organizationId, facilityId, series[0].id, input.membershipId, product.today],
+      [organizationId, facilityId, series[0].id, app?.payerMembershipId ?? input.membershipId, product.today],
     );
     const invoice = invoiceRows[0]!;
 
@@ -943,8 +1062,9 @@ export async function sellPass(
       ],
     );
 
-    // A free entry (a courtesy pass at 0 €) has nothing to settle.
-    if (amountCents > 0) {
+    // A free entry (a courtesy pass at 0 €) has nothing to settle; a phone pack
+    // is owed until the office records it paid (POOLSE-204).
+    if (amountCents > 0 && app === null) {
       await tx.query(
         `INSERT INTO invoice_payment
            (organization_id, invoice_id, amount_cents, paid_on, source, recorded_by)
@@ -966,6 +1086,7 @@ export async function sellPass(
         documentNo: invoice.document_no,
         product: product.name,
         checkedIn: checkInId !== null,
+        soldVia: app === null ? 'reception' : 'app',
         amountCents,
         categories: categoryNames,
         // The override, with what it overrode (POOLSE-203, rule 4).
@@ -976,7 +1097,7 @@ export async function sellPass(
     });
 
     return { passId, invoiceId: invoice.id, documentNo: invoice.document_no, checkInId };
-  });
+  }
 }
 
 /**
@@ -989,6 +1110,7 @@ export async function checkIn(
   facilityId: string,
   passId: string,
   poolId: string,
+  swimmer: { membershipId: string | null; studentId: string | null } = { membershipId: null, studentId: null },
 ): Promise<string | null> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query(
@@ -996,7 +1118,7 @@ export async function checkIn(
       [passId, facilityId],
     );
     if (rows.length === 0) return null;
-    return insertCheckIn(tx, organizationId, passId, poolId);
+    return insertCheckIn(tx, organizationId, passId, poolId, swimmer);
   });
 }
 

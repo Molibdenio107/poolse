@@ -115,3 +115,10 @@ The office ticks a category (*Sénior*, *Sócio*, *Munícipe*…) on a person af
 - **At the sale**: the product list shows the person's prices, and under it *Preço: 27,00 € (preço Sénior + Sócio)*. *Vender ao preço base* is the only override, and it is audited. The sale resolves the price again on the server; the document line keeps the amount and the category names, so a later price change never touches a sold pass.
 - An anonymous single entry pays the base price.
 - **API**: `PUT /facilities/:id/pass-products/:productId/prices`, `POST …/prices/:priceId/archive`, `GET /facilities/:id/reception/people/:membershipId/prices`; owner and admin.
+
+## Family packs and packs bought on the phone — POOLSE-204 (08-11-2026)
+
+- **On the product**: *Pack família* (not for a single entry) and *À venda na app*. A family pack sells at its base price; category prices never apply to it.
+- **At the desk**: the person's panel lists their own passes and their children's (*de Tomás*). A family pack asks *Quem entra* (the holder and the children they guard today) and each entry names its person; the in-water list shows who swam. Two people may be in the water on one family pack, never the same person twice. An archived guardian link takes the child off the pack at once.
+- **Paid before use**: a pack bought in the app reads *Comprado na app e ainda por pagar: não dá entrada.* and the check-in is refused with *Este pack ainda não está pago.* until the office records the payment on its document (*Faturação*). A desk sale is paid at the counter as before.
+- New refusals, in words: *Escolha quem entra com este pack família.*, *Esta pessoa não pode usar este pack.*, *Este pack ainda não está pago.*

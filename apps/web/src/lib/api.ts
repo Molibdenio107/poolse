@@ -4203,6 +4203,50 @@ export interface PassProduct {
   soldCount: number;
   /** The price per category set — POOLSE-203. The base is `amountCents`. */
   prices: PassPrice[];
+  /** A *Pack família* — POOLSE-204. */
+  shareable: boolean;
+  /** Offered in the family app — POOLSE-204. */
+  soldInApp: boolean;
+}
+
+/** One person who may swim on a pass — POOLSE-204. */
+export interface Swimmer {
+  membershipId: string | null;
+  studentId: string | null;
+  name: string;
+}
+
+/** *Natação livre* in the family app — POOLSE-204. */
+export interface AppPass {
+  id: string;
+  productName: string;
+  facilityName: string;
+  kind: PassKind;
+  entries: number | null;
+  entriesLeft: number | null;
+  validUntil: string | null;
+  shared: boolean;
+  unpaid: boolean;
+  holderName: string | null;
+}
+
+export interface AppPassProduct {
+  id: string;
+  name: string;
+  facilityName: string;
+  kind: PassKind;
+  entries: number | null;
+  validityDays: number | null;
+  shareable: boolean;
+  prices: { personKey: string; amountCents: number; categoryNames: string | null }[];
+}
+
+export interface AppPasses {
+  passes: AppPass[];
+  forSale: AppPassProduct[];
+  people: { key: string; name: string; self: boolean }[];
+  canBuy: boolean;
+  owed: { passId: string; productName: string; amountCents: number; documentNo: string; invoiceId: string }[];
 }
 
 /** One tank right now. `capacity` null is "not measured" and refuses nothing. */
@@ -4254,6 +4298,14 @@ export interface Pass {
   inWater: boolean;
   documentNo: string | null;
   invoiceId: string | null;
+  /** POOLSE-204: who holds it — the person at the desk, or a child they guard. */
+  holderName: string | null;
+  holderStudentId: string | null;
+  shared: boolean;
+  soldVia: 'reception' | 'app';
+  paid: boolean;
+  /** Who may check in on it. */
+  family: Swimmer[];
 }
 
 export interface InvoiceDraft {

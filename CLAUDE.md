@@ -195,6 +195,7 @@ Read [`docs/conventions/money.md`](docs/conventions/money.md) before touching an
 - An Admin sees every staff member's pay except the Owner's, and the card says so.
 - A free-swim sale is an invoice line, and who is in the water is `pool_occupancy()`.
 - A cost is an amount with a period, and a window is a sum of `cost_month`.
+- Who may use a pass is `pass_family()`; each check-in names its swimmer, and a pack bought in the app opens the door only once `pass_current.paid` (POOLSE-204).
 - A pass's price is `pass_price_for()`, resolved again at the sale and snapshotted on the line; the only override is the base price (POOLSE-203).
 - A person's category is `person_category`; its validity is `person_category_status()` and what applies is `person_categories()` by `fee_category.rank`, never TypeScript (POOLSE-202).
 

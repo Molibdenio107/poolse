@@ -7,7 +7,7 @@ import { useSavedAction } from '@/lib/saved';
 import { SelectField, TextField } from '@/components/ui/field';
 import { formatCents } from '@/lib/money';
 import { formatDate } from '@/lib/date-format';
-import type { Pass, PassProduct, PersonPrice, PersonSummary } from '@/lib/api';
+import type { Pass, PassProduct, PersonPrice, PersonSummary, Swimmer } from '@/lib/api';
 import {
   checkInAction,
   passesOf,
@@ -374,13 +374,26 @@ function PersonPasses({
           {[...live, ...spent].map((pass) => (
             <li
               key={pass.id}
-              className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+              className={`flex flex-col gap-2 py-3 first:pt-0 last:pb-0 ${pass.shared ? '' : 'sm:flex-row sm:items-center sm:justify-between'}`}
             >
-              <div className="min-w-0">
-                <p className="font-medium">{pass.productName}</p>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">
+                  {pass.productName}
+                  {/* POOLSE-204: a child's own pack, checked in from here. */}
+                  {pass.holderStudentId !== null && pass.holderName !== null && (
+                    <span className="font-normal text-foreground-muted">
+                      {' '}
+                      {t('reception.heldBy', { name: pass.holderName })}
+                    </span>
+                  )}
+                </p>
                 <p className="text-sm text-foreground-muted">
                   <Standing pass={pass} />
+                  {pass.shared && ` · ${t('passes.shareableShort')}`}
                 </p>
+                {pass.soldVia === 'app' && !pass.paid && (
+                  <p className="text-sm font-medium text-danger">{t('reception.unpaidAppPack')}</p>
+                )}
               </div>
               {live.includes(pass) && poolId === '' && (
                 <p className="shrink-0 text-sm text-foreground-muted">
@@ -390,6 +403,7 @@ function PersonPasses({
               {live.includes(pass) && poolId !== '' && (
                 <CheckInButton
                   facilityId={facilityId}
+                  family={pass.shared ? pass.family : []}
                   passId={pass.id}
                   poolId={poolId}
                   poolName={poolName}
@@ -414,18 +428,24 @@ function PersonPasses({
 
 function CheckInButton({
   facilityId,
+  family,
   passId,
   poolId,
   poolName,
   onDone,
 }: {
   facilityId: string;
+  /** A family pack's people (POOLSE-204): the desk says who goes in. Empty for a personal pass. */
+  family: Swimmer[];
   passId: string;
   poolId: string;
   poolName: string;
   onDone: () => void;
 }): React.ReactElement {
   const t = useTranslations();
+  const keyOf = (one: Swimmer): string => (one.studentId !== null ? `s:${one.studentId}` : `m:${one.membershipId ?? ''}`);
+  const [who, setWho] = useState(family[0] === undefined ? '' : keyOf(family[0]));
+  const chosen = family.find((one) => keyOf(one) === who);
   const [, submit, pending] = useSavedAction(
     async (previous: ReceptionState, formData: FormData) => {
       const next = await checkInAction(previous, formData);
@@ -435,10 +455,24 @@ function CheckInButton({
     INITIAL,
   );
   return (
-    <form action={submit} className="shrink-0">
+    <form action={submit} className="flex shrink-0 flex-wrap items-end gap-2">
       <input type="hidden" name="facilityId" value={facilityId} />
       <input type="hidden" name="passId" value={passId} />
       <input type="hidden" name="poolId" value={poolId} />
+      {chosen?.membershipId != null && chosen.studentId === null && (
+        <input type="hidden" name="membershipId" value={chosen.membershipId} />
+      )}
+      {chosen?.studentId != null && <input type="hidden" name="studentId" value={chosen.studentId} />}
+      {family.length > 0 && (
+        <SelectField
+          name="swimmer"
+          label={t('reception.whoSwims')}
+          initial={who}
+          onValueChange={setWho}
+          options={family.map((one) => ({ value: keyOf(one), label: one.name }))}
+          className="w-56 max-w-full"
+        />
+      )}
       <button type="submit" disabled={pending} className={BUTTON}>
         <LogIn aria-hidden className="size-4" />
         {t('reception.letIn', { pool: poolName })}

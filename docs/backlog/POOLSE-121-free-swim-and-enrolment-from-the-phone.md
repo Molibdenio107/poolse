@@ -25,4 +25,6 @@ Answer the two open points first. If *owed* and *pedido*, the write paths exist:
 
 To be written once the two open points are answered.
 
+**08-11-2026 (Rui): open point 2 answered — owed** (POOLSE-204). A pack bought in the app is an owed invoice line, works only once paid, one unpaid at a time; built by POOLSE-204, which absorbs this ticket's free-swim half.
+
 **29-10-2026 (Rui): open point 3 answered — a pedido.** Joining a class from the app is built: every turma with a free place, the child's level first, for one of the reader's people *or a new child* (Rui's call), landing in Pedidos de inscrição naming the turma. Open point 2 (how a free-swim entry bought in the app is paid) is still open, so that half stays parked. `docs/features/registration.md`, *From the app*.

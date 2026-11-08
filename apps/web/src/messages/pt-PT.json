@@ -43,6 +43,32 @@
     "toAvisos": "Voltar aos avisos"
   },
   "app": {
+    "passes": {
+      "title": "Natação livre",
+      "none": "Sem packs nem passes.",
+      "left": "{left} de {total} entradas",
+      "until": "válido até {date}",
+      "unpaid": "Por pagar",
+      "buyTitle": "Comprar um pack",
+      "product": "Pack a comprar",
+      "forWhom": "Para quem",
+      "forMe": "Para mim",
+      "familyHint": "Para si e para os seus filhos, uma entrada por pessoa.",
+      "priceFor": "{amount} (preço {categories})",
+      "payFirst": "Fica por pagar até o clube registar o pagamento. Só dá entrada depois de pago.",
+      "buy": "Comprar",
+      "bought": "Pack comprado. Está em Pagamentos até ser pago.",
+      "owedTitle": "Natação livre por pagar",
+      "owedHint": "Packs comprados na app. Dão entrada depois de pagos.",
+      "errors": {
+        "productRequired": "Escolha um pack.",
+        "unpaid": "Já tem um pack por pagar ({documentNo}). Pague-o antes de comprar outro.",
+        "minor": "Um pack é comprado pelo encarregado de educação.",
+        "gone": "Este pack ou esta pessoa já não está disponível. Atualize a página.",
+        "buyFailed": "Não foi possível comprar o pack.",
+        "familyPackSelf": "Um pack família é seu e dos seus filhos; compre-o para si."
+      }
+    },
     "name": "Poolse",
     "tagline": "Gestão de piscinas",
     "openBackoffice": "Abrir o backoffice",
@@ -4950,6 +4976,9 @@
     "externalCount": "{count, plural, one {# período ficou de fora por estar faturado fora do Poolse} other {# períodos ficaram de fora por estarem faturados fora do Poolse}}."
   },
   "reception": {
+    "heldBy": "de {name}",
+    "unpaidAppPack": "Comprado na app e ainda por pagar: não dá entrada.",
+    "whoSwims": "Quem entra",
     "priceUnknown": "Não foi possível ver o preço desta pessoa. A venda cobra o preço que o sistema calcular.",
     "priceBase": "Preço: {amount} (preço base)",
     "priceFor": "Preço: {amount} (preço {categories})",
@@ -5021,6 +5050,9 @@
       "inWater": "na água agora"
     },
     "refused": {
+      "whoRequired": "Escolha quem entra com este pack família.",
+      "notFamily": "Esta pessoa não pode usar este pack.",
+      "unpaid": "Este pack ainda não está pago.",
       "poolFull": "O tanque leva {capacity} pessoas e já há {occupied} na água.",
       "usedUp": "As {entries} entradas deste passe já foram usadas.",
       "expired": "Este passe terminou a {date}.",
@@ -5044,6 +5076,11 @@
     "closedOption": "{pool}: encerramento em curso"
   },
   "passes": {
+    "shareable": "Pack família",
+    "shareableShort": "Pack família",
+    "shareableHint": "Usado por quem o compra e pelos filhos de quem é encarregado de educação, uma entrada por pessoa. Vende-se sempre ao preço base.",
+    "soldInApp": "À venda na app",
+    "soldInAppShort": "à venda na app",
     "prices": {
       "toggle": "{count, plural, =0 {Preços por categoria} one {Preços por categoria (#)} other {Preços por categoria (#)}}",
       "hint": "Cada pessoa paga o preço da sua categoria mais prioritária que tenha preço, ou de uma combinação que tenha todas. Sem nenhuma, paga o preço base. As entradas já vendidas não mudam.",
