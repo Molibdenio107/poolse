@@ -107,3 +107,11 @@ The office ticks a category (*Sénior*, *Sócio*, *Munícipe*…) on a person af
 - **Rank**: the categories panel on a site's *Preços › Descontos* has a second drag list, *Prioridade no preço das entradas*: the first category a person holds sets their pass price. It does not change the display order or monthly fees. The panel also says, as visible text, that a residence-based price is the club's decision and responsibility.
 - **Family app**: *Perfil* lists the reader's own valid categories with their expiry, never the proof (`GET /app/categories`).
 - **API**: `GET/POST /person-categories`, `PATCH /person-categories/:id`, `POST /person-categories/:id/archive`, `GET /person-categories/expiring`, `POST /fee-categories/rank`.
+
+## Pass prices per category — POOLSE-203 (08-11-2026)
+
+- **On the product** (*Preços › Natação livre*, *Preços por categoria*): the base price, one row per category (its own price or *Preço base*), and *Adicionar combinação* for two or more categories with a typed price. Nothing combines unless the club types it. Removing a price asks first and archives it.
+- **Which price**: the largest set of categories the person holds that has a price; on a tie, the higher-ranked. With no typed combination that is the highest-priority category that has a price, skipping one without. None: the base price. `pass_price_for()` in SQL is the only place this is decided.
+- **At the sale**: the product list shows the person's prices, and under it *Preço: 27,00 € (preço Sénior + Sócio)*. *Vender ao preço base* is the only override, and it is audited. The sale resolves the price again on the server; the document line keeps the amount and the category names, so a later price change never touches a sold pass.
+- An anonymous single entry pays the base price.
+- **API**: `PUT /facilities/:id/pass-products/:productId/prices`, `POST …/prices/:priceId/archive`, `GET /facilities/:id/reception/people/:membershipId/prices`; owner and admin.

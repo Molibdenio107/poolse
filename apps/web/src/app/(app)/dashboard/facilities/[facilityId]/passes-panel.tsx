@@ -8,7 +8,8 @@ import { useSavedAction } from '@/lib/saved';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextField } from '@/components/ui/field';
 import { centsToInput, formatCents, parseCents } from '@/lib/money';
-import type { PassKind, PassProduct } from '@/lib/api';
+import type { FeeCategory, PassKind, PassProduct } from '@/lib/api';
+import { PassPriceTable } from './pass-prices';
 import type { FormState } from '../../actions';
 import { archiveProductAction, saveProductAction, saveStayAction } from './passes.actions';
 import { Reveal } from '@/components/ui/reveal';
@@ -38,16 +39,20 @@ export function PassesPanel({
   facilityId,
   products,
   stayMinutes,
+  categories,
 }: {
   facilityId: string;
   products: PassProduct[];
   stayMinutes: number;
+  /** The club's categories, for the price table — POOLSE-203. */
+  categories: FeeCategory[];
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [dropping, setDropping] = useState<PassProduct | null>(null);
+  const [pricing, setPricing] = useState<string | null>(null);
 
   const shape = (product: PassProduct): string => {
     if (product.kind === 'single') return t('passes.shape.single');
@@ -117,6 +122,18 @@ export function PassesPanel({
                   product={product}
                   onDone={() => setEditing(null)}
                 />
+              </Reveal>
+              {/* POOLSE-203: the price per category, and typed combinations. */}
+              <button
+                type="button"
+                onClick={() => setPricing(pricing === product.id ? null : product.id)}
+                aria-expanded={pricing === product.id}
+                className="self-start text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              >
+                {t('passes.prices.toggle', { count: product.prices.length })}
+              </button>
+              <Reveal open={pricing === product.id}>
+                <PassPriceTable facilityId={facilityId} product={product} categories={categories} />
               </Reveal>
             </li>
           ))}

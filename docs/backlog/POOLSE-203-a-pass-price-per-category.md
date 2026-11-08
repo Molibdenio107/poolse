@@ -4,6 +4,16 @@
 
 **Type:** Feature · **Area:** Reception / Billing · **Priority:** Medium (pilot) · **Depends on** [POOLSE-202](./POOLSE-202-a-category-on-the-person-with-proof.md), [POOLSE-68](./POOLSE-68-free-swim-passes-and-check-in.md)
 
+### As built (08-11-2026) — wins over what follows
+
+- **Fallback** (Rui, 08-11-2026): rule 2(c) wins over the old QA 3. An unpriced category is skipped and the next ranked with a price applies; the base price only when none does.
+- **Schema**: `pass_product_price` with `category_ids uuid[]` (sorted, no repeats, by CHECK through `category_set_is_canonical()`), one live price per exact set, and a trigger that refuses another club's category as a foreign-key violation. Migration `1794654400000_pass-price-per-category.sql`.
+- **`pass_price_for(org, product, membership)`**: one ordering of every held set (largest first, then by the positions of its categories in rank order), so singles and combinations are the same rule. Returns the amount, the set and the names joined by " + ".
+- **Sale**: `sellPass` resolves the price inside its transaction and writes it to the line (`amount_cents`, `fee_category_name`) and the counter payment. `basePrice: true` is the override, audited on `pass.sold` with the price it overrode. Any `amountCents` in the body is a 422. Documents already print the names through `LineLabel`.
+- **UI**: *Preços por categoria (n)* under each product on *Natação livre*. The sale form lists the person's prices, says *Preço: … (preço Sénior + Sócio)*, and offers *Vender ao preço base* only when the two differ.
+- **Rule 6, `pass.shared`**: not added here. No pass is shared before POOLSE-204, so every pass, category-priced or not, is personal already. The column arrives with 204's family pack, where it first means something.
+- **Tests**: `packages/db/test/pass-price.sql` (QA 1–4, isolation), `apps/api/src/reception/pass-prices.integration.test.ts` (QA 1, 2, 4, 5, 6, refusals), role-probe lines. Walked in a browser: the price table, a refused one-category combination, a saved combination, and the sale preview with the base override.
+
 ### PO — why this exists
 
 Rui, 08-11-2026: a pack of entries priced by who buys it. *"If it's senior and sócio, it gets the senior discount, and it only gets a discount on sócio if the club wants. This should be customizable, not default."*
@@ -31,7 +41,7 @@ Rui, 08-11-2026: a pack of entries priced by who buys it. *"If it's senior and s
 
 1. Base 40 €, Sénior 30 €, no combination: a Sénior and Sócio person pays 30 €.
 2. The same with a typed Sénior+Sócio at 27 €: they pay 27 €.
-3. Sócio ranked above Sénior with no combination: they pay Sócio's price, or the base price if Sócio has none.
+3. Sócio ranked above Sénior with no combination: they pay Sócio's price, or, if Sócio has none, Sénior's (rule 2(c); Rui, 08-11-2026, corrected from "the base price").
 4. A Sénior whose proof expired yesterday: base price.
 5. The price table changed after a sale: the sold line's amount is unchanged.
 6. An override to an arbitrary amount → 422. An override to the base price is audited.

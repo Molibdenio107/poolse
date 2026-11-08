@@ -97,6 +97,7 @@ import { StudentMessagesController } from '../messages/student-messages.controll
 import { MedicalExamScheduleController } from '../students/medical-exam-schedule.controller.js';
 import { StaffNotesController } from '../staff-notes/staff-notes.controller.js';
 import { PersonCategoriesController } from '../billing/person-categories.controller.js';
+import { PassProductsController, ReceptionController } from '../reception/passes.controller.js';
 import { FeeCategoriesController } from '../billing/categories.controller.js';
 
 /**
@@ -1771,6 +1772,16 @@ test('person categories are the office’s; a family reads only its own — POOL
       await refused(`POST person-categories/:id/archive as ${role}`, 403, () => api.remove(NO_SUCH_ID));
       await refused(`POST fee-categories/rank as ${role}`, 403, () => new FeeCategoriesController().rank({ ids: [] }));
       await refused(`GET app/categories as ${role}`, 403, () => new AppController().categories());
+      // POOLSE-203: the price table and the per-person price are the office's.
+      await refused(`PUT pass-products/:id/prices as ${role}`, 403, () =>
+        new PassProductsController().setPrice(NO_SUCH_ID, NO_SUCH_ID, { categoryIds: [], amountCents: 0 }),
+      );
+      await refused(`POST pass-products/:id/prices/:priceId/archive as ${role}`, 403, () =>
+        new PassProductsController().archivePrice(NO_SUCH_ID, NO_SUCH_ID, NO_SUCH_ID),
+      );
+      await refused(`GET reception/people/:id/prices as ${role}`, 403, () =>
+        new ReceptionController().prices(NO_SUCH_ID, fixture.martaId),
+      );
     });
   }
   await asEach(async () => {

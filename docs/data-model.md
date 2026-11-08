@@ -2691,6 +2691,12 @@ A free swimmer has no enrolment, so a category also sits on the **person**. For 
 - **`person_categories(org, membership_id, student_id)`** → the person's valid categories (not archived, not expired) by rank. A membership and the student whose login it is count as one person; a category held on both is returned once.
 - **Retention**: triggers on `student.anonymised_at` and on the anonymised membership (the invoice reminders' test) clear `notes` and `proof_seen_by`.
 
+### A pass price per category — POOLSE-203, 8 November 2026
+
+- **`pass_product_price`**: `organization_id`, `facility_id`, `product_id` (composite FK to `pass_product`), `category_ids uuid[]` (one category or a typed combination; sorted with no repeats by CHECK through `category_set_is_canonical()`), `amount_cents`, archive columns. One live price per product per exact set (partial unique). Each element must be a category of the same club: a trigger raises `foreign_key_violation` otherwise, which is the composite key's job done per element. RLS; no DELETE for the app.
+- **`pass_price_for(org, product, membership)`** → `amount_cents`, `category_ids`, `category_names` (*Sénior + Sócio*, rank order). Of the price rows whose whole set the person holds (`person_categories()`), the largest set wins, ties to the higher-ranked categories. A category with no price is skipped, never a reason to fall to the base (Rui, 08-11-2026). None held, or no person: the base price, with null names.
+- **The sale snapshots it** on `invoice_line.amount_cents` and `invoice_line.fee_category_name`; the payment is the same figure. The office may sell at the base price instead (audited with what it overrode), never at a typed amount (422).
+
 ### The trial ladder — POOLSE-61 slice B1, 14 September 2026
 
 ```

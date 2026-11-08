@@ -152,3 +152,9 @@ with mensalidades. `docs/features/reception.md`.
 A category on a person (for passes; monthly fees keep the enrolment/turma rule) is a `person_category` row on a student or a membership, with proof seen on, by whom, and valid until. **Validity is `person_category_status(valid_until)`**: live, expiring (30 days or fewer) or expired against `club_today()`. **What applies is `person_categories(org, membership, student)`**, ordered by `fee_category.rank`, which is not `sort_order`. A membership and the student whose login it is are one person there.
 
 The trap: comparing `validUntil` to today in TypeScript, or sorting by `sortOrder`. Both look right until a club reorders its list or the server's clock is a day off Lisbon's. Read the status and the order from SQL. Monthly fees never read `person_category`: `enrolment_fee_category_all` stays the only precedence for a fee line.
+
+## A pass's price is `pass_price_for()`, and the sale snapshots it — POOLSE-203
+
+`pass_product_price` holds a price per category set; `pass_price_for(org, product, membership)` is the only precedence (largest held set, ties to rank, unpriced categories skipped, else base). The sale reads it inside its own transaction and writes the amount and the names onto the invoice line. The screen's preview is the same function, read earlier, and never what is charged. The office's only override is the base price; a typed amount is a 422.
+
+The trap: computing "the best price" in TypeScript from the product's `prices` list. The list is there to show the table, not to choose from it.

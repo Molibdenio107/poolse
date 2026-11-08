@@ -7,10 +7,11 @@ import { useSavedAction } from '@/lib/saved';
 import { SelectField, TextField } from '@/components/ui/field';
 import { formatCents } from '@/lib/money';
 import { formatDate } from '@/lib/date-format';
-import type { Pass, PassProduct, PersonSummary } from '@/lib/api';
+import type { Pass, PassProduct, PersonPrice, PersonSummary } from '@/lib/api';
 import {
   checkInAction,
   passesOf,
+  pricesOf,
   searchPeople,
   sellAction,
   walkInAction,
@@ -464,7 +465,27 @@ function SellForm({
   const [productId, setProductId] = useState(products[0]?.id ?? '');
   const [enter, setEnter] = useState(true);
   const [validFrom, setValidFrom] = useState('');
+  const [atBase, setAtBase] = useState(false);
   const chosen = products.find((product) => product.id === productId);
+  /*
+   * POOLSE-203: the price this person pays and why, from `pass_price_for()` on
+   * the server. Shown before the sale; the sale itself resolves it again, so
+   * a stale screen can never charge a different figure than it says.
+   */
+  const [prices, setPrices] = useState<PersonPrice[] | 'failed' | null>(null);
+  useEffect(() => {
+    let live = true;
+    void pricesOf(facilityId, membershipId).then((found) => {
+      if (live) setPrices(found ?? 'failed');
+    });
+    return () => {
+      live = false;
+    };
+  }, [facilityId, membershipId]);
+  const priceOf = (id: string): PersonPrice | undefined =>
+    Array.isArray(prices) ? prices.find((one) => one.productId === id) : undefined;
+  const resolved = priceOf(productId);
+  const discounted = resolved !== undefined && resolved.amountCents !== resolved.baseCents;
   /*
    * A pass that starts on a later day cannot let anybody in today — the trigger
    * refuses it and, being one transaction, the sale with it. So the box is not
@@ -496,10 +517,34 @@ function SellForm({
         onValueChange={setProductId}
         options={products.map((product) => ({
           value: product.id,
-          label: `${product.name} — ${formatCents(locale, product.amountCents)}`,
+          label: `${product.name} — ${formatCents(locale, priceOf(product.id)?.amountCents ?? product.amountCents)}`,
         }))}
         error={fields['productId'] === undefined ? undefined : t(fields['productId'])}
       />
+      {/* The price and why, in words (POOLSE-203, rule 4). */}
+      {prices === 'failed' && <p className="text-sm text-foreground-muted">{t('reception.priceUnknown')}</p>}
+      {resolved !== undefined && (
+        <p className="text-sm">
+          {resolved.categoryNames === null || atBase
+            ? t('reception.priceBase', { amount: formatCents(locale, resolved.baseCents) })
+            : t('reception.priceFor', {
+                amount: formatCents(locale, resolved.amountCents),
+                categories: resolved.categoryNames,
+              })}
+        </p>
+      )}
+      {discounted && (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="basePrice"
+            checked={atBase}
+            onChange={(event) => setAtBase(event.target.checked)}
+            className="size-4"
+          />
+          {t('reception.sellAtBase', { amount: formatCents(locale, resolved.baseCents) })}
+        </label>
+      )}
       {/* A single entry is good today and no other day, so it asks no date. */}
       {chosen !== undefined && chosen.kind !== 'single' && (
         <TextField

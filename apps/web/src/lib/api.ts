@@ -4201,6 +4201,8 @@ export interface PassProduct {
   vatExempt: boolean;
   provenance: 'actual' | 'contracted' | 'estimated' | 'assumed';
   soldCount: number;
+  /** The price per category set — POOLSE-203. The base is `amountCents`. */
+  prices: PassPrice[];
 }
 
 /** One tank right now. `capacity` null is "not measured" and refuses nothing. */
@@ -5957,6 +5959,24 @@ export interface AppFeeCharge extends AppFeeItem {
   amountCents: number;
   dueOn: string | null;
   sharedWith: string[];
+}
+
+/** One price for one set of categories on a pass product — POOLSE-203. */
+export interface PassPrice {
+  id: string;
+  categoryIds: string[];
+  /** In rank order, the club's own words. */
+  categoryNames: string[];
+  amountCents: number;
+}
+
+/** What one person pays for one product today, and why — `pass_price_for()`. */
+export interface PersonPrice {
+  productId: string;
+  amountCents: number;
+  baseCents: number;
+  /** *Sénior + Sócio*; null at the base price. */
+  categoryNames: string | null;
 }
 
 /** A category on one person — POOLSE-202. `status` is SQL's (`person_category_status`). */

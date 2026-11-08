@@ -4948,6 +4948,10 @@
     "externalCount": "{count, plural, one {# period was left out, invoiced outside Poolse} other {# periods were left out, invoiced outside Poolse}}."
   },
   "reception": {
+    "priceUnknown": "Could not read this person's price. The sale charges the price the system works out.",
+    "priceBase": "Price: {amount} (base price)",
+    "priceFor": "Price: {amount} ({categories} price)",
+    "sellAtBase": "Sell at the base price ({amount})",
     "title": "Reception",
     "hint": "Who is in the water, selling an entry or a pack, and letting in people who already have a pass.",
     "notPermitted": "Reception belongs to the club's management.",
@@ -5038,6 +5042,26 @@
     "closedOption": "{pool}: closed now"
   },
   "passes": {
+    "prices": {
+      "toggle": "{count, plural, =0 {Prices by category} one {Prices by category (#)} other {Prices by category (#)}}",
+      "hint": "Each person pays the price of their highest-priority category that has one, or of a combination they hold entirely. With none, they pay the base price. Passes already sold do not change.",
+      "noCategories": "The club has no categories yet. Create them under Discounts to price by category.",
+      "base": "Base price",
+      "atBase": "Base price",
+      "set": "Set price",
+      "change": "Change",
+      "remove": "Remove",
+      "addCombination": "Add combination",
+      "combinationOf": "Combination of",
+      "amount": "Price",
+      "removeTitle": "Remove price",
+      "removeAsk": "Remove the price for {label}? Whoever had it pays the next price instead. Passes already sold do not change.",
+      "categoriesRequired": "Choose at least one category.",
+      "categoriesRepeat": "A category appears twice.",
+      "combinationTwo": "A combination has at least two categories.",
+      "saveFailed": "Could not save the price.",
+      "removeFailed": "Could not remove the price."
+    },
     "title": "Free swim",
     "hint": "What reception sells: single entries, packs and passes for a period. Changing a product applies to later sales, never to ones already made.",
     "none": "Nothing is on sale at this site yet.",

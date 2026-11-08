@@ -8,6 +8,7 @@ import {
   type Pass,
   type PersonSummary,
   type Reception,
+  type PersonPrice,
 } from '@/lib/api';
 import { outcome, type Outcome } from '@/lib/load-failure';
 import { formatDate } from '@/lib/date-format';
@@ -98,6 +99,22 @@ export async function passesOf(facilityId: string, membershipId: string): Promis
   }
 }
 
+/**
+ * What this person pays for each product today, and why — POOLSE-203, from
+ * `pass_price_for()`. Null when it could not be read; the sale still charges
+ * what the server resolves.
+ */
+export async function pricesOf(facilityId: string, membershipId: string): Promise<PersonPrice[] | null> {
+  try {
+    const result = await apiFetch<{ prices: PersonPrice[] }>(
+      `/facilities/${encodeURIComponent(facilityId)}/reception/people/${encodeURIComponent(membershipId)}/prices`,
+    );
+    return result.prices;
+  } catch {
+    return null;
+  }
+}
+
 function field(formData: FormData, name: string): string | null {
   const value = String(formData.get(name) ?? '').trim();
   return value === '' ? null : value;
@@ -117,6 +134,8 @@ export async function sellAction(
       membershipId: field(formData, 'membershipId'),
       validFrom: field(formData, 'validFrom'),
       checkInPoolId: formData.get('checkIn') === 'on' ? field(formData, 'poolId') : null,
+      // POOLSE-203: the base price instead of the category price — never a typed amount.
+      ...(formData.get('basePrice') === 'on' ? { basePrice: true } : {}),
     });
   } catch (error) {
     return failure(error, 'reception.saleFailed');

@@ -41,6 +41,26 @@ export interface PassProduct {
   provenance: MoneyProvenance;
   /** How many have been sold — what makes retiring one a decision. */
   soldCount: number;
+  /** The price per category set — POOLSE-203. The base is `amountCents`. */
+  prices: PassPrice[];
+}
+
+/** One price for one set of categories (a single one, or a typed combination) — POOLSE-203. */
+export interface PassPrice {
+  id: string;
+  categoryIds: string[];
+  /** In rank order, the club's own words. */
+  categoryNames: string[];
+  amountCents: number;
+}
+
+/** What one person pays for one product today, and why — `pass_price_for()`. */
+export interface PersonPrice {
+  productId: string;
+  amountCents: number;
+  baseCents: number;
+  /** *Sénior + Sócio*; null at the base price. */
+  categoryNames: string | null;
 }
 
 export interface PassProductInput {
@@ -145,6 +165,8 @@ export class OwnerRequiredError extends Error {}
 export class NoSuchPersonError extends Error {}
 /** The site has no live invoice series to number the sale in. */
 export class NoSeriesError extends Error {}
+/** A price names a category this club does not have — POOLSE-203. */
+export class NoSuchCategoryError extends Error {}
 
 async function facilityExists(tx: Tx, facilityId: string): Promise<boolean> {
   const { rows } = await tx.query(
@@ -162,7 +184,18 @@ const PRODUCT_COLUMNS = `
   p.id, p.kind::text AS kind, p.name, p.entries, p.validity_days, p.amount_cents,
   p.vat_rate, p.vat_exempt, p.provenance::text AS provenance,
   (SELECT count(*) FROM pass s
-    WHERE s.product_id = p.id AND s.organization_id = p.organization_id)::int AS sold_count`;
+    WHERE s.product_id = p.id AND s.organization_id = p.organization_id)::int AS sold_count,
+  (SELECT coalesce(json_agg(json_build_object(
+            'id', pp.id,
+            'categoryIds', pp.category_ids,
+            'categoryNames', (SELECT coalesce(json_agg(c.name ORDER BY c.rank, lower(c.name)), '[]'::json)
+                                FROM fee_category c
+                               WHERE c.organization_id = pp.organization_id AND c.id = ANY (pp.category_ids)),
+            'amountCents', pp.amount_cents)
+          ORDER BY cardinality(pp.category_ids), pp.amount_cents), '[]'::json)
+     FROM pass_product_price pp
+    WHERE pp.product_id = p.id AND pp.organization_id = p.organization_id
+      AND pp.archived_at IS NULL) AS prices`;
 
 interface ProductRow {
   id: string;
@@ -175,6 +208,7 @@ interface ProductRow {
   vat_exempt: boolean;
   provenance: MoneyProvenance;
   sold_count: number;
+  prices: PassPrice[];
 }
 
 function toProduct(row: ProductRow): PassProduct {
@@ -190,6 +224,7 @@ function toProduct(row: ProductRow): PassProduct {
     vatExempt: row.vat_exempt,
     provenance: row.provenance,
     soldCount: row.sold_count,
+    prices: row.prices,
   };
 }
 
@@ -625,6 +660,118 @@ export async function passesOf(
 // Selling and checking in
 // ---------------------------------------------------------------------------
 
+/**
+ * The price for one set of categories — POOLSE-203. One live price per exact
+ * set: typing a set that already has one changes its amount. Sold passes keep
+ * what they were sold at (the line snapshots it). False: no such product here.
+ */
+export async function setProductPrice(
+  organizationId: string,
+  facilityId: string,
+  productId: string,
+  categoryIds: string[],
+  amountCents: number,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows: product } = await tx.query(
+      `SELECT 1 FROM pass_product WHERE id = $1 AND facility_id = $2 AND archived_at IS NULL`,
+      [productId, facilityId],
+    );
+    if (product.length === 0) return false;
+    try {
+      const { rows } = await tx.query<{ id: string }>(
+        `WITH wanted AS (
+           SELECT ARRAY(SELECT DISTINCT x FROM unnest($4::uuid[]) AS x ORDER BY 1) AS ids
+         ),
+         updated AS (
+           UPDATE pass_product_price pp SET amount_cents = $5
+             FROM wanted
+            WHERE pp.product_id = $3 AND pp.category_ids = wanted.ids AND pp.archived_at IS NULL
+           RETURNING pp.id
+         )
+         INSERT INTO pass_product_price (organization_id, facility_id, product_id, category_ids, amount_cents)
+         SELECT $1, $2, $3, wanted.ids, $5 FROM wanted
+          WHERE NOT EXISTS (SELECT 1 FROM updated)
+         RETURNING id`,
+        [organizationId, facilityId, productId, categoryIds, amountCents],
+      );
+      await recordAudit(tx, {
+        action: 'pass_price.set',
+        entityType: 'pass_product',
+        entityId: productId,
+        data: { categoryIds, amountCents, created: rows.length > 0 },
+      });
+    } catch (error) {
+      // Another club's or a made-up category: the per-element key's refusal.
+      if ((error as { code?: string }).code === '23503') throw new NoSuchCategoryError();
+      throw error;
+    }
+    return true;
+  });
+}
+
+/** Remove one price (an archive). False: no such live price on this product here. */
+export async function archiveProductPrice(
+  organizationId: string,
+  facilityId: string,
+  productId: string,
+  priceId: string,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string }>(
+      `UPDATE pass_product_price SET archived_at = now()
+        WHERE id = $1 AND product_id = $2 AND facility_id = $3 AND archived_at IS NULL
+      RETURNING id`,
+      [priceId, productId, facilityId],
+    );
+    if (rows.length === 0) return false;
+    await recordAudit(tx, {
+      action: 'pass_price.removed',
+      entityType: 'pass_product',
+      entityId: productId,
+      data: { priceId },
+    });
+    return true;
+  });
+}
+
+/**
+ * What this person pays for each of the site's products today, and why —
+ * straight from `pass_price_for()`, for reception's sale form. Null: no such
+ * person in this club.
+ */
+export async function pricesForPerson(
+  organizationId: string,
+  facilityId: string,
+  membershipId: string,
+): Promise<PersonPrice[] | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows: person } = await tx.query(
+      `SELECT 1 FROM membership WHERE id = $1 AND archived_at IS NULL`,
+      [membershipId],
+    );
+    if (person.length === 0) return null;
+    const { rows } = await tx.query<{
+      product_id: string;
+      amount_cents: number;
+      base_cents: number;
+      category_names: string | null;
+    }>(
+      `SELECT p.id AS product_id, r.amount_cents, p.amount_cents AS base_cents, r.category_names
+         FROM pass_product p
+         CROSS JOIN LATERAL pass_price_for($1, p.id, $3::uuid) r
+        WHERE p.facility_id = $2 AND p.archived_at IS NULL`,
+      [organizationId, facilityId, membershipId],
+    );
+    return rows.map((row) => ({
+      productId: row.product_id,
+      amountCents: row.amount_cents,
+      baseCents: row.base_cents,
+      categoryNames: row.category_names,
+    }));
+  });
+}
+
 export interface SaleInput {
   productId: string;
   /** Null only for a single entry. */
@@ -633,6 +780,11 @@ export interface SaleInput {
   validFrom: string | null;
   /** Check the buyer in at once, into this tank — "sell and check in" in one act. */
   checkInPoolId: string | null;
+  /**
+   * POOLSE-203, rule 4: sell at the product's base price rather than the
+   * person's category price. The only override there is; audited.
+   */
+  basePrice: boolean;
 }
 
 export interface Sale {
@@ -702,6 +854,19 @@ export async function sellPass(
       if (person.length === 0) throw new NoSuchPersonError();
     }
 
+    /*
+     * The price, and why — POOLSE-203. `pass_price_for()` is the precedence;
+     * nothing here re-derives it. The office may sell at the base instead,
+     * never at a number it typed, and that choice is audited below.
+     */
+    const { rows: priced } = await tx.query<{ amount_cents: number; category_names: string | null }>(
+      `SELECT amount_cents, category_names FROM pass_price_for($1, $2, $3::uuid)`,
+      [organizationId, input.productId, input.membershipId],
+    );
+    const resolved = priced[0] ?? { amount_cents: product.amount_cents, category_names: null };
+    const amountCents = input.basePrice ? product.amount_cents : resolved.amount_cents;
+    const categoryNames = input.basePrice ? null : resolved.category_names;
+
     // A single entry is good on the day it is sold and no other.
     const validFrom =
       product.kind === 'single' ? product.today : (input.validFrom ?? product.today);
@@ -759,29 +924,32 @@ export async function sellPass(
     const invoice = invoiceRows[0]!;
 
     await tx.query(
+      // The amount and the category names are snapshotted: a later change to
+      // the price table never touches a sold pass (POOLSE-203, rule 3).
       `INSERT INTO invoice_line
          (organization_id, invoice_id, pass_id, description, period_start, months,
-          amount_cents, vat_rate, vat_exempt, sort_order)
-       VALUES ($1, $2, $3, $4, $5::date, 1, $6, $7, $8, 0)`,
+          amount_cents, vat_rate, vat_exempt, sort_order, fee_category_name)
+       VALUES ($1, $2, $3, $4, $5::date, 1, $6, $7, $8, 0, $9)`,
       [
         organizationId,
         invoice.id,
         passId,
         product.name,
         validFrom,
-        product.amount_cents,
+        amountCents,
         product.vat_rate,
         product.vat_exempt,
+        categoryNames,
       ],
     );
 
     // A free entry (a courtesy pass at 0 €) has nothing to settle.
-    if (product.amount_cents > 0) {
+    if (amountCents > 0) {
       await tx.query(
         `INSERT INTO invoice_payment
            (organization_id, invoice_id, amount_cents, paid_on, source, recorded_by)
          VALUES ($1, $2, $3, $5::date, 'manual', $4)`,
-        [organizationId, invoice.id, product.amount_cents, currentTenant().membershipId, product.today],
+        [organizationId, invoice.id, amountCents, currentTenant().membershipId, product.today],
       );
     }
 
@@ -794,7 +962,17 @@ export async function sellPass(
       action: 'pass.sold',
       entityType: 'pass',
       entityId: passId,
-      data: { documentNo: invoice.document_no, product: product.name, checkedIn: checkInId !== null },
+      data: {
+        documentNo: invoice.document_no,
+        product: product.name,
+        checkedIn: checkInId !== null,
+        amountCents,
+        categories: categoryNames,
+        // The override, with what it overrode (POOLSE-203, rule 4).
+        ...(input.basePrice && resolved.amount_cents !== product.amount_cents
+          ? { basePriceOverride: { resolvedCents: resolved.amount_cents, resolvedCategories: resolved.category_names } }
+          : {}),
+      },
     });
 
     return { passId, invoiceId: invoice.id, documentNo: invoice.document_no, checkInId };

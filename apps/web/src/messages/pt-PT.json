@@ -4950,6 +4950,10 @@
     "externalCount": "{count, plural, one {# período ficou de fora por estar faturado fora do Poolse} other {# períodos ficaram de fora por estarem faturados fora do Poolse}}."
   },
   "reception": {
+    "priceUnknown": "Não foi possível ver o preço desta pessoa. A venda cobra o preço que o sistema calcular.",
+    "priceBase": "Preço: {amount} (preço base)",
+    "priceFor": "Preço: {amount} (preço {categories})",
+    "sellAtBase": "Vender ao preço base ({amount})",
     "title": "Receção",
     "hint": "Quem está na água, vender uma entrada ou um pack, e dar entrada a quem já tem passe.",
     "notPermitted": "A receção é da gerência do clube.",
@@ -5040,6 +5044,26 @@
     "closedOption": "{pool}: encerramento em curso"
   },
   "passes": {
+    "prices": {
+      "toggle": "{count, plural, =0 {Preços por categoria} one {Preços por categoria (#)} other {Preços por categoria (#)}}",
+      "hint": "Cada pessoa paga o preço da sua categoria mais prioritária que tenha preço, ou de uma combinação que tenha todas. Sem nenhuma, paga o preço base. As entradas já vendidas não mudam.",
+      "noCategories": "O clube ainda não tem categorias. Crie-as em Descontos para dar preços por categoria.",
+      "base": "Preço base",
+      "atBase": "Preço base",
+      "set": "Definir preço",
+      "change": "Alterar",
+      "remove": "Remover",
+      "addCombination": "Adicionar combinação",
+      "combinationOf": "Combinação de",
+      "amount": "Preço",
+      "removeTitle": "Remover preço",
+      "removeAsk": "Remover o preço de {label}? Quem o tinha passa a pagar o preço seguinte. As entradas já vendidas não mudam.",
+      "categoriesRequired": "Escolha pelo menos uma categoria.",
+      "categoriesRepeat": "Uma categoria aparece duas vezes.",
+      "combinationTwo": "Uma combinação tem pelo menos duas categorias.",
+      "saveFailed": "Não foi possível guardar o preço.",
+      "removeFailed": "Não foi possível remover o preço."
+    },
     "title": "Natação livre",
     "hint": "O que a receção vende: entradas avulsas, packs e passes por período. Alterar um produto vale para as vendas seguintes, nunca para as já feitas.",
     "none": "Ainda não há entradas à venda nesta instalação.",

@@ -339,6 +339,7 @@ export default async function FacilityPage({
                         facilityId={facilityId}
                         products={passes.data.products}
                         stayMinutes={passes.data.stayMinutes}
+                        categories={categories.state === 'ok' ? categories.data.categories : []}
                       />
                     )}
                   </>

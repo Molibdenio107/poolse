@@ -8,12 +8,15 @@ import {
   Param,
   Patch,
   Post,
+  Put,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { isValidNif } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
 import {
   archiveProduct,
+  archiveProductPrice,
   cancelCheckIn,
   checkIn,
   checkOut,
@@ -21,11 +24,14 @@ import {
   createWalkIn,
   listProducts,
   passesOf,
+  pricesForPerson,
   readReception,
   sellPass,
+  setProductPrice,
   setStayMinutes,
   updateProduct,
   NoSeriesError,
+  NoSuchCategoryError,
   NoSuchPersonError,
   NoSuchProductError,
   OwnerRequiredError,
@@ -33,6 +39,7 @@ import {
   type PassKind,
   type PassProduct,
   type PassProductInput,
+  type PersonPrice,
   type Reception,
   type Sale,
 } from './passes.repository.js';
@@ -51,6 +58,7 @@ import { PoolseModule } from '../tenant/modules.js';
  */
 
 const KINDS: readonly PassKind[] = ['single', 'pack', 'period'];
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_NAME = 60;
 
 @PoolseModule('reception')
@@ -99,6 +107,74 @@ export class PassProductsController {
       throw duplicateName(error);
     }
     return { updated: true };
+  }
+
+  /**
+   * A price for one set of categories — POOLSE-203: one category, or a
+   * combination of two or more the club types. The same set again changes its
+   * amount. Sold passes keep their snapshot.
+   */
+  @Put(':productId/prices')
+  async setPrice(
+    @Param('facilityId') facilityId: string,
+    @Param('productId') productId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ updated: true }> {
+    requireRole('owner', 'admin');
+    if (!UUID.test(productId)) throw new NotFoundException('No such product');
+    const { organizationId } = currentTenant();
+    const raw = body['categoryIds'];
+    const categoryIds = Array.isArray(raw)
+      ? raw.filter((id): id is string => typeof id === 'string' && UUID.test(id))
+      : [];
+    if (!Array.isArray(raw) || categoryIds.length === 0 || categoryIds.length !== raw.length) {
+      throw new BadRequestException({
+        message: 'Choose at least one category',
+        fields: { categoryIds: 'passes.prices.categoriesRequired' },
+      });
+    }
+    if (new Set(categoryIds).size !== categoryIds.length) {
+      throw new BadRequestException({
+        message: 'A category appears twice',
+        fields: { categoryIds: 'passes.prices.categoriesRepeat' },
+      });
+    }
+    const amountCents = body['amountCents'];
+    if (typeof amountCents !== 'number' || !Number.isInteger(amountCents) || amountCents < 0) {
+      throw new BadRequestException({
+        message: 'amountCents must be a whole number of cents',
+        fields: { amountCents: 'fees.amountInvalid' },
+      });
+    }
+    try {
+      if (!(await setProductPrice(organizationId, facilityId, productId, categoryIds, amountCents))) {
+        throw new NotFoundException('No such product');
+      }
+    } catch (error) {
+      if (error instanceof NoSuchCategoryError) {
+        throw new BadRequestException({
+          message: 'No such category',
+          fields: { categoryIds: 'passes.prices.categoriesRequired' },
+        });
+      }
+      throw error;
+    }
+    return { updated: true };
+  }
+
+  @Post(':productId/prices/:priceId/archive')
+  async archivePrice(
+    @Param('facilityId') facilityId: string,
+    @Param('productId') productId: string,
+    @Param('priceId') priceId: string,
+  ): Promise<{ archived: true }> {
+    requireRole('owner', 'admin');
+    if (!UUID.test(productId) || !UUID.test(priceId)) throw new NotFoundException('No such price');
+    const { organizationId } = currentTenant();
+    if (!(await archiveProductPrice(organizationId, facilityId, productId, priceId))) {
+      throw new NotFoundException('No such price');
+    }
+    return { archived: true };
   }
 
   @Post(':productId/archive')
@@ -155,6 +231,23 @@ export class ReceptionController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
     return { passes: await passesOf(organizationId, facilityId, membershipId) };
+  }
+
+  /**
+   * What this person pays for each product today, and why — POOLSE-203. From
+   * `pass_price_for()`, so the sale form shows the price the sale will charge.
+   */
+  @Get('people/:membershipId/prices')
+  async prices(
+    @Param('facilityId') facilityId: string,
+    @Param('membershipId') membershipId: string,
+  ): Promise<{ prices: PersonPrice[] }> {
+    requireRole('owner', 'admin');
+    if (!UUID.test(membershipId)) throw new NotFoundException('No such person');
+    const { organizationId } = currentTenant();
+    const prices = await pricesForPerson(organizationId, facilityId, membershipId);
+    if (prices === null) throw new NotFoundException('No such person');
+    return { prices };
   }
 
   /** Somebody new at the desk, to sell a pack or a monthly pass to. */
@@ -228,6 +321,20 @@ export class ReceptionController {
         fields: { productId: 'passes.productRequired' },
       });
     }
+    /*
+     * POOLSE-203, rule 4: the price is the server's. The only override is the
+     * base price; a typed amount is refused outright rather than ignored.
+     */
+    if (body['amountCents'] !== undefined) {
+      throw new UnprocessableEntityException({
+        code: 'pass_price_not_typed',
+        message: 'A pass is sold at its resolved price or its base price, never a typed amount',
+      });
+    }
+    const basePrice = body['basePrice'];
+    if (basePrice !== undefined && typeof basePrice !== 'boolean') {
+      throw new BadRequestException({ message: 'basePrice must be true or false' });
+    }
     const validFrom = text(body['validFrom']);
     // The shape and a real day: 2026-02-30 has the shape and would 500 on the cast.
     if (
@@ -247,6 +354,7 @@ export class ReceptionController {
         membershipId: text(body['membershipId']),
         validFrom,
         checkInPoolId: text(body['checkInPoolId']),
+        basePrice: basePrice === true,
       });
     } catch (error) {
       if (error instanceof NoSuchProductError) throw new NotFoundException('No such product');

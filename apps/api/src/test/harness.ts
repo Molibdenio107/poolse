@@ -216,6 +216,8 @@ const TENANT_TABLES = [
   'email_preference',
   'invoice_line',
   'pass',
+  // POOLSE-203: a price names its product.
+  'pass_product_price',
   'pass_product',
   'invoice',
   'invoice_series',

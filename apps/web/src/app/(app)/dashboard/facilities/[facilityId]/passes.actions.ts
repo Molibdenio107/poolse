@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { ApiError, apiFetch, apiPatch, apiPost, type PassProduct } from '@/lib/api';
+import { ApiError, apiFetch, apiPatch, apiPost, apiPut, type PassProduct } from '@/lib/api';
 import { outcome, type Outcome } from '@/lib/load-failure';
 import type { FormState } from '../../actions';
 
@@ -100,6 +100,51 @@ export async function saveStayAction(
     await apiPatch(`/facilities/${facilityId}/reception/stay`, { minutes });
   } catch (error) {
     return failure(error, 'passes.saveFailed');
+  }
+  refresh(facilityId);
+  return { ok: true };
+}
+
+/**
+ * A price for one set of categories — POOLSE-203. `categoryIds` repeats in the
+ * form (one per category); a new combination needs two or more, said in words.
+ */
+export async function setPriceAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const facilityId = String(formData.get('facilityId') ?? '');
+  const productId = String(formData.get('productId') ?? '');
+  const categoryIds = formData.getAll('categoryIds').map(String).filter((id) => id !== '');
+  if (categoryIds.length === 0) return { ok: false, fields: { categoryIds: 'passes.prices.categoriesRequired' } };
+  // A combination is two or more; one category has its own row already.
+  if (formData.get('combination') === '1' && categoryIds.length < 2) {
+    return { ok: false, fields: { categoryIds: 'passes.prices.combinationTwo' } };
+  }
+  const cents = String(formData.get('amountCents') ?? '').trim();
+  if (cents === '' || !Number.isInteger(Number(cents))) {
+    return { ok: false, fields: { amountCents: 'fees.amountInvalid' } };
+  }
+  try {
+    await apiPut(`/facilities/${encodeURIComponent(facilityId)}/pass-products/${encodeURIComponent(productId)}/prices`, {
+      categoryIds,
+      amountCents: Number(cents),
+    });
+  } catch (error) {
+    return failure(error, 'passes.prices.saveFailed');
+  }
+  refresh(facilityId);
+  return { ok: true };
+}
+
+export async function archivePriceAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const facilityId = String(formData.get('facilityId') ?? '');
+  const productId = String(formData.get('productId') ?? '');
+  const priceId = String(formData.get('priceId') ?? '');
+  try {
+    await apiPost(
+      `/facilities/${encodeURIComponent(facilityId)}/pass-products/${encodeURIComponent(productId)}/prices/${encodeURIComponent(priceId)}/archive`,
+      {},
+    );
+  } catch (error) {
+    return failure(error, 'passes.prices.removeFailed');
   }
   refresh(facilityId);
   return { ok: true };
