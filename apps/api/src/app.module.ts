@@ -127,6 +127,7 @@ import {
   EnrollmentCategoryController,
   FeeCategoriesController,
 } from './billing/categories.controller.js';
+import { PersonCategoriesController } from './billing/person-categories.controller.js';
 import { PlatformModule } from './platform/platform.module.js';
 import { RequestStatsInterceptor } from './platform/request-stats.interceptor.js';
 import { TenantMiddleware } from './tenant/tenant.middleware.js';
@@ -282,6 +283,7 @@ export const IDENTITY_ONLY_ROUTES = [
     InvoiceSeriesController,
     FeeCategoriesController,
     EnrollmentCategoryController,
+    PersonCategoriesController,
     StudentFeesController,
     StudentPaidController,
     StudentSocioController,

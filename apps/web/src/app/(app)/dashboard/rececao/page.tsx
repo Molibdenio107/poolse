@@ -6,6 +6,7 @@ import { backProp, originBack } from '@/lib/back';
 import { PageError, PageShell } from '@/components/page-shell';
 import { readReception } from './reception.actions';
 import { ReceptionBoard } from './reception-board';
+import { ExpiringCategories } from './expiring-categories';
 
 /**
  * Receção — POOLSE-68.
@@ -82,6 +83,8 @@ export default async function ReceptionPage({
           // which every check-in there would then refuse as the wrong site.
           <ReceptionBoard key={chosen.id} facilityId={chosen.id} reception={reception.data} />
         )}
+        {/* POOLSE-202: categories whose proof runs out within 30 days. */}
+        {reception.state === 'ok' && <ExpiringCategories />}
       </div>
     </PageShell>
   );

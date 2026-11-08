@@ -15,6 +15,7 @@ import type { FeeCategory } from '@/lib/api';
 import type { FormState } from '../../actions';
 import {
   archiveCategoryAction,
+  rankCategoriesAction,
   reorderCategoriesAction,
   saveCategoryAction,
 } from './categories.actions';
@@ -255,6 +256,41 @@ export function CategoriesPanel({
             {t('categories.add')}
           </button>
         ))}
+
+      {/*
+        POOLSE-202: the price precedence, its own order (Rui, 08-11-2026). The
+        list above is how categories are shown; this one is which wins when a
+        person holds several. Only for somebody who may write it.
+      */}
+      {canManage && categories.length > 1 && (
+        <section aria-labelledby="categories-rank" className="flex flex-col gap-2 rounded border border-border p-4">
+          <h3 id="categories-rank" className="text-sm font-medium">
+            {t('categories.rankTitle')}
+          </h3>
+          <p className="text-sm text-foreground-muted">{t('categories.rankHint')}</p>
+          <Reorderable
+            items={[...categories]
+              .sort((a, b) => a.rank - b.rank)
+              .map((category) => ({ ...category, label: category.name }))}
+            onReorder={async (ids) => {
+              await rankCategoriesAction(facilityId, ids);
+            }}
+          >
+            {(category) => <span>{category.name}</span>}
+          </Reorderable>
+        </section>
+      )}
+
+      {/*
+        POOLSE-202: a residence rule is the club's decision and responsibility,
+        said where categories are made. Visible text, not a tooltip.
+      */}
+      {canManage && (
+        <section className="rounded border border-border p-4">
+          <h3 className="text-sm font-medium">{t('categories.residenceTitle')}</h3>
+          <p className="mt-2 text-sm text-foreground-muted">{t('categories.residenceBody')}</p>
+        </section>
+      )}
 
       {/*
         What a category is *for*, said on the page rather than assumed.

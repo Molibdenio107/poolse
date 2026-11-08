@@ -96,3 +96,14 @@ tarde*) with its reason on its occupancy card, and reads *(encerrado)* in the ta
 check-in on it is refused by the check-in trigger under the pool lock — "Este tanque está
 encerrado até …. Escolha outro tanque." — while another tank of the same site takes the
 swimmer.
+
+## Person categories — POOLSE-202 (08-11-2026)
+
+The office ticks a category (*Sénior*, *Sócio*, *Munícipe*…) on a person after seeing proof: the date it was seen, who saw it, and valid until (blank = no expiry). The notes say what was seen, never its number. No copy of the document is kept. Poolse never decides eligibility.
+
+- **Where**: a *Categorias* card on the student record (General tab) and in Receção's person panel for somebody who is not a student (Rui, 08-11-2026). Add, *Renovar* (new dates) or *Remover* (asks first; an archive). Each change is audited (`person_category.added/renewed/removed`).
+- **Who**: owner and admin; there is no reception role. Instructors and families are refused by the API.
+- **Expiry**: *Categorias a expirar* on the Receção page lists every category with 30 days or fewer left, soonest first, and the menu's *Receção* carries the attention circle while any are listed. An expired one reads *Expirou a dd-MM-yyyy* on the card; the next sale is at the base price (POOLSE-203), and packs already sold are untouched.
+- **Rank**: the categories panel on a site's *Preços › Descontos* has a second drag list, *Prioridade no preço das entradas*: the first category a person holds sets their pass price. It does not change the display order or monthly fees. The panel also says, as visible text, that a residence-based price is the club's decision and responsibility.
+- **Family app**: *Perfil* lists the reader's own valid categories with their expiry, never the proof (`GET /app/categories`).
+- **API**: `GET/POST /person-categories`, `PATCH /person-categories/:id`, `POST /person-categories/:id/archive`, `GET /person-categories/expiring`, `POST /fee-categories/rank`.

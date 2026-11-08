@@ -133,6 +133,12 @@ export async function reorderCategoriesAction(
   revalidatePath(`/dashboard/facilities/${facilityId}`);
 }
 
+/** The price precedence — POOLSE-202. Same contract as `reorderCategoriesAction`. */
+export async function rankCategoriesAction(facilityId: string, ids: string[]): Promise<void> {
+  await apiPost('/fee-categories/rank', { ids });
+  revalidatePath(`/dashboard/facilities/${facilityId}`);
+}
+
 export async function archiveCategoryAction(
   _previous: FormState,
   formData: FormData,

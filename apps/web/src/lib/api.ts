@@ -2893,6 +2893,8 @@ export interface FeeCategory {
   id: string;
   name: string;
   sortOrder: number;
+  /** Which category wins when a person holds several — POOLSE-202. Lowest first; not `sortOrder`. */
+  rank: number;
   /**
    * What it takes off — one or the other, and often neither.
    *
@@ -5955,6 +5957,30 @@ export interface AppFeeCharge extends AppFeeItem {
   amountCents: number;
   dueOn: string | null;
   sharedWith: string[];
+}
+
+/** A category on one person — POOLSE-202. `status` is SQL's (`person_category_status`). */
+export interface PersonCategory {
+  id: string;
+  categoryId: string;
+  name: string;
+  rank: number;
+  heldOn: 'student' | 'membership';
+  proofSeenOn: string;
+  proofSeenByName: string | null;
+  validUntil: string | null;
+  notes: string | null;
+  status: 'live' | 'expiring' | 'expired';
+}
+
+/** A row on *Categorias a expirar* — POOLSE-202. */
+export interface ExpiringCategory {
+  id: string;
+  name: string;
+  validUntil: string;
+  personName: string;
+  studentId: string | null;
+  membershipId: string | null;
 }
 
 /** One row on *Extratos* — POOLSE-201. No NIF, address or e-mail on the list. */

@@ -18,6 +18,7 @@ import {
 } from './reception.actions';
 import { BUTTON, BUTTON_QUIET, PANEL, PANEL_TITLE } from './styles';
 import { today as todayOfClub } from '@/lib/dates';
+import { PersonCategoriesCard } from '@/components/person-categories-card';
 
 const INITIAL: ReceptionState = { ok: false };
 
@@ -77,6 +78,7 @@ export function PersonDesk({
           </>
         )
       ) : (
+        <>
         <PersonPasses
           facilityId={facilityId}
           person={chosen}
@@ -86,6 +88,9 @@ export function PersonDesk({
           poolName={poolName}
           onClear={() => setChosen(null)}
         />
+        {/* POOLSE-202: the person's categories, an expired one said as a line. */}
+        <PersonCategoriesCard key={chosen.membershipId} person={{ membershipId: chosen.membershipId }} className="shadow-none p-0" />
+        </>
       )}
     </section>
   );

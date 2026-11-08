@@ -146,3 +146,9 @@ out the same way. Pass revenue is its own figure (sales not since credited) and 
 with mensalidades. `docs/features/reception.md`.
 
 **A cost is an amount with a period, and a window is a sum of `cost_month`.** POOLSE-182. `allocate_cost` splits by day; triggers on the sources keep `cost_month`, so a bill is projected and never copied. Salaries are read on demand by `salary_months()`, never stored. A sub-meter's tariff never enters the ledger, because the supply's bill already holds those euros. Invoices and estimates are never summed without naming both. **The page is *Custos* (`GET /costs/overview`, one read for the screen and its CSV)**: eight groups, a window stopping at today, rounding carried across months so the table equals the tiles (`costs/cost-overview.ts`). A new chart of up to eight series takes `--chart-1…8` in `StackedMonthBars`' order, never a ninth colour. `docs/features/costs.md`.
+
+## A person's category is `person_category`, and SQL says whether it holds — POOLSE-202
+
+A category on a person (for passes; monthly fees keep the enrolment/turma rule) is a `person_category` row on a student or a membership, with proof seen on, by whom, and valid until. **Validity is `person_category_status(valid_until)`**: live, expiring (30 days or fewer) or expired against `club_today()`. **What applies is `person_categories(org, membership, student)`**, ordered by `fee_category.rank`, which is not `sort_order`. A membership and the student whose login it is are one person there.
+
+The trap: comparing `validUntil` to today in TypeScript, or sorting by `sortOrder`. Both look right until a club reorders its list or the server's clock is a day off Lisbon's. Read the status and the order from SQL. Monthly fees never read `person_category`: `enrolment_fee_category_all` stays the only precedence for a fee line.

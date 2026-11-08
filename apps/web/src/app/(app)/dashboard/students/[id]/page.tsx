@@ -1,3 +1,4 @@
+import { PersonCategoriesCard } from '@/components/person-categories-card';
 import { readableSports } from '@/lib/sport-scope';
 import { SportLevelForm } from './sport-level-form';
 import { cn } from '@/lib/utils';
@@ -398,6 +399,9 @@ export default async function StudentPage({
                   studentEmail={loaded.contactEmail}
                 />
               )}
+
+              {/* POOLSE-202: the person's categories and their proof. The office's only. */}
+              {!family && reg.canManage && <PersonCategoriesCard person={{ studentId: id }} />}
 
               {/*
                 Who this student is — the name, the level, the birth date. It is

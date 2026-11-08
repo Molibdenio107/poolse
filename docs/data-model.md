@@ -2681,6 +2681,16 @@ Neither reference from `class_group` or `enrollment` is cascaded, so `fee_catego
 **after** `class_group` in `TENANT_TABLES`: deleting the categories first fails on the foreign
 key, which is the key doing its job. `student_fee` is already ahead of it there.
 
+### A category on the person — POOLSE-202, 8 November 2026
+
+A free swimmer has no enrolment, so a category also sits on the **person**. For passes only (POOLSE-203); monthly fees keep `enrolment_fee_category_all` / `enrolment_fee_category()`, which this does not touch.
+
+- **`fee_category.rank`** `integer NOT NULL DEFAULT 0`: which category wins when a person holds several, lowest first. Separate from `sort_order`, which stays the display order (Rui, 08-11-2026). Seeded from `sort_order`; a new category lands last in both.
+- **`person_category`**: `organization_id`, `membership_id` **or** `student_id` (exactly one, CHECK), `fee_category_id`, `proof_seen_on` (date), `proof_seen_by` (membership; nullable only because anonymisation clears it), `valid_until` (null = no expiry, CHECK ≥ `proof_seen_on`), `notes` (≤ 200, CHECK refuses six digits in a row: what was seen, never its number), archive columns. Composite FKs to membership, student and fee_category. Partial unique: one live row per person per category, per side. RLS; `poolse_app` has SELECT, INSERT, UPDATE and no DELETE (removal is an archive). No copy of the proof is kept.
+- **`person_category_status(valid_until)`** → `live` / `expiring` (0–30 days left, still valid) / `expired` (before `club_today()`). The one definition of validity.
+- **`person_categories(org, membership_id, student_id)`** → the person's valid categories (not archived, not expired) by rank. A membership and the student whose login it is count as one person; a category held on both is returned once.
+- **Retention**: triggers on `student.anonymised_at` and on the anonymised membership (the invoice reminders' test) clear `notes` and `proof_seen_by`.
+
 ### The trial ladder — POOLSE-61 slice B1, 14 September 2026
 
 ```

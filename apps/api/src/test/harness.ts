@@ -266,6 +266,8 @@ const TENANT_TABLES = [
    * foreign key. Which is the key doing its job: a category something still
    * names is not one a teardown should be able to remove quietly either.
    */
+  // POOLSE-202: names a category, a student or a membership; before all three.
+  'person_category',
   'fee_category',
   /*
    * The parceria tables — POOLSE-47. After `class_schedule`, because a booking

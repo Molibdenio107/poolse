@@ -105,7 +105,7 @@ export interface Item {
  * `meetInbox` is POOLSE-114's count; the rest are POOLSE-120's circles — what
  * needs doing, from `GET /attention`, cleared when it is done.
  */
-export type BadgeKey = 'meetInbox' | 'leads' | 'facilities' | 'calendar' | 'students';
+export type BadgeKey = 'meetInbox' | 'leads' | 'facilities' | 'calendar' | 'students' | 'categories';
 /** By badge key, and `<key>:<sport>` for a per-sport copy (POOLSE-143). */
 export type Badges = Partial<Record<string, number>>;
 
@@ -390,6 +390,8 @@ export const SECTIONS: Item[] = [
     roles: ['owner', 'admin'],
     kinds: ['business'],
     module: 'reception',
+    // POOLSE-202: person categories whose proof runs out within 30 days.
+    badge: 'categories',
     children: [
       // Pedidos de inscrição — POOLSE-165 (Rui, 04-11-2026): the office handles
       // them at the desk. The shared list; each sport's copy stays under that

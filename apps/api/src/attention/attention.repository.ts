@@ -6,6 +6,7 @@ import { labValues, type LabParameter } from '../facilities/lab-results.reposito
 import { TASK_STATE } from '../maintenance/maintenance.repository.js';
 import { readLeadsWidget, waitingLeadsBySport } from '../leads/leads.repository.js';
 import { studentsToReview } from '../students/students.repository.js';
+import { countExpiringCategories } from '../billing/person-categories.repository.js';
 
 /**
  * Where something needs doing — POOLSE-120 (Rui, 28-10-2026).
@@ -42,6 +43,8 @@ export interface AttentionScope {
   review: boolean;
   water: boolean;
   maintenance: boolean;
+  /** Person categories expiring within 30 days — POOLSE-202, the office's at reception. */
+  categories?: boolean;
   /** Families' answers: `all` for the office, `mine` for a teacher, or none. */
   families: 'all' | 'mine' | null;
   membershipId: string;
@@ -64,6 +67,12 @@ export async function readAttention(organizationId: string, scope: AttentionScop
       add(out.menu, 'students');
       for (const sport of student.sports) add(out.menu, `students:${sport}`);
     }
+  }
+
+  if (scope.categories === true) {
+    // POOLSE-202: the menu's *Receção* counts the categories about to expire.
+    const expiring = await countExpiringCategories(organizationId);
+    if (expiring > 0) add(out.menu, 'categories', expiring);
   }
 
   if (scope.leads) {

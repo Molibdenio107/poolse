@@ -4,6 +4,17 @@
 
 **Type:** Feature · **Area:** Students / Reception / Billing · **Priority:** Medium (pilot) · **Depends on** POOLSE-23 (fee categories), [POOLSE-68](./POOLSE-68-free-swim-passes-and-check-in.md) · **Unblocks** [POOLSE-203](./POOLSE-203-a-pass-price-per-category.md)
 
+### As built (08-11-2026) — wins over what follows
+
+- **Rank is its own column** (Rui, 08-11-2026): `fee_category.rank`, seeded from `sort_order`, with a second drag list on the categories panel (*Prioridade no preço das entradas*, `POST /fee-categories/rank`). `sort_order` stays the display order.
+- **Schema**: `person_category` (migration `1794654300000_person-category.sql`), `person_category_status(valid_until)` (live / expiring ≤ 30 days / expired) and `person_categories(org, membership, student)` (valid ones by rank). A membership and the student whose login it is count as one person. Removal is an archive; the app role has no DELETE. Notes ≤ 200 and a CHECK refuses six digits in a row. Anonymising a student or a membership clears `notes` and `proof_seen_by` by trigger. The enrolment precedence view, its function and `student_fee` are untouched.
+- **Where the card lives** (Rui, 08-11-2026): a student's record (General tab) and, for anybody else, Receção's person panel. No member record page was built. One component, `components/person-categories-card.tsx`, loads itself through `lib/person-categories.actions.ts`.
+- **API**: `PersonCategoriesController` (`GET/POST /person-categories`, `PATCH /:id`, `POST /:id/archive`, `GET /expiring`), owner and admin only, since there is no reception role. A person of another club is a 404. Refusals carry a field and an i18n key. `GET /app/categories` gives the reader their own valid categories (name and expiry only).
+- **Warnings**: *Categorias a expirar* on the Receção page (not paginated; listed as an exemption in CONVENTIONS.md) and the attention circle on the menu's *Receção* (`categories`, office only, with reception on). An expired row reads *Expirou a dd-MM-yyyy* on the card, which in Receção sits in the person panel where the check-in is done (rule 5). It is not yet on the scan itself; there is no scan until POOLSE-205.
+- **Help text**: the residence warning is a visible section on the categories panel, not a link.
+- **Tests**: `packages/db/test/person-category.sql`, `apps/api/src/billing/person-categories.integration.test.ts` (QA 1–5), and role-probe lines. Walked in a browser: panel, student card (refusal, add, expired, expiring, dark mode), Receção list and circle, family *Perfil*.
+- **Person merge**: `merge_memberships` does not move `person_category` rows, as it does not move passes either; a merged person's categories stay on the archived membership. Proposal, not built.
+
 ### PO — why this exists
 
 Rui, 08-11-2026: *"if a person is from 'porto' it can get a personalized discount."* Brainstormed the same evening (decisions below). A free swimmer has no enrolment, so today's categories (on the enrolment or the turma) cannot reach them. The category has to sit on the **person**.

@@ -65,14 +65,19 @@ export default async function AppProfilePage({
     );
   }
 
-  const [locale, sessionsLoad, familyLoad, joinLink, invoicesLoad] = await Promise.all([
+  const [locale, sessionsLoad, familyLoad, joinLink, invoicesLoad, categoriesLoad] = await Promise.all([
     getLocale(),
     outcome(apiFetch<{ sessions: ActiveSession[] }>('/me/sessions')),
     outcome(apiFetch<{ students: { name: string; self: boolean }[] }>('/family')),
     outcome(apiFetch<{ slug: string | null }>('/app/join-link')),
     // *Extratos* (POOLSE-201): only somebody who pays has the row.
     hats.homes.includes('family') ? outcome(apiFetch<AppInvoiceList>('/app/invoices')) : Promise.resolve(null),
+    // POOLSE-202, rule 6: the reader's own categories, read-only, never the proof.
+    hats.homes.includes('family')
+      ? outcome(apiFetch<{ categories: { name: string; validUntil: string | null }[] }>('/app/categories'))
+      : Promise.resolve(null),
   ]);
+  const categories = categoriesLoad !== null && categoriesLoad.state === 'ok' ? categoriesLoad.data.categories : [];
   const pays = invoicesLoad !== null && invoicesLoad.state === 'ok' && invoicesLoad.data.payer;
   // *Convidar amigos* (Rui, 07-11-2026): only while the club takes pre-registrations.
   const mayInvite = joinLink.state === 'ok' && joinLink.data.slug !== null;
@@ -118,6 +123,20 @@ export default async function AppProfilePage({
             <dt className="text-sm text-foreground-muted">{t('profile.contactPhone')}</dt>
             <dd>{me.user.contactPhone ?? '—'}</dd>
           </div>
+          {categories.length > 0 && (
+            <div className="flex items-start justify-between gap-3 py-2">
+              <dt className="text-sm text-foreground-muted">{t('personCategories.title')}</dt>
+              <dd className="flex flex-col items-end text-right">
+                {categories.map((one) => (
+                  <span key={one.name}>
+                    {one.validUntil === null
+                      ? one.name
+                      : t('personCategories.appUntil', { name: one.name, date: formatDate(one.validUntil) })}
+                  </span>
+                ))}
+              </dd>
+            </div>
+          )}
         </dl>
         <EditProfile me={me} photo={<IdPhoto url={me.user.avatarUrl} name={fullName} target="own-photo" />} />
       </section>

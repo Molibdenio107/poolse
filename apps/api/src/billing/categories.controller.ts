@@ -16,6 +16,7 @@ import {
   createCategory,
   listCategories,
   renameCategory,
+  rankCategories,
   reorderCategories,
   setEnrollmentCategory,
   CategoryInUseError,
@@ -24,6 +25,8 @@ import {
   type FeeCategoryInput,
 } from './categories.repository.js';
 import { CoreRoute } from '../tenant/modules.js';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const MAX_NAME = 60;
 
@@ -139,6 +142,27 @@ export class FeeCategoriesController {
       throw new BadRequestException('No such categories');
     }
     return { reordered: true };
+  }
+
+  /**
+   * The price precedence — POOLSE-202. Which category wins when a person holds
+   * several; the same contract as `reorder`, on its own column.
+   */
+  @Post('rank')
+  async rank(@Body() body: Record<string, unknown>): Promise<{ ranked: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const raw = body['ids'];
+    if (!Array.isArray(raw)) throw new BadRequestException('ids must be a list of category ids');
+    const ids = raw.filter((id): id is string => typeof id === 'string' && UUID.test(id));
+    if (ids.length !== raw.length) throw new BadRequestException('ids must all be category ids');
+    if (new Set(ids).size !== ids.length) throw new BadRequestException('ids must not repeat');
+
+    if (!(await rankCategories(organizationId, ids))) {
+      throw new BadRequestException('No such categories');
+    }
+    return { ranked: true };
   }
 
   @Post(':id/archive')

@@ -31,12 +31,13 @@ export async function attentionForReader(): Promise<Attention> {
   const scope = {
     leads: office,
     review: office,
+    categories: office && moduleIsOn('reception'),
     water: upkeep && moduleIsOn('water_quality'),
     maintenance: upkeep && moduleIsOn('maintenance'),
     families: office ? ('all' as const) : hasRole('instructor') ? ('mine' as const) : null,
     membershipId,
   };
-  if (!scope.leads && !scope.water && !scope.maintenance && scope.families === null) return NOTHING;
+  if (!scope.leads && !scope.categories && !scope.water && !scope.maintenance && scope.families === null) return NOTHING;
   // A support session sees the club as an admin would, but is nobody's teacher.
   if (support === true && scope.families === 'mine') scope.families = null;
   return readAttention(organizationId, scope);

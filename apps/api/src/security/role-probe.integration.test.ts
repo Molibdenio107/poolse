@@ -96,6 +96,8 @@ import { AppAvisosController, AvisosController } from '../messages/avisos.contro
 import { StudentMessagesController } from '../messages/student-messages.controller.js';
 import { MedicalExamScheduleController } from '../students/medical-exam-schedule.controller.js';
 import { StaffNotesController } from '../staff-notes/staff-notes.controller.js';
+import { PersonCategoriesController } from '../billing/person-categories.controller.js';
+import { FeeCategoriesController } from '../billing/categories.controller.js';
 
 /**
  * Role probe — security review, 12-10-2026, inverted into a regression test.
@@ -1752,5 +1754,26 @@ test('POOLSE-169: the staff board — a guardian and a student cannot read, pin 
     await refused(`GET staff-notes as ${label}`, 403, () => new StaffNotesController().list());
     await refused(`POST staff-notes as ${label}`, 403, () => new StaffNotesController().pin({ body: 'x' }));
     await refused(`DELETE staff-notes/:id as ${label}`, 403, () => new StaffNotesController().remove(NO_SUCH_ID));
+  });
+});
+
+test('person categories are the office’s; a family reads only its own — POOLSE-202', async () => {
+  const office = ['instructor', 'maintenance'] as const;
+  for (const [id, role] of [[fixture.instructorId, office[0]], [fixture.maintenanceId, office[1]]] as const) {
+    await as(id, [role], async () => {
+      const api = new PersonCategoriesController();
+      await refused(`GET person-categories as ${role}`, 403, () => api.list(fixture.aliceId));
+      await refused(`GET person-categories/expiring as ${role}`, 403, () => api.expiring());
+      await refused(`POST person-categories as ${role}`, 403, () =>
+        api.add({ studentId: fixture.aliceId, categoryId: NO_SUCH_ID, proofSeenOn: '2026-11-01' }),
+      );
+      await refused(`PATCH person-categories/:id as ${role}`, 403, () => api.renew(NO_SUCH_ID, {}));
+      await refused(`POST person-categories/:id/archive as ${role}`, 403, () => api.remove(NO_SUCH_ID));
+      await refused(`POST fee-categories/rank as ${role}`, 403, () => new FeeCategoriesController().rank({ ids: [] }));
+      await refused(`GET app/categories as ${role}`, 403, () => new AppController().categories());
+    });
+  }
+  await asEach(async () => {
+    await refused('GET person-categories as a family', 403, () => new PersonCategoriesController().list(fixture.aliceId));
   });
 });

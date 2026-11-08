@@ -7,6 +7,7 @@ import {
   type PayerInvoice,
   type PayerInvoiceItem,
 } from '../billing/payer-invoices.repository.js';
+import { myCategories } from '../billing/person-categories.repository.js';
 import {
   BadRequestException,
   Body,
@@ -321,6 +322,18 @@ export class AppController {
           }),
     });
     return { saved: true };
+  }
+
+  /**
+   * The reader's own categories — POOLSE-202, rule 6: name and expiry, read-only,
+   * never the proof. Straight from `person_categories()`.
+   */
+  @Get('categories')
+  @Header('Cache-Control', 'private, no-store')
+  async categories(): Promise<{ categories: { name: string; validUntil: string | null }[] }> {
+    requireRole('guardian', 'student');
+    const { organizationId, membershipId } = currentTenant();
+    return { categories: await myCategories(organizationId, membershipId) };
   }
 
   /**

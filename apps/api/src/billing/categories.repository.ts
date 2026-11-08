@@ -30,6 +30,11 @@ export interface FeeCategory {
   name: string;
   sortOrder: number;
   /**
+   * Which category wins when a person holds several (POOLSE-202): lowest first.
+   * Separate from `sortOrder`, which is display only (Rui, 08-11-2026).
+   */
+  rank: number;
+  /**
    * What it takes off — one or the other, and often neither.
    *
    * Both null is a category that is purely a label, which stays a legitimate
@@ -91,6 +96,7 @@ export async function listCategories(organizationId: string): Promise<FeeCategor
       id: string;
       name: string;
       sort_order: number;
+      rank: number;
       discount_percent: string | null;
       discount_cents: number | null;
       used_by_groups: number;
@@ -156,7 +162,7 @@ export async function listCategories(organizationId: string): Promise<FeeCategor
           UNION
          SELECT category_id, student_id FROM charged
        )
-       SELECT c.id, c.name, c.sort_order, c.discount_percent, c.discount_cents,
+       SELECT c.id, c.name, c.sort_order, c.rank, c.discount_percent, c.discount_cents,
               (SELECT count(*)::int FROM class_group cg
                 WHERE cg.fee_category_id = c.id
                   AND cg.organization_id = c.organization_id
@@ -181,6 +187,7 @@ export async function listCategories(organizationId: string): Promise<FeeCategor
       id: row.id,
       name: row.name,
       sortOrder: row.sort_order,
+      rank: row.rank,
       // `numeric` arrives as a string from pg, which refuses to lose digits for
       // us. A rate this small is safe as a number; the amount beside it is an
       // integer already, for the reason every amount here is.
@@ -230,10 +237,11 @@ export async function createCategory(
        * that needs no decision — somebody who wants it third drags it there.
        */
       ({ rows } = await tx.query<{ id: string }>(
-        `INSERT INTO fee_category (organization_id, name, sort_order,
+        `INSERT INTO fee_category (organization_id, name, sort_order, rank,
                                    discount_percent, discount_cents)
          SELECT $1, $2,
                 coalesce(max(c.sort_order) + 1, 0),
+                coalesce(max(c.rank) + 1, 0),
                 $3, $4
            FROM fee_category c
           WHERE c.organization_id = $1 AND c.archived_at IS NULL
@@ -355,6 +363,36 @@ export async function reorderCategories(
       data: { order: ids },
     });
 
+    return true;
+  });
+}
+
+/**
+ * The price precedence, the whole order at once — POOLSE-202. The same contract
+ * as `reorderCategories`, on `rank` rather than `sort_order`: the top category
+ * a person holds sets their pass price (POOLSE-203). Nothing already sold moves.
+ */
+export async function rankCategories(organizationId: string, ids: string[]): Promise<boolean> {
+  if (ids.length === 0) return true;
+
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string }>(
+      `UPDATE fee_category AS c
+          SET rank = ordered.position
+         FROM unnest($1::uuid[]) WITH ORDINALITY AS ordered(id, position)
+        WHERE c.id = ordered.id
+          AND c.archived_at IS NULL
+      RETURNING c.id`,
+      [ids],
+    );
+    if (rows.length === 0) return false;
+
+    await recordAudit(tx, {
+      action: 'fee_category.ranked',
+      entityType: 'fee_category',
+      entityId: null,
+      data: { order: ids },
+    });
     return true;
   });
 }
