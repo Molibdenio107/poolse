@@ -1,7 +1,7 @@
 import { instructorPhotoSql } from '../tenant/app-view.js';
 import { ENROLLED_IN_SESSION, NOT_COMING_TO_SESSION } from '../dashboard/instructor.repository.js';
 import { withOrg } from '@poolse/db';
-import { mayAnswer, needsBirthDate } from '../feedback/feedback.repository.js';
+import { lessonSport, mayAnswer, needsBirthDate } from '../feedback/feedback.repository.js';
 
 /**
  * The family agenda — POOLSE-90 slice 1.
@@ -71,6 +71,12 @@ export interface AgendaEntry {
    * The trigger on `session_notice` is the guard; this only says it in advance.
    */
   noticeOpen: boolean;
+  /**
+   * The lesson's *Desafio* (POOLSE-195), or null — shown on *Início*'s card (Rui,
+   * 09-11-2026). Safe here because every row already is the reader's own child in
+   * a turma they were enrolled in that day: `familyMayReadPlan`'s own rule.
+   */
+  challenge: string | null;
 }
 
 /**
@@ -150,6 +156,9 @@ async function readEntries(
               ${mayAnswer('s', '$3::uuid')} AS "mayAnswer",
               ${needsBirthDate('s', '$3::uuid')} AS "needsBirthDate",
               (cs.status <> 'cancelled' AND cs.starts_at > now()) AS "noticeOpen",
+              (SELECT lc.body FROM lesson_challenge lc
+                WHERE lc.organization_id = cs.organization_id AND lc.class_group_id = cs.class_group_id
+                  AND lc.on_date = cs.occurs_on AND lc.archived_at IS NULL) AS challenge,
               mark.status::text AS attendance,
               ${LESSON_PAGE_ANSWERS} AS opens
          FROM unnest($1::uuid[]) AS chosen(id)
@@ -235,6 +244,7 @@ export async function readCalendar(
               false AS "mayAnswer",
               false AS "needsBirthDate",
               false AS "noticeOpen",
+              NULL::text AS challenge,
               NULL::text AS attendance,
               false AS opens,
               false AS generated
@@ -506,6 +516,8 @@ export interface RecentLesson {
   open: boolean;
   /** The reader answers for this child; else the list offers nothing to do. */
   mayAnswer: boolean;
+  /** The lesson's sport: the mood is drawn in its icons. */
+  sport: string;
 }
 
 /**
@@ -528,7 +540,8 @@ export async function readRecent(
               to_char(cs.starts_at AT TIME ZONE ${TZ}, 'HH24:MI')    AS "localTime",
               fb.mood,
               club_today() <= lesson_feedback_closes_on(cs.organization_id, cs.pool_id, cs.starts_at) AS open,
-              ${mayAnswer('s', '$2::uuid')} AS "mayAnswer"
+              ${mayAnswer('s', '$2::uuid')} AS "mayAnswer",
+              ${lessonSport('cs')} AS sport
          FROM unnest($1::uuid[]) AS chosen(id)
          JOIN student_person s ON s.id = chosen.id AND s.archived_at IS NULL
          JOIN attendance a

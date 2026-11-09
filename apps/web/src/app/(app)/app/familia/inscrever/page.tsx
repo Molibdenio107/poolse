@@ -7,6 +7,7 @@ import { apiFetch, type AppJoinOptions } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { describeLoad } from '@/lib/load-failure';
 import { JoinForm } from './join-form';
+import { backTarget } from '@/lib/back';
 
 /**
  * Asking to join a class — POOLSE-121, the enrolment half (Rui, 29-10-2026).
@@ -16,8 +17,14 @@ import { JoinForm } from './join-form';
  * request goes to the club's Pedidos de inscrição, which decides. Under the form,
  * the requests already sent and where each one stands.
  */
-export default async function JoinClass(): Promise<React.ReactElement> {
+export default async function JoinClass({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  // Back to *Aulas* when it was opened there (Rui, 09-11-2026), *Início* otherwise.
+  const back = backTarget((await searchParams).from, '/app/familia');
 
   let options: AppJoinOptions;
   try {
@@ -30,8 +37,8 @@ export default async function JoinClass(): Promise<React.ReactElement> {
   return (
     <>
       <Link
-        href="/app/familia"
-        aria-label={t('app.family.backToAgenda')}
+        href={back.href}
+        aria-label={t(back.labelKey)}
         className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline coarse:-my-3 coarse:py-3 coarse:pr-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <ArrowLeft className="size-4" aria-hidden />

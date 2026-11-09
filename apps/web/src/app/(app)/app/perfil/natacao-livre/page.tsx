@@ -7,6 +7,7 @@ import { describeLoad } from '@/lib/load-failure';
 import { LinkBusy } from '@/components/link-busy';
 import { PageError } from '@/components/page-shell';
 import { BuyForm } from './buy-form';
+import { backTarget } from '@/lib/back';
 
 /**
  * *Natação livre* — POOLSE-204, rule 7. Each live pass the reader may use (their
@@ -14,8 +15,13 @@ import { BuyForm } from './buy-form';
  * família*, or *Por pagar*. Then what the club sells on the phone. No list of
  * other people's entries.
  */
-export default async function FreeSwim(): Promise<React.ReactElement> {
+export default async function FreeSwim({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const back = backTarget((await searchParams).from, '/app/perfil?home=family');
   let answer: AppPasses;
   try {
     answer = await apiFetch<AppPasses>('/app/passes');
@@ -27,8 +33,8 @@ export default async function FreeSwim(): Promise<React.ReactElement> {
   return (
     <>
       <Link
-        href="/app/perfil?home=family"
-        aria-label={t('app.profile.backTo')}
+        href={back.href}
+        aria-label={t(back.labelKey)}
         className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline coarse:-my-3 coarse:py-3"
       >
         <ArrowLeft className="size-4" aria-hidden />

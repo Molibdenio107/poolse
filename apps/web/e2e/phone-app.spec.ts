@@ -156,8 +156,10 @@ test.describe('as a guardian, before a lesson', () => {
 test.describe('asking for a place, as a guardian', () => {
   test.use({ storageState: GUARDIAN_SESSION });
 
-  test('POOLSE-121 — the agenda opens Pedir inscrição; her children, a new child and the turmas with room, on a phone', async ({ page }) => {
-    await visit(page, '/app/familia');
+  test('POOLSE-121 — Perfil › + Natação opens Pedir inscrição; her children, a new child and the turmas with room, on a phone', async ({ page }) => {
+    // Its home since 09-11-2026 (Rui); Início offers it only with no lesson coming.
+    await visit(page, '/app/perfil?home=family');
+    await page.getByRole('link', { name: /^\+ (natação|swimming)$/i }).tap();
     await page.getByRole('link', { name: /pedir inscrição numa turma|ask for a place in a class/i }).tap();
     await expect(page.getByRole('heading', { name: /pedir inscrição numa turma|ask for a place in a class/i })).toBeVisible();
     await expect(page.getByRole('radio', { name: /ana poolside/i })).toBeVisible();
@@ -443,7 +445,7 @@ test.describe('POOLSE-136 — the phone shell, as an instructor', () => {
     await expect(bar.getByRole('link')).toHaveCount(4);
     await expect(bar.getByRole('link', { name: /^(início|home)$/i })).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('header').getByRole('link', { name: /abrir o backoffice|open the backoffice/i })).toHaveCount(0);
-    // No search in a teacher's app (Rui, 07-11-2026).
+    // No search anywhere in the app (Rui, 09-11-2026; the teacher's since 07-11).
     await expect(page.getByRole('button', { name: /procurar uma página|search for a page/i })).toHaveCount(0);
 
     // Alunos: the students of their turmas, and a card with who to call.

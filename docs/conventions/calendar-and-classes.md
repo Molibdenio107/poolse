@@ -45,7 +45,7 @@ Turmas, and it is wired into `generate_sessions`, `class_group`, `class_schedule
 
 **A turma is chosen in `TurmaPicker` (`components/turma-picker.tsx`), never a `<select>` of joined strings.** POOLSE-110: grouped by level with the requested level first, searchable, a row per turma with slots, instructor and a fill bar with its figure, a full turma pickable only where `allowFull`. A caller with a better grouping than level gives every row `group: { key, label, order }`; the rows then keep their given order (POOLSE-113, the advancement queue's rank reasons). Used by Pedidos and the advancement queue; the app's enrolment swaps to it next. A control inside a dialog that closes itself on Escape marks itself `data-own-escape`, and `Dialog` leaves the key to it.
 
-**Turmas opens on *Cartões*** (`turma-cards.tsx`, multi-sport Slice 4): a card per turma with a `Badge` of *Aberta / Completa / Sem professor*, the last outlined in amber; the weekly board is `?section=week`. `docs/features/classes.md`.
+**Turmas opens on *Lista*** (called *Cartões* until 09-11-2026) (`turma-cards.tsx`, multi-sport Slice 4): a card per turma with a `Badge` of *Aberta / Completa / Sem professor*, the last outlined in amber; the weekly board is `?section=week`. `docs/features/classes.md`.
 
 **Capacity rules compose, they do not override.** An enrolment must fit its turma
 (`class_group.capacity`), the turmas sharing a slot must fit the tank (`pool.max_capacity`),
@@ -98,7 +98,7 @@ handing them to the grid. Skip the overlay and a one-week move is written, refus
 reported correctly — and then invisible, because the block springs back to the pattern's slot.
 A change the screen cannot show reads as a change that did not happen.
 
-**A week's occurrence is found by its booking's id, never by turma-weekday-hour.**
+**A week's occurrence is found by its booking's id, never by turma-weekday-hour.** **So a turma lesson with no `schedule_id` is invisible to the calendar** while the family app, which lists lessons as they are, still shows it: 169 such lessons, left in Rui's dev club by a timetable from before bookings (27-08-2026), put a Masters class on a student's phone that the calendar did not have (09-11-2026; deleted). `generate_sessions` always sets the link, and `sessions.sql` test 1e holds it there.
 `bookingKey` in `lib/slot-key.ts`; `slotKey` is the fallback for a session with no booking.
 The composite was exact only while an occurrence could not leave its pattern's slot — it can
 now, so the two halves stop agreeing the moment anybody moves one week, and every control on

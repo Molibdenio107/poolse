@@ -43,6 +43,7 @@
     "toAvisos": "Back to notices"
   },
   "app": {
+    "moreSwimming": { "title": "+ Swimming", "backTo": "Back to More swimming" },
     "passes": {
       "title": "Free swim",
       "none": "No packs or passes.",
@@ -87,7 +88,8 @@
       "creditNoteOf": "Credit note for {documentNo}",
       "savePdf": "Save as PDF",
       "seeAll": "See statements",
-      "backTo": "Back to statements"
+      "backTo": "Back to statements",
+      "backToPayments": "Back to Payments"
     },
     "fees": {
       "overdue": "Overdue",
@@ -204,6 +206,8 @@
         "planned": "Planned",
         "notYet": "No lessons scheduled yet.",
         "noneThisWeek": "No lessons this week.",
+        "today": "Today",
+        "yearRange": "{from} – {to}",
         "attendance": {
           "present": "Present",
           "absent": "Absent",
@@ -290,8 +294,10 @@
       "titleFor": "Coming to the lesson? · {name}",
       "going": "Yes",
       "notGoing": "No",
-      "saidGoing": "Said they are coming",
-      "saidNotGoing": "Said they are not coming",
+      "saidGoing": "Coming",
+      "saidNotGoing": "Not coming",
+      "saidGoingSelf": "I'm going",
+      "saidNotGoingSelf": "I'm not going",
       "savedGoing": "Sent: coming to the lesson",
       "savedNotGoing": "Sent: not coming to the lesson",
       "needsBirthDate": "Add your date of birth on your Profile.",
@@ -495,6 +501,7 @@
       "failed": "Progress could not be loaded.",
       "event": "{distance} m {stroke}",
       "totalDistance": "Distance swum",
+      "distanceBy": { "season": "This season", "month": "This month", "perYear": "Average per year" },
       "metres": "{value} m",
       "noPool": "Not given",
       "hours": "Hours",
@@ -1875,6 +1882,10 @@
     }
   },
   "classes": {
+    "recintoFilter": {
+      "pool": { "label": "Pool", "any": "All pools", "none": "No pool" },
+      "other": { "label": "Venue", "any": "All venues", "none": "No venue" }
+    },
     "colour": "Class colour",
     "colourHint": "Optional. With no colour, the class uses its level’s.",
     "colourNone": "No colour",
@@ -2010,7 +2021,7 @@
     "occurrenceInstructorBusy": "The instructor already has another class in a different pool at that time.",
     "occurrenceClosed": "It cannot go there: that pool is closed at that time.",
     "cards": {
-      "title": "Cards",
+      "title": "List",
       "state": {
         "open": "Open",
         "full": "Full",
@@ -3614,86 +3625,12 @@
     "seePricing": "See pricing",
     "trialNote": "15 days free. No credit card.",
     "headline": "Run your pool without the spreadsheet.",
-    "subhead": "Poolse brings together the classes, students, fees, water and energy of the people who run pools — schools, municipal pools, hotels and condominiums.",
-    "screenshotPlaceholder": "[Product screenshot — not built yet]",
-    "availableNow": "Available now",
+    "subhead": "Classes, students, fees, front desk, water, energy and staff in one place — on the front-desk computer and on the phones of the people who teach and the people who pay.",
     "comingLater": "On the way",
     "comingNote": "Not built yet. It is on the plan.",
     "ctaTitle": "Start at the beginning.",
-    "ctaBody": "Create your organization, add your sites, bring in your staff. Under five minutes, no card needed.",
+    "ctaBody": "Create the organisation, add your facilities and bring in the team. It takes under five minutes and needs no card.",
     "footerNote": "Poolse is still being built, and says so.",
-    "now": {
-      "facilities": {
-        "title": "Sites and pools",
-        "body": "Several sites, each with its own pools, lanes, capacity and opening hours."
-      },
-      "classes": {
-        "title": "Classes and calendar",
-        "body": "The weekly timetable, dragging a class to another hour, and the season's lessons created on their own."
-      },
-      "students": {
-        "title": "Students and attendance",
-        "body": "The student record, guardians, levels, progression, and taking the register in under a minute."
-      },
-      "billing": {
-        "title": "Fees and payments",
-        "body": "Price list, discounts by category, internal documents and who is overdue. Not certified invoices yet."
-      },
-      "reception": {
-        "title": "Reception and free swim",
-        "body": "Sell entries and packs, check people in, and know how many are in the water."
-      },
-      "water": {
-        "title": "Water and maintenance",
-        "body": "Water tests with out-of-range alerts, recurring tasks, repair requests and a public water-quality page."
-      },
-      "energy": {
-        "title": "Energy",
-        "body": "Meters, electricity and gas bills, and what each lesson hour costs in each pool."
-      },
-      "staff": {
-        "title": "Staff",
-        "body": "Roles, pay, holidays, qualifications with expiry dates and the lifeguard roster."
-      },
-      "safety": {
-        "title": "Incidents",
-        "body": "A record of an accident, with the clinical details encrypted and a PDF for the insurer."
-      },
-      "families": {
-        "title": "Messages to families",
-        "body": "Tell a whole class by email, with a record of who was told."
-      },
-      "imports": {
-        "title": "Excel, in and out",
-        "body": "Bring the students, the timetable and the pay list from the spreadsheet you already use."
-      },
-      "undo": {
-        "title": "Undo a mistake",
-        "body": "Archived something by mistake? Undo it from the notice itself, or restore it later from the archive."
-      },
-      "support": {
-        "title": "Support only with permission",
-        "body": "Poolse support comes in only when the owner allows it, for a fixed time, and everything it does is recorded."
-      },
-      "languages": {
-        "title": "Portuguese and English",
-        "body": "Each person picks their own language and theme, light or dark."
-      }
-    },
-    "soon": {
-      "studentApp": {
-        "title": "App for students and families",
-        "body": "The timetable, notices, and paying by direct debit and MB WAY."
-      },
-      "certified": {
-        "title": "Certified invoicing",
-        "body": "Legal invoices, issued through software certified by the tax authority."
-      },
-      "preRegistration": {
-        "title": "Online registration",
-        "body": "A family signs up on the club's website and reception never retypes it."
-      }
-    },
     "pricing": {
       "title": "Pricing",
       "subhead": "One plan, with everything included. The price is not settled yet — the features are.",
@@ -3720,6 +3657,156 @@
       "interval": {
         "monthly": "Monthly",
         "yearly": "Yearly"
+      }
+    },
+    "eyebrow": "For swim schools, municipal pools, hotels and condominiums",
+    "shotNote": "Poolse at work, with demonstration data.",
+    "shot": {
+      "classes": "The Classes screen: each class with its schedule, teacher, tank and capacity.",
+      "week": "The classes' weekly pattern, day by day, with partnerships marked.",
+      "energy": "The Energy screen: bill costs per month and what each hour of lessons costs.",
+      "teacher": "The teacher's app on a phone: the next lesson and the registers still to take."
+    },
+    "audience": {
+      "title": "Made for the people who run the water",
+      "schools": {
+        "title": "Swim schools",
+        "body": "Classes by level, waiting lists, progression, and families kept in the loop."
+      },
+      "municipal": {
+        "title": "Municipal pools",
+        "body": "Several pools, school partnerships, free swim and the notices the law requires."
+      },
+      "hotels": {
+        "title": "Hotels and condominiums",
+        "body": "Water within limits, maintenance on time and what heating really costs."
+      },
+      "owners": {
+        "title": "Private owners",
+        "body": "A pool at home: the readings, the tasks and the alerts, and nothing else."
+      }
+    },
+    "pillars": {
+      "teaching": {
+        "eyebrow": "Lessons",
+        "title": "The week's timetable, without whiteboards or paper.",
+        "body": "The season's classes generate their lessons on their own. Holidays and closures go into the calendar, and the register is taken at the poolside.",
+        "points": [
+          "Classes by lane, with capacity and a waiting list",
+          "A calendar with holidays and closures",
+          "A register in under a minute, on the phone",
+          "Make-up lessons and stand-in teachers"
+        ]
+      },
+      "money": {
+        "eyebrow": "Fees",
+        "title": "Who has paid, who owes, and how much.",
+        "body": "A price list with categories and discounts, documents per payer, and the front desk — all from the same list.",
+        "points": [
+          "Prices by category: senior, member, siblings",
+          "One document per payer, siblings together",
+          "Front desk: entries, passes and who is in the water",
+          "The club's IBAN and MB WAY in the families' app"
+        ]
+      },
+      "pool": {
+        "eyebrow": "The pool",
+        "title": "The water, the upkeep, and what heating costs.",
+        "body": "Readings checked against the standard, maintenance that is not forgotten, and energy bills turned into a cost per lesson.",
+        "points": [
+          "Readings against NP 4542:2017, with alerts",
+          "A public water-quality page",
+          "Recurring tasks and repair requests",
+          "Electricity and gas bills, and cost per hour of lessons"
+        ]
+      }
+    },
+    "apps": {
+      "title": "On everyone's phone",
+      "body": "The same Poolse, installed as an app from the browser. Each person sees only what concerns them.",
+      "families": {
+        "title": "Families and students",
+        "body": "The children's timetable, notices, Going / Not going, progress, payments and statements."
+      },
+      "teachers": {
+        "title": "Teachers",
+        "body": "Today's lessons, the register at the poolside, notes and the students in their classes."
+      },
+      "maintenance": {
+        "title": "Maintenance",
+        "body": "Today's tasks and logging the readings, right by the tank."
+      }
+    },
+    "trust": {
+      "title": "The club's data belongs to the club",
+      "health": {
+        "title": "Health data encrypted",
+        "body": "Medical certificates and incidents are stored encrypted, each file with its own key."
+      },
+      "support": {
+        "title": "Support only by permission",
+        "body": "Poolse support enters only when the owner allows it, for a set time, and everything is logged."
+      },
+      "retention": {
+        "title": "Retention periods",
+        "body": "The data of people who leave the club expires on its own, within GDPR periods."
+      },
+      "roles": {
+        "title": "Each role sees its own",
+        "body": "A teacher sees the students in their classes; a family sees its own children."
+      },
+      "undo": {
+        "title": "Undo a mistake",
+        "body": "Archived by mistake? Restore it from Archived, with the history of every change."
+      },
+      "languages": {
+        "title": "Portuguese and English",
+        "body": "Each person picks their language and a light or dark theme."
+      }
+    },
+    "everything": {
+      "title": "And also",
+      "competition": {
+        "title": "Competition",
+        "body": "Times, LENEX results and the gap to the FPN qualifying times."
+      },
+      "preRegistration": {
+        "title": "Online sign-up",
+        "body": "A family asks for a place on the club's website and the front desk accepts without retyping."
+      },
+      "staff": {
+        "title": "Staff",
+        "body": "Roles, pay, holidays, qualifications with expiry dates and the lifeguard rota."
+      },
+      "safety": {
+        "title": "Incidents",
+        "body": "An accident report, with clinical details encrypted and a PDF for the insurer."
+      },
+      "messages": {
+        "title": "Notices to families",
+        "body": "In the app and by email, with a record of who was told."
+      },
+      "imports": {
+        "title": "Excel in and out",
+        "body": "Bring students, timetable and salaries from the spreadsheet you already use."
+      },
+      "sports": {
+        "title": "Other venues",
+        "body": "Tennis, padel, pitches and gym, as modules, in the same calendar."
+      },
+      "complaints": {
+        "title": "Complaints book",
+        "body": "The complaints book and the regulation in force on every public page."
+      }
+    },
+    "coming": {
+      "certified": {
+        "title": "Certified invoicing",
+        "body": "Legal invoices issued through AT-certified software. Today the documents are internal records."
+      },
+      "payments": {
+        "title": "Pay in the app",
+        "body": "Direct debit and MB WAY paid in the app itself. Today the app shows the IBAN and the reference."
       }
     }
   },

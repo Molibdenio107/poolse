@@ -1,19 +1,10 @@
 import { redirect } from 'next/navigation';
 import { apiFetch, type Me } from '@/lib/api';
-import { hatsOf, landsInTeaching, viewRoles, type AppHat } from '@/lib/app-hats';
+import { hatsOf, viewRoles, type AppHat } from '@/lib/app-hats';
 import { readShell } from '@/lib/shell';
 import { SuspendedNotice } from '../dashboard/suspended-notice';
-import { CommandPalette } from '@/components/command-palette';
-import { modulesOf } from '@/lib/modules';
-import { readableSports } from '@/lib/sport-scope';
 import { AppFrame } from './app-frame';
 import { ViewBanner } from './view-banner';
-
-/** Module-level, so the bar's list is not rebuilt on every render. */
-const APP_PLACES = {
-  own: { surface: 'app', viewing: false },
-  view: { surface: 'app', viewing: true },
-} as const;
 
 /**
  * App mode's shell — POOLSE-90; its frame since POOLSE-136 (`app-frame.tsx`).
@@ -62,18 +53,6 @@ export default async function AppModeLayout({
       organizationName={membership.organizationName}
       logoFileId={(await readShell()).logoFileId}
       homes={homes}
-      // A teacher's app has no search (Rui, 07-11-2026): three tabs are the whole app.
-      search={
-        landsInTeaching(viewRoles(membership)) ? null : (
-        <CommandPalette
-          roles={[...viewRoles(membership)]}
-          kind={membership.organizationKind}
-          modules={[...modulesOf(membership)]}
-          sports={readableSports(membership)}
-          place={APP_PLACES[view === null ? 'own' : 'view']}
-        />
-        )
-      }
       banner={
         me.viewing == null ? null : (
           <ViewBanner name={me.viewing.name} hat={me.viewing.hat} expiresAt={me.viewing.expiresAt} />

@@ -75,6 +75,12 @@ interface ClassesResponse {
     /** With their age bounds, so the enrol picker can filter by them. */
     levels: (Choice & { minAgeMonths: number | null; maxAgeMonths: number | null })[];
     pools: Choice[];
+    /**
+     * The club's live recintos with their sport, and the pool behind each one
+     * that is a pool — Turmas' filter (Rui, 09-11-2026). The pool id is how a
+     * parceria, which knows only its lanes' pool, is filtered with the turmas.
+     */
+    recintos: (Choice & { sport: string; poolId: string | null })[];
     instructors: Choice[];
     /** With birth dates, for the same reason. */
     students: (Choice & { birthDate: string | null })[];
@@ -469,6 +475,15 @@ async function formOptions(organizationId: string): Promise<ClassesResponse['opt
     const pools = await tx.query<Choice>(
       `SELECT id, name FROM pool WHERE archived_at IS NULL ORDER BY name`,
     );
+    const recintos = await tx.query<Choice & { sport: string; poolId: string | null }>(
+      `SELECT pa.id, pa.name, pa.sport_id::text AS sport, p.id AS "poolId"
+         FROM playing_area pa
+         LEFT JOIN pool p
+           ON p.playing_area_id = pa.id AND p.organization_id = pa.organization_id
+          AND p.archived_at IS NULL
+        WHERE pa.archived_at IS NULL
+        ORDER BY pa.position, pa.name`,
+    );
     // Anyone who can teach. An owner who also takes a turma appears here, which
     // is the case membership_role exists for.
     const instructors = await tx.query<Choice>(
@@ -506,6 +521,7 @@ async function formOptions(organizationId: string): Promise<ClassesResponse['opt
     return {
       levels: levels.rows,
       pools: pools.rows,
+      recintos: recintos.rows,
       instructors: instructors.rows,
       students: students.rows,
       feeCategories: feeCategories.rows,

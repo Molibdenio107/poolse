@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ChevronRight, Lock } from 'lucide-react';
+import { ChevronRight, Lock, Target } from 'lucide-react';
 import { LinkBusy } from '@/components/link-busy';
 import { Classmates } from '@/components/app/classmates';
 import { PersonAvatar } from '@/components/person-avatar';
@@ -89,11 +89,29 @@ export async function NextLessonHero({
           {/* What the family already told the club, which left *Início* with the rows. */}
           {next.going !== null && (
             <span className="text-sm font-medium">
-              {next.going ? t('app.notice.saidGoing') : t('app.notice.saidNotGoing')}
+              {/* About oneself *Vou*, about a child *Vem* (Rui, 09-11-2026). */}
+              {child.self
+                ? t(next.going ? 'app.notice.saidGoingSelf' : 'app.notice.saidNotGoingSelf')
+                : t(next.going ? 'app.notice.saidGoing' : 'app.notice.saidNotGoing')}
             </span>
           )}
           <LinkBusy />
         </Link>
+      )}
+
+      {/*
+        The next lesson's Desafio, in a blue of its own under the card (Rui,
+        09-11-2026): something to try, read before the lesson. The words are the
+        signal; the blue only lifts it.
+      */}
+      {next !== undefined && next.challenge !== null && next.challenge.trim() !== '' && (
+        <p className="flex items-start gap-2 bg-primary/15 px-4 py-3 text-sm">
+          <Target className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+          <span>
+            <span className="font-bold">{t('app.family.challenge')}: </span>
+            {next.challenge}
+          </span>
+        </p>
       )}
 
       {/* Outside the link: a link cannot hold the buttons that open a photo. */}

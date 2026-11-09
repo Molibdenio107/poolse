@@ -13,7 +13,7 @@ import { readAttention } from '@/lib/attention';
 import { readShell } from '@/lib/shell';
 import { SuspendedNotice } from './suspended-notice';
 import { PhoneLanding } from './phone-landing';
-import { landsInTeaching } from '@/lib/app-hats';
+import { familyOnly, landsInTeaching } from '@/lib/app-hats';
 import { ClubSupportStrip, SupportEndedNotice, SupportSessionBanner } from './support-strip';
 
 /**
@@ -172,6 +172,10 @@ export default async function DashboardLayout({
   const [{ viewing, roles, support, clubGone, kind, modules, sports, organizationName, suspended }, shell] =
     await Promise.all([currentViewer(), readShell()]);
   if (viewing) redirect('/app');
+  // A family and nothing else lives in the app (POOLSE-90). Here and not only in
+  // the page: after sign-in Clerk navigates on the client, and the shell streamed
+  // before the page's redirect, so a phone saw the back office first (Rui, 09-11-2026).
+  if (familyOnly(roles)) redirect('/app');
   const { logoFileId, subscriptionAlert: subscription } = shell;
 
   // A support window that ended, with this browser still pointed at its club.

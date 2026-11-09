@@ -81,6 +81,18 @@ const LIVE_RECORD = `r.organization_id = $1 AND r.student_id = $2 AND r.archived
 const WITH_MEET = `LEFT JOIN swim_meet sm ON sm.id = r.meet_id AND sm.organization_id = r.organization_id`;
 
 /**
+ * *Distância nadada*, opened (Rui, 09-11-2026): all time first, then this season
+ * (the published swimming season holding today; null with none), this month, and
+ * the average per calendar year since the first recorded time (null with none).
+ */
+export interface DistanceBreakdown {
+  allTimeM: number;
+  seasonM: number | null;
+  monthM: number;
+  perYearM: number | null;
+}
+
+/**
  * The tab's first screen, in one read whatever the history's length: the fastest
  * swim per stroke and distance (Rui, 06-11-2026: one line each, so 25 m and 50 m
  * pools fold together here, unlike the office's bests), and the sum of the distances.
@@ -88,7 +100,13 @@ const WITH_MEET = `LEFT JOIN swim_meet sm ON sm.id = r.meet_id AND sm.organizati
 export async function progressSummary(
   organizationId: string,
   studentId: string,
-): Promise<{ bests: ProgressBest[]; totalDistanceM: number; timesTotal: number; favouriteStroke: string | null }> {
+): Promise<{
+  bests: ProgressBest[];
+  totalDistanceM: number;
+  distance: DistanceBreakdown;
+  timesTotal: number;
+  favouriteStroke: string | null;
+}> {
   return withOrg(organizationId, async (tx) => {
     const { rows: bests } = await tx.query<ProgressBest>(
       `SELECT DISTINCT ON (r.stroke, r.distance_m)
@@ -100,17 +118,47 @@ export async function progressSummary(
         ORDER BY r.stroke, r.distance_m, r.time_ms, r.swum_on`,
       [organizationId, studentId],
     );
-    const { rows: totals } = await tx.query<{ metres: string; times: number; favourite: string | null }>(
-      `SELECT coalesce(sum(r.distance_m), 0)::text AS metres, count(r.id)::int AS times,
-              (SELECT favourite_stroke::text FROM student WHERE organization_id = $1 AND id = $2) AS favourite
+    const { rows: totals } = await tx.query<{
+      metres: string;
+      times: number;
+      favourite: string | null;
+      season_metres: string | null;
+      month_metres: string;
+      years: number | null;
+    }>(
+      `WITH now_season AS (
+         SELECT starts_on, ends_on FROM season
+          WHERE organization_id = $1 AND archived_at IS NULL AND status = 'published'
+            AND coalesce(sport_id, 'pool') = 'pool'
+            AND club_today() BETWEEN starts_on AND ends_on
+          ORDER BY starts_on DESC LIMIT 1
+       )
+       SELECT coalesce(sum(r.distance_m), 0)::text AS metres, count(r.id)::int AS times,
+              (SELECT favourite_stroke::text FROM student WHERE organization_id = $1 AND id = $2) AS favourite,
+              CASE WHEN EXISTS (SELECT 1 FROM now_season) THEN
+                coalesce(sum(r.distance_m) FILTER (
+                  WHERE r.swum_on BETWEEN (SELECT starts_on FROM now_season) AND (SELECT ends_on FROM now_season)), 0)::text
+              END AS season_metres,
+              coalesce(sum(r.distance_m) FILTER (
+                WHERE date_trunc('month', r.swum_on) = date_trunc('month', club_today())), 0)::text AS month_metres,
+              -- Calendar years from the first time to this one, both counted.
+              (extract(year FROM club_today()) - extract(year FROM min(r.swum_on)) + 1)::int AS years
          FROM student_record r
          ${WITH_MEET}
         WHERE ${LIVE_RECORD}`,
       [organizationId, studentId],
     );
+    const total = Number(totals[0]?.metres ?? 0);
+    const years = totals[0]?.years ?? null;
     return {
       bests,
-      totalDistanceM: Number(totals[0]?.metres ?? 0),
+      totalDistanceM: total,
+      distance: {
+        allTimeM: total,
+        seasonM: totals[0]?.season_metres == null ? null : Number(totals[0].season_metres),
+        monthM: Number(totals[0]?.month_metres ?? 0),
+        perYearM: years === null || years < 1 ? null : Math.round(total / years),
+      },
       timesTotal: totals[0]?.times ?? 0,
       favouriteStroke: totals[0]?.favourite ?? null,
     };

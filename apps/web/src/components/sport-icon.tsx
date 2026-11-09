@@ -39,6 +39,41 @@ const Basketball = createLucideIcon('basketball', [
   ['path', { d: 'M19.1 4.9c-1.8 1.8-2.9 4.3-2.9 7.1s1.1 5.3 2.9 7.1', key: 'r' }],
 ]);
 
+/** A swimmer in the water, for the swimming rating (Rui, 09-11-2026); the sport's own icon stays *Waves*. */
+const Swimmer = createLucideIcon('swimmer', [
+  ['circle', { cx: '16.5', cy: '6.5', r: '2', key: 'head' }],
+  ['path', { d: 'M3 12 7.5 8.5l4 2.5 3.5-2.5', key: 'stroke' }],
+  ['path', { d: 'M2 16c1.7 0 2.3-1.2 4-1.2s2.3 1.2 4 1.2 2.3-1.2 4-1.2 2.3 1.2 4 1.2 2.3-1.2 4-1.2', key: 'w1' }],
+  ['path', { d: 'M2 20.5c1.7 0 2.3-1.2 4-1.2s2.3 1.2 4 1.2 2.3-1.2 4-1.2 2.3 1.2 4 1.2 2.3-1.2 4-1.2', key: 'w2' }],
+]);
+
+const SoccerBall = createLucideIcon('soccer-ball', [
+  ['circle', { cx: '12', cy: '12', r: '10', key: 'ball' }],
+  ['path', { d: 'm12 8.5 3.3 2.4-1.3 3.9h-4l-1.3-3.9z', key: 'patch' }],
+  ['path', { d: 'M12 8.5V2.5M15.3 10.9l5.9-1.9M14 14.8l3.5 4.9M10 14.8l-3.5 4.9M8.7 10.9 2.8 9', key: 'seams' }],
+]);
+
+const Handball = createLucideIcon('handball', [
+  ['circle', { cx: '12', cy: '12', r: '10', key: 'ball' }],
+  ['path', { d: 'M3.5 8.5c5 2.5 12 2.5 17 0M3.5 15.5c5-2.5 12-2.5 17 0', key: 'seams' }],
+]);
+
+/**
+ * The icon a lesson's rating is drawn in, per sport (Rui, 09-11-2026): *"instead
+ * of faces … swimming stroke little icons, for tennis tennis balls, for
+ * basketball basketballs"*. Something of the sport itself, counted one to five.
+ */
+export const RATING_ICON: Record<PoolseSport, LucideIcon> = {
+  pool: Swimmer,
+  tennis: TennisBall,
+  padel: PadelRacket,
+  basketball: Basketball,
+  football: SoccerBall,
+  handball: Handball,
+  volleyball: Volleyball,
+  gym: Dumbbell,
+};
+
 export const SPORT_ICON: Record<PoolseSport, LucideIcon> = {
   pool: Waves,
   tennis: TennisBall,

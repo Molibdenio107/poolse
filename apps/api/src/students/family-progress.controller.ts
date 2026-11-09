@@ -23,6 +23,7 @@ import {
   listProgressTimes,
   mayEnterProgress,
   progressSummary,
+  type DistanceBreakdown,
   type ProgressBest,
   type ProgressLesson,
   type ProgressPool,
@@ -89,6 +90,7 @@ export class FamilyProgressController {
     strokes: readonly string[];
     bests: ProgressBest[];
     totalDistanceM: number;
+    distance: DistanceBreakdown;
     timesTotal: number;
     favouriteStroke: string | null;
     times: ProgressTime[];

@@ -272,7 +272,7 @@ Read [`docs/conventions/calendar-and-classes.md`](docs/conventions/calendar-and-
 - A closure is one site or some of its tanks, and what it reaches is `closure_reaches` / `session_reach`.
 - A partnership group's days are written by one path, all or nothing
 - A turma is chosen in `TurmaPicker` (`components/turma-picker.tsx`), never a `<select>` of joined strings.
-- Turmas opens on *Cartões
+- Turmas opens on *Lista
 - Capacity rules compose, they do not override.
 - A calendar block's state is words first
 - One student, one hour: an enrolment that overlaps another of the student's turmas is refused; a move that creates one is warned

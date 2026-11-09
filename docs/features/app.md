@@ -43,8 +43,8 @@ desktop palette is not touched.
   overdue, *Por pagar … até* before its date, *Em dia* when nothing is owed. It links to the
   child's fee page.
 - **Últimas aulas** (POOLSE-116, `recent` on the agenda): the lessons each child was enrolled in
-  and marked *present* at inside the feedback window, newest first, each with its mood (face and
-  word), or *Dar feedback* when the reader answers for that child. A missed lesson and a reposição
+  and marked *present* at inside the feedback window, newest first, each with its mood (the sport's icons,
+  counted, and the word), or *Dar feedback* when the reader answers for that child. A missed lesson and a reposição
   (no enrolment, so the lesson page would not open) are not listed. The strip is absent when empty.
 - **The window counts from the day the lesson happened** (`lesson_feedback_closes_on()`, on the
   site's clock), never from `occurs_on`, which a one-week move does not change.
@@ -62,7 +62,9 @@ unchanged and was never limited in time, so opening a past lesson gives a family
 
 Under the plan, one panel per child in the lesson, from `feedback` on the lesson read:
 
-- **The form**, while the window is open and the reader answers for that child: five faces (radio
+- **The form**, while the window is open and the reader answers for that child: five of the lesson's
+  sport icons (swimmers, tennis balls, basketballs…, `RATING_ICON`; choosing the third lights three; faces until
+  09-11-2026, Rui) as radio
   buttons, a 44 px row on a phone, each labelled with its word, and the chosen mood shown in
   words), an optional box of up to 500 characters, and *O professor e a secretaria vão ler isto.*
   `PUT /app/lessons/:id/feedback` writes it or rewrites it; *Pode alterar até …* says until when.
@@ -344,7 +346,7 @@ On *Documentos* the FPN row opens *Declaração FPN* (`/app/familia/documentos/:
 
 Rui: the bar is always visible, to make moving around easy. `tabFor` lights the tab a deeper screen is reached from (*Documentos* and *Pagamentos* under *Perfil*, a lesson under *Aulas*), which keep their own *Voltar*. A sticky Save bar stands on `--app-bar-clear`. It stays off paper.
 
-**The teacher's app, 07-11-2026.** Four tabs: *Início*, *Aulas*, *Alunos*, *Perfil*; no search bar.
+**The teacher's app, 07-11-2026.** Four tabs: *Início*, *Aulas*, *Alunos*, *Perfil*; no search bar. **No home in the app has a search bar** (Rui, 09-11-2026): family and student included; the backoffice keeps its *Procurar* (Ctrl+K).
 *Início* shows the *Quadro do clube* first when a note is pinned (*+ Nota* adds one), the next lesson, owed
 registers and *Como correram as últimas aulas*: the last seven lessons taught, each folding open to what
 families wrote (`GET /app/teaching/feedback`). *Alunos* lists the students of the turmas the person teaches
@@ -372,3 +374,12 @@ neither is drawn. A newcomer's request reaches the secretaria's queue; nobody is
 - **Where**: *Perfil › Natação livre* (shown when the reader has a pass or the club sells a pack in the app). It lists each live pass the reader may use: their own, their children's, and a family pack of the guardian who holds it. Each pass says *7 de 10 entradas · válido até dd-MM-yyyy · Pack família*, or *Por pagar*. No list of anybody's entries.
 - **Buying**: a guardian (for themselves, or for a child they guard, who then holds the pack) or an adult student (for themselves). A minor's own login sees passes and never buys (403). A family pack is bought for oneself only. The price is the server's (`pass_price_for`), shown before buying. The document is addressed to the buyer and is **owed**: it appears on *Pagamentos* under *Natação livre por pagar* (its own block, not mixed into the fees; Rui) and in *Extratos*. The pack opens the door once paid. **One unpaid phone pack at a time** per payer: a second purchase is refused, naming the unpaid document.
 - **API**: `GET /app/passes`, `POST /app/passes` (`productId`, optional `studentId`, `purchaseKey`; never an amount). Ten purchases an hour per person (`FAMILY_UPLOAD`). The same key twice is the same sale. Nothing when the club's reception or invoicing is off; a *ver como* view opens neither.
+
+## Family app changes, 09-11-2026 (Rui)
+
+- **Vou / Vem.** What a lesson's answer says, in few words: about oneself *Vou* / *Não vou*, about a child *Vem* / *Não vem* (`app.notice.saidGoing[Self]`). The teacher's app already said *Vem* / *Não vem*.
+- **+ Natação** on *Perfil* (`/app/perfil/mais-natacao`) holds *Natação livre* (only with a pass to see or a pack to buy) and *Pedir inscrição numa turma* (calendar-plus icon; a person-plus read as *add a friend*). Each comes back to *+ Natação*. On *Início* the join link shows only when no lesson is coming in the agenda's two weeks.
+- **Desafio on Início.** The next lesson's Desafio is a light-blue band under its card. The agenda rows carry `challenge`; they are already the reader's own child in a turma they were in that day, `familyMayReadPlan`'s rule.
+- **Hoje.** On any other week, a small *Hoje* pill sits in the page's title row (family and teacher *Aulas*, `WeekToday`) and returns to this one: inside the card it squeezed the week, and on a row of its own it pushed the arrows down. **The card keeps one size every week:** the title has two lines' room, and a week across New Year uses short months (*28 dez. 2026 a 3 jan. 2027*).
+- **Distância nadada** opens: all time stays the figure on show; inside, this season (the published swimming season holding today), this month, and the average per calendar year since the first time. Summed in SQL in `progressSummary`, never typed.
+- **Classmates' photos** open large only where the club holds a photo **and** photo consent (POOLSE-194, unchanged by Rui's call): a login's own picture does not count.

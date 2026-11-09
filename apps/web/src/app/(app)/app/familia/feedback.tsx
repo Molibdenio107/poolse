@@ -41,6 +41,7 @@ export async function FeedbackPanel({
           comment={feedback?.comment ?? null}
           challenge={standing.challenge}
           challengeDone={feedback?.challengeDone ?? null}
+          sport={standing.sport}
         />
         <p className="text-sm text-foreground-muted">
           {t('app.feedback.editableUntil', { date: formatDate(standing.closesOn) })}
@@ -56,7 +57,7 @@ export async function FeedbackPanel({
           </p>
         ) : (
           <div className="flex flex-col gap-1">
-            <MoodFace mood={feedback.mood} className="font-medium" />
+            <MoodFace mood={feedback.mood} sport={standing.sport} className="font-medium" />
             {feedback.comment !== null && <p className="whitespace-pre-wrap">{feedback.comment}</p>}
           </div>
         )}
@@ -122,7 +123,7 @@ export async function RecentLessons({
                 </span>
                 <span className="flex shrink-0 items-center gap-1 text-sm">
                   {lesson.mood !== null ? (
-                    <MoodFace mood={lesson.mood} />
+                    <MoodFace mood={lesson.mood} sport={lesson.sport} />
                   ) : lesson.open && lesson.mayAnswer ? (
                     <span className="font-medium text-primary">{t('app.feedback.give')}</span>
                   ) : null}

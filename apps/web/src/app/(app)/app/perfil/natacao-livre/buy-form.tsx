@@ -7,6 +7,7 @@ import { SelectField } from '@/components/ui/field';
 import { formatCents } from '@/lib/money';
 import type { AppPasses } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
+import { newUuid } from '@/lib/uuid';
 import { buyPassAction } from './buy.actions';
 
 const INITIAL: FormState = { ok: false };
@@ -21,7 +22,7 @@ export function BuyForm({ forSale, people }: Pick<AppPasses, 'forSale' | 'people
   const locale = useLocale();
   const [productId, setProductId] = useState(forSale[0]?.id ?? '');
   const [person, setPerson] = useState('self');
-  const [key, setKey] = useState(() => crypto.randomUUID());
+  const [key, setKey] = useState(() => newUuid());
   const product = forSale.find((one) => one.id === productId);
   // A family pack is the payer's own: nobody else to choose.
   const choices = product?.shareable === true ? people.filter((one) => one.self) : people;
@@ -29,7 +30,7 @@ export function BuyForm({ forSale, people }: Pick<AppPasses, 'forSale' | 'people
   const price = product?.prices.find((one) => one.personKey === who);
   const [state, submit, pending] = useSavedAction(async (previous: FormState, formData: FormData) => {
     const next = await buyPassAction(previous, formData);
-    if (next.ok) setKey(crypto.randomUUID());
+    if (next.ok) setKey(newUuid());
     return next;
   }, INITIAL);
   const fields = state.fields ?? {};

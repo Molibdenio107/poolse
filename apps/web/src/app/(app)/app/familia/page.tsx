@@ -9,7 +9,7 @@ import { PageError } from '@/components/page-shell';
 import { ChildFilter } from './child-filter';
 import { NextLessonHero } from '@/components/app/next-lesson-hero';
 import { RecentLessons } from './feedback';
-import { UserPlus } from 'lucide-react';
+import { CalendarPlus } from 'lucide-react';
 
 /**
  * The family agenda — POOLSE-90 slice 1 (roadmap 3.3 and 3.6).
@@ -92,17 +92,23 @@ export default async function FamilyAgenda({
         from: child === undefined ? '/app/familia' : `/app/familia?child=${child}`,
       })}
 
-      {/* POOLSE-121: ask the club for a place in a class, for a child or a new one. */}
+      {/*
+        POOLSE-121: ask the club for a place in a class. It lives as a
+        row under *Perfil › + Natação* now (Rui, 09-11-2026), and comes back here only for a family with no
+        lesson coming (the agenda's two weeks): the moment it is the main thing to do.
+      */}
+      {agenda.entries.every((entry) => entry.status === 'cancelled') && (
       <Link
         href="/app/familia/inscrever"
         className="flex min-h-control items-center justify-between gap-3 rounded-lg bg-surface p-3 shadow-card text-control font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <span className="flex items-center gap-2">
-          <UserPlus className="size-4 text-primary" aria-hidden />
+          <CalendarPlus className="size-4 text-primary" aria-hidden />
           {t('app.join.open')}
         </span>
         <LinkBusy />
       </Link>
+      )}
     </>
   );
 }

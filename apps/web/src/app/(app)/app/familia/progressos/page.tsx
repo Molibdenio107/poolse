@@ -1,5 +1,5 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
-import { Medal } from 'lucide-react';
+import { ChevronDown, Medal } from 'lucide-react';
 import { formatSwimTime } from '@poolse/rules';
 import { apiFetch, type FamilyProgress } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
@@ -85,12 +85,39 @@ export default async function FamilyProgressPage({
 
             {section === 'summary' && (
               <>
-                <div className="flex items-baseline justify-between gap-3 rounded bg-surface p-4 shadow-card">
-                  <span className="text-sm font-bold">{t('app.records.totalDistance')}</span>
-                  <span className="text-xl font-semibold tabular-nums">
-                    {t('app.records.metres', { value: format.number(progress?.totalDistanceM ?? 0) })}
-                  </span>
-                </div>
+                {/*
+                  All time is the figure on show; a tap opens the rest (Rui,
+                  09-11-2026): this season, this month, the average per year.
+                */}
+                <details className="group rounded bg-surface shadow-card">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+                    <span className="flex items-center gap-1.5 text-sm font-bold">
+                      {t('app.records.totalDistance')}
+                      <ChevronDown className="size-4 text-foreground-muted transition-transform group-open:rotate-180" aria-hidden />
+                    </span>
+                    <span className="text-xl font-semibold tabular-nums">
+                      {t('app.records.metres', { value: format.number(progress?.distance.allTimeM ?? progress?.totalDistanceM ?? 0) })}
+                    </span>
+                  </summary>
+                  {progress !== null && (
+                    <dl className="flex flex-col divide-y divide-border px-4 pb-3 text-sm">
+                      {(
+                        [
+                          ['season', progress.distance.seasonM],
+                          ['month', progress.distance.monthM],
+                          ['perYear', progress.distance.perYearM],
+                        ] as const
+                      ).map(([key, metres]) => (
+                        <div key={key} className="flex items-baseline justify-between gap-3 py-2">
+                          <dt className="text-foreground-muted">{t(`app.records.distanceBy.${key}`)}</dt>
+                          <dd className="font-semibold tabular-nums">
+                            {metres === null ? '—' : t('app.records.metres', { value: format.number(metres) })}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                </details>
 
                 {progress?.canEdit === true && (
                   <div className="rounded bg-surface p-4 shadow-card">

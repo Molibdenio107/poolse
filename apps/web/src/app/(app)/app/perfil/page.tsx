@@ -5,8 +5,8 @@ import { SignOutButton } from '@clerk/nextjs';
 import {
   Award,
   IdCard,
-  Eye, ChevronRight, FileText, LayoutDashboard, LogOut, Receipt, Settings, UserPlus, Wallet, Waves } from 'lucide-react';
-import { apiFetch, type ActiveSession, type AppInvoiceList, type AppPasses, type Me } from '@/lib/api';
+  Eye, ChevronRight, FileText, LayoutDashboard, LogOut, Settings, UserPlus, Wallet, Waves } from 'lucide-react';
+import { apiFetch, type ActiveSession, type Me } from '@/lib/api';
 import { hatsOf, isHat, landsInTeaching } from '@/lib/app-hats';
 import { outcome } from '@/lib/load-failure';
 import { formatDate, formatStamp } from '@/lib/date-format';
@@ -65,26 +65,17 @@ export default async function AppProfilePage({
     );
   }
 
-  const [locale, sessionsLoad, familyLoad, joinLink, invoicesLoad, categoriesLoad, passesLoad] = await Promise.all([
+  const [locale, sessionsLoad, familyLoad, joinLink, categoriesLoad] = await Promise.all([
     getLocale(),
     outcome(apiFetch<{ sessions: ActiveSession[] }>('/me/sessions')),
     outcome(apiFetch<{ students: { name: string; self: boolean }[] }>('/family')),
     outcome(apiFetch<{ slug: string | null }>('/app/join-link')),
-    // *Extratos* (POOLSE-201): only somebody who pays has the row.
-    hats.homes.includes('family') ? outcome(apiFetch<AppInvoiceList>('/app/invoices')) : Promise.resolve(null),
     // POOLSE-202, rule 6: the reader's own categories, read-only, never the proof.
     hats.homes.includes('family')
       ? outcome(apiFetch<{ categories: { name: string; validUntil: string | null }[] }>('/app/categories'))
       : Promise.resolve(null),
-    // *Natação livre* (POOLSE-204): a row when there is a pass to see or a pack to buy.
-    hats.homes.includes('family') ? outcome(apiFetch<AppPasses>('/app/passes')) : Promise.resolve(null),
   ]);
-  const swims =
-    passesLoad !== null &&
-    passesLoad.state === 'ok' &&
-    (passesLoad.data.passes.length > 0 || passesLoad.data.forSale.length > 0);
   const categories = categoriesLoad !== null && categoriesLoad.state === 'ok' ? categoriesLoad.data.categories : [];
-  const pays = invoicesLoad !== null && invoicesLoad.state === 'ok' && invoicesLoad.data.payer;
   // *Convidar amigos* (Rui, 07-11-2026): only while the club takes pre-registrations.
   const mayInvite = joinLink.state === 'ok' && joinLink.data.slug !== null;
   const sessions = sessionsLoad.state === 'ok' ? sessionsLoad.data.sessions : [];
@@ -162,34 +153,22 @@ export default async function AppProfilePage({
         </Link>
       )}
 
-      {familyRows && swims && (
+      {/* *+ Natação* (Rui, 09-11-2026): free swim and asking for a turma, under one row. */}
+      {familyRows && (
         <Link
-          href="/app/perfil/natacao-livre"
+          href="/app/perfil/mais-natacao"
           className={`${row} rounded bg-surface px-4 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}
         >
           <span className="flex items-center gap-3">
             <Waves className="size-5 text-primary" aria-hidden />
-            {t('app.passes.title')}
+            {t('app.moreSwimming.title')}
           </span>
           <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
           <LinkBusy />
         </Link>
       )}
 
-      {familyRows && pays && (
-        <Link
-          href="/app/perfil/extratos"
-          className={`${row} rounded bg-surface px-4 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}
-        >
-          <span className="flex items-center gap-3">
-            <Receipt className="size-5 text-primary" aria-hidden />
-            {t('app.invoices.title')}
-          </span>
-          <ChevronRight className="size-4 text-foreground-muted" aria-hidden />
-          <LinkBusy />
-        </Link>
-      )}
-
+      {/* *Extratos* is reached from *Pagamentos* only (Rui, 09-11-2026): one way in, not two. */}
       {familyRows && mayInvite && (
         <Link
           href="/app/perfil/convidar"

@@ -46,6 +46,10 @@ export default async function FamilyLesson({
   // The plan is a nice-to-have on this page: a refusal or a failure shows no plan.
   const plan = await apiFetch<LessonPlan>(`/sessions/${sessionId}/plan`).catch(() => null);
   const people = await apiFetch<AppClassmates>(`/app/lessons/${sessionId}/classmates`).catch(() => null);
+  // Who is the reader: about oneself it is *Vou / Não vou*, about a child *Vem / Não vem* (Rui, 09-11-2026).
+  const selves = await apiFetch<{ students: { id: string; self: boolean }[] }>('/family')
+    .then((answer) => new Set(answer.students.filter((one) => one.self).map((one) => one.id)))
+    .catch(() => new Set<string>());
   const first = lesson.entries[0]!;
   const water = first.poolId === null ? null : (lesson.water.find((one) => one.poolId === first.poolId) ?? null);
   const several = lesson.entries.length > 1;
@@ -129,9 +133,9 @@ export default async function FamilyLesson({
                 <p className="text-sm text-foreground-muted">
                   {entry.going === null
                     ? t(entry.needsBirthDate ? 'app.notice.needsBirthDate' : 'app.notice.guardianAnswers')
-                    : entry.going
-                      ? t('app.notice.saidGoing')
-                      : t('app.notice.saidNotGoing')}
+                    : selves.has(entry.studentId)
+                      ? t(entry.going ? 'app.notice.saidGoingSelf' : 'app.notice.saidNotGoingSelf')
+                      : t(entry.going ? 'app.notice.saidGoing' : 'app.notice.saidNotGoing')}
                 </p>
               )}
             </section>

@@ -34,7 +34,7 @@ export async function FeedbackList({
                 ? item.studentName
                 : [formatDate(item.lessonDate), item.className].filter(Boolean).join(' · ')}
             </p>
-            <MoodFace mood={item.mood} />
+            <MoodFace mood={item.mood} sport={item.sport} />
             {item.comment !== null && <p className="whitespace-pre-wrap break-words">{item.comment}</p>}
             {item.challengeDone !== null && item.challengeText !== null && (
               <p className="text-sm">

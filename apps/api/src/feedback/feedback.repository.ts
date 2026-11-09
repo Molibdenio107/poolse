@@ -44,6 +44,8 @@ export interface LessonFeedback {
   /** The lesson: its day on the site's clock, and its turma. */
   lessonDate: string;
   className: string | null;
+  /** The lesson's sport: the rating is drawn in its icons. */
+  sport: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,6 +76,8 @@ export interface FamilyFeedback {
   feedback: LessonFeedback | null;
   /** The lesson's Desafio, to answer here — POOLSE-195. Null when it has none. */
   challenge: string | null;
+  /** The lesson's sport: the form's rating is drawn in its icons. */
+  sport: string;
 }
 
 /** A trigger refusal, named: the controller answers it as a 409. */
@@ -104,6 +108,15 @@ export const needsBirthDate = (student: string, membership: string): string =>
                      WHERE gl.organization_id = ${student}.organization_id
                        AND gl.student_id = ${student}.id AND gl.archived_at IS NULL))`;
 
+/**
+ * A lesson's sport, from its turma's recinto, `pool` with none — so a rating is
+ * drawn in the sport's own icons (Rui, 09-11-2026). `session` is a SQL alias.
+ */
+export const lessonSport = (session: string): string =>
+  `coalesce((SELECT pa.sport_id FROM class_group sg
+               JOIN playing_area pa ON pa.id = sg.playing_area_id AND pa.organization_id = sg.organization_id
+              WHERE sg.id = ${session}.class_group_id AND sg.organization_id = ${session}.organization_id), 'pool')`;
+
 export const mayAnswer = (student: string, membership: string): string =>
   `family_may_answer(${student}.organization_id, ${student}.id, ${membership})`;
 
@@ -125,6 +138,7 @@ const FEEDBACK_COLUMNS = `
        ELSE ${personShortName('fb.author_membership_id')} END AS "authorName",
   to_char(cs.starts_at AT TIME ZONE ${TZ}, 'YYYY-MM-DD') AS "lessonDate",
   cg.name AS "className",
+  ${lessonSport('cs')} AS sport,
   to_char(fb.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "createdAt",
   to_char(fb.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "updatedAt"`;
 
@@ -168,6 +182,7 @@ async function familyFeedbackIn(
     may_answer: boolean;
     needs_birth_date: boolean;
     feedback_id: string | null;
+    sport: string;
   }>(
     `SELECT s.id AS student_id, ${shortName('s')} AS student_name, cs.status::text AS status, cs.ends_at <= now() AS ended,
             a.status::text AS mark,
@@ -175,7 +190,8 @@ async function familyFeedbackIn(
             club_today() <= lesson_feedback_closes_on(cs.organization_id, cs.pool_id, cs.starts_at) AS open,
             ${mayAnswer('s', '$1')} AS may_answer,
             ${needsBirthDate('s', '$1')} AS needs_birth_date,
-            fb.id AS feedback_id
+            fb.id AS feedback_id,
+            ${lessonSport('cs')} AS sport
        FROM unnest($3::uuid[]) AS chosen(id)
        JOIN student_person s ON s.id = chosen.id AND s.archived_at IS NULL
        JOIN class_session cs ON cs.id = $2 AND cs.organization_id = s.organization_id
@@ -214,6 +230,7 @@ async function familyFeedbackIn(
     needsBirthDate: row.needs_birth_date,
     feedback: row.feedback_id === null ? null : (found.get(row.feedback_id) ?? null),
     challenge: desafio.rows[0]?.body ?? null,
+    sport: row.sport,
   }));
 }
 

@@ -97,7 +97,18 @@ BEGIN
     RAISE EXCEPTION 'FAIL test 1d: a second run created % duplicates', r.o_created;
   END IF;
 
-  RAISE NOTICE 'PASS test 1: a full year of sessions is generated, once, on the right days';
+  -- Every turma lesson carries the weekly slot it came from (Rui, 09-11-2026).
+  -- The calendar draws the pattern and finds a week's lesson by `schedule_id`;
+  -- the family app lists lessons as they are. A lesson with no slot is shown on
+  -- the phone and nowhere on the calendar — 169 such lessons, left by an old
+  -- timetable, are how this was found.
+  SELECT count(*) INTO n FROM class_session
+   WHERE organization_id = v_org AND class_group_id IS NOT NULL AND schedule_id IS NULL;
+  IF n <> 0 THEN
+    RAISE EXCEPTION 'FAIL test 1e: % generated lessons have no weekly slot behind them', n;
+  END IF;
+
+  RAISE NOTICE 'PASS test 1: a full year of sessions is generated, once, on the right days, each from its slot';
 END $$;
 
 -- ---------------------------------------------------------------------------

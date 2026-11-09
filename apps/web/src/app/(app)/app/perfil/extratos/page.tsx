@@ -44,8 +44,8 @@ export default async function PayerInvoices({
   return (
     <>
       <Link
-        href="/app/perfil?home=family"
-        aria-label={t('app.profile.backTo')}
+        href="/app/familia/pagamentos"
+        aria-label={t('app.invoices.backToPayments')}
         className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline coarse:-my-3 coarse:py-3"
       >
         <ArrowLeft className="size-4" aria-hidden />

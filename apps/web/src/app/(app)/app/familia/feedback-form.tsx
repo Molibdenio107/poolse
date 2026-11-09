@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { TextAreaField, useSeeded } from '@/components/ui/field';
-import { MOODS, MOOD_ICONS } from '@/components/mood';
+import { MOODS, ratingIcon } from '@/components/mood';
 import { useSavedAction } from '@/lib/saved';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../dashboard/actions';
@@ -25,6 +25,7 @@ export function FeedbackForm({
   comment: savedComment,
   challenge,
   challengeDone,
+  sport,
 }: {
   sessionId: string;
   studentId: string;
@@ -33,6 +34,8 @@ export function FeedbackForm({
   /** The lesson's Desafio: optional to answer, and the mood stays the required one. */
   challenge: string | null;
   challengeDone: boolean | null;
+  /** The lesson's sport: the rating is its icons, counted (Rui, 09-11-2026). */
+  sport: string;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(saveFeedbackAction, INITIAL);
@@ -51,21 +54,25 @@ export function FeedbackForm({
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 font-medium">{t('app.feedback.prompt')}</legend>
         {/*
-          One row of five on the narrowest phone: the faces alone, each 44 px
-          under a finger, with its word for a screen reader — and the chosen
-          mood said in words beside the row, so colour never carries it.
+          One row of five on the narrowest phone, each 44 px under a finger: the
+          sport's icon, and choosing the third lights the first three, like
+          stars (Rui, 09-11-2026). Each radio carries its word for a screen
+          reader, and the chosen mood is said in words under the row, so
+          neither the count nor the colour carries it alone.
         */}
         <div className="grid max-w-sm grid-cols-5 gap-2">
           {MOODS.map((value) => {
-            const Icon = MOOD_ICONS[value];
+            const Icon = ratingIcon(sport);
             const chosen = mood === String(value);
+            const lit = mood !== '' && value <= Number(mood);
             return (
               <label
                 key={value}
                 className={cn(
                   'flex min-h-control min-w-[var(--control-h)] cursor-pointer items-center justify-center rounded-lg border py-1',
                   'has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary',
-                  chosen ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-foreground',
+                  chosen ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface',
+                  lit ? 'text-primary' : 'text-foreground/40',
                 )}
               >
                 <input

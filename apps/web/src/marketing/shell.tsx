@@ -26,9 +26,9 @@ export function MarketingShell({
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="border-b border-border">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-          <Link href={home} className="text-lg font-semibold tracking-tight">
+      <header className="z-20 border-b border-border bg-background/85 backdrop-blur md:sticky md:top-0">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
+          <Link href={home} className="font-heading text-lg font-semibold tracking-tight">
             {t('app.name')}
           </Link>
 
@@ -77,7 +77,7 @@ export function MarketingShell({
       <main className="flex-1">{children}</main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-6 text-sm text-foreground-muted">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-6 text-sm text-foreground-muted">
           <span>{t('marketing.footerNote')}</span>
           <Link href={pricing} className="hover:text-foreground">
             {t('marketing.pricingLink')}

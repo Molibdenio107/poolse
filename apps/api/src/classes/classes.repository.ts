@@ -47,6 +47,14 @@ export interface ClassGroup {
   levelName: string | null;
   poolId: string | null;
   poolName: string | null;
+  /**
+   * The turma's recinto and its sport (POOLSE-122) — Turmas filters by it
+   * (Rui, 09-11-2026). A pool is a recinto of sport `pool`, so for a swimming
+   * turma this is its pool's own recinto; a court or a pitch is the same field.
+   */
+  playingAreaId: string | null;
+  playingAreaName: string | null;
+  sport: string;
   /** The site the pool is at — the schedule board filters and draws by it. */
   facilityId: string | null;
   instructorMembershipId: string | null;
@@ -187,6 +195,9 @@ const GROUP_COLUMNS = `
   l.name  AS level_name,
   cg.pool_id,
   p.name  AS pool_name,
+  cg.playing_area_id,
+  pa.name AS playing_area_name,
+  coalesce(pa.sport_id::text, 'pool') AS sport,
   -- Which site the turma is at, via its pool — round 5. The schedule board
   -- filters by facility, because the grid's hours come from that facility's
   -- opening hours and a turma at another site would be drawn against the wrong
@@ -277,6 +288,7 @@ const GROUP_JOINS = `
   LEFT JOIN student_level l ON l.id = cg.level_id AND l.organization_id = cg.organization_id
   LEFT JOIN pool p         ON p.id = cg.pool_id  AND p.organization_id = cg.organization_id
   LEFT JOIN lane ln        ON ln.id = cg.lane_id AND ln.organization_id = cg.organization_id
+  LEFT JOIN playing_area pa ON pa.id = cg.playing_area_id AND pa.organization_id = cg.organization_id
   LEFT JOIN membership m   ON m.id = cg.instructor_membership_id
                           AND m.organization_id = cg.organization_id
   LEFT JOIN app_user u     ON u.id = m.app_user_id
@@ -289,6 +301,9 @@ interface GroupRow {
   level_name: string | null;
   pool_id: string | null;
   pool_name: string | null;
+  playing_area_id: string | null;
+  playing_area_name: string | null;
+  sport: string;
   facility_id: string | null;
   monthly_price_cents: number | null;
   instructor_membership_id: string | null;
@@ -310,6 +325,9 @@ function toGroup(row: GroupRow): ClassGroup {
     levelName: row.level_name,
     poolId: row.pool_id,
     poolName: row.pool_name,
+    playingAreaId: row.playing_area_id,
+    playingAreaName: row.playing_area_name,
+    sport: row.sport,
     facilityId: row.facility_id,
     monthlyPriceCents: row.monthly_price_cents,
     instructorMembershipId: row.instructor_membership_id,

@@ -2514,6 +2514,8 @@ export interface FamilyProgress {
   strokes: string[];
   bests: ProgressBest[];
   totalDistanceM: number;
+  /** *Distância nadada*, opened (Rui, 09-11-2026). Null season: none holds today; null per year: no times. */
+  distance: { allTimeM: number; seasonM: number | null; monthM: number; perYearM: number | null };
   timesTotal: number;
   favouriteStroke: string | null;
   times: ProgressTime[];
@@ -2855,6 +2857,10 @@ export interface ClassGroup {
   levelName: string | null;
   poolId: string | null;
   poolName: string | null;
+  /** The turma's recinto and its sport — Turmas filters by it (Rui, 09-11-2026). */
+  playingAreaId: string | null;
+  playingAreaName: string | null;
+  sport: PoolseSport;
   /** The site the pool is at — the schedule board filters and draws by it. */
   facilityId: string | null;
   instructorMembershipId: string | null;
@@ -2937,6 +2943,8 @@ export interface ClassOptions {
     maxAgeMonths: number | null;
   }[];
   pools: { id: string; name: string }[];
+  /** Live recintos with their sport, and the pool behind each pool — Turmas' filter. */
+  recintos: { id: string; name: string; sport: PoolseSport; poolId: string | null }[];
   instructors: { id: string; name: string }[];
   /** With birth dates, so the picker can work out who fits. */
   students: { id: string; name: string; birthDate: string | null }[];
@@ -5863,6 +5871,8 @@ export interface AppAgendaEntry {
   needsBirthDate: boolean;
   /** Still takes an answer: a turma's, not cancelled, not started. */
   noticeOpen: boolean;
+  /** The lesson's Desafio, or null — shown on Início's card (Rui, 09-11-2026). */
+  challenge: string | null;
 }
 
 /** One answer on a lesson, for its register — POOLSE-90 slice 2. */
@@ -6179,6 +6189,8 @@ export interface LessonFeedback {
   authorName: string | null;
   lessonDate: string;
   className: string | null;
+  /** The lesson's sport: the rating is drawn in its icons. */
+  sport: PoolseSport;
   createdAt: string;
   updatedAt: string;
 }
@@ -6195,6 +6207,8 @@ export interface FamilyFeedback {
   needsBirthDate: boolean;
   feedback: LessonFeedback | null;
   challenge: string | null;
+  /** The lesson's sport: the form's rating is drawn in its icons. */
+  sport: PoolseSport;
 }
 
 export interface RecentLesson {
@@ -6207,6 +6221,8 @@ export interface RecentLesson {
   open: boolean;
   /** The reader answers for this child; else *Dar feedback* is not offered. */
   mayAnswer: boolean;
+  /** The lesson's sport: the mood is drawn in its icons (Rui, 09-11-2026). */
+  sport: PoolseSport;
 }
 
 /** One period on the /admin *Leitura com IA* card — POOLSE-137. */

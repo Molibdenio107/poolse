@@ -262,7 +262,7 @@ documentos* sit at the top of the card. Every family ticked goes to the API as t
 
 ## *Extratos* in the app — POOLSE-201 (08-11-2026)
 
-The person a document is **addressed to** reads it on the phone under *Perfil › Extratos*: a guardian who is the payer, or an adult-path student who pays for themselves. A second guardian who is not the payer sees none (Rui). Called *Extratos*, never *Faturas*, until certified invoicing (7b.7); the internal-record notice is the first thing on the screen and on the A4 paper (`invoice-paper.tsx`, shared with the office's print page).
+The person a document is **addressed to** reads it on the phone under *Pagamentos › Ver extratos* (the *Perfil* row was removed, Rui 09-11-2026: one way in): a guardian who is the payer, or an adult-path student who pays for themselves. A second guardian who is not the payer sees none (Rui). Called *Extratos*, never *Faturas*, until certified invoicing (7b.7); the internal-record notice is the first thing on the screen and on the A4 paper (`invoice-paper.tsx`, shared with the office's print page).
 
 - `GET /app/invoices?offset=` (20 a page, no NIF or address on the list) and `GET /app/invoices/:id` (audited as `invoice.read_by_payer`). Both `Cache-Control: private, no-store`. Anybody else's id, another club's or a made-up one is the same 404; staff tokens get 403.
 - With the club's invoicing module off, the list says `payer: false` (the row hides) and a document is a 404.

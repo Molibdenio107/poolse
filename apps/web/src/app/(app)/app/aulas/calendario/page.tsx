@@ -4,7 +4,7 @@ import { apiFetch, type TeachingLesson } from '@/lib/api';
 import { addDays, today } from '@/lib/dates';
 import { describeLoad } from '@/lib/load-failure';
 import { PageError } from '@/components/page-shell';
-import { WeekStrip } from '@/components/app/week-strip';
+import { WeekStrip, WeekToday } from '@/components/app/week-strip';
 import { dayHeading } from '../../familia/agenda-parts';
 import { LessonCard } from '../lesson-card';
 
@@ -63,7 +63,10 @@ export default async function TeachingCalendar({
 
   return (
     <>
-      <h1>{t('app.tabs.familia.aulas')}</h1>
+      <div className="flex min-h-9 items-center justify-between gap-3">
+        <h1>{t('app.tabs.familia.aulas')}</h1>
+        <WeekToday week={week} today={day} child={undefined} base={PATH} />
+      </div>
       <WeekStrip
         week={week}
         today={day}

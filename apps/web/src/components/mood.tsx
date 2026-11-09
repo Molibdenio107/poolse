@@ -1,34 +1,45 @@
-import { Angry, Frown, Laugh, Meh, Smile, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import type { PoolseSport } from '@poolse/rules';
+import { RATING_ICON } from '@/components/sport-icon';
 import { cn } from '@/lib/utils';
 
 /**
- * How a lesson went, 1 to 5 — POOLSE-116.
+ * How a lesson went, 1 to 5 — POOLSE-116; drawn in the sport's own icons since
+ * 09-11-2026 (Rui): swimmers for a swimming lesson, tennis balls for tennis,
+ * basketballs for basketball — counted, like stars. Faces before that.
  *
- * Outlined faces, never a fill: the attendance states, role badges, age
- * brackets and certification status already own four colour systems, and a
- * fifth would be one too many to keep apart. So a mood is a face **and its
- * word**, everywhere it is shown, and colour (only `--primary`, only on the
- * chosen face in the form) never carries it alone.
+ * Still outlined, never a fill colour of its own: attendance, roles, ages and
+ * certification already own four colour systems. The count is strong ink and
+ * the rest faint, and **the word is always beside it**, so neither the count
+ * nor the contrast carries the mood alone.
  */
 export const MOODS = [1, 2, 3, 4, 5] as const;
 export type Mood = (typeof MOODS)[number];
 
-export const MOOD_ICONS: Record<Mood, LucideIcon> = {
-  1: Angry,
-  2: Frown,
-  3: Meh,
-  4: Smile,
-  5: Laugh,
-};
+/** The sport's rating icon, `pool` for anything unknown. */
+export function ratingIcon(sport: string | null | undefined): (typeof RATING_ICON)[PoolseSport] {
+  return RATING_ICON[(sport ?? 'pool') as PoolseSport] ?? RATING_ICON.pool;
+}
 
-/** The face and its word, read-only — the agenda, the register strip, the record. */
-export function MoodFace({ mood, className }: { mood: number; className?: string }): React.ReactElement {
+/** The count and its word, read-only — the agenda, the register strip, the record. */
+export function MoodFace({
+  mood,
+  sport,
+  className,
+}: {
+  mood: number;
+  sport?: string | null;
+  className?: string;
+}): React.ReactElement {
   const t = useTranslations();
-  const Icon = MOOD_ICONS[mood as Mood] ?? Meh;
+  const Icon = ratingIcon(sport);
   return (
-    <span className={cn('inline-flex items-center gap-1.5', className)}>
-      <Icon className="size-5 shrink-0" aria-hidden />
+    <span className={cn('inline-flex items-center gap-2', className)}>
+      <span className="inline-flex shrink-0 items-center gap-0.5" aria-hidden>
+        {MOODS.map((value) => (
+          <Icon key={value} className={cn('size-4', value > mood && 'opacity-25')} />
+        ))}
+      </span>
       <span>{t(`feedback.mood.${mood}`)}</span>
     </span>
   );

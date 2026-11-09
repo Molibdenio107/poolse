@@ -23,6 +23,7 @@ import { backProp, originBack } from '@/lib/back';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 import { addonSportAsked } from '@/lib/modules';
 import { SportPending } from '../sport-pending';
+import { FilterSelect } from '@/components/filter-select';
 
 /**
  * The whole week, and who is in it.
@@ -36,7 +37,7 @@ import { SportPending } from '../sport-pending';
 export default async function ClassesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scope?: string; section?: string; from?: string; sport?: string }>;
+  searchParams: Promise<{ scope?: string; section?: string; from?: string; sport?: string; recinto?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
@@ -50,7 +51,7 @@ export default async function ClassesPage({
     roles, so an absent parameter is not "all" — it is "whichever is useful to
     you", and the answer comes back in `scope`.
   */
-  const { scope, section, from, sport } = await searchParams;
+  const { scope, section, from, sport, recinto } = await searchParams;
   // POOLSE-125: another sport's Turmas — what exists of it, in words.
   const other = await addonSportAsked(sport);
   if (other !== null) return <SportPending sport={other} page="classes" from={from} />;
@@ -132,9 +133,33 @@ export default async function ClassesPage({
       // name and disagree with every other list of the same children.
       .map((student) => student.shortName);
 
+  /*
+    Which recinto — Rui, 09-11-2026. Turmas inside Natação filtered by pool, and
+    written as a recinto so a court or a pitch is the same filter when its sport
+    gets a Turmas page: the options are the recintos of this page's sport, and
+    the value is the recinto's id. `none` is the turmas with no recinto yet.
+    Offered only when there is a choice to make; Lista and Semana only, the
+    two views of where a class happens.
+  */
+  const pageSport = sport ?? 'pool';
+  const recintoOptions = (data?.options.recintos ?? []).filter((one) => one.sport === pageSport);
+  const someWithout = (data?.groups ?? []).some((group) => group.playingAreaId === null);
+  const offersRecinto = recintoOptions.length + (someWithout ? 1 : 0) > 1;
+  const chosenRecinto =
+    offersRecinto && recinto !== undefined && (recinto === 'none' || recintoOptions.some((one) => one.id === recinto))
+      ? recinto
+      : null;
+  const inRecinto = (playingAreaId: string | null): boolean =>
+    chosenRecinto === null || (chosenRecinto === 'none' ? playingAreaId === null : playingAreaId === chosenRecinto);
+  const recintoOfPool = new Map(
+    recintoOptions.flatMap((one) => (one.poolId === null ? [] : [[one.poolId, one.id] as const])),
+  );
+  const filteredGroups = (data?.groups ?? []).filter((group) => inRecinto(group.playingAreaId));
+  const recintoWords = pageSport === 'pool' ? 'pool' : 'other';
+
   // One entry per slot per turma: a turma running Tuesday and Thursday appears
   // in both columns, which is what a week looks like.
-  const turmaEntries: WeekEntry[] = (data?.groups ?? []).flatMap((group) =>
+  const turmaEntries: WeekEntry[] = filteredGroups.flatMap((group) =>
     group.schedules.map((slot) => ({
       key: slot.id,
       weekday: slot.weekday,
@@ -245,6 +270,15 @@ export default async function ClassesPage({
    */
   const partnerEntries: WeekEntry[] = (grid?.bookings ?? [])
     .filter((booking) => booking.subjectType === 'parceria')
+    // A parceria is where its lanes are; with none it has no recinto.
+    .filter((booking) => {
+      if (chosenRecinto === null) return true;
+      const places = booking.laneIds
+        .map((id) => grid?.lanes.find((lane) => lane.id === id)?.poolId)
+        .map((poolId) => (poolId === undefined ? undefined : recintoOfPool.get(poolId)))
+        .filter((id): id is string => id !== undefined);
+      return chosenRecinto === 'none' ? places.length === 0 : places.includes(chosenRecinto);
+    })
     .map((booking) => {
       const lanes = booking.laneIds
         .map((id) => grid?.lanes.find((lane) => lane.id === id)?.name)
@@ -347,11 +381,12 @@ export default async function ClassesPage({
     "all", it is "whichever the API thinks is useful to you" (above).
   */
   const sectionLink = (key: string): string =>
-    sectionHref('/dashboard/classes', { scope }, key);
+    sectionHref('/dashboard/classes', { scope, recinto: chosenRecinto ?? undefined }, key);
   const scopeLink = (option: 'all' | 'mine'): string => {
     const query = new URLSearchParams();
     if (option === 'mine') query.set('scope', 'mine');
     if (current !== 'cards') query.set('section', current);
+    if (chosenRecinto !== null) query.set('recinto', chosenRecinto);
     const rest = query.toString();
     return rest === '' ? '/dashboard/classes' : `/dashboard/classes?${rest}`;
   };
@@ -483,6 +518,21 @@ export default async function ClassesPage({
                 <p className="text-sm text-foreground-muted">{t('classes.scopeMineOnly')}</p>
               )}
 
+              {offersRecinto && (current === 'cards' || current === 'week') && (
+                <FilterSelect
+                  name="recinto"
+                  label={t(`classes.recintoFilter.${recintoWords}.label`)}
+                  value={chosenRecinto ?? ''}
+                  anyLabel={t(`classes.recintoFilter.${recintoWords}.any`)}
+                  options={[
+                    ...recintoOptions.map((one) => ({ value: one.id, label: one.name })),
+                    ...(someWithout
+                      ? [{ value: 'none', label: t(`classes.recintoFilter.${recintoWords}.none`) }]
+                      : []),
+                  ]}
+                />
+              )}
+
               {data.canManage && (
                 <FromLink
                   href="/dashboard/classes/new"
@@ -494,7 +544,7 @@ export default async function ClassesPage({
             </div>
           )}
 
-          {current === 'cards' && <TurmaCards groups={data.groups} canManage={data.canManage} />}
+          {current === 'cards' && <TurmaCards groups={filteredGroups} canManage={data.canManage} />}
 
           {current === 'clashes' && <ClashList students={clashes} />}
 

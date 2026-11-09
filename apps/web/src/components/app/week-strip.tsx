@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { agendaWeekRange } from '@poolse/rules';
+import { agendaWeekOf, agendaWeekRange } from '@poolse/rules';
 import { LinkBusy } from '@/components/link-busy';
 import { formatDateRange, formatDayMonthShort } from '@/lib/date-format';
 import { addDays } from '@/lib/dates';
@@ -9,6 +9,39 @@ import { cn } from '@/lib/utils';
 
 const STEP =
   'inline-flex h-control w-control shrink-0 items-center justify-center rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+
+/**
+ * *Hoje* — back to this week from any other (Rui, 09-11-2026). Its own piece, for
+ * the page's title row: inside the card it squeezed the week, and in a row of
+ * its own above the card it pushed the arrows down the moment it appeared. In
+ * the title row nothing moves. Nothing is drawn on this week itself.
+ */
+export async function WeekToday({
+  week,
+  today,
+  child,
+  base = '/app/familia/aulas',
+}: {
+  week: string;
+  today: string;
+  child: string | undefined;
+  base?: string;
+}): Promise<React.ReactElement | null> {
+  const current = agendaWeekOf(today);
+  if (week === current) return null;
+  const t = await getTranslations();
+  const query = new URLSearchParams({ week: current });
+  if (child !== undefined) query.set('child', child);
+  return (
+    <Link
+      href={`${base}?${query.toString()}`}
+      className="inline-flex h-8 shrink-0 items-center rounded-full bg-primary/15 px-3 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    >
+      {t('app.family.calendar.today')}
+      <LinkBusy />
+    </Link>
+  );
+}
 
 /**
  * The family's calendar strip — POOLSE-175, a week since 06-11-2026 (Rui): the
@@ -61,7 +94,19 @@ export async function WeekStrip({
     <section aria-label={t('app.family.calendar.label')} className="flex flex-col gap-2 rounded bg-surface p-3 shadow-card">
       <div className="flex items-center justify-between gap-2">
         {step(addDays(week, -7), t('app.family.calendar.previous'), <ChevronLeft className="size-5" aria-hidden />, week > first)}
-        <h2 className="text-center font-bold">{formatDateRange(week, addDays(week, 6), locale)}</h2>
+        {/*
+          Two lines' room on every week (Rui, 09-11-2026), so "30 de novembro a 6 de
+          dezembro de 2026" does not make that one week's card taller than the rest.
+        */}
+        <h2 className="flex min-h-[2lh] items-center justify-center text-center font-bold">
+          {/* A week across New Year names both years, so its words are the short months. */}
+          {week.slice(0, 4) === addDays(week, 6).slice(0, 4)
+            ? formatDateRange(week, addDays(week, 6), locale)
+            : t('app.family.calendar.yearRange', {
+                from: `${formatDayMonthShort(week, locale)} ${week.slice(0, 4)}`,
+                to: `${formatDayMonthShort(addDays(week, 6), locale)} ${addDays(week, 6).slice(0, 4)}`,
+              })}
+        </h2>
         {step(addDays(week, 7), t('app.family.calendar.next'), <ChevronRight className="size-5" aria-hidden />, week < last)}
       </div>
       <ol className="grid grid-cols-7 gap-1">

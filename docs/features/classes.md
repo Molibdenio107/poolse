@@ -45,10 +45,12 @@ The numbers are the lanes' own positions at the tank, not positions within this 
 
 The weekly board (`WeekGrid`) is one column below `md`: each day is a heading with its turmas under it. From `md` up it keeps one column per day (POOLSE-88 phone views).
 
-## Cartões — multi-sport Slice 4 (1 November 2026)
+## Lista (was Cartões) — multi-sport Slice 4 (1 November 2026)
 
-Turmas opens on **Cartões**, the handoff's *05 Turmas*. *Semana*, *Sem horário* and *Parcerias* follow it in the
+Turmas opens on **Lista** (*Cartões* until Rui renamed it, 09-11-2026), the handoff's *05 Turmas*. *Semana*, *Sem horário* and *Parcerias* follow it in the
 same pill row, and `?section=week` still opens the weekly board.
+
+**Filtered by recinto** (Rui, 09-11-2026). On *Lista* and *Semana*, a *Piscina* select (`?recinto=<playing_area id>`, or `none` for turmas with no recinto yet) narrows the turmas, and on *Semana* the parcerias too, by their lanes' pool. It is offered only when there is a choice, and it travels with the section and scope links. The options are the recintos of the page's sport (`options.recintos` on `GET /class-groups`, each with its `poolId`), so a court or a pitch is the same filter when its sport has a Turmas page; only the words change (`classes.recintoFilter.other`).
 
 Each turma is one card (`turma-cards.tsx`), drawn from the list the page already loads, with no new read:
 

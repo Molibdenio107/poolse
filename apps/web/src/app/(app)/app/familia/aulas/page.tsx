@@ -7,7 +7,7 @@ import { addDays, today } from '@/lib/dates';
 import { describeLoad, outcome } from '@/lib/load-failure';
 import { storageConfigured } from '@/lib/storage-status';
 import { PageError } from '@/components/page-shell';
-import { WeekStrip } from '@/components/app/week-strip';
+import { WeekStrip, WeekToday } from '@/components/app/week-strip';
 import { EntryCard, dayHeading } from '../agenda-parts';
 import { FamilyCertificates } from '../certificates';
 import { ChildFilter } from '../child-filter';
@@ -104,7 +104,11 @@ export default async function FamilyLessons({
 
   return (
     <>
-      <h1>{t('app.tabs.familia.aulas')}</h1>
+      {/* *Hoje* in the title row, so nothing below moves when it appears (Rui, 09-11-2026). */}
+      <div className="flex min-h-9 items-center justify-between gap-3">
+        <h1>{t('app.tabs.familia.aulas')}</h1>
+        <WeekToday week={week} today={day} child={child} />
+      </div>
       <ChildFilter base="/app/familia/aulas" children={agenda.children} chosen={child} />
 
       <WeekStrip
