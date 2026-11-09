@@ -35,7 +35,7 @@ const COPY = {
     noInstructions: 'Para saber como pagar, contacte o clube.',
     paid: 'Se já pagou, agradecemos e pedimos que ignore esta mensagem.',
     signature: (club: string) =>
-      `Enviado pelo Poolse a pedido de ${club}. As respostas a este email não chegam ao clube.`,
+      `Enviado pelo Poolse a pedido de ${club}. Pode responder a este email.`,
   },
   en: {
     subject: 'Payment reminder',
@@ -48,7 +48,7 @@ const COPY = {
     noInstructions: 'To find out how to pay, please contact the club.',
     paid: 'If you have already paid, thank you, and please ignore this message.',
     signature: (club: string) =>
-      `Sent by Poolse on behalf of ${club}. Replies to this email do not reach the club.`,
+      `Sent by Poolse on behalf of ${club}. You can reply to this email.`,
   },
 } as const;
 

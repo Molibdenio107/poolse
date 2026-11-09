@@ -1221,6 +1221,28 @@ test('regulations and the complaints setting refuse a guardian and a student (40
   });
 });
 
+test("the club's reply email and the billing email refuse who may not set them (403) — POOLSE-209", async () => {
+  await asEach(async () => {
+    await refused('PUT settings/reply-email', 403, () =>
+      new SettingsController().saveReplyEmail({ replyEmail: 'secretaria@clube.pt' }),
+    );
+    await refused('PUT subscription/billing-email', 403, () =>
+      new SubscriptionController().putBillingEmail({ billingEmail: 'contas@clube.pt' }),
+    );
+  });
+  await as(fixture.instructorId, ['instructor'], async () => {
+    await refused('PUT settings/reply-email as instructor', 403, () =>
+      new SettingsController().saveReplyEmail({ replyEmail: 'secretaria@clube.pt' }),
+    );
+  });
+  // The billing email is the owner's alone: an admin sets the reply email, not this.
+  await as(fixture.adminId, ['admin'], async () => {
+    await refused('PUT subscription/billing-email as admin', 403, () =>
+      new SubscriptionController().putBillingEmail({ billingEmail: 'contas@clube.pt' }),
+    );
+  });
+});
+
 test('where the club is paid refuses a guardian and a student (403) — POOLSE-94', async () => {
   await asEach(async () => {
     await refused('PUT settings/payment-details', 403, () =>

@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { clubMessageEmail } from '../notifications/club-message-email.js';
-import { sendEmail, type Email } from '../notifications/notifier.js';
+import { sendEmail, type Email, clubEmail } from '../notifications/notifier.js';
 import { findDelivery, markDelivered } from './messages.repository.js';
 import { optOutUrl } from '../notifications/email-preferences.js';
 
@@ -43,7 +43,7 @@ export async function deliverMessage(
     let delivered = 0;
     for (const to of delivery.pending) {
       const sent = await send(
-        clubMessageEmail({
+        clubEmail(organizationId, clubMessageEmail({
           to,
           organizationName: delivery.organizationName,
           subject: delivery.subject,
@@ -51,7 +51,7 @@ export async function deliverMessage(
           locale: delivery.organizationLocale,
           // POOLSE-86: a general message carries the way out; a closure warning does not.
           optOutLink: link(to),
-        }),
+        })),
       );
       if (sent) {
         await markDelivered(organizationId, messageId, to);

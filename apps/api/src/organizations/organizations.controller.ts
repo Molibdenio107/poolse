@@ -26,6 +26,9 @@ import {
   reposicaoSettings,
   saveReposicaoSettings,
   saveTaxNumber,
+  saveReplyEmail,
+  setInitialReplyEmail,
+  EMAIL_SHAPE,
   savePaymentInstructions,
   TaxNumberTakenError,
   TrialAlreadyClaimedError,
@@ -42,6 +45,8 @@ interface CreateOrganizationBody {
   facilityName?: unknown;
   /** `business` (the default) or `personal` — slice 4.5. */
   kind?: unknown;
+  /** POOLSE-209: where families' replies go; blank leaves the owner's. */
+  replyEmail?: unknown;
 }
 
 interface CreateOrganizationResponse {
@@ -104,6 +109,12 @@ export class OrganizationsController {
     const user = await ensureAppUser(clerkUserId);
     const locale = typeof body.locale === 'string' && body.locale ? body.locale : user.locale;
 
+    // POOLSE-209: asked at creation, prefilled with the owner's; blank keeps the owner's.
+    const replyEmail = typeof body.replyEmail === 'string' ? body.replyEmail.trim() : '';
+    if (replyEmail !== '' && (replyEmail.length > 254 || !EMAIL_SHAPE.test(replyEmail))) {
+      throw new BadRequestException({ fields: { replyEmail: 'clubData.replyEmail.shape' } });
+    }
+
     /*
      * One person, one trial — POOLSE-62.
      *
@@ -127,7 +138,7 @@ export class OrganizationsController {
     try {
       // Blank is allowed and means "same as the organization". An operator with one
       // site should not have to type its name twice, and the function decides.
-      return await provisionOrganization(
+      const made = await provisionOrganization(
         clerkUserId,
         name,
         locale,
@@ -135,6 +146,9 @@ export class OrganizationsController {
         kind,
         signupIpHash,
       );
+      // After the club exists, inside its own context, as the owner it now has.
+      if (replyEmail !== '') await setInitialReplyEmail(made.organizationId, replyEmail);
+      return made;
     } catch (error) {
       if (error instanceof TrialAlreadyClaimedError) {
         throw new ForbiddenException({
@@ -250,6 +264,23 @@ export class SettingsController {
     });
     if (noticeId !== null) void deliverPaymentChangeNotice(organizationId, noticeId);
     return readTaxSettings(organizationId);
+  }
+
+  /**
+   * The club's email for families' replies — POOLSE-209. Owner and admin, on
+   * *Dados do clube*. Required: changed, never cleared (the owner's answers until
+   * the first save).
+   */
+  @Put('reply-email')
+  async saveReplyEmail(@Body() body: { replyEmail?: unknown }): Promise<TaxSettings> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    const value = typeof body.replyEmail === 'string' ? body.replyEmail.trim() : '';
+    if (value === '') throw new BadRequestException({ fields: { replyEmail: 'clubData.replyEmail.required' } });
+    if (value.length > 254 || !EMAIL_SHAPE.test(value)) {
+      throw new BadRequestException({ fields: { replyEmail: 'clubData.replyEmail.shape' } });
+    }
+    return saveReplyEmail(organizationId, value);
   }
 
   @Put('tax')

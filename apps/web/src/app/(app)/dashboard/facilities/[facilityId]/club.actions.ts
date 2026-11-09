@@ -62,6 +62,20 @@ export async function savePaymentDetailsAction(
   return { ok: true };
 }
 
+/** Where families' replies go — POOLSE-209. Required; the API judges the shape. */
+export async function saveReplyEmailAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  try {
+    await apiPut('/settings/reply-email', { replyEmail: String(formData.get('replyEmail') ?? '') });
+  } catch (error) {
+    return describeFailure(error, 'clubData.replyEmail.saveFailed');
+  }
+  revalidatePath('/dashboard/facilities', 'layout');
+  return { ok: true };
+}
+
 /** *Como pagar* — POOLSE-86. Blank clears it, and the reminder then says to contact the club. */
 export async function savePaymentInstructionsAction(
   _previous: FormState,

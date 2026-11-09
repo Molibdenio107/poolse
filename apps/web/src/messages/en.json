@@ -774,6 +774,8 @@
     "endFailed": "Could not end that session."
   },
   "organization": {
+    "replyEmailLabel": "Club's email (for families' replies)",
+    "replyEmailHint": "When a family replies to a club email, the reply arrives here. You can change it later in Club details.",
     "nameLabel": "Organization name",
     "namePlaceholder": "e.g. Aveiro Municipal Pools",
     "create": "Create organization",
@@ -1083,6 +1085,16 @@
     }
   },
   "subscription": {
+    "billingEmail": {
+      "title": "Billing email",
+      "hint": "Where the invoices and receipts for the Poolse subscription go. It can be your accountant's. It never receives families' email.",
+      "label": "Billing email",
+      "usingOwner": "Not set yet: they go to {email}.",
+      "required": "Enter an email.",
+      "shape": "This email does not look valid.",
+      "saveFailed": "The billing email could not be saved.",
+      "stripeLater": "Saved. The payment system will be updated the next time the subscription is opened."
+    },
     "title": "Subscription",
     "subtitle": "What the club pays Poolse.",
     "notPermitted": "Only the owner and administrators can see the subscription.",
@@ -6655,6 +6667,15 @@
     "saveFailed": "The complaints book setting could not be saved."
   },
   "clubData": {
+    "replyEmail": {
+      "title": "Families' replies",
+      "hint": "The club's emails leave Poolse under the club's name. When a family replies, the reply reaches this address.",
+      "label": "Club's email",
+      "usingOwner": "Not set yet: replies go to {email}.",
+      "required": "Enter an email.",
+      "shape": "This email does not look valid.",
+      "saveFailed": "The email could not be saved."
+    },
     "tab": "Club details",
     "hint": "Tax details and how to pay belong to the club and apply to every site. The numbering books are this site's alone.",
     "paymentTitle": "How to pay",

@@ -2,6 +2,8 @@
 
 The full text of the conventions for a student record, levels, competition, what a family sees, messages or an archive. `CLAUDE.md` holds one line each; read this file before changing that area.
 
+**A club's email speaks as the club, and its replies reach the club.** POOLSE-209 (Rui, 09-11-2026). Every email a club sends is wrapped in `clubEmail(organizationId, …)` (`notifications/notifier.ts`), and `sendEmail` then sends it From `"<club name>" <EMAIL_FROM address>` with Reply-To `organization.reply_email`, or the owner's login email until one is set (`clubIdentity`). **Never the club's own address as From:** a Gmail sender fails DMARC, and a club's domain needs DNS records and a paid provider plan; own-domain sending is a later, paid option. The club's name passes `headerSafeName` before it reaches a header: quotes, angle brackets, backslashes and control characters go, capped at 70. Poolse's own mail (platform, trial, support, the results inbox's reply) passes no organization and leaves as Poolse. A new club email that forgets `clubEmail` leaves as Poolse with no Reply-To, which is safe and wrong. `docs/features/messages.md`.
+
 **Every email is sent once after its commit, rendered from its row, and retried hourly if it did
 not leave.** POOLSE-86 slice 3.0a. A sender is a by-id function (`deliverWaterAlert`,
 `deliverLabAlert`, `redeliverQualificationAlert`, `deliverMessage`, `deliverTrialNotice`,

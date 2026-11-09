@@ -19,7 +19,7 @@ export interface ClubMessageEmailInput {
  * **The club's own words, verbatim.** Subject and body are exactly what the
  * operator typed; nothing is translated or wrapped in a template that speaks for
  * them. What Poolse adds is the footer, which says who sent it and that a reply
- * does not reach the club — there is no inbox behind this (phase 3.0) — and,
+ * reaches the club (Reply-To is the club's email since POOLSE-209) — and,
  * since POOLSE-86, on a general message, the link that stops them.
  *
  * **In the organization's language**, as the invitation, leave and water emails
@@ -31,8 +31,8 @@ export interface ClubMessageEmailInput {
  */
 const FOOTER: Record<'pt-PT' | 'en', (club: string) => string> = {
   'pt-PT': (club) =>
-    `Mensagem enviada por ${club} através do Poolse. As respostas a este email não chegam ao clube.`,
-  en: (club) => `Message sent by ${club} through Poolse. Replies to this email do not reach the club.`,
+    `Mensagem enviada por ${club} através do Poolse. Pode responder a este email.`,
+  en: (club) => `Message sent by ${club} through Poolse. You can reply to this email.`,
 };
 
 const OPT_OUT: Record<'pt-PT' | 'en', { text: (club: string) => string; link: string }> = {

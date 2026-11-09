@@ -7,8 +7,10 @@ import {
   Logger,
   NotFoundException,
   Post,
+  Put,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { EMAIL_SHAPE } from '../organizations/organizations.repository.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import {
@@ -23,8 +25,10 @@ import {
   type BillingInterval,
 } from './stripe.js';
 import {
+  readBillingAddress,
   readCustomerId,
   readSubscription,
+  saveBillingEmail,
   rememberCustomer,
   type OrganizationSubscription,
   readBillingMode,
@@ -255,6 +259,34 @@ export class SubscriptionController {
    * everything a club wants to do with a subscription after starting it is a
    * screen somebody else maintains, in a flow that is already compliant.
    */
+  /**
+   * The billing email — POOLSE-209. Owner only, like the rest of this screen.
+   * Saved here first; then, if Stripe already has a customer, its email follows.
+   * A Stripe failure keeps the saved value and says so (`stripeSynced: false`):
+   * the next checkout or portal visit carries it.
+   */
+  @Put('billing-email')
+  async putBillingEmail(@Body() body: { billingEmail?: unknown }): Promise<{ stripeSynced: boolean }> {
+    requireRole('owner');
+    const { organizationId } = currentTenant();
+    const value = typeof body.billingEmail === 'string' ? body.billingEmail.trim() : '';
+    if (value === '') throw new BadRequestException({ fields: { billingEmail: 'subscription.billingEmail.required' } });
+    if (value.length > 254 || !EMAIL_SHAPE.test(value)) {
+      throw new BadRequestException({ fields: { billingEmail: 'subscription.billingEmail.shape' } });
+    }
+    await saveBillingEmail(organizationId, value);
+
+    const customerId = await readCustomerId(organizationId);
+    if (customerId === null || !stripeEnabled()) return { stripeSynced: true };
+    try {
+      await stripeClient().customers.update(customerId, { email: value });
+      return { stripeSynced: true };
+    } catch (error) {
+      this.logger.warn(`Stripe customer email not updated: ${error instanceof Error ? error.message : error}`);
+      return { stripeSynced: false };
+    }
+  }
+
   @Post('portal')
   async portal(): Promise<{ url: string }> {
     requireRole('owner');
@@ -295,8 +327,11 @@ async function customerFor(
   const existing = await readCustomerId(organizationId);
   if (existing !== null) return existing;
 
+  // POOLSE-209: Stripe's invoices and receipts go to the billing email (the owner's until set).
+  const email = await readBillingAddress(organizationId);
   const customer = await stripeClient().customers.create({
     name: subscription.name,
+    ...(email === null ? {} : { email }),
     metadata: { organization_id: organizationId },
   });
 

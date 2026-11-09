@@ -1,7 +1,7 @@
 import type { PoolseSport } from '@poolse/rules';
 import { SportIcon, sportNameKey } from '@/components/sport-icon';
 import { RegulationPanel, type ComplaintsSettingsView, type RegulationVersionView } from './regulation-panel';
-import { PaymentInstructionsPanel, TaxPanel } from './tax-panel';
+import { PaymentInstructionsPanel, ReplyEmailPanel, TaxPanel } from './tax-panel';
 import { LogoPanel } from './logo-panel';
 import { DocumentsTab } from './boletim-template-panel';
 import { SeriesPanel } from './series-panel';
@@ -531,6 +531,8 @@ export default async function FacilityPage({
                 ) : (
                   <>
                     <TaxPanel settings={tax.data} />
+                    {/* POOLSE-209: where families' replies go, for every club. */}
+                    <ReplyEmailPanel settings={tax.data} />
                     {/* Como pagar is read by invoice reminders: invoicing's (POOLSE-87). */}
                     {invoicing && <PaymentInstructionsPanel settings={tax.data} />}
                   </>

@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { withOrg } from '@poolse/db';
 import { paymentChangeEmail } from '../notifications/payment-change-email.js';
-import { sendEmail, type Email } from '../notifications/notifier.js';
+import { sendEmail, type Email, clubEmail } from '../notifications/notifier.js';
 
 const logger = new Logger('PaymentChangeNotice');
 
@@ -46,7 +46,7 @@ export async function deliverPaymentChangeNotice(
     let all = true;
     for (const to of notice.recipients) {
       const sent = await send(
-        paymentChangeEmail({
+        clubEmail(organizationId, paymentChangeEmail({
           to,
           organizationName: notice.name,
           changedBy: notice.changed_by ?? '—',
@@ -54,7 +54,7 @@ export async function deliverPaymentChangeNotice(
           oldEnd: notice.old_end,
           newEnd: notice.new_end,
           locale: notice.locale,
-        }),
+        })),
       );
       all &&= sent;
     }

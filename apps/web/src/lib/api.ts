@@ -4409,6 +4409,10 @@ export interface TaxSettings {
   paymentIban: string | null;
   paymentAccountHolder: string | null;
   paymentMbwayPhone: string | null;
+  /** POOLSE-209: where families' replies go; null until set. */
+  replyEmail: string | null;
+  /** Where they go meanwhile: the owner's login email. */
+  replyEmailFallback: string | null;
 }
 
 /** Where families pay the club — POOLSE-94. Null fields were left empty. */
@@ -4807,6 +4811,9 @@ export interface OrganizationSubscription {
   hasCustomer: boolean;
   hasSubscription: boolean;
   suspendedAt: string | null;
+  /** POOLSE-209: where Stripe's invoices go; null until set, and then the owner's. */
+  billingEmail: string | null;
+  billingEmailFallback: string | null;
 }
 
 /** One plan — POOLSE-60. It is what a club bought, never what it may do. */

@@ -225,7 +225,7 @@ export default async function DashboardPage({
                 <h2 className="text-lg font-medium">{t('account.noOrganizations')}</h2>
                 <p className="text-sm text-foreground-muted">{t('account.noOrganizationsHint')}</p>
               </div>
-              <CreateOrganizationForm />
+              <CreateOrganizationForm ownerEmail={me?.user.email ?? ''} />
             </section>
           )}
 

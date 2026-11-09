@@ -293,6 +293,7 @@ Read [`docs/conventions/calendar-and-classes.md`](docs/conventions/calendar-and-
 Read [`docs/conventions/students-and-families.md`](docs/conventions/students-and-families.md) before touching a student record, levels, competition, what a family sees, messages or an archive.
 
 - Every email is sent once after its commit, rendered from its row, and retried hourly if it did not leave.
+- A club's email is `clubEmail(organizationId, ...)`: From the club's name at Poolse's address, Reply-To the club's `reply_email` (POOLSE-209).
 - A NIF is checksum-validated, and `isValidNif` in `@poolse/rules` is the one definition.
 - A family asks for a place from the app, and it is a pedido in the same queue.
 - An adult is the absence of a guardian edge, never a flag.

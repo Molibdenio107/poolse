@@ -234,10 +234,20 @@ export interface TaxSettings {
   paymentIban: string | null;
   paymentAccountHolder: string | null;
   paymentMbwayPhone: string | null;
+  /** POOLSE-209: where families' replies go; null until set. */
+  replyEmail: string | null;
+  /** Where they go meanwhile: the owner's login email. */
+  replyEmailFallback: string | null;
 }
 
-const TAX_COLUMNS =
-  'vat_number, payment_instructions, payment_iban, payment_account_holder, payment_mbway_phone';
+const TAX_COLUMNS = `vat_number, payment_instructions, payment_iban, payment_account_holder, payment_mbway_phone,
+  reply_email::text AS reply_email,
+  (SELECT u.cached_email::text
+     FROM membership_role r
+     JOIN membership m ON m.id = r.membership_id AND m.organization_id = r.organization_id
+     JOIN app_user u ON u.id = m.app_user_id
+    WHERE r.organization_id = organization.id AND r.role = 'owner' AND r.archived_at IS NULL
+    LIMIT 1) AS reply_email_fallback`;
 
 function toTaxSettings(row: {
   vat_number: string | null;
@@ -245,6 +255,8 @@ function toTaxSettings(row: {
   payment_iban: string | null;
   payment_account_holder: string | null;
   payment_mbway_phone: string | null;
+  reply_email: string | null;
+  reply_email_fallback: string | null;
 } | undefined): TaxSettings {
   return {
     taxNumber: row?.vat_number ?? null,
@@ -252,8 +264,43 @@ function toTaxSettings(row: {
     paymentIban: row?.payment_iban ?? null,
     paymentAccountHolder: row?.payment_account_holder ?? null,
     paymentMbwayPhone: row?.payment_mbway_phone ?? null,
+    replyEmail: row?.reply_email ?? null,
+    replyEmailFallback: row?.reply_email_fallback ?? null,
   };
 }
+
+/**
+ * The club's email for families' replies — POOLSE-209. Owner and admin, checked
+ * by the controller; changed, never cleared. Audited with the address: it is
+ * the club's own and "what did this change to" is the question.
+ */
+export async function saveReplyEmail(organizationId: string, replyEmail: string): Promise<TaxSettings> {
+  return withOrg(organizationId, async (tx) => {
+    await tx.query('UPDATE organization SET reply_email = $2 WHERE id = $1', [organizationId, replyEmail]);
+    await recordAudit(tx, {
+      action: 'organization.reply_email_changed',
+      entityType: 'organization',
+      entityId: organizationId,
+      data: { replyEmail },
+    });
+    const { rows } = await tx.query(`SELECT ${TAX_COLUMNS} FROM organization WHERE id = $1`, [organizationId]);
+    return toTaxSettings(rows[0]);
+  });
+}
+
+/**
+ * The first value, from the create form — POOLSE-209. No audit entry: creation
+ * runs outside any tenant context (`recordAudit` needs one), and the club's
+ * creation is itself the event.
+ */
+export async function setInitialReplyEmail(organizationId: string, replyEmail: string): Promise<void> {
+  await withOrg(organizationId, (tx) =>
+    tx.query('UPDATE organization SET reply_email = $2 WHERE id = $1', [organizationId, replyEmail]),
+  );
+}
+
+/** POOLSE-209: one shape for an address, the database's CHECK in words. */
+export const EMAIL_SHAPE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export async function readTaxSettings(organizationId: string): Promise<TaxSettings> {
   return withOrg(organizationId, async (tx) => {

@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { labAlertEmail } from '../notifications/lab-alert-email.js';
-import { sendEmail, type Email } from '../notifications/notifier.js';
+import { sendEmail, type Email, clubEmail } from '../notifications/notifier.js';
 import { waterAlertEmail } from '../notifications/water-alert-email.js';
 import { findWaterAlertNotice, markAlertSent } from './analyses.repository.js';
 import { findLabAlertNotice, markLabAlertSent } from './lab-results.repository.js';
@@ -31,7 +31,7 @@ export async function deliverWaterAlert(
     let delivered = false;
     for (const to of notice.recipients) {
       const sent = await send(
-        waterAlertEmail({
+        clubEmail(organizationId, waterAlertEmail({
           to,
           organizationName: notice.organizationName,
           facilityName: notice.facilityName,
@@ -40,7 +40,7 @@ export async function deliverWaterAlert(
           timezone: notice.facilityTimezone,
           excursions: notice.excursions,
           locale: notice.organizationLocale,
-        }),
+        })),
       );
       // One address that went through is enough to call the alert delivered;
       // the recipient list is recorded whole either way.
@@ -66,7 +66,7 @@ export async function deliverLabAlert(
     let delivered = false;
     for (const to of notice.recipients) {
       const sent = await send(
-        labAlertEmail({
+        clubEmail(organizationId, labAlertEmail({
           to,
           organizationName: notice.organizationName,
           facilityName: notice.facilityName,
@@ -76,7 +76,7 @@ export async function deliverLabAlert(
           laboratory: notice.laboratory,
           failures: notice.grading.failures,
           locale: notice.organizationLocale,
-        }),
+        })),
       );
       delivered = delivered || sent;
     }

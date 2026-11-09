@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
+import { describeFailure } from '@/lib/form-failure';
 import { ApiError, apiPost, type AcceptResult, type CreatedInvitation } from '../../../lib/api';
 
 /**
@@ -106,6 +107,8 @@ export async function createOrganizationAction(
         name,
         kind,
         facilityName: String(formData.get('facilityName') ?? '').trim(),
+        // POOLSE-209: blank keeps the owner's address answering.
+        replyEmail: String(formData.get('replyEmail') ?? '').trim(),
       },
       clientIp ? { clientIp } : {},
     );
@@ -119,6 +122,8 @@ export async function createOrganizationAction(
     if (error instanceof ApiError && error.code === 'trial_not_available') {
       return { ok: false, errorKey: 'organization.trialNotAvailable' };
     }
+    // A bad reply email comes back as a field (POOLSE-209); the rest as before.
+    if (error instanceof ApiError && error.status === 400) return describeFailure(error, 'organization.createFailed');
     return failure(error, 'organization.createFailed');
   }
 

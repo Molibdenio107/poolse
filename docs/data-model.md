@@ -3436,6 +3436,10 @@ where a bound is present.
 coverage — "based on 11 of 14 staff" — because an unqualified total over partial data is the
 same shape as a complete one and nothing on it says which.
 
+### The club's reply email and billing email — POOLSE-209, 9 November 2026
+
+`organization.reply_email citext` is where families' replies go: every club email leaves From the club's name at Poolse's address with Reply-To this (the owner's login email while null). `organization.billing_email citext` is the Stripe customer's email. Both carry a format CHECK (`organization_reply_email_format`, `organization_billing_email_format`, the same shape `EMAIL_SHAPE` checks in the API) and are written by the app login through column grants, like `payment_iban`; neither is a platform column. Set at creation through an ordinary UPDATE after `provision_organization`, which is unchanged.
+
 ### The operator's subscription — slice 2.4, 13 September 2026
 
 ```

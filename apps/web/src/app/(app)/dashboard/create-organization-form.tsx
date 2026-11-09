@@ -27,12 +27,14 @@ const INITIAL: FormState = { ok: false };
  * and log the garden pool at night. Two radios and not a select, so that both
  * answers and what each one means are visible without opening anything.
  */
-export function CreateOrganizationForm(): React.ReactElement {
+export function CreateOrganizationForm({ ownerEmail }: { ownerEmail: string }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(createOrganizationAction, INITIAL);
   const [kind, setKind] = useState<OrganizationKind>('business');
   const [name, setName] = useSeeded<string>('');
   const [facilityName, setFacilityName] = useSeeded<string>('');
+  // POOLSE-209: where families' replies go, the creator's own address to start with.
+  const [replyEmail, setReplyEmail] = useSeeded<string>(ownerEmail);
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -98,6 +100,30 @@ export function CreateOrganizationForm(): React.ReactElement {
             className={CONTROL_LINE}
           />
           <p className="text-sm text-foreground-muted">{t('organization.facilityHint')}</p>
+
+          {/* POOLSE-209 (Rui, 09-11-2026): asked now, changed later in Dados do clube. */}
+          <label htmlFor="organization-reply-email" className={FIELD_LABEL}>
+            {t('organization.replyEmailLabel')}
+          </label>
+          <input
+            id="organization-reply-email"
+            name="replyEmail"
+            type="email"
+            autoComplete="email"
+            value={replyEmail}
+            onChange={(event) => setReplyEmail(event.target.value)}
+            maxLength={254}
+            className={CONTROL_LINE}
+            aria-describedby="organization-reply-email-hint"
+          />
+          <p id="organization-reply-email-hint" className="text-sm text-foreground-muted">
+            {t('organization.replyEmailHint')}
+          </p>
+          {state.fields?.['replyEmail'] !== undefined && (
+            <p className="text-sm text-danger" role="alert">
+              {t(state.fields['replyEmail'])}
+            </p>
+          )}
         </>
       )}
 

@@ -363,3 +363,7 @@ screen points at the Stripe dashboard rather than showing a number this product 
   history.
 - **Poolse does not invoice its own revenue.** `manual_payment` is the record that a receipt was
   owed and for what — Portugal requires one for cash — and issuing it is a later ticket.
+
+## Billing email — POOLSE-209 (09-11-2026)
+
+The owner sets *Email de faturação* on this screen: where Stripe sends the subscription's invoices and receipts, often an accountant. It is `organization.billing_email`; until set, the owner's login email is used and the field says so. The Stripe customer is created with it (it used to be created with no email), and a change calls `customers.update`; if Stripe cannot be reached the value is saved anyway and the screen says the next visit carries it (`stripeSynced: false`). Owner only (`PUT /subscription/billing-email`); it never receives family mail, which is the club's reply email on *Dados do clube*.

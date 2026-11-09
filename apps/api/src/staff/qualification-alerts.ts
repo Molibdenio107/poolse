@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { withOrg, withPlatform } from '@poolse/db';
-import { sendEmail, type Email } from '../notifications/notifier.js';
+import { sendEmail, type Email, clubEmail } from '../notifications/notifier.js';
 import { qualificationAlertEmail } from '../notifications/qualification-alert-email.js';
 
 /**
@@ -134,7 +134,7 @@ export async function deliverQualificationAlerts(
     let sent = false;
     for (const to of alert.recipients) {
       const ok = await send(
-        qualificationAlertEmail({
+        clubEmail(organizationId, qualificationAlertEmail({
           to,
           organizationName: run.organizationName,
           personName: alert.personName,
@@ -142,7 +142,7 @@ export async function deliverQualificationAlerts(
           expiresOn: alert.expiresOn,
           threshold: alert.threshold,
           locale: run.locale,
-        }),
+        })),
       );
       sent = sent || ok;
     }

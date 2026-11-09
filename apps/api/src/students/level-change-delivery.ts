@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { withOrg } from '@poolse/db';
 import { levelChangeEmail } from '../notifications/level-change-email.js';
-import { sendEmail, type Email } from '../notifications/notifier.js';
+import { sendEmail, type Email, clubEmail } from '../notifications/notifier.js';
 
 const logger = new Logger('LevelChangeNotice');
 
@@ -46,7 +46,7 @@ export async function deliverLevelChangeNotice(
     let all = true;
     for (const to of notice.recipients) {
       const sent = await send(
-        levelChangeEmail({
+        clubEmail(organizationId, levelChangeEmail({
           to,
           organizationName: notice.name,
           studentName: notice.student_name,
@@ -54,7 +54,7 @@ export async function deliverLevelChangeNotice(
           toLevel: notice.to_level,
           reason: notice.reason,
           locale: notice.locale,
-        }),
+        })),
       );
       all &&= sent;
     }

@@ -33,7 +33,7 @@ import {
   revokeInvitation,
 } from './invitations.repository.js';
 import { invitationEmail } from '../notifications/invitation-email.js';
-import { emailIsConfigured, sendEmail } from '../notifications/notifier.js';
+import { emailIsConfigured, sendEmail, clubEmail } from '../notifications/notifier.js';
 import { invitationExpiry, issueToken, normaliseEmail } from './invitations.service.js';
 import { CoreRoute } from '../tenant/modules.js';
 
@@ -115,14 +115,14 @@ export async function deliver(
   try {
     const voice = await organizationVoice(organizationId);
     const sent = await sendEmail(
-      invitationEmail({
+      clubEmail(organizationId, invitationEmail({
         to: email,
         organizationName: voice.name,
         roles,
         link: joinLink(token),
         expiresAt,
         locale: voice.locale,
-      }),
+      })),
     );
     return record(sent ? 'sent' : 'failed');
   } catch {

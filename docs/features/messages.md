@@ -28,7 +28,7 @@ The message and every address are recorded first; the emails go afterwards, one 
 and each is stamped as it leaves. A message whose emails have not left (no provider, or the
 provider refused) says *Registada — ainda não saiu nenhum email* rather than implying a family
 was told. The text arrives exactly as typed, with one line from Poolse naming the club and
-saying replies do not reach it.
+saying the family can reply. **Since POOLSE-209 (09-11-2026) a reply reaches the club:** every club email leaves under the club's name from Poolse's address, with Reply-To the club's email (*Dados do clube › Respostas das famílias*, owner and admin; asked at club creation, the owner's until set).
 
 **A family may stop the club's general messages** (POOLSE-86, Rui 19-10-2026). Every general
 message ends with *Para deixar de receber as mensagens gerais de …* and a link that works with no

@@ -15,7 +15,7 @@ import {
 import { currentTenant } from '../tenant/tenant.context.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
-import { sendEmail } from '../notifications/notifier.js';
+import { sendEmail, clubEmail } from '../notifications/notifier.js';
 import { vacationDecisionEmail } from '../notifications/vacation-email.js';
 import {
   balanceFor,
@@ -319,7 +319,7 @@ export class VacationsController {
       if (!notice?.email) return;
 
       await sendEmail(
-        vacationDecisionEmail({
+        clubEmail(organizationId, vacationDecisionEmail({
           to: notice.email,
           personName: notice.personName,
           organizationName: notice.organizationName,
@@ -327,7 +327,7 @@ export class VacationsController {
           days: notice.days,
           note,
           locale: notice.organizationLocale,
-        }),
+        })),
       );
     } catch (error) {
       this.logger.warn(`Could not notify the requester of ${requestId}: ${String(error)}`);

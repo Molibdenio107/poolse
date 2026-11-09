@@ -1,10 +1,84 @@
 import { Logger } from '@nestjs/common';
+import { withOrg } from '@poolse/db';
 
 export interface Email {
   to: string;
   subject: string;
   text: string;
   html: string;
+  /**
+   * The club this email speaks for — POOLSE-209. Set, it leaves under the
+   * club's name with Reply-To the club's email; absent, it is Poolse's own
+   * (platform, trial, support) and leaves as Poolse with no Reply-To.
+   */
+  organizationId?: string;
+}
+
+/** Stamp an email as the club's own: its name in From, its email in Reply-To (POOLSE-209). */
+export function clubEmail(organizationId: string, email: Email): Email {
+  return { ...email, organizationId };
+}
+
+/** Who a club email is from and where replies go — POOLSE-209. */
+export interface ClubIdentity {
+  name: string;
+  replyTo: string | null;
+}
+
+/**
+ * The club's name and reply address: `reply_email`, else the owner's login
+ * email. Read per email, inside the club's own context; a failure reads as
+ * "no identity", and the email still leaves, as Poolse.
+ */
+export async function clubIdentity(organizationId: string): Promise<ClubIdentity | null> {
+  try {
+    return await withOrg(organizationId, async (tx) => {
+      const { rows } = await tx.query<{ name: string; reply_to: string | null }>(
+        `SELECT o.name,
+                coalesce(o.reply_email::text, (
+                  SELECT u.cached_email::text
+                    FROM membership_role r
+                    JOIN membership m ON m.id = r.membership_id AND m.organization_id = r.organization_id
+                    JOIN app_user u ON u.id = m.app_user_id
+                   WHERE r.organization_id = o.id AND r.role = 'owner' AND r.archived_at IS NULL
+                   LIMIT 1)) AS reply_to
+           FROM organization o WHERE o.id = $1`,
+        [organizationId],
+      );
+      const row = rows[0];
+      return row === undefined ? null : { name: row.name, replyTo: row.reply_to };
+    });
+  } catch (error) {
+    logger.warn(`Could not read the club's sender for ${organizationId}: ${error instanceof Error ? error.message : error}`);
+    return null;
+  }
+}
+
+/**
+ * A display name a mail header can carry — POOLSE-209's trap. A club names
+ * itself, so its name never reaches a header raw: quotes, angle brackets,
+ * backslashes, line breaks and every other control character go, and it is
+ * capped. What is left is quoted by us.
+ */
+export function headerSafeName(name: string): string {
+  const clean = name
+    .replace(/[\u0000-\u001f\u007f"<>\\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 70);
+  return clean === '' ? 'Poolse' : clean;
+}
+
+/** The address part of `EMAIL_FROM` ("Poolse <x@y>" or "x@y"). */
+function senderAddress(): string {
+  const from = sender();
+  return /<([^>]+)>/.exec(from)?.[1] ?? from;
+}
+
+/** The From and Reply-To an email leaves with. */
+export function addressing(identity: ClubIdentity | null): { from: string; replyTo: string | null } {
+  if (identity === null) return { from: sender(), replyTo: null };
+  return { from: `"${headerSafeName(identity.name)}" <${senderAddress()}>`, replyTo: identity.replyTo };
 }
 
 const logger = new Logger('Notifier');
@@ -56,6 +130,8 @@ function sender(): string {
  * screen either way.
  */
 export async function sendEmail(email: Email): Promise<boolean> {
+  const identity = email.organizationId === undefined ? null : await clubIdentity(email.organizationId);
+  const { from, replyTo } = addressing(identity);
   if (provider() === 'console') {
     /*
      * The body only off production — sweep of 15-10-2026. An invitation's body
@@ -68,7 +144,7 @@ export async function sendEmail(email: Email): Promise<boolean> {
       logger.warn(`[console] not sent (EMAIL_PROVIDER is not set) — to ${email.to}, subject: ${email.subject}`);
     } else {
       logger.log(
-        `[console] would send to ${email.to}\n  subject: ${email.subject}\n  ${email.text.replace(/\n/g, '\n  ')}`,
+        `[console] would send to ${email.to}\n  from: ${from}${replyTo === null ? '' : `\n  reply-to: ${replyTo}`}\n  subject: ${email.subject}\n  ${email.text.replace(/\n/g, '\n  ')}`,
       );
     }
     return false;
@@ -81,13 +157,13 @@ export async function sendEmail(email: Email): Promise<boolean> {
   }
 
   try {
-    let response = await post(key, email);
+    let response = await post(key, email, from, replyTo);
     if (response.status === 429) {
       // Rate-limited (sweep 19-10b): wait as asked, once, rather than spending one
       // of the retry job's five attempts on the provider being busy.
       const wait = Math.min(Number(response.headers.get('retry-after') ?? '1') || 1, 10);
       await new Promise((resolve) => setTimeout(resolve, wait * 1000));
-      response = await post(key, email);
+      response = await post(key, email, from, replyTo);
     }
 
     if (!response.ok) {
@@ -116,7 +192,7 @@ const SPACING_MS = 550;
 let queue: Promise<unknown> = Promise.resolve();
 let lastCall = 0;
 
-function post(key: string, email: Email): Promise<Response> {
+function post(key: string, email: Email, from: string, replyTo: string | null): Promise<Response> {
   const call = queue.then(async () => {
     const wait = lastCall + SPACING_MS - Date.now();
     if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
@@ -125,7 +201,8 @@ function post(key: string, email: Email): Promise<Response> {
       method: 'POST',
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
       body: JSON.stringify({
-        from: sender(),
+        from,
+        ...(replyTo === null ? {} : { reply_to: replyTo }),
         to: [email.to],
         subject: email.subject,
         text: email.text,

@@ -3,6 +3,7 @@ import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { backProp, backTarget } from '@/lib/back';
 import { ApiError, apiFetch, type SubscriptionView } from '@/lib/api';
 import { PageError, PageShell } from '@/components/page-shell';
+import { BillingEmailForm } from './billing-email-form';
 import { PlanPicker } from './plan-picker';
 import { formatDate } from '@/lib/date-format';
 import { formatCents } from '@/lib/money';
@@ -195,6 +196,14 @@ export default async function SubscriptionPage({
 
           {!view.canManage && (
             <p className="text-sm text-foreground-muted">{t('subscription.ownerOnlyHint')}</p>
+          )}
+
+          {/* POOLSE-209: where Poolse's invoices for this subscription go. */}
+          {view.canManage && (
+            <BillingEmailForm
+              billingEmail={view.subscription.billingEmail}
+              fallback={view.subscription.billingEmailFallback}
+            />
           )}
         </>
       )}

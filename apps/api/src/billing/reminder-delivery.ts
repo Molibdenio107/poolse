@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { withOrg } from '@poolse/db';
 import { invoiceReminderEmail } from '../notifications/invoice-reminder-email.js';
-import { sendEmail, type Email } from '../notifications/notifier.js';
+import { sendEmail, type Email, clubEmail } from '../notifications/notifier.js';
 import type { ReminderDocument } from './reminders.repository.js';
 import { readPaymentDestinations } from './payment-destinations.js';
 
@@ -42,14 +42,14 @@ export async function deliverInvoiceReminder(
     if (row === null || row.delivered) return false;
 
     const sent = await send(
-      invoiceReminderEmail({
+      clubEmail(organizationId, invoiceReminderEmail({
         to: row.email,
         organizationName: row.organization_name,
         payerName: row.payer_name,
         documents: row.lines,
         payment: row.payment,
         locale: row.locale,
-      }),
+      })),
     );
     if (sent) {
       await withOrg(organizationId, (tx) =>

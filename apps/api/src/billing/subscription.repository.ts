@@ -1,5 +1,6 @@
 import { withOrg, withPlatform } from '@poolse/db';
 import type { BillingInterval, PlanKey } from './stripe.js';
+import { recordAudit } from '../audit/audit.js';
 
 /**
  * The organization's own subscription — slice 2.4.
@@ -47,6 +48,10 @@ export interface OrganizationSubscription {
   hasSubscription: boolean;
   /** Shut clubs see the notice, not this screen — but the state is still true. */
   suspendedAt: string | null;
+  /** POOLSE-209: where Stripe's invoices and receipts go; null until set. */
+  billingEmail: string | null;
+  /** Meanwhile: the owner's login email. */
+  billingEmailFallback: string | null;
 }
 
 /** What a club reads about its own subscription. Tenant-scoped, like any page. */
@@ -66,10 +71,19 @@ export async function readSubscription(
       stripe_customer_id: string | null;
       stripe_subscription_id: string | null;
       suspended_at: Date | null;
+      billing_email: string | null;
+      owner_email: string | null;
     }>(
       `SELECT id, name, plan, billing_interval, subscription_status, trial_ends_at,
               subscription_current_period_end, subscription_cancel_at_period_end,
-              stripe_customer_id, stripe_subscription_id, suspended_at
+              stripe_customer_id, stripe_subscription_id, suspended_at,
+              billing_email::text AS billing_email,
+              (SELECT u.cached_email::text
+                 FROM membership_role r
+                 JOIN membership m ON m.id = r.membership_id AND m.organization_id = r.organization_id
+                 JOIN app_user u ON u.id = m.app_user_id
+                WHERE r.organization_id = organization.id AND r.role = 'owner' AND r.archived_at IS NULL
+                LIMIT 1) AS owner_email
          FROM organization
         WHERE id = $1`,
       [organizationId],
@@ -92,7 +106,39 @@ export async function readSubscription(
       hasCustomer: row.stripe_customer_id !== null,
       hasSubscription: row.stripe_subscription_id !== null,
       suspendedAt: row.suspended_at?.toISOString() ?? null,
+      billingEmail: row.billing_email,
+      billingEmailFallback: row.owner_email,
     };
+  });
+}
+
+/** The address Stripe should hold: the billing email, else the owner's — POOLSE-209. */
+export async function readBillingAddress(organizationId: string): Promise<string | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ email: string | null }>(
+      `SELECT coalesce(billing_email::text, (SELECT u.cached_email::text
+                 FROM membership_role r
+                 JOIN membership m ON m.id = r.membership_id AND m.organization_id = r.organization_id
+                 JOIN app_user u ON u.id = m.app_user_id
+                WHERE r.organization_id = organization.id AND r.role = 'owner' AND r.archived_at IS NULL
+                LIMIT 1)) AS email
+         FROM organization WHERE id = $1`,
+      [organizationId],
+    );
+    return rows[0]?.email ?? null;
+  });
+}
+
+/** POOLSE-209: the owner's choice of billing email, audited with the address. */
+export async function saveBillingEmail(organizationId: string, billingEmail: string): Promise<void> {
+  await withOrg(organizationId, async (tx) => {
+    await tx.query('UPDATE organization SET billing_email = $2 WHERE id = $1', [organizationId, billingEmail]);
+    await recordAudit(tx, {
+      action: 'organization.billing_email_changed',
+      entityType: 'organization',
+      entityId: organizationId,
+      data: { billingEmail },
+    });
   });
 }
 

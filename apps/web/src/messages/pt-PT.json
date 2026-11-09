@@ -775,6 +775,8 @@
     "endFailed": "Não foi possível terminar a sessão."
   },
   "organization": {
+    "replyEmailLabel": "Email do clube (para respostas das famílias)",
+    "replyEmailHint": "Quando uma família responde a um email do clube, a resposta chega aqui. Pode mudar depois em Dados do clube.",
     "nameLabel": "Nome da organização",
     "namePlaceholder": "Ex.: Piscinas Municipais de Aveiro",
     "create": "Criar organização",
@@ -1084,6 +1086,16 @@
     }
   },
   "subscription": {
+    "billingEmail": {
+      "title": "Email de faturação",
+      "hint": "Para onde vão as faturas e recibos da subscrição do Poolse. Pode ser o do contabilista. Não recebe emails das famílias.",
+      "label": "Email de faturação",
+      "usingOwner": "Ainda não definido: vai para {email}.",
+      "required": "Indique um email.",
+      "shape": "Este email não parece válido.",
+      "saveFailed": "Não foi possível guardar o email de faturação.",
+      "stripeLater": "Guardado. O sistema de pagamentos será atualizado no próximo acesso à subscrição."
+    },
     "title": "Subscrição",
     "subtitle": "O que o clube paga ao Poolse.",
     "notPermitted": "Só o proprietário e os administradores podem ver a subscrição.",
@@ -6657,6 +6669,15 @@
     "saveFailed": "Não foi possível guardar a definição do livro de reclamações."
   },
   "clubData": {
+    "replyEmail": {
+      "title": "Respostas das famílias",
+      "hint": "Os emails do clube saem do Poolse com o nome do clube. Quando uma família responde, a resposta chega a este endereço.",
+      "label": "Email do clube",
+      "usingOwner": "Ainda não definido: as respostas vão para {email}.",
+      "required": "Indique um email.",
+      "shape": "Este email não parece válido.",
+      "saveFailed": "Não foi possível guardar o email."
+    },
     "tab": "Dados do clube",
     "hint": "Os dados fiscais e a forma de pagar são do clube e aplicam-se a todas as instalações. Os livros de numeração são só desta instalação.",
     "paymentTitle": "Como pagar",

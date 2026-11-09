@@ -6,7 +6,12 @@ import { useSavedAction } from '@/lib/saved';
 import type { TaxSettings } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
 import { formatIban, formatMbwayPhone } from '@poolse/rules';
-import { savePaymentDetailsAction, savePaymentInstructionsAction, saveTaxNumberAction } from './club.actions';
+import {
+  savePaymentDetailsAction,
+  savePaymentInstructionsAction,
+  saveReplyEmailAction,
+  saveTaxNumberAction,
+} from './club.actions';
 
 /**
  * The club's own NIPC — POOLSE-62, second half.
@@ -49,6 +54,49 @@ export function TaxPanel({ settings }: { settings: TaxSettings }): React.ReactEl
           hint={t('settings.tax.numberHint')}
         />
 
+        <button
+          type="submit"
+          disabled={pending}
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary font-semibold text-primary-foreground outline-primary hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
+        >
+          {pending ? t('common.working') : t('common.save')}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+/**
+ * *Respostas das famílias* — POOLSE-209 (Rui, 09-11-2026). Every email the club
+ * sends leaves from Poolse under the club's name, and a family's reply goes to
+ * this address. Owner and admin, as the route is. Until it is set the owner's
+ * login email answers, and the card says which one, in words.
+ */
+export function ReplyEmailPanel({ settings }: { settings: TaxSettings }): React.ReactElement {
+  const t = useTranslations();
+  const [state, dispatch, pending] = useSavedAction(saveReplyEmailAction, INITIAL);
+
+  return (
+    <section className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
+      <div>
+        <h2 className="text-sm font-medium">{t('clubData.replyEmail.title')}</h2>
+        <p className="text-sm text-foreground-muted">{t('clubData.replyEmail.hint')}</p>
+      </div>
+      <form action={dispatch} className="flex flex-col gap-3">
+        <TextField
+          name="replyEmail"
+          type="email"
+          label={t('clubData.replyEmail.label')}
+          initial={settings.replyEmail ?? settings.replyEmailFallback ?? ''}
+          autoComplete="email"
+          maxLength={254}
+          error={state.fields?.['replyEmail'] === undefined ? undefined : t(state.fields['replyEmail'])}
+          hint={
+            settings.replyEmail === null && settings.replyEmailFallback !== null
+              ? t('clubData.replyEmail.usingOwner', { email: settings.replyEmailFallback })
+              : undefined
+          }
+        />
         <button
           type="submit"
           disabled={pending}
