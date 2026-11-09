@@ -27,6 +27,13 @@ Two consequences worth stating, because both are easy to get wrong from age alon
   still linked: *Confirmar* (the parent stays payer only), *É acompanhante*, or *Convidar para a
   app* (the student invitation, sent only on that press). Acting clears the row and the circle;
   each act and change of kind is in Atividade.
+- **At 18 the family is told, and the young adult answers** (POOLSE-208). On the day, one email
+  to each parent with a parental link and one to the student (their locale, from the club,
+  once, retried hourly); none for an acompanhante. On *Perfil* the young adult sees each
+  consent a parent signed as *Dada pelo encarregado — a confirmar por si*, with *Confirmar*
+  (a new record signed by them) and *Retirar* (stops at once). Until they answer, the parent's
+  consent stays in force; the office sees *a confirmar pelo próprio* beside it. The parent who
+  pays sees one line on *Pagamentos*: *{nome} fez 18 anos: vê apenas os pagamentos.*
 - A student with **no birth date on file** is on the guardian path. Guessing "adult" for
   missing data skips the guardian block for a child nobody has finished registering, which is
   the mistake you cannot recover from; guessing the other way asks for a guardian an adult is

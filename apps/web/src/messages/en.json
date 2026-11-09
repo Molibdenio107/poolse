@@ -43,6 +43,22 @@
     "toAvisos": "Back to notices"
   },
   "app": {
+    "consents": {
+      "title": "Permissions",
+      "byParent": "Given by your parent — yours to confirm",
+      "confirm": "Confirm",
+      "withdraw": "Withdraw",
+      "withdrawTitle": "Withdraw this permission?",
+      "withdrawMessage": "It stops at once.",
+      "failed": "Could not save.",
+      "confirmed": "Confirmed.",
+      "withdrawn": "Withdrawn.",
+      "kind": {
+        "photo": "Photos",
+        "medical_data": "Health data",
+        "parent_sharing": "Sharing with parents"
+      }
+    },
     "moreSwimming": { "title": "+ Swimming", "backTo": "Back to More swimming" },
     "passes": {
       "title": "Free swim",
@@ -92,6 +108,7 @@
       "backToPayments": "Back to Payments"
     },
     "fees": {
+      "cameOfAge": "{name} turned 18: you see payments only.",
       "overdue": "Overdue",
       "overdueCount": "{count, plural, one {# period overdue} other {# periods overdue}}",
       "upcoming": "Next payments",
@@ -3183,6 +3200,7 @@
     "meetOfficial": "Official meet"
   },
   "sensitive": {
+    "awaitsSelf": "Given by a parent — awaiting the student",
     "title": "Health and consent",
     "open": "Medical notes and consent",
     "openHint": "Opening this is recorded.",

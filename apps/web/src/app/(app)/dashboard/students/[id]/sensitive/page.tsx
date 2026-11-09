@@ -316,6 +316,10 @@ export default async function SensitivePage({
                             {t('sensitive.evidence')}: {entry.evidenceNote}
                           </span>
                         )}
+                        {/* POOLSE-208: a parent's consent on an adult, until they answer it. */}
+                        {entry.awaitsSelf && (
+                          <span className="text-sm font-medium text-warning">{t('sensitive.awaitsSelf')}</span>
+                        )}
                       </div>
                       {loaded.canManage && (
                         <WithdrawConsentButton

@@ -223,8 +223,12 @@ export class AppController {
       throw new NotFoundException('No such student');
     }
     const chosen = child === undefined ? mine : mine.filter((one) => one.id === child);
+    const paidOnly = new Set(paid.map((one) => one.id));
     return {
-      children: await Promise.all(chosen.map((one) => familyFees(organizationId, one, mine))),
+      children: await Promise.all(
+        // POOLSE-208 rule 5: a child who came of age shows here only, and says why.
+        chosen.map(async (one) => ({ ...(await familyFees(organizationId, one, mine)), paidOnly: paidOnly.has(one.id) })),
+      ),
       family: mine.map((one) => ({ id: one.id, name: one.name })),
     };
   }

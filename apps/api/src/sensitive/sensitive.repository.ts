@@ -15,6 +15,8 @@ export interface ConsentRecord {
   evidenceNote: string | null;
   withdrawnAt: string | null;
   withdrawnByName: string | null;
+  /** POOLSE-208: signed by a parent, the student now of age and not yet answered. */
+  awaitsSelf: boolean;
 }
 
 export interface SensitiveNotes {
@@ -201,9 +203,11 @@ export async function listConsent(
       evidence_note: string | null;
       withdrawn_at: Date | null;
       withdrawn_by_name: string | null;
+      awaits_self: boolean;
     }>(
       `
       SELECT c.id, c.kind, c.granted, c.granted_at, c.evidence_note, c.withdrawn_at,
+             consent_awaits_self(c.organization_id, c.id)             AS awaits_self,
              display_name(g.cached_first_name, g.cached_last_name)   AS granted_by_name,
              display_name(w.cached_first_name, w.cached_last_name)   AS withdrawn_by_name
         FROM consent c
@@ -228,6 +232,7 @@ export async function listConsent(
       evidenceNote: row.evidence_note,
       withdrawnAt: row.withdrawn_at?.toISOString() ?? null,
       withdrawnByName: row.withdrawn_by_name,
+      awaitsSelf: row.awaits_self,
     }));
   });
 }

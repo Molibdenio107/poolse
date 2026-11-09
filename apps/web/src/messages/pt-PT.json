@@ -43,6 +43,22 @@
     "toAvisos": "Voltar aos avisos"
   },
   "app": {
+    "consents": {
+      "title": "Autorizações",
+      "byParent": "Dada pelo encarregado — a confirmar por si",
+      "confirm": "Confirmar",
+      "withdraw": "Retirar",
+      "withdrawTitle": "Retirar esta autorização?",
+      "withdrawMessage": "Deixa de valer já.",
+      "failed": "Não foi possível guardar.",
+      "confirmed": "Confirmada.",
+      "withdrawn": "Retirada.",
+      "kind": {
+        "photo": "Fotografias",
+        "medical_data": "Dados de saúde",
+        "parent_sharing": "Partilha com encarregados"
+      }
+    },
     "moreSwimming": { "title": "+ Natação", "backTo": "Voltar a Mais natação" },
     "passes": {
       "title": "Natação livre",
@@ -92,6 +108,7 @@
       "backToPayments": "Voltar a Pagamentos"
     },
     "fees": {
+      "cameOfAge": "{name} fez 18 anos: vê apenas os pagamentos.",
       "overdue": "Em dívida",
       "overdueCount": "{count, plural, one {# período em atraso} other {# períodos em atraso}}",
       "overdueCount": "{count, plural, one {# período em atraso} other {# períodos em atraso}}",
@@ -3185,6 +3202,7 @@
     "meetOfficial": "Prova oficial"
   },
   "sensitive": {
+    "awaitsSelf": "Dada pelo encarregado — a confirmar pelo próprio",
     "title": "Saúde e consentimentos",
     "open": "Notas médicas e consentimentos",
     "openHint": "O acesso fica registado.",

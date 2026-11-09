@@ -7,6 +7,7 @@ import {
   IdCard,
   Eye, ChevronRight, FileText, LayoutDashboard, LogOut, Settings, UserPlus, Wallet, Waves } from 'lucide-react';
 import { apiFetch, type ActiveSession, type Me } from '@/lib/api';
+import { ConsentsToConfirm } from './consents-to-confirm';
 import { hatsOf, isHat, landsInTeaching } from '@/lib/app-hats';
 import { outcome } from '@/lib/load-failure';
 import { formatDate, formatStamp } from '@/lib/date-format';
@@ -75,6 +76,11 @@ export default async function AppProfilePage({
       ? outcome(apiFetch<{ categories: { name: string; validUntil: string | null }[] }>('/app/categories'))
       : Promise.resolve(null),
   ]);
+  // POOLSE-208: what a parent signed before 18, for the young adult to answer. A student login only.
+  const consentsLoad = membership.roles.includes('student')
+    ? await outcome(apiFetch<{ consents: { id: string; kind: string }[] }>('/app/consents'))
+    : null;
+  const consents = consentsLoad !== null && consentsLoad.state === 'ok' ? consentsLoad.data.consents : [];
   const categories = categoriesLoad !== null && categoriesLoad.state === 'ok' ? categoriesLoad.data.categories : [];
   // *Convidar amigos* (Rui, 07-11-2026): only while the club takes pre-registrations.
   const mayInvite = joinLink.state === 'ok' && joinLink.data.slug !== null;
@@ -138,6 +144,8 @@ export default async function AppProfilePage({
         <EditProfile me={me} photo={<IdPhoto url={me.user.avatarUrl} name={fullName} target="own-photo" />} />
       </section>
 
+
+      {consents.length > 0 && <ConsentsToConfirm consents={consents} />}
 
       {familyRows && (
         <Link

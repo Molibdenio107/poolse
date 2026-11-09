@@ -100,6 +100,7 @@ import { PersonCategoriesController } from '../billing/person-categories.control
 import { PassProductsController, ReceptionController } from '../reception/passes.controller.js';
 import { FeeCategoriesController } from '../billing/categories.controller.js';
 import { MajorityController } from '../students/majority.controller.js';
+import { AppConsentsController } from '../app/app-consents.controller.js';
 
 /**
  * Role probe — security review, 12-10-2026, inverted into a regression test.
@@ -1258,6 +1259,20 @@ test('Fez 18 anos refuses everybody but the office (403) — POOLSE-207', async 
   await as(fixture.instructorId, ['instructor'], async () => {
     await refused('GET students/turned-18 as instructor', 403, () => majority.list());
   });
+});
+
+test('the young adult’s consents refuse everybody but a student login (403) — POOLSE-208', async () => {
+  const consents = new AppConsentsController();
+  for (const [who, roles] of [
+    [fixture.instructorId, ['instructor']],
+    [fixture.adminId, ['admin']],
+  ] as const) {
+    await as(who, [...roles], async () => {
+      await refused(`GET app/consents as ${roles[0]}`, 403, () => consents.list());
+      await refused(`POST app/consents/:id/confirm as ${roles[0]}`, 403, () => consents.confirm(NO_SUCH_ID));
+      await refused(`POST app/consents/:id/withdraw as ${roles[0]}`, 403, () => consents.withdraw(NO_SUCH_ID));
+    });
+  }
 });
 
 test('where the club is paid refuses a guardian and a student (403) — POOLSE-94', async () => {

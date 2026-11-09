@@ -69,6 +69,8 @@ const TENANT_TABLES = [
   'lesson_request',
   // POOLSE-207. Names a student and the membership that reviewed it.
   'majority_review',
+  // POOLSE-208. Names a student and a parent's (or the student's) membership.
+  'majority_notice',
   // POOLSE-84. A recipient may name a lead or a partner, so it goes before both.
   // Before `message` and `medical_exam`, which it points at: POOLSE-192.
   'medical_exam_schedule',

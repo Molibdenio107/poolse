@@ -2358,6 +2358,8 @@ export interface ConsentRecord {
   evidenceNote: string | null;
   withdrawnAt: string | null;
   withdrawnByName: string | null;
+  /** POOLSE-208: given by a parent, the student now of age, not yet answered by them. */
+  awaitsSelf: boolean;
 }
 
 export interface SensitiveNotes {
@@ -6117,6 +6119,8 @@ export type AppInvoice = Omit<
 >;
 
 export interface AppChildFees {
+  /** POOLSE-208: came of age; the reader is their payer and sees only this. */
+  paidOnly?: boolean;
   id: string;
   name: string;
   overdue: AppFeeCharge[];

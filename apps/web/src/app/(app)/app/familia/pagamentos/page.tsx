@@ -110,6 +110,9 @@ export default async function FamilyPayments({
       {answer.children.map((one) => (
         <section key={one.id} className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
           {several && <h2 className="font-bold">{one.name}</h2>}
+          {one.paidOnly === true && (
+            <p className="text-sm text-foreground-muted">{t('app.fees.cameOfAge', { name: one.name })}</p>
+          )}
 
           <div className="flex flex-col gap-1">
             {/* Red is a debt, not a heading: with nothing overdue it stays plain. */}

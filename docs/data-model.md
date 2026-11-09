@@ -525,6 +525,13 @@ majority_review                 -- POOLSE-207: the office acted on a student who
   unique (organization_id, student_id, majority_on) where archived_at is null
   majority_pending(org): of age by a confirmed date, majority in the last 60 days, a live
     parental link, no live review of that majority — the list and the circle both read it
+
+majority_notice                 -- POOLSE-208: the email at 18, one per recipient per majority
+  id, organization_id, student_id, majority_on, kind ('parent'|'student'), membership_id,
+  email, locale ('pt-PT'|'en'), payer, delivered_at, delivery_attempts, last_attempt_at
+  unique (organization_id, student_id, majority_on, kind, email)
+  majority_notices_write(org): written nightly (07:40 Lisbon) for majorities in the last 3 days
+consent_awaits_self(org, consent): live, granted by a (former) guardian, the student on the adult path
   unique (student_id, guardian_membership_id) where archived_at is null
   unique (student_id) where archived_at is null and is_primary
 

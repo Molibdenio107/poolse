@@ -298,6 +298,7 @@ Read [`docs/conventions/students-and-families.md`](docs/conventions/students-and
 - A family asks for a place from the app, and it is a pedido in the same queue.
 - An adult is the absence of an acompanhante's edge, never a flag: a `parental` link stops granting at majority, and a family read goes through `guardian_access`, never `guardian_link` (POOLSE-206).
 - Who came of age with a parent's link is `majority_pending()`, and the office answers on *Fez 18 anos* with a `majority_review` (POOLSE-207).
+- At 18 a `majority_notice` tells parent and student once, and a parent's consent stays in force until the young adult answers it (`consent_awaits_self()`, POOLSE-208).
 - A warning about a person never gates what a club does with them.
 - A student holds one level per sport
 - An archive is undone through the bin, and an archive that takes children lists them.
