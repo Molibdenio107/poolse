@@ -78,6 +78,14 @@ export class BadInputFilter implements ExceptionFilter {
   }
 
   private translate(exception: unknown, request: Request): HttpException | null {
+    /*
+     * A refusal the schema says in words — POOLSE-206's `guardian_is_self`, raised
+     * by a trigger on any path that would link a person to themselves. Its code
+     * travels as structure, so a form can name it.
+     */
+    if (exception instanceof Error && /^guardian_is_self:/.test(exception.message)) {
+      return new BadRequestException({ statusCode: 400, code: 'guardian_is_self', message: 'A person cannot be their own guardian' });
+    }
     if (!isBadTextRepresentation(exception)) return null;
 
     const offending = offendingValue(exception.message);

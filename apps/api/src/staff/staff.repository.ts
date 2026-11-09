@@ -524,7 +524,7 @@ export async function archiveStaffAccount(
     if (turmas > 0 || lessons > 0) return { state: 'refused', code: 'staff_still_teaches', turmas, lessons };
 
     const { rows: family } = await tx.query<{ children: number }>(
-      `SELECT count(*)::int AS children FROM guardian_link
+      `SELECT count(*)::int AS children FROM guardian_access
         WHERE guardian_membership_id = $1 AND archived_at IS NULL`,
       [membershipId],
     );

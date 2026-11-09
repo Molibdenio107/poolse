@@ -4,15 +4,21 @@ What a club records about a person, and how that differs when the person is an a
 
 ## Which path somebody is on
 
-An **adult** is a student at or above the club's own `age_of_majority` with **no live guardian
+An **adult** is a student at or above the club's own `age_of_majority` with **no live acompanhante's
 link**. The absence of the edge is the definition — there is deliberately no `is_adult`
 column, so correcting a birth date or adding a guardian moves somebody between paths with
 nothing to migrate.
 
 Two consequences worth stating, because both are easy to get wrong from age alone:
 
-- An **adult who has a guardian** is on the guardian path. A supported adult is precisely the
-  case the distinction exists for.
+- An **adult who has an acompanhante** is on the guardian path. A supported adult (*maior
+  acompanhado*) is precisely the case the distinction exists for.
+- **A parent's link ends at 18** (POOLSE-206, 09-11-2026). A link is `parental` or
+  `accompanying`; a parental link grants nothing from the student's birthday at the club's age
+  of majority — no lessons, progress, documents, messages, *Vou / Não vou* or family pack. If
+  that parent was the payer they stay the payer: the adult's fees on *Pagamentos* and the
+  documents on *Extratos*, nothing else. Missing or declared dates never end it. The office's
+  record keeps the link, with its kind. Nobody can be linked as their own guardian.
 - A student with **no birth date on file** is on the guardian path. Guessing "adult" for
   missing data skips the guardian block for a child nobody has finished registering, which is
   the mistake you cannot recover from; guessing the other way asks for a guardian an adult is

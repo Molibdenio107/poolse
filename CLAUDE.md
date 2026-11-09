@@ -296,7 +296,7 @@ Read [`docs/conventions/students-and-families.md`](docs/conventions/students-and
 - A club's email is `clubEmail(organizationId, ...)`: From the club's name at Poolse's address, Reply-To the club's `reply_email` (POOLSE-209).
 - A NIF is checksum-validated, and `isValidNif` in `@poolse/rules` is the one definition.
 - A family asks for a place from the app, and it is a pedido in the same queue.
-- An adult is the absence of a guardian edge, never a flag.
+- An adult is the absence of an acompanhante's edge, never a flag: a `parental` link stops granting at majority, and a family read goes through `guardian_access`, never `guardian_link` (POOLSE-206).
 - A warning about a person never gates what a club does with them.
 - A student holds one level per sport
 - An archive is undone through the bin, and an archive that takes children lists them.

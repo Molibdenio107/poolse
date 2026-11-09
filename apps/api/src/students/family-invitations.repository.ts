@@ -61,7 +61,7 @@ export const SELF_INVITABLE = (s: string): string =>
 export const HAS_UNINVITED = (s: string): string => `(
   EXISTS (
     SELECT 1
-      FROM guardian_link gl
+      FROM guardian_access gl
       JOIN membership gm ON gm.id = gl.guardian_membership_id AND gm.organization_id = gl.organization_id
      WHERE gl.student_id = ${s}.id AND gl.organization_id = ${s}.organization_id
        AND gl.archived_at IS NULL AND gm.archived_at IS NULL
@@ -108,7 +108,7 @@ const INVITEES_SQL = `
   people AS (
     SELECT 'guardian'::text AS kind, gl.guardian_membership_id AS membership_id,
            gl.relationship, gl.is_primary, 0 AS rank
-      FROM guardian_link gl
+      FROM guardian_access gl
       JOIN s ON gl.student_id = s.id AND gl.organization_id = s.organization_id
      WHERE gl.archived_at IS NULL
     UNION ALL
@@ -389,7 +389,7 @@ async function resolveTarget(
 
   const { rows } = await tx.query<{ email: string | null; has_login: boolean }>(
     `SELECT person_email(m.id)::text AS email, m.app_user_id IS NOT NULL AS has_login
-       FROM guardian_link gl
+       FROM guardian_access gl
        JOIN student s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
        JOIN membership m ON m.id = gl.guardian_membership_id AND m.organization_id = gl.organization_id
       WHERE gl.student_id = $1 AND gl.guardian_membership_id = $2
@@ -472,7 +472,7 @@ export async function invitationOnRecord(
         WHERE i.id = $2
           AND i.accepted_at IS NULL AND i.revoked_at IS NULL
           AND (i.membership_id = s.membership_id OR EXISTS (
-                SELECT 1 FROM guardian_link gl
+                SELECT 1 FROM guardian_access gl
                  WHERE gl.student_id = s.id AND gl.guardian_membership_id = i.membership_id
                    AND gl.archived_at IS NULL))`,
       [studentId, invitationId],

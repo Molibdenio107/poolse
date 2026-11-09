@@ -67,7 +67,7 @@ async function peopleOf(tx: Tx, membershipId: string): Promise<AppRequestPerson[
       WHERE s.membership_id = $1 AND s.archived_at IS NULL
      UNION
      SELECT s.id, ${shortName('s')} AS name, false AS self, s.level_id AS "levelId"
-       FROM guardian_link gl
+       FROM guardian_access gl
        JOIN student_person s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
       WHERE gl.guardian_membership_id = $1 AND gl.archived_at IS NULL AND s.archived_at IS NULL
       ORDER BY self DESC, name`,

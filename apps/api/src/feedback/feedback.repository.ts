@@ -104,7 +104,7 @@ const TZ = `coalesce(f.timezone, 'Europe/Lisbon')`;
  */
 export const needsBirthDate = (student: string, membership: string): string =>
   `(${student}.birth_date IS NULL AND ${student}.membership_id = ${membership}
-    AND NOT EXISTS (SELECT 1 FROM guardian_link gl
+    AND NOT EXISTS (SELECT 1 FROM guardian_access gl
                      WHERE gl.organization_id = ${student}.organization_id
                        AND gl.student_id = ${student}.id AND gl.archived_at IS NULL))`;
 
@@ -128,6 +128,7 @@ const FEEDBACK_COLUMNS = `
   CASE
     WHEN fb.author_membership_id IS NULL THEN NULL
     WHEN fb.author_membership_id = s.membership_id THEN 'student'
+    -- History: who wrote it then, whatever the link is today (POOLSE-206).
     WHEN EXISTS (SELECT 1 FROM guardian_link gl
                   WHERE gl.organization_id = fb.organization_id
                     AND gl.student_id = fb.student_id

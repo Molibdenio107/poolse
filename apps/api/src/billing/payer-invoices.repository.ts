@@ -85,6 +85,7 @@ export async function listPayerInvoices(
   return withOrg(organizationId, async (tx) => {
     const { rows: who } = await tx.query<{ payer: boolean }>(
       `SELECT EXISTS (
+                -- Every live link, granting or not: a parent keeps paying after 18 (POOLSE-206).
                 SELECT 1 FROM guardian_link g
                  WHERE g.guardian_membership_id = $1::uuid
                    AND g.archived_at IS NULL

@@ -498,7 +498,7 @@ export async function familyMayReadPlan(
             AND (
               s.membership_id = $1
               OR EXISTS (
-                SELECT 1 FROM guardian_link gl
+                SELECT 1 FROM guardian_access gl
                  WHERE gl.student_id = s.id
                    AND gl.guardian_membership_id = $1
                    AND gl.archived_at IS NULL

@@ -234,7 +234,7 @@ export async function openFile(
               (l.student_id IS NOT NULL AND (
                  EXISTS (SELECT 1 FROM student s
                           WHERE s.id = l.student_id AND s.membership_id = $2 AND s.archived_at IS NULL)
-                 OR EXISTS (SELECT 1 FROM guardian_link gl
+                 OR EXISTS (SELECT 1 FROM guardian_access gl
                              WHERE gl.student_id = l.student_id AND gl.guardian_membership_id = $2
                                AND gl.archived_at IS NULL))) AS own_child_certificate,
               -- A student's photograph (Rui, 28-10-2026): shown only while its
@@ -246,7 +246,7 @@ export async function openFile(
                     AND pc.kind = 'photo' AND pc.granted AND pc.withdrawn_at IS NULL)) AS photo_consented,
               (sp.id IS NOT NULL AND (
                  sp.membership_id = $2
-                 OR EXISTS (SELECT 1 FROM guardian_link gl
+                 OR EXISTS (SELECT 1 FROM guardian_access gl
                              WHERE gl.student_id = sp.id AND gl.guardian_membership_id = $2
                                AND gl.archived_at IS NULL))) AS own_child_photo,
               -- POOLSE-194: an adult's photo, to someone in their turma now. A
@@ -260,7 +260,7 @@ export async function openFile(
                   WHERE them.organization_id = sp.organization_id AND them.student_id = sp.id
                     AND them.status = 'active' AND my.archived_at IS NULL
                     AND (my.membership_id = $2
-                         OR EXISTS (SELECT 1 FROM guardian_link gl
+                         OR EXISTS (SELECT 1 FROM guardian_access gl
                                      WHERE gl.student_id = my.id AND gl.guardian_membership_id = $2
                                        AND gl.archived_at IS NULL)))) AS classmate_photo,
               -- POOLSE-194: the photo of whoever teaches a child of this family,
@@ -277,7 +277,7 @@ export async function openFile(
                  WHERE im.organization_id = f.organization_id AND im.photo_file_id = f.id
                    AND my.archived_at IS NULL
                    AND (my.membership_id = $2
-                        OR EXISTS (SELECT 1 FROM guardian_link gl
+                        OR EXISTS (SELECT 1 FROM guardian_access gl
                                     WHERE gl.student_id = my.id AND gl.guardian_membership_id = $2
                                       AND gl.archived_at IS NULL))) AS teaches_mine,
               -- Whose ID document this photograph is (POOLSE-149).

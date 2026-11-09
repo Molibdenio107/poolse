@@ -349,8 +349,12 @@ const GUARDIANS = `(
                'taxNumber',    m.tax_number,
                'address',      m.address,
                'isPrimary',    gl.is_primary,
-               'hasLogin',     m.app_user_id IS NOT NULL
+               'hasLogin',     m.app_user_id IS NOT NULL,
+               'kind',         gl.kind,
+               'grants',       EXISTS (SELECT 1 FROM guardian_access ga WHERE ga.id = gl.id)
              ) AS g
+        -- The office's record of every live link, granting or not (POOLSE-206):
+        -- a parent's link to an adult stays on the record, marked by kind and grants.
         FROM guardian_link gl
         JOIN membership m
           ON m.id = gl.guardian_membership_id
@@ -811,7 +815,7 @@ const IS_ADULT_STUDENT = `student_is_adult_path(s.organization_id, s.id)`;
 
 const IS_GUARDIAN = `(
   s.membership_id IS NOT NULL AND EXISTS (
-    SELECT 1 FROM guardian_link gl2
+    SELECT 1 FROM guardian_access gl2
      WHERE gl2.guardian_membership_id = s.membership_id
        AND gl2.organization_id = s.organization_id
        AND gl2.archived_at IS NULL
@@ -918,7 +922,7 @@ const FAMILY_LOGINS = `
      JOIN app_user u ON u.id = m.app_user_id
     WHERE m.organization_id = s.organization_id AND m.archived_at IS NULL
       AND (m.id = s.membership_id
-           OR m.id IN (SELECT gl.guardian_membership_id FROM guardian_link gl
+           OR m.id IN (SELECT gl.guardian_membership_id FROM guardian_access gl
                         WHERE gl.student_id = s.id AND gl.organization_id = s.organization_id
                           AND gl.archived_at IS NULL)))`;
 
@@ -2459,7 +2463,7 @@ export async function searchPeople(
               ), '{}') AS roles,
               m.app_user_id IS NOT NULL AS has_login,
               (
-                SELECT count(*) FROM guardian_link gl
+                SELECT count(*) FROM guardian_access gl
                  WHERE gl.guardian_membership_id = m.id AND gl.archived_at IS NULL
               )::int AS guardian_of
          FROM membership m
@@ -2521,7 +2525,7 @@ export async function studentsOf(
       `SELECT s.id,
               ${shortName('s')} AS name,
               gl.relationship
-         FROM guardian_link gl
+         FROM guardian_access gl
          JOIN student_person s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
         WHERE gl.guardian_membership_id = $1
           AND gl.archived_at IS NULL
@@ -2550,12 +2554,39 @@ export async function familyStudents(
         WHERE s.membership_id = $1 AND s.archived_at IS NULL
        UNION ALL
        SELECT s.id, ${shortName('s')} AS name, ${PHOTO_KEY} AS "photoFileId", gl.relationship, false AS self
-         FROM guardian_link gl
+         FROM guardian_access gl
          JOIN student_person s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
         WHERE gl.guardian_membership_id = $1
           AND gl.archived_at IS NULL
           AND s.archived_at IS NULL
         ORDER BY self DESC, name`,
+      [membershipId],
+    );
+    return rows;
+  });
+}
+
+/**
+ * The students a person pays for and is not family of — POOLSE-206 rule 4. A
+ * parent whose child came of age keeps the payer role
+ * (`invoice_payer_membership_id` reads every live link) and sees that child's
+ * fees on *Pagamentos*, and nothing else of them.
+ */
+export async function paidStudents(
+  organizationId: string,
+  membershipId: string,
+): Promise<{ id: string; name: string }[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string; name: string }>(
+      `SELECT s.id, ${shortName('s')} AS name
+         FROM guardian_link gl
+         JOIN student_person s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
+        WHERE gl.guardian_membership_id = $1
+          AND gl.archived_at IS NULL
+          AND s.archived_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM guardian_access ga WHERE ga.id = gl.id)
+          AND invoice_payer_membership_id(gl.organization_id, gl.student_id) = $1
+        ORDER BY ${nameOrder('s')}`,
       [membershipId],
     );
     return rows;
@@ -2658,7 +2689,7 @@ export async function listGuardians(
                         )
                         ORDER BY ${nameOrder('s')}
                       )
-                 FROM guardian_link gl
+                 FROM guardian_access gl
                  JOIN student_person s
                    ON s.id = gl.student_id
                   AND s.organization_id = gl.organization_id
@@ -2789,7 +2820,7 @@ export async function findDuplicate(
               person_email(m.id)::text AS email,
               person_phone(m.id) AS phone,
               (
-                SELECT count(*) FROM guardian_link gl
+                SELECT count(*) FROM guardian_access gl
                  WHERE gl.guardian_membership_id = m.id AND gl.archived_at IS NULL
               )::int AS guardian_of
          FROM membership m
@@ -3078,7 +3109,7 @@ export async function lessonContact(organizationId: string, studentId: string): 
                         'primary', gl.is_primary,
                         'phone', person_phone(gl.guardian_membership_id))
                         ORDER BY gl.is_primary DESC), '[]'::jsonb)
-                 FROM guardian_link gl
+                 FROM guardian_access gl
                 WHERE gl.student_id = s.id AND gl.organization_id = s.organization_id
                   AND gl.archived_at IS NULL) AS guardians,
               CASE WHEN s.emergency_contact_membership_id IS NOT NULL

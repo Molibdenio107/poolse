@@ -165,10 +165,12 @@ test('QA 10–11: the label comes from who sent it, whatever the age', async () 
     await sendFpn(tenant, login, 'student', adult);
     assert.equal((await pendingOf(tenant, adult))[0]!.submittedByRole, 'student');
 
-    // Nineteen, and a guardian still linked: it truly is the guardian's upload.
+    // Nineteen, and an acompanhante still linked: it truly is the guardian's upload.
+    // A parent's link would grant nothing at nineteen (POOLSE-206).
     const [row] = await tenant.sql<{ on: string }>(`SELECT (club_today() - interval '19 years')::date::text AS on`);
     const nineteen = await addStudent(tenant, 'Bia', row!.on);
     const guardian = await addGuardian(tenant, nineteen);
+    await tenant.sql(`UPDATE guardian_link SET kind = 'accompanying' WHERE student_id = $1`, [nineteen]);
     await sendFpn(tenant, guardian, 'guardian', nineteen);
     assert.equal((await pendingOf(tenant, nineteen))[0]!.submittedByRole, 'guardian');
   });

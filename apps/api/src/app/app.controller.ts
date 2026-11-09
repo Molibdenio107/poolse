@@ -38,7 +38,7 @@ import {
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import { CoreRoute, moduleIsOn } from '../tenant/modules.js';
-import { familyStudents } from '../students/students.repository.js';
+import { familyStudents, paidStudents } from '../students/students.repository.js';
 import { studentFees } from '../billing/fees.repository.js';
 import type { FeeBalance } from '../billing/fee-balance.js';
 import {
@@ -210,7 +210,15 @@ export class AppController {
   ): Promise<{ children: FamilyChildFees[]; family: { id: string; name: string }[] }> {
     requireRole('guardian', 'student');
     const { organizationId, membershipId } = currentTenant();
-    const mine = await familyStudents(organizationId, membershipId);
+    /*
+     * POOLSE-206 rule 4: plus the adults this person still pays for, a parent's
+     * link past 18. Here only: they are in no other family read.
+     */
+    const family = await familyStudents(organizationId, membershipId);
+    const paid = (await paidStudents(organizationId, membershipId)).filter(
+      (one) => !family.some((member) => member.id === one.id),
+    );
+    const mine = [...family, ...paid];
     if (child !== undefined && !mine.some((one) => one.id === child)) {
       throw new NotFoundException('No such student');
     }

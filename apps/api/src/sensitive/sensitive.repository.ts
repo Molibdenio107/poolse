@@ -356,7 +356,7 @@ export async function enrolmentContext(
               END AS age_years,
               o.age_of_majority,
               EXISTS (
-                SELECT 1 FROM guardian_link g
+                SELECT 1 FROM guardian_access g
                  WHERE g.student_id = s.id
                    AND g.organization_id = s.organization_id
                    AND g.archived_at IS NULL

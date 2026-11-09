@@ -36,7 +36,7 @@ const PURPOSE: Record<StoredKind, FilePurpose> = {
 async function maySend(tx: Tx, membershipId: string, studentId: string): Promise<boolean> {
   const { rows } = await tx.query<{ allowed: boolean }>(
     `SELECT EXISTS (
-              SELECT 1 FROM guardian_link gl
+              SELECT 1 FROM guardian_access gl
                WHERE gl.student_id = $2 AND gl.guardian_membership_id = $1 AND gl.archived_at IS NULL
               UNION ALL
               SELECT 1 FROM student s
@@ -63,7 +63,7 @@ export async function mayTakeFpnFor(organizationId: string, membershipId: string
   return withOrg(organizationId, async (tx) => {
     if (!(await maySend(tx, membershipId, studentId))) return false;
     const { rows } = await tx.query<{ guardian: boolean; declared: boolean }>(
-      `SELECT EXISTS (SELECT 1 FROM guardian_link gl
+      `SELECT EXISTS (SELECT 1 FROM guardian_access gl
                        WHERE gl.student_id = s.id AND gl.guardian_membership_id = $2 AND gl.archived_at IS NULL) AS guardian,
               s.birth_date_declared_at IS NOT NULL AS declared
          FROM student s WHERE s.id = $1`,

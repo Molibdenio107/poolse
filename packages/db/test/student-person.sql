@@ -112,8 +112,9 @@ BEGIN
   VALUES (v_org, 'active', 'Tutora', 'Legal') RETURNING id INTO v_g;
   INSERT INTO student (organization_id, first_name, last_name, birth_date, membership_id)
   VALUES (v_org, 'Adulta', 'Tutelada', DATE '1985-01-01', v_m) RETURNING id INTO v_guarded;
-  INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id, relationship)
-  VALUES (v_org, v_guarded, v_g, 'tutor');
+  -- An adult's guardian is an acompanhante (POOLSE-206); a parental link would not count.
+  INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id, relationship, kind)
+  VALUES (v_org, v_guarded, v_g, 'tutor', 'accompanying');
   IF (SELECT identity_from_login FROM student_person WHERE id = v_guarded) THEN
     RAISE EXCEPTION 'FAIL test 3: a student with a guardian read through';
   END IF;

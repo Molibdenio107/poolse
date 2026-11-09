@@ -58,12 +58,16 @@ async function student(
   return row!.id;
 }
 
-async function giveGuardian(tenant: ScratchTenant, studentId: string): Promise<string> {
+async function giveGuardian(
+  tenant: ScratchTenant,
+  studentId: string,
+  kind: 'parental' | 'accompanying' = 'parental',
+): Promise<string> {
   const guardian = await addMember(tenant, 'Sofia', 'Marques', ['guardian']);
   await tenant.sql(
-    `INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id, relationship)
-     VALUES ($1, $2, $3, 'mae')`,
-    [tenant.organizationId, studentId, guardian],
+    `INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id, relationship, kind)
+     VALUES ($1, $2, $3, 'mae', $4::guardian_link_kind)`,
+    [tenant.organizationId, studentId, guardian, kind],
   );
   return guardian;
 }
@@ -100,10 +104,17 @@ test('a minor, and an adult who has a guardian, are both on the guardian path', 
        * who that distinction exists for. Age alone would have got this wrong.
        */
       const supported = await student(tenant, 'Jorge', bornYearsAgo(52));
-      await giveGuardian(tenant, supported);
+      await giveGuardian(tenant, supported, 'accompanying');
       const seen = await controller.read(supported);
       assert.equal(seen.enrolment?.adultPath, false);
       assert.equal(seen.enrolment?.hasGuardian, true);
+
+      // POOLSE-206: a parent's link to an adult grants nothing; he signs his own.
+      const grown = await student(tenant, 'Afonso', bornYearsAgo(47));
+      await giveGuardian(tenant, grown);
+      const own = await controller.read(grown);
+      assert.equal(own.enrolment?.adultPath, true);
+      assert.equal(own.enrolment?.hasGuardian, false);
     });
   });
 });

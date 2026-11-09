@@ -1659,6 +1659,10 @@ export interface Guardian {
   isPrimary: boolean;
   /** Clerk owns their name and email — the form shows those read-only. */
   hasLogin: boolean;
+  /** POOLSE-206: encarregado of a minor, or acompanhante of a maior acompanhado. */
+  kind: 'parental' | 'accompanying';
+  /** Whether the link grants anything today: false for a parent's link past majority. */
+  grants: boolean;
 }
 
 /**

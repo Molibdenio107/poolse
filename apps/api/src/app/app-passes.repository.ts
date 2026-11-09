@@ -81,7 +81,7 @@ export class MinorMayNotBuyError extends Error {}
 const MY_STUDENTS = `SELECT s.id FROM student s
                       WHERE s.membership_id = $1::uuid AND s.archived_at IS NULL`;
 /** The children the reader is a live guardian of. */
-const MY_CHILDREN = `SELECT g.student_id FROM guardian_link g
+const MY_CHILDREN = `SELECT g.student_id FROM guardian_access g
                        JOIN student s ON s.id = g.student_id AND s.organization_id = g.organization_id
                       WHERE g.guardian_membership_id = $1::uuid
                         AND g.archived_at IS NULL AND s.archived_at IS NULL`;

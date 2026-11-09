@@ -34,6 +34,8 @@ async function addStudent(tenant: ScratchTenant, first: string, email: string | 
 async function addGuardian(tenant: ScratchTenant, student: string, first: string, email: string, phone: string | null, primary = true): Promise<string> {
   const guardian = await addMember(tenant, first, 'Silva', ['guardian']);
   await owner.query(`UPDATE membership SET email = $2, phone = $3 WHERE id = $1`, [guardian, email, phone]);
+  // A student with a parent is a child: a parent's link to an adult grants nothing (POOLSE-206).
+  await tenant.sql(`UPDATE student SET birth_date = (club_today() - interval '10 years')::date WHERE id = $1`, [student]);
   await tenant.sql(
     `INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id, relationship, is_primary)
      VALUES ($1, $2, $3, 'Mãe', $4)`,

@@ -309,7 +309,7 @@ export async function mayActForStudent(
                  WHERE s.id = $2 AND s.membership_id = $1 AND s.archived_at IS NULL
                 UNION ALL
                 -- Or this person is their encarregado de educação.
-                SELECT 1 FROM guardian_link gl
+                SELECT 1 FROM guardian_access gl
                  WHERE gl.student_id = $2
                    AND gl.guardian_membership_id = $1
                    AND gl.archived_at IS NULL

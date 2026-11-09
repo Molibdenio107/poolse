@@ -401,7 +401,7 @@ export async function fpnPrint(
       place: string | null;
     }>(
       `SELECT ${displayName('s')} AS name,
-              (SELECT person_name(gl.guardian_membership_id) FROM guardian_link gl
+              (SELECT person_name(gl.guardian_membership_id) FROM guardian_access gl
                 WHERE gl.student_id = s.id AND gl.archived_at IS NULL
                 ORDER BY gl.is_primary DESC, gl.created_at LIMIT 1) AS guardian_name,
               s.address_line, s.locality, s.postal_code,
@@ -533,7 +533,7 @@ export async function boletimPrint(organizationId: string, studentId: string): P
                         'phone', person_phone(m.id),
                         'email', person_email(gl.guardian_membership_id)::text,
                         'relationship', gl.relationship)
-                 FROM guardian_link gl
+                 FROM guardian_access gl
                  JOIN membership m ON m.id = gl.guardian_membership_id
                 WHERE gl.student_id = s.id AND gl.archived_at IS NULL
                 ORDER BY gl.is_primary DESC, gl.created_at LIMIT 1) AS guardian

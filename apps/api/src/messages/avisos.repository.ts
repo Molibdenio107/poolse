@@ -237,7 +237,7 @@ export async function avisosForReader(organizationId: string, membershipId: stri
                 FROM student_person s
                WHERE s.archived_at IS NULL
                  AND (s.membership_id = $1
-                      OR EXISTS (SELECT 1 FROM guardian_link g
+                      OR EXISTS (SELECT 1 FROM guardian_access g
                                   WHERE g.student_id = s.id AND g.organization_id = s.organization_id
                                     AND g.guardian_membership_id = $1 AND g.archived_at IS NULL))
             )

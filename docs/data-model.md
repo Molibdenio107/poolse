@@ -513,7 +513,11 @@ consent
 guardian_link                   -- the relation between two people
   id, organization_id, student_id, guardian_membership_id, relationship,
   is_primary boolean default false, can_view_progress boolean default false,
+  kind guardian_link_kind ('parental'|'accompanying') default 'parental',   -- POOLSE-206
   archived_at
+  trigger guardian_link_not_self: the guardian is never the student's own membership
+  view guardian_access (security_invoker): the live links that grant today —
+    accompanying, or the student is not student_of_age()
   unique (student_id, guardian_membership_id) where archived_at is null
   unique (student_id) where archived_at is null and is_primary
 
@@ -2598,7 +2602,10 @@ something RLS catches: both rows pass their own policy, and only the composite k
 ### The adult and senior path — POOLSE-23, 8 September 2026
 
 **There is no `is_adult` column, and there must never be one.** An adult is a student at or
-above the organization's `age_of_majority` with no live `guardian_link`; the absence of the
+above the organization's `age_of_majority` with no live **accompanying** link (POOLSE-206,
+09-11-2026: a `parental` link stops counting on the birthday, read and never stored; the view
+`guardian_access` holds the links that grant, and every family reader uses it — the payer,
+history and the office's record of the links stay on `guardian_link`); the absence of the
 edge is the definition. `student_is_adult_path(organization_id, student_id)` is that sentence
 in SQL — STABLE rather than IMMUTABLE, because it reads `current_date` and a cached answer
 would be wrong on somebody's birthday, the one day it matters. A student with no birth date is
@@ -2702,7 +2709,7 @@ A free swimmer has no enrolment, so a category also sits on the **person**. For 
 - **`pass_product.shareable`** (a *Pack família*; never a single entry) and **`pass_product.sold_in_app`**.
 - **`pass.student_id`**: a child may hold a personal pass (Rui, 08-11-2026). A pass has one holder, a login **or** a student (CHECK), or none for an anonymous single entry. **`pass.shared`** (a family pack held by a login), **`pass.sold_via`** (`pass_sold_via`: `reception` | `app`) and **`pass.purchase_key`** (unique per club; required on an `app` sale) are snapshotted at the sale.
 - **`pass_check_in.membership_id` / `student_id`**: who swam, at most one (CHECK), composite FKs. Existing entries were backfilled to the holder. Entries left stay derived.
-- **`pass_family(org, pass)`**: the holder, plus on a shared pass every child the holder is a live guardian of today (`guardian_link.archived_at IS NULL`, student not archived). The one definition of who may use a pass.
+- **`pass_family(org, pass)`**: the holder, plus on a shared pass every child the holder is a guardian of today (`guardian_access`: a son who turned 18 leaves his parent's pack, POOLSE-206; student not archived). The one definition of who may use a pass.
 - **`pass_current`** gains `student_id`, `shared`, `sold_via` and **`paid`** (payments on the sale's document cover its lines).
 - **Check-in trigger** additions: no swimmer named means the holder on a personal pass and a refusal on a shared one (`pass_who_required`); a named swimmer must be in `pass_family()` (`pass_not_family`); an `app` pass not `paid` is refused (`pass_unpaid`); the in-water test is per person on a shared pass.
 - **`pass_price_for(org, product, membership, student DEFAULT NULL)`** replaces the three-argument form: a child is priced by their own categories, and a shareable product always sells at its base.

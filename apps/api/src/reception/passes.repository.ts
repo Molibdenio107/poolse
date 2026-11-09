@@ -699,7 +699,7 @@ export async function passesOf(
         WHERE pc.facility_id = $1
           AND (pc.membership_id = $2
                OR pc.student_id IN (
-                    SELECT g.student_id FROM guardian_link g
+                    SELECT g.student_id FROM guardian_access g
                      WHERE g.guardian_membership_id = $2 AND g.archived_at IS NULL))
         ORDER BY pc.sold_at DESC, pc.id`,
       [facilityId, membershipId],

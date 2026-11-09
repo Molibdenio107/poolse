@@ -27,8 +27,21 @@ whole request is visible. An inline guardian whose NIF matches an existing perso
 
 **A family asks for a place from the app, and it is a pedido in the same queue.** POOLSE-121 (Rui, 29-10-2026). `POST /app/enrolment-requests` writes a `lead` naming `requested_class_group_id` and `requested_by_membership_id`; for a child the club has it carries `student_id` from the start (`existingStudent`), and `placeLead` then attaches the turma to that student instead of running the student form. A new child is an ordinary lead with the reader as guardian. `docs/features/registration.md`.
 
-**An adult is the absence of a guardian edge, never a flag.** A student at or above the club's
-`age_of_majority` with no live `guardian_link` is on the adult path; `student_is_adult_path`
+**An adult is the absence of an acompanhante's edge, never a flag.** POOLSE-206 (Rui,
+09-11-2026). A `guardian_link` has a `kind`: `parental` (the encarregado of a minor, whose
+responsibilities end at majority, Código Civil art. 122.º) or `accompanying` (the acompanhante of
+a *maior acompanhado*, Lei 49/2018). **`guardian_access` is the view of the links that grant
+anything today**: live, and accompanying or the student is not of age (`student_of_age`: a
+confirmed date at or past majority; none or declared is not of age). Every reader that gives a
+family something — sees a child, answers for them, uses a pack, gets their email — reads
+`guardian_access`. Only three kinds of reader stay on `guardian_link`: the **payer**
+(`invoice_payer_membership_id`; a parent who paid keeps paying and sees that adult's fees on
+*Pagamentos* through `paidStudents` and the documents on *Extratos*, and nothing else), **history**
+(retention, merges, who wrote a feedback) and the **office's own record** of the links (it shows
+`kind` and `grants`). The kind is never inferred from `relationship`. Nobody is their own guardian:
+a trigger refuses it in words (`guardian_is_self`, a 400 with that code), and a person merge
+archives a link that would collapse into one person. A student at or above the club's
+`age_of_majority` with no live accompanying link is on the adult path; `student_is_adult_path`
 is the one definition and every screen reads it rather than deriving it. An `is_adult` column
 would drift the first time a birth date is corrected. A student with **no** birth date is on
 the guardian path — guessing adult for missing data is the guess that cannot be recovered from.
