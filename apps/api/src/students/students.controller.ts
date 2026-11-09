@@ -97,6 +97,8 @@ import {
   type StudentInput,
   type StudentLevel,
   setStudentSportLevel,
+  GUARDIAN_KINDS,
+  type GuardianKind,
 } from './students.repository.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import { isClassColour } from '../classes/classes.repository.js';
@@ -1216,6 +1218,14 @@ function readGuardians(body: Record<string, unknown>): GuardianInput[] {
   return flat === null ? [] : [flat];
 }
 
+function readGuardianKind(value: unknown): GuardianKind {
+  if (value === undefined || value === null || value === '') return 'parental';
+  if (typeof value === 'string' && (GUARDIAN_KINDS as readonly string[]).includes(value)) {
+    return value as GuardianKind;
+  }
+  throw new BadRequestException({ code: 'bad_guardian_kind', message: 'kind must be parental or accompanying' });
+}
+
 /** Null for an entry that names nobody — an untouched row in the form. */
 function readGuardian(
   entry: Record<string, unknown>,
@@ -1232,6 +1242,8 @@ function readGuardian(
     // The first listed is the primary contact unless one says otherwise. The
     // repository re-checks this; here it only carries what was asked for.
     isPrimary: entry['isPrimary'] === true || entry['isPrimary'] === 'true' || index === 0,
+    // POOLSE-207. Absent is a parent's link, as every link was before it.
+    kind: readGuardianKind(entry['kind']),
   };
 
   if (guardian.membershipId === null && guardian.name === null) return null;

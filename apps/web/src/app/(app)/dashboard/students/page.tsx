@@ -126,6 +126,9 @@ export default async function StudentsPage({
   // second sport — the only case the *Modalidades* chips and column appear in.
   const me = await apiFetch<Me>('/me').catch(() => null);
   const attention = await readAttention();
+  // POOLSE-207: who came of age with a parent's link. The office's only; anybody else is refused, and sees nothing.
+  const turned = await apiFetch<{ students: unknown[] }>('/students/turned-18').catch(() => null);
+  const turnedCount = turned?.students.length ?? 0;
   const clubSports = me?.memberships[0]?.sports ?? [];
   const multiSport = isMultiSport(clubSports);
 
@@ -256,6 +259,16 @@ export default async function StudentsPage({
           message={t(failure.key)}
           {...(failure.detail === '' ? {} : { detail: failure.detail })}
         />
+      )}
+
+      {turnedCount > 0 && (
+        <FromLink
+          href="/dashboard/students/fez-18"
+          className="flex items-center justify-between gap-3 rounded border border-primary bg-primary/[0.08] p-4 text-sm font-medium hover:bg-primary/[0.12]"
+        >
+          <span>{t('majority.banner', { count: turnedCount })}</span>
+          <span className="text-primary">{t('majority.open')}</span>
+        </FromLink>
       )}
 
       {data !== null && (

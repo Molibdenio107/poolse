@@ -33,7 +33,16 @@ export async function ContactsCard({
       .map((guardian) => ({
         key: guardian.linkId,
         name: guardian.name,
-        detail: [guardian.relationship, guardian.isPrimary ? t('students.guardianPrimary') : null]
+        // POOLSE-207: the kind in words where it matters — an acompanhante, or a parent past 18.
+        detail: [
+          guardian.relationship,
+          guardian.kind === 'accompanying'
+            ? t('students.guardianKind.accompanying')
+            : guardian.grants
+              ? null
+              : t('students.guardianKind.formerParent'),
+          guardian.isPrimary ? t('students.guardianPrimary') : null,
+        ]
           .filter(Boolean)
           .join(' · '),
         phone: guardian.phone,

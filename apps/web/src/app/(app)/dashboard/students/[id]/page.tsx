@@ -45,6 +45,8 @@ import type { StudentDocuments } from '@/lib/fpn-forms';
 import { FpnSection, IdentificationSection } from './documents';
 import { FamilySubmissions, type FamilySubmission } from './family-submissions';
 import { BirthDateConfirm } from './birth-date-confirm';
+import { AcompanhanteWarning } from './acompanhante-warning';
+import { ageInYears } from '@/lib/ages';
 import { StudentMessages, type StudentMessagesData } from './student-messages';
 import { moduleIsOn } from '@/lib/modules';
 import { loadFees } from './fees.actions';
@@ -391,6 +393,19 @@ export default async function StudentPage({
               {!family && loaded.cover !== undefined && loaded.cover !== null && (
                 <CoverBadge cover={loaded.cover} />
               )}
+              {/* POOLSE-207 rule 3: an adult the app treats as a minor, said in words. */}
+              {!family &&
+                reg.canManage &&
+                loaded.birthDate !== null &&
+                (ageInYears(loaded.birthDate) ?? 0) >= reg.ageOfMajority &&
+                loaded.guardians.some((guardian) => guardian.kind === 'accompanying') && (
+                  <AcompanhanteWarning
+                    studentId={loaded.id}
+                    links={loaded.guardians
+                      .filter((guardian) => guardian.kind === 'accompanying')
+                      .map((guardian) => ({ linkId: guardian.linkId, name: guardian.name }))}
+                  />
+                )}
               {!family && (
                 <ContactsCard
                   guardians={loaded.guardians}

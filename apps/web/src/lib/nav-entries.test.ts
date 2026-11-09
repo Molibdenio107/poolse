@@ -98,7 +98,7 @@ test('POOLSE-143: Alunos is shared and copied; Níveis, Avanços and Competiçã
   const shared = sections.find((item) => item.key === 'students.title' && item.sport === undefined);
   assert.deepEqual(
     shared?.children?.map((item) => item.key),
-    ['students.guardiansTitle', 'messages.title', 'avisos.title'],
+    ['students.guardiansTitle', 'majority.title', 'messages.title', 'avisos.title'],
     'the shared register keeps what has no sport dimension; Pedidos sits under Receção (POOLSE-165)',
   );
   const studentsOf = (sport: string): Item | undefined =>

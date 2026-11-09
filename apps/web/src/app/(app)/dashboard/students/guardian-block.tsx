@@ -5,7 +5,8 @@ import { useTranslations } from 'next-intl';
 import { Search, UserPlus, X } from 'lucide-react';
 import type { DuplicateMatch, Guardian, PersonSummary } from '@/lib/api';
 import { ageInYears } from '@/lib/ages';
-import { TextField } from '@/components/ui/field';
+import { SelectField, TextField } from '@/components/ui/field';
+import { Dialog } from '@/components/ui/dialog';
 import { RoleBadges } from '@/components/role-badge';
 import { findDuplicateAction, searchPeopleAction } from './students.actions';
 import { DEBOUNCE_MS, MIN_SEARCH_LENGTH } from '@/components/search-input';
@@ -52,6 +53,8 @@ interface Draft {
   hasLogin: boolean;
   /** Existing people are shown as a card rather than as six inputs. */
   existing: boolean;
+  /** POOLSE-207: encarregado de educação, or acompanhante of a maior acompanhado. */
+  kind: 'parental' | 'accompanying';
 }
 
 function draftOf(guardian: Guardian): Draft {
@@ -66,6 +69,7 @@ function draftOf(guardian: Guardian): Draft {
     isPrimary: guardian.isPrimary,
     hasLogin: guardian.hasLogin,
     existing: true,
+    kind: guardian.kind,
   };
 }
 
@@ -91,6 +95,7 @@ const BLANK: Draft = {
   isPrimary: true,
   hasLogin: false,
   existing: false,
+  kind: 'parental',
 };
 
 export function GuardianBlock({
@@ -117,9 +122,26 @@ export function GuardianBlock({
 
   const [drafts, setDrafts] = useState<Draft[]>(() => (guardians ?? []).map(draftOf));
   const [reopened, setReopened] = useState(false);
+  /*
+   * POOLSE-207 rule 2: a guardian for somebody of age is asked about first.
+   * The picked person waits here until the answer; *Cancelar* drops them.
+   */
+  const [asking, setAsking] = useState<{ draft: Draft; first: boolean } | null>(null);
 
   const age = birthDate === '' ? null : ageInYears(birthDate);
   const minor = age !== null && age < ageOfMajority;
+  const adult = age !== null && age >= ageOfMajority;
+
+  const add = (draft: Draft, first: boolean): void =>
+    setDrafts((current) => (first ? [draft] : [...current, { ...draft, isPrimary: false }]));
+  const pick = (draft: Draft, first: boolean): void => {
+    if (adult) setAsking({ draft, first });
+    else add(draft, first);
+  };
+  const answer = (kind: Draft['kind'] | null): void => {
+    if (asking !== null && kind !== null) add({ ...asking.draft, kind }, asking.first);
+    setAsking(null);
+  };
   const hasData = drafts.length > 0;
   const open = minor || reopened || (age === null && hasData);
 
@@ -200,10 +222,11 @@ export function GuardianBlock({
             onChange={(change) => update(index, change)}
             onPrimary={() => makePrimary(index)}
             onRemove={() => remove(index)}
+            adult={adult}
           />
         ))}
 
-        {drafts.length === 0 && <PersonPicker onPick={(draft) => setDrafts([draft])} />}
+        {drafts.length === 0 && <PersonPicker onPick={(draft) => pick(draft, true)} />}
 
         {drafts.length > 0 && drafts.length < 4 && (
           <details className="rounded border border-dashed border-border p-3">
@@ -211,15 +234,43 @@ export function GuardianBlock({
               {t('students.guardianAddAnother')}
             </summary>
             <div className="mt-3">
-              <PersonPicker
-                onPick={(draft) =>
-                  setDrafts((current) => [...current, { ...draft, isPrimary: false }])
-                }
-              />
+              <PersonPicker onPick={(draft) => pick(draft, false)} />
             </div>
           </details>
         )}
       </div>
+
+      <Dialog
+        open={asking !== null}
+        onClose={() => answer(null)}
+        title={t('students.guardianAdultQuestion.title')}
+        description={t('students.guardianAdultQuestion.body')}
+        closeLabel={t('common.cancel')}
+      >
+        <div className="flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => answer(null)}
+            className="inline-flex h-control items-center rounded-sm px-4 text-control text-foreground-muted hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={() => answer('parental')}
+            className="inline-flex h-control items-center rounded-sm border border-border-strong px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('students.guardianAdultQuestion.no')}
+          </button>
+          <button
+            type="button"
+            onClick={() => answer('accompanying')}
+            className="inline-flex h-control items-center rounded-sm bg-primary px-4 text-control font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('students.guardianAdultQuestion.yes')}
+          </button>
+        </div>
+      </Dialog>
     </section>
   );
 }
@@ -241,6 +292,7 @@ function GuardianRow({
   onChange,
   onPrimary,
   onRemove,
+  adult,
 }: {
   draft: Draft;
   index: number;
@@ -249,6 +301,8 @@ function GuardianRow({
   onChange: (change: Partial<Draft>) => void;
   onPrimary: () => void;
   onRemove: () => void;
+  /** The student is of age: a parent's link only pays, and the row says so. */
+  adult: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const error = (field: string): string | undefined =>
@@ -295,6 +349,22 @@ function GuardianRow({
           than to the person. The same woman is "avó" to one child and "tutora
           legal" to another.
         */}
+        {/* POOLSE-207: the kind of link, never read from the relationship's words. */}
+        <SelectField
+          name={`guardianKind-${index}`}
+          label={t('students.guardianKind.label')}
+          initial={draft.kind}
+          options={[
+            { value: 'parental', label: t('students.guardianKind.parental') },
+            { value: 'accompanying', label: t('students.guardianKind.accompanying') },
+          ]}
+          hint={
+            adult && draft.kind === 'parental'
+              ? t('students.guardianKind.payerOnly')
+              : t('students.guardianKind.hint')
+          }
+          onValueChange={(value) => onChange({ kind: value === 'accompanying' ? 'accompanying' : 'parental' })}
+        />
         <TextField
           name={`guardianRelationship-${index}`}
           label={t('students.guardianRelationship')}
@@ -510,6 +580,7 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
                     isPrimary: true,
                     hasLogin: person.hasLogin,
                     existing: true,
+                    kind: 'parental',
                   })
                 }
                 className="flex w-full flex-col gap-1 p-3 text-left hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"

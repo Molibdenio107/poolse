@@ -2594,7 +2594,68 @@
     "inUse": "This policy still covers {count} students. End that cover before archiving it.",
     "saveFailed": "The policy could not be saved."
   },
+  "majority": {
+    "banner": "{count, plural, one {# student turned 18 with a parent linked} other {# students turned 18 with a parent linked}}",
+    "open": "Review",
+    "title": "Turned 18",
+    "subtitle": "Students who came of age with a parent still linked.",
+    "notPermitted": "Only the owner and administration see this list.",
+    "empty": "Nobody to review",
+    "emptyHint": "When a student with a parent turns 18, they appear here for 60 days.",
+    "cameOfAge": "Of age since {date}",
+    "parents": "Parent: {names}",
+    "whatChanged": "In the app, the parent now sees only this student’s payments.",
+    "failed": "Could not save.",
+    "inviteFailed": "Could not send the invitation.",
+    "acompanhanteRemoved": "Acompanhante removed.",
+    "done": {
+      "confirmed": "Confirmed.",
+      "accompanying": "Now an acompanhante.",
+      "invited": "Invitation sent."
+    },
+    "action": {
+      "confirmed": "Confirm",
+      "accompanying": "Is an acompanhante",
+      "invited": "Invite to the app"
+    },
+    "ask": {
+      "confirmed": {
+        "title": "Confirm {name}?",
+        "message": "Nothing changes: the parent stays only as the payer."
+      },
+      "accompanying": {
+        "title": "Is {name} a supported adult?",
+        "message": "The parent becomes an acompanhante and answers for {name} in the app again. Only with a court decision."
+      },
+      "invited": {
+        "title": "Invite {name} to the app?",
+        "message": "An invitation email goes to {name}."
+      }
+    },
+    "warning": {
+      "badge": "Of age, with an acompanhante",
+      "body": "The app treats them as a minor (the acompanhante answers for them).",
+      "remove": "Remove acompanhante",
+      "removeTitle": "Remove the acompanhante?",
+      "removeMessage": "{name} no longer answers for this student in the app."
+    }
+  },
   "students": {
+    "guardianIsSelf": "A person cannot be their own guardian.",
+    "guardianAdultQuestion": {
+      "title": "This person is of age. Are they a supported adult?",
+      "body": "An acompanhante is appointed by a court and answers for the adult in the app. A parent of an adult stays only as the payer.",
+      "yes": "Yes, acompanhante",
+      "no": "No"
+    },
+    "guardianKind": {
+      "label": "Kind of link",
+      "parental": "Parent or guardian",
+      "accompanying": "Acompanhante (supported adult)",
+      "hint": "Acompanhante: only for an adult whose support a court decided.",
+      "payerOnly": "Stays only as the payer: a parent has no access to an adult’s data.",
+      "formerParent": "Guardian until 18 (payments only)"
+    },
     "duplicateCheckFailed": "Could not check whether this person is already recorded.",
     "guardianSearchRetry": "Try again",
     "guardianSearchFailed": "The search could not be run.",

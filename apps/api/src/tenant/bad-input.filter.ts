@@ -84,7 +84,12 @@ export class BadInputFilter implements ExceptionFilter {
      * travels as structure, so a form can name it.
      */
     if (exception instanceof Error && /^guardian_is_self:/.test(exception.message)) {
-      return new BadRequestException({ statusCode: 400, code: 'guardian_is_self', message: 'A person cannot be their own guardian' });
+      return new BadRequestException({
+        statusCode: 400,
+        code: 'guardian_is_self',
+        message: 'A person cannot be their own guardian',
+        fields: { guardianName: 'students.guardianIsSelf' },
+      });
     }
     if (!isBadTextRepresentation(exception)) return null;
 

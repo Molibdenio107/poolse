@@ -428,6 +428,8 @@ export const SECTIONS: Item[] = [
       // Encarregados de educação belong with the families, not with the staff —
       // POOLSE-35.
       { href: '/dashboard/students/guardians', key: 'students.guardiansTitle' },
+      // Fez 18 anos — POOLSE-207: who came of age with a parent's link. The office's list.
+      { href: '/dashboard/students/fez-18', key: 'majority.title', roles: OFFICE },
       // Pedidos de inscrição — POOLSE-69. The shared list lives under Receção
       // since POOLSE-165; this entry is each sport's filtered copy (POOLSE-143,
       // under that sport's Alunos, Rui 04-11-2026), and the shared one only for

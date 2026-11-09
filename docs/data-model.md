@@ -518,6 +518,13 @@ guardian_link                   -- the relation between two people
   trigger guardian_link_not_self: the guardian is never the student's own membership
   view guardian_access (security_invoker): the live links that grant today —
     accompanying, or the student is not student_of_age()
+
+majority_review                 -- POOLSE-207: the office acted on a student who came of age
+  id, organization_id, student_id, majority_on date, action ('confirmed'|'accompanying'|'invited'),
+  reviewed_by (membership), reviewed_at, archived_at
+  unique (organization_id, student_id, majority_on) where archived_at is null
+  majority_pending(org): of age by a confirmed date, majority in the last 60 days, a live
+    parental link, no live review of that majority — the list and the circle both read it
   unique (student_id, guardian_membership_id) where archived_at is null
   unique (student_id) where archived_at is null and is_primary
 

@@ -337,6 +337,8 @@ export async function runImport(
                   taxNumber: row.guardian.taxNumber,
                   address: null,
                   isPrimary: true,
+                  // A file says nothing of a court measure: a parent's link (POOLSE-206).
+                  kind: 'parental',
                 },
               ],
       });

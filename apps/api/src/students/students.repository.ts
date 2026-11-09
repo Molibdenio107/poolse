@@ -132,7 +132,12 @@ export interface GuardianInput {
   taxNumber: string | null;
   address: string | null;
   isPrimary: boolean;
+  /** POOLSE-207: encarregado of a minor (default) or acompanhante of a maior acompanhado. */
+  kind: GuardianKind;
 }
+
+export type GuardianKind = 'parental' | 'accompanying';
+export const GUARDIAN_KINDS: readonly GuardianKind[] = ['parental', 'accompanying'];
 
 /** A student's level in a sport other than swimming — POOLSE-148. */
 export interface SportLevel {
@@ -1629,11 +1634,14 @@ export async function studentsToReview(
                   (SELECT count(*)::int FROM family_submission f
                     WHERE f.student_id = s.id AND f.organization_id = s.organization_id
                       AND f.decision IS NULL) AS pending,
-                  (s.birth_date_declared_at IS NOT NULL)::int AS declared
+                  (s.birth_date_declared_at IS NOT NULL)::int
+                  -- POOLSE-207: came of age with a parent's link, not yet looked at.
+                  + (s.id IN (SELECT p.student_id FROM majority_pending($1) p))::int AS declared
              FROM student s
             WHERE s.archived_at IS NULL
          ) r
         WHERE r.pending + r.declared > 0`,
+      [organizationId],
     );
     return rows;
   });
@@ -2359,14 +2367,29 @@ async function syncGuardians(
      * marking one is the same two-step the season reset uses, and for the same
      * reason: the index is doing the work, not the code.
      */
+    // POOLSE-207: a change of kind is on the record, as Atividade shows it.
+    const { rows: was } = await tx.query<{ id: string; kind: GuardianKind }>(
+      `SELECT id, kind FROM guardian_link
+        WHERE student_id = $1 AND guardian_membership_id = $2 AND archived_at IS NULL`,
+      [studentId, membershipId],
+    );
     await tx.query(
       `INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id,
-                                  relationship, is_primary)
-       VALUES ($1, $2, $3, $4, false)
+                                  relationship, is_primary, kind)
+       VALUES ($1, $2, $3, $4, false, $5::guardian_link_kind)
        ON CONFLICT (student_id, guardian_membership_id) WHERE archived_at IS NULL
-       DO UPDATE SET relationship = EXCLUDED.relationship, archived_at = NULL`,
-      [organizationId, studentId, membershipId, guardian.relationship],
+       DO UPDATE SET relationship = EXCLUDED.relationship, kind = EXCLUDED.kind, archived_at = NULL`,
+      [organizationId, studentId, membershipId, guardian.relationship, guardian.kind],
     );
+    const before = was[0];
+    if (before !== undefined && before.kind !== guardian.kind) {
+      await recordAudit(tx, {
+        action: 'guardian.kind_changed',
+        entityType: 'student',
+        entityId: studentId,
+        data: { linkId: before.id, before: { kind: before.kind }, after: { kind: guardian.kind } },
+      });
+    }
 
     kept.push(membershipId);
   }

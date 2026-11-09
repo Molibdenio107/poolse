@@ -19,6 +19,14 @@ Two consequences worth stating, because both are easy to get wrong from age alon
   that parent was the payer they stay the payer: the adult's fees on *Pagamentos* and the
   documents on *Extratos*, nothing else. Missing or declared dates never end it. The office's
   record keeps the link, with its kind. Nobody can be linked as their own guardian.
+- **The office says the kind, and is told at 18** (POOLSE-207). The guardian form has
+  *Tipo de ligação* (encarregado de educação / acompanhante); adding a guardian to somebody of
+  age asks *"É um adulto acompanhado?"* first (*Cancelar* adds nobody). An adult with an
+  acompanhante carries a warning on *Geral* with *Retirar acompanhante*, which blocks nothing.
+  *Alunos › Fez 18 anos* (owner, admin) lists who came of age in the last 60 days with a parent
+  still linked: *Confirmar* (the parent stays payer only), *É acompanhante*, or *Convidar para a
+  app* (the student invitation, sent only on that press). Acting clears the row and the circle;
+  each act and change of kind is in Atividade.
 - A student with **no birth date on file** is on the guardian path. Guessing "adult" for
   missing data skips the guardian block for a child nobody has finished registering, which is
   the mistake you cannot recover from; guessing the other way asks for a guardian an adult is

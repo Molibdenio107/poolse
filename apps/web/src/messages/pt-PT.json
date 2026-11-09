@@ -2596,7 +2596,68 @@
     "inUse": "Esta apólice ainda cobre {count} alunos. Termine essas coberturas antes de a arquivar.",
     "saveFailed": "Não foi possível guardar a apólice."
   },
+  "majority": {
+    "banner": "{count, plural, one {# aluno fez 18 anos com encarregado ligado} other {# alunos fizeram 18 anos com encarregado ligado}}",
+    "open": "Rever",
+    "title": "Fez 18 anos",
+    "subtitle": "Alunos que chegaram à maioridade com um encarregado ainda ligado.",
+    "notPermitted": "Só o proprietário e a administração veem esta lista.",
+    "empty": "Ninguém por rever",
+    "emptyHint": "Quando um aluno com encarregado faz 18 anos, aparece aqui durante 60 dias.",
+    "cameOfAge": "Maior de idade desde {date}",
+    "parents": "Encarregado: {names}",
+    "whatChanged": "Na app, o encarregado já só vê os pagamentos deste aluno.",
+    "failed": "Não foi possível guardar.",
+    "inviteFailed": "Não foi possível enviar o convite.",
+    "acompanhanteRemoved": "Acompanhante retirado.",
+    "done": {
+      "confirmed": "Confirmado.",
+      "accompanying": "Ficou como acompanhante.",
+      "invited": "Convite enviado."
+    },
+    "action": {
+      "confirmed": "Confirmar",
+      "accompanying": "É acompanhante",
+      "invited": "Convidar para a app"
+    },
+    "ask": {
+      "confirmed": {
+        "title": "Confirmar {name}?",
+        "message": "Nada muda: o encarregado fica só como quem paga."
+      },
+      "accompanying": {
+        "title": "{name} é um adulto acompanhado?",
+        "message": "O encarregado passa a acompanhante e volta a responder por {name} na app. Só se houver decisão de tribunal."
+      },
+      "invited": {
+        "title": "Convidar {name} para a app?",
+        "message": "Vai um email de convite para {name}."
+      }
+    },
+    "warning": {
+      "badge": "Maior de idade com acompanhante",
+      "body": "Na app é tratado como menor (o acompanhante responde por ele).",
+      "remove": "Retirar acompanhante",
+      "removeTitle": "Retirar acompanhante?",
+      "removeMessage": "{name} deixa de responder por este aluno na app."
+    }
+  },
   "students": {
+    "guardianIsSelf": "Uma pessoa não pode ser encarregada de educação de si própria.",
+    "guardianAdultQuestion": {
+      "title": "Esta pessoa é maior de idade. É um adulto acompanhado?",
+      "body": "Um acompanhante é nomeado por tribunal e responde pelo adulto na app. Um encarregado de educação de um adulto fica só como quem paga.",
+      "yes": "Sim, acompanhante",
+      "no": "Não"
+    },
+    "guardianKind": {
+      "label": "Tipo de ligação",
+      "parental": "Encarregado de educação",
+      "accompanying": "Acompanhante (maior acompanhado)",
+      "hint": "Acompanhante: só para um adulto com acompanhamento decidido por tribunal.",
+      "payerOnly": "Fica só como quem paga: um encarregado não tem acesso aos dados de um adulto.",
+      "formerParent": "Encarregado até aos 18 (só pagamentos)"
+    },
     "duplicateCheckFailed": "Não foi possível verificar se esta pessoa já existe.",
     "guardianSearchRetry": "Tentar de novo",
     "guardianSearchFailed": "Não foi possível fazer a pesquisa.",

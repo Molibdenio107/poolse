@@ -99,6 +99,7 @@ import { StaffNotesController } from '../staff-notes/staff-notes.controller.js';
 import { PersonCategoriesController } from '../billing/person-categories.controller.js';
 import { PassProductsController, ReceptionController } from '../reception/passes.controller.js';
 import { FeeCategoriesController } from '../billing/categories.controller.js';
+import { MajorityController } from '../students/majority.controller.js';
 
 /**
  * Role probe — security review, 12-10-2026, inverted into a regression test.
@@ -1240,6 +1241,22 @@ test("the club's reply email and the billing email refuse who may not set them (
     await refused('PUT subscription/billing-email as admin', 403, () =>
       new SubscriptionController().putBillingEmail({ billingEmail: 'contas@clube.pt' }),
     );
+  });
+});
+
+test('Fez 18 anos refuses everybody but the office (403) — POOLSE-207', async () => {
+  const majority = new MajorityController();
+  await asEach(async () => {
+    await refused('GET students/turned-18', 403, () => majority.list());
+    await refused('POST students/:id/majority-review', 403, () =>
+      majority.review(NO_SUCH_ID, { action: 'confirmed' }),
+    );
+    await refused('POST students/:id/guardians/:linkId/remove-acompanhante', 403, () =>
+      majority.removeAcompanhante(NO_SUCH_ID, NO_SUCH_ID),
+    );
+  });
+  await as(fixture.instructorId, ['instructor'], async () => {
+    await refused('GET students/turned-18 as instructor', 403, () => majority.list());
   });
 });
 

@@ -1665,6 +1665,17 @@ export interface Guardian {
   grants: boolean;
 }
 
+/** One row of *Fez 18 anos* — POOLSE-207. */
+export interface TurnedOfAge {
+  studentId: string;
+  name: string;
+  /** The birthday at the club's age of majority, `yyyy-MM-dd`. */
+  majorityOn: string;
+  parents: { linkId: string; membershipId: string; name: string; relationship: string | null }[];
+  /** An email on the record, no login, no live invitation: *Convidar para a app* applies. */
+  invitable: boolean;
+}
+
 /**
  * A person the club already knows — POOLSE-17.
  *
