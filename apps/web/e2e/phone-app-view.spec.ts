@@ -10,6 +10,13 @@ import { E2E_EMAIL, E2E_PASSWORD, NO_TEST_USER } from './session';
 
 test.skip(E2E_EMAIL === undefined || E2E_PASSWORD === undefined, NO_TEST_USER);
 
+/*
+ * Room for *Sair* (09-11-2026): on a cold dev route the four pages took the whole
+ * 30 s, the `finally` never reached *Sair*, and the open view turned every later
+ * owner test in the run into a family's app.
+ */
+test.describe.configure({ timeout: 90_000 });
+
 /** A view opens by redirecting, and a redirect still landing can interrupt the next goto. */
 async function visit(page: Page, path: string): Promise<void> {
   try {

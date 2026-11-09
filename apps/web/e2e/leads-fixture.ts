@@ -115,7 +115,7 @@ export async function leadsFixture(email: string): Promise<{ leadId: string }> {
     ]);
     await turma(FULL_TURMA, 1, 1, [[5, '17:00']]);
 
-    // Golfinhos' next three Mondays at 18:00, Lisbon — what *Aula experimental*
+    // Golfinhos' next three Mondays after today at 18:00, Lisbon — what *Aula experimental*
     // offers once the turma is picked. Added only when missing.
     const golfinhos = (
       await db.query<{ id: string }>(
@@ -128,7 +128,8 @@ export async function leadsFixture(email: string): Promise<{ leadId: string }> {
          (organization_id, class_group_id, pool_id, instructor_membership_id, occurs_on, starts_at, duration_minutes)
        SELECT $1, $2, $3, $4, d, (d + TIME '18:00') AT TIME ZONE 'Europe/Lisbon', 45
          FROM (SELECT ((now() AT TIME ZONE 'Europe/Lisbon')::date
-                       + ((8 - extract(isodow FROM now() AT TIME ZONE 'Europe/Lisbon')::int) % 7 + 7 * w)::int) AS d
+                       -- After today, never today: on a Monday evening tonight's 18:00 is past.
+                       + ((7 - extract(isodow FROM now() AT TIME ZONE 'Europe/Lisbon')::int) % 7 + 1 + 7 * w)::int) AS d
                  FROM generate_series(0, 2) AS w) mondays
         WHERE NOT EXISTS (SELECT 1 FROM class_session s WHERE s.class_group_id = $2 AND s.occurs_on = mondays.d)`,
       [org, golfinhos, place.pool_id, instructor],

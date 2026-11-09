@@ -259,8 +259,9 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
 
   test('the last row is above the bar, and a lesson page has no bar over its Save', async ({ page }) => {
     const lesson = await poolsideLesson();
-    await visit(page, '/app/familia');
-    const last = page.getByRole('link', { name: /pedir inscrição numa turma|ask for a place in a class/i });
+    // Perfil's last row: Pedir inscrição left Início on 09-11-2026 (+ Natação holds it).
+    await visit(page, '/app/perfil?home=family');
+    const last = page.getByRole('button', { name: /terminar sessão|sign out/i });
     await last.scrollIntoViewIfNeeded();
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     const row = (await last.boundingBox())!;
@@ -275,7 +276,8 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
     await visit(page, '/app/familia');
     // The corner is the club: its name for a reader, and no link.
     const header = page.locator('header');
-    await expect(header.getByRole('img', { name: 'Clube E2E' })).toBeVisible();
+    // The logo opens larger on a tap (06-11-2026), so it is a button named for it.
+    await expect(header.getByRole('button', { name: /(logótipo|logo) of Clube E2E|logótipo de Clube E2E/i })).toBeVisible();
     await expect(header.getByRole('link', { name: /^(o meu perfil|my profile)$/i })).toHaveCount(0);
 
     await visit(page, '/app/perfil?home=family');
