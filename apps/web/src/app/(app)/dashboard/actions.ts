@@ -228,7 +228,13 @@ export async function reissueAction(
     return failure(error, 'invite.reissueFailed');
   }
 
-  revalidatePath('/dashboard/facilities/staff');
+  /*
+   * No revalidatePath here (Rui, 10-11-2026). It would send the redrawn list
+   * in this same response, without the replaced row, and the button holding
+   * the new link would unmount in the very update that delivers it: Reenviar
+   * looked like it did nothing. `useSavedAction` refreshes once the link is
+   * already in `ReissuedLinks`' dialog.
+   */
   return { ok: true, invitation };
 }
 
