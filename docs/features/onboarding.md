@@ -59,4 +59,4 @@ everything is visible from the first frame. `WaterBanner`
 
 ## Joining by invitation
 
-*Já faz parte de {clube}* (`app/(app)/join/joined.tsx`) uses the same tick and ripples as Início (`CheckPulse`), then the sentence and an *Entrar* button to `/app`. It shows right after accepting and when a used link is opened again. The accept is `quiet`, so no *Guardado.* pulse plays over it.
+*Já faz parte de {clube}* (`app/(app)/join/joined.tsx`) uses the same water banner, tick and ripples as Início (`WaterBanner`, `CheckPulse`), then the sentence and an *Entrar* button to `/app`. It shows right after accepting and when a used link is opened again. The accept is `quiet`, so no *Guardado.* pulse plays over it.
