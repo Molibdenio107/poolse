@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guia rápido do Poolse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* Poolse's own palette: the water teal and the lane-rope green. One column to read, a menu map to scan. */
+  :root {
+    --bg: #f6f9fa;
+    --surface: #ffffff;
+    --ink: #1d2a2e;
+    --muted: #55666b;
+    --accent: #2e6f80;          /* the primary teal, deepened so it reads as text */
+    --accent-fill: rgb(103, 166, 182);
+    --green: rgb(179, 212, 157);
+    --line: #d9e4e7;
+    --font-display: "Poppins", "Montserrat", ui-sans-serif, system-ui, sans-serif;
+    --font-body: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11191b; --surface: #182327; --ink: #e6eef0; --muted: #9fb2b7;
+      --accent: #8cc7d6; --accent-fill: rgb(103, 166, 182); --green: rgb(150, 190, 125); --line: #2a3a3f;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11191b; --surface: #182327; --ink: #e6eef0; --muted: #9fb2b7;
+    --accent: #8cc7d6; --accent-fill: rgb(103, 166, 182); --green: rgb(150, 190, 125); --line: #2a3a3f;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--font-body); }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.25; text-wrap: balance; }
+  h1 { font-size: 2rem; margin: 0 0 .5rem; }
+  h2 { font-size: 1.35rem; margin: 2.5rem 0 .75rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+  h3 { font-size: 1.05rem; margin: 1.5rem 0 .4rem; }
+  p, li { max-width: 65ch; }
+  .lead { color: var(--muted); font-size: 1.05rem; margin: 0; }
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .toc { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
+  .toc a { display: inline-block; padding: .35rem .75rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); text-decoration: none; font-size: .9rem; }
+  .map { display: grid; gap: .5rem; margin: 1rem 0; }
+  .row { display: grid; grid-template-columns: 11rem 1fr; gap: 1rem; padding: .7rem 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+  .row b { font-family: var(--font-display); font-weight: 600; }
+  @media (max-width: 520px) { .row { grid-template-columns: 1fr; gap: .15rem; } }
+  .steps { padding-left: 1.25rem; }
+  .steps li { margin: .35rem 0; }
+  .path { font-weight: 600; }
+  kbd { font: 600 .85em var(--font-body); padding: .1rem .4rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; background: var(--surface); }
+  .dot { display: inline-block; width: .65rem; height: .65rem; border-radius: 50%; background: var(--accent-fill); vertical-align: middle; margin: 0 .15rem; }
+  .tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0 1rem; padding: 0; list-style: none; }
+  .tabs li { padding: .25rem .65rem; border-radius: 6px; background: color-mix(in srgb, var(--green) 35%, var(--surface)); font-size: .9rem; }
+  .note { padding: .9rem 1rem; border-left: 4px solid var(--green); background: var(--surface); border-radius: 0 10px 10px 0; }
+  footer { margin-top: 3rem; color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Guia rápido do Poolse</h1>
+  <p class="lead">Como entrar, onde está cada coisa e como fazer as tarefas do dia a dia. Para a equipa do clube e para as famílias.</p>
+  <ul class="toc" aria-label="Neste guia">
+    <li><a href="#entrar">Entrar</a></li>
+    <li><a href="#menu">O menu</a></li>
+    <li><a href="#atalhos">Procurar e avisos</a></li>
+    <li><a href="#aluno">A ficha do aluno</a></li>
+    <li><a href="#tarefas">Tarefas da secretaria</a></li>
+    <li><a href="#professores">Professores</a></li>
+    <li><a href="#familias">Famílias</a></li>
+  </ul>
+
+  <h2 id="entrar">Entrar</h2>
+  <ol class="steps">
+    <li>O clube envia-lhe um <b>convite por email</b> (ou uma ligação). Abra-o e crie a sua conta com esse email.</li>
+    <li>Depois, entre sempre pelo mesmo endereço, com o seu email e palavra-passe.</li>
+    <li>No computador abre a <b>área de gestão</b>, com o menu à esquerda. No telemóvel abre a <b>app</b>, com separadores em baixo. É a mesma conta.</li>
+    <li>No telemóvel, use <span class="path">Adicionar ao ecrã principal</span> no menu do navegador para o Poolse ficar como uma app.</li>
+  </ol>
+
+  <h2 id="menu">O menu (computador)</h2>
+  <p>Cada pessoa vê só as entradas da sua função. A secretaria vê tudo.</p>
+  <div class="map">
+    <div class="row"><b>Painel</b><span>O resumo do dia: o que está pendente, as aulas de hoje e os números do clube.</span></div>
+    <div class="row"><b>Instalações</b><span>As piscinas e espaços, a água, as ocorrências, os nadadores-salvadores e a equipa (<span class="path">Staff</span>).</span></div>
+    <div class="row"><b>Turmas</b><span>As turmas, as épocas e as aulas de reposição.</span></div>
+    <div class="row"><b>Calendário</b><span>A semana de aulas por piscina e pista. Em <span class="path">Encerramentos</span> marca feriados e dias fechados.</span></div>
+    <div class="row"><b>Receção</b><span>Entradas e vendas ao balcão.</span></div>
+    <div class="row"><b>Alunos</b><span>Os alunos, os encarregados de educação, os pedidos de inscrição, as mensagens, os avisos, a competição, os níveis e as progressões.</span></div>
+  </div>
+  <p>O botão <b>Voltar</b> leva sempre ao sítio de onde veio.</p>
+
+  <h2 id="atalhos">Procurar, e o que precisa de atenção</h2>
+  <h3>Ir para qualquer sítio</h3>
+  <p>Carregue em <kbd>Ctrl</kbd> + <kbd>K</kbd> e escreva o que procura: uma página (“quotas”, “presenças”) ou uma ação (“Registar presenças”, “Nova aluna ou novo aluno”, “Mudar o idioma”, “Mudar entre tema claro e escuro”). <kbd>Enter</kbd> abre, <kbd>Esc</kbd> fecha.</p>
+  <h3>Os círculos e o sino</h3>
+  <p>Um círculo <span class="dot" aria-hidden="true"></span> quer dizer <b>há uma coisa para fazer</b>. Um número quer dizer que há várias. Siga o círculo: aparece no menu, depois no separador, depois no cartão onde está o problema. Quando o resolve, o círculo desaparece. O <b>sino</b>, ao lado da pesquisa, lista tudo o que está pendente para si.</p>
+
+  <h2 id="aluno">A ficha do aluno</h2>
+  <p>Em <span class="path">Alunos</span>, abra um aluno. A ficha está dividida em separadores:</p>
+  <ul class="tabs" aria-label="Separadores da ficha do aluno">
+    <li>Geral</li><li>Mensalidades</li><li>Documentos</li><li>Turmas</li><li>Semana</li><li>Reposições</li><li>Feedback</li><li>Acesso à app</li><li>Mensagens</li><li>Atividade</li>
+  </ul>
+  <p>Os dados de saúde ficam à parte, em <span class="path">Geral → Notas médicas</span> (<b>Saúde e consentimentos</b>), e só a secretaria e a família os veem. Em <span class="path">Atividade</span> vê quem mudou o quê.</p>
+
+  <h2 id="tarefas">Tarefas da secretaria</h2>
+  <h3>Inscrever um aluno</h3>
+  <ol class="steps">
+    <li><kbd>Ctrl</kbd> + <kbd>K</kbd> → <span class="path">Nova aluna ou novo aluno</span>, ou <span class="path">Alunos</span> → o botão de novo aluno.</li>
+    <li>Preencha os dados e guarde. Depois, em <span class="path">Turmas</span>, escolha a turma.</li>
+  </ol>
+  <p>Os pedidos que as famílias enviam pelo formulário do clube aparecem em <span class="path">Alunos → Pedidos de inscrição</span>.</p>
+  <h3>Dar acesso à família</h3>
+  <p>Na ficha do aluno, separador <span class="path">Acesso à app</span> → <span class="path">Enviar convite por email</span>. O convite vale 24 horas; se expirar, envie um novo link no mesmo sítio.</p>
+  <h3>Registar presenças</h3>
+  <p><kbd>Ctrl</kbd> + <kbd>K</kbd> → <span class="path">Registar presenças</span>, ou abra a aula no <span class="path">Calendário</span>.</p>
+  <h3>Marcar uma mensalidade como paga</h3>
+  <p>Na ficha do aluno, separador <span class="path">Mensalidades</span> → <span class="path">Pago</span>.</p>
+  <h3>Fechar a piscina num dia</h3>
+  <p><span class="path">Calendário → Encerramentos</span>. As aulas desse dia são canceladas e as famílias avisadas.</p>
+  <h3>Falar com as famílias</h3>
+  <p><span class="path">Alunos → Mensagens</span> para uma mensagem, ou <span class="path">Avisos</span> para um aviso que aparece na app durante alguns dias.</p>
+
+  <h2 id="professores">Professores (no telemóvel)</h2>
+  <div class="map">
+    <div class="row"><b>Início</b><span>As suas aulas de hoje. Abra uma aula para registar as presenças.</span></div>
+    <div class="row"><b>Aulas</b><span>O seu calendário da semana.</span></div>
+    <div class="row"><b>Alunos</b><span>Os alunos das suas turmas.</span></div>
+    <div class="row"><b>Perfil</b><span>Os seus dados, as notificações e sair.</span></div>
+  </div>
+
+  <h2 id="familias">Famílias (no telemóvel)</h2>
+  <div class="map">
+    <div class="row"><b>Início</b><span>O que se passa esta semana, os avisos do clube, os pagamentos e os documentos.</span></div>
+    <div class="row"><b>Aulas</b><span>As aulas de cada filho. Em cada aula pode dizer <b>Vou</b> ou <b>Não vou</b>.</span></div>
+    <div class="row"><b>Progressos</b><span>O nível, as competências e os tempos.</span></div>
+    <div class="row"><b>Perfil</b><span>Os seus dados, as notificações e sair.</span></div>
+  </div>
+  <p>Com mais de um filho, escolha qual no topo do ecrã.</p>
+
+  <div class="note">
+    <p><b>Precisa de ajuda?</b> Fale primeiro com a secretaria do seu clube. A secretaria pode contactar o suporte do Poolse.</p>
+  </div>
+
+  <footer>Guia para a fase piloto · 10-11-2026 · A política de privacidade e os termos estão no rodapé do site do Poolse.</footer>
+</div>
+</body>
+</html>
