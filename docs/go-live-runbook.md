@@ -45,11 +45,11 @@ into a dashboard. The first three cannot be changed later without consequences.
 
 ## 2. Accounts (Rui)
 
-- [ ] **Railway**: Hobby plan, project `poolse`, environment `production`.
+- [ ] **Railway**: Hobby plan, project `poolse`, environment `production`. **Region: EU** (e.g. EU West, Amsterdam) for the database and the API — the privacy policy says Railway is in the EU.
 - [ ] **Vercel**: Hobby for the free pilot (Pro the day a club pays), project `poolse-web` from the GitHub repo.
 - [ ] **Clerk**: a **production instance**, separate from the development one, on the domain; add its DNS records.
 - [ ] **Resend**: free plan; verify the domain (its DNS records), and an inbound domain if results by email are wanted (POOLSE-114).
-- [ ] **Cloudflare R2**: two private buckets, `poolse-production` (uploads) and `poolse-backups-production`, each with an API token scoped to that one bucket.
+- [ ] **Cloudflare R2**: two private buckets, `poolse-production` (uploads) and `poolse-backups-production`, both created with **jurisdiction: European Union** (it cannot be changed later; the privacy policy says R2 is in the EU). Three API tokens: Read & Write on the uploads bucket only (the API), Read & Write on the backups bucket only (the backup job), and **Read only on the uploads bucket only** (the nightly copy of the files, GitHub secrets `FILES_S3_*` — `deploy.md`, *Backups and restoring*).
 - [ ] **Anthropic**: an API key with a monthly spend limit set on console.anthropic.com.
 - [ ] **Sentry** (optional): two DSNs, API and web.
 - [ ] **Mailboxes**: `PLATFORM_ALERT_EMAIL`, a mailbox **not** reachable by taking over Rui's Clerk account; and the support address families and clubs see.
