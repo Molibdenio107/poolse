@@ -296,7 +296,7 @@ function SavedPulse({
     <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center p-6">
       <div
         role="status"
-        className="save-pulse flex max-w-xs flex-col items-center gap-4 rounded-2xl border border-border bg-surface/95 px-10 py-7 text-center shadow-lg backdrop-blur-sm"
+        className="save-pulse flex max-w-xs flex-col items-center gap-4 px-10 py-7 text-center"
         style={{ '--save-pulse-dwell': `${dwell}ms` } as React.CSSProperties}
       >
         <span className="relative inline-flex size-16 items-center justify-center">
