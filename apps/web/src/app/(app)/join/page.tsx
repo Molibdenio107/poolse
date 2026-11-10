@@ -71,7 +71,6 @@ export default async function JoinPage({
   return (
     <PageShell
       title={t('join.title')}
-      subtitle={t('app.tagline')}
       actions={
         <>
           <PreferenceControls />
