@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
@@ -7,6 +6,7 @@ import { apiFetch, type InvitationPreview, type Me } from '../../../lib/api';
 import { fetchInvitationPreview } from '../../../lib/public-invitation';
 import { PreferenceControls } from '../preference-controls';
 import { AcceptForm } from './accept-form';
+import { Joined } from './joined';
 import { PageError, PageShell } from '@/components/page-shell';
 import { formatDate } from '@/lib/date-format';
 
@@ -99,14 +99,10 @@ export default async function JoinPage({
         successful accept and called it an error). Say they are in, and how.
       */}
       {joined && (
-        <section className="flex flex-col gap-3 rounded border border-success/40 bg-success/10 p-5">
-          <p className="font-medium text-success">
-            {t('join.accepted', { organization: preview?.organizationName ?? '' })}
-          </p>
-          <Link href="/app" className="text-primary hover:underline coarse:-my-3 coarse:py-3">
-            {t('join.enter')}
-          </Link>
-        </section>
+        <Joined
+          sentence={t('join.accepted', { organization: preview?.organizationName ?? '' })}
+          enter={t('join.enter')}
+        />
       )}
 
       {preview !== null && preview.status !== 'pending' && !joined && (

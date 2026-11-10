@@ -21,6 +21,8 @@ import { ApiError, apiPost, type AcceptResult, type CreatedInvitation } from '..
 
 export interface FormState {
   ok: boolean;
+  /** A success whose own screen says so: `useSavedAction` raises no message (Rui, 10-11-2026). */
+  quiet?: boolean;
   /** A key into the message catalogue, never a sentence: this is i18n territory. */
   errorKey?: string;
   /** Server detail worth showing verbatim — an API message, not a translated string. */
@@ -272,7 +274,8 @@ export async function acceptAction(
   // Memberships changed, so both screens that list them are stale.
   revalidatePath('/dashboard');
   revalidatePath('/dashboard/facilities/staff');
-  return { ok: result.status === 'accepted', result };
+  // `quiet`: the screen's own tick says it; a *Guardado.* on top would say it twice.
+  return { ok: result.status === 'accepted', result, quiet: true };
 }
 
 /**

@@ -7,6 +7,7 @@ import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { acceptAction, type FormState } from '../dashboard/actions';
 import type { AcceptResult } from '../../../lib/api';
+import { Joined } from './joined';
 
 type AcceptFormState = FormState & { result?: AcceptResult };
 
@@ -51,14 +52,10 @@ export function AcceptForm({
 
   if (state.result?.status === 'accepted') {
     return (
-      <div className="flex flex-col gap-3 rounded border border-success/40 bg-success/10 p-5">
-        <p className="font-medium text-success">
-          {t('join.accepted', { organization: state.result.organizationName ?? organizationName })}
-        </p>
-        <Link href="/app" className="text-primary hover:underline">
-          {t('join.enter')}
-        </Link>
-      </div>
+      <Joined
+        sentence={t('join.accepted', { organization: state.result.organizationName ?? organizationName })}
+        enter={t('join.enter')}
+      />
     );
   }
 

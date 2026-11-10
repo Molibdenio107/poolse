@@ -74,7 +74,7 @@ export function useSavedAction<State extends { ok?: boolean }, Payload>(
     acted.current = state;
 
     if (state.ok === true) {
-      const done = state as { undo?: string; redirectTo?: string };
+      const done = state as { undo?: string; redirectTo?: string; quiet?: boolean };
       // A success that removed this page goes where the action said; the
       // toast lives above the route, so it survives the navigation, and it does
       // not start to fade while the next page is still on its way.
@@ -83,6 +83,9 @@ export function useSavedAction<State extends { ok?: boolean }, Payload>(
         startNavigation(() => router.push(to));
       } else router.refresh();
 
+      // A success whose screen says it better — the join's arrival — asks for
+      // no message of its own (Rui, 10-11-2026).
+      if (done.quiet === true) return;
       const message = successMessage(t, state);
       if (done.undo !== undefined) offerUndo(done.undo, message);
       else toast.show('success', message);

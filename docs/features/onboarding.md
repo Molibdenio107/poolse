@@ -56,3 +56,7 @@ The motion is CSS in `globals.css` (`.onboard-*`): waves that drift, cards that 
 `prefers-reduced-motion: no-preference`, so with reduced motion on, nothing moves and
 everything is visible from the first frame. `WaterBanner`
 (`app/(app)/dashboard/water-banner.tsx`) is decoration only and `aria-hidden`.
+
+## Joining by invitation
+
+*Já faz parte de {clube}* (`app/(app)/join/joined.tsx`) uses the same tick and ripples as Início (`CheckPulse`), then the sentence and an *Entrar* button to `/app`. It shows right after accepting and when a used link is opened again. The accept is `quiet`, so no *Guardado.* pulse plays over it.
