@@ -1441,3 +1441,52 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
     transform: scale(1.9);
   }
 }
+
+/*
+ * A success, as a pulse in the middle of the screen (Rui, 10-11-2026) — the
+ * Início tick, quicker. `--save-pulse-dwell` is set by `SavedPulse` from the
+ * length of its sentence; the card fades out over its last 450ms. Ripples
+ * are hidden until they run, so under reduced motion only the tick and the
+ * word show, still, then go.
+ */
+.save-pulse-ripple {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .save-pulse {
+    animation:
+      save-pulse-in 220ms ease-out both,
+      save-pulse-out 450ms ease-in calc(var(--save-pulse-dwell, 1900ms) - 450ms) forwards;
+  }
+  .save-pulse-circle {
+    animation: onboard-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .save-pulse-mark {
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: onboard-draw 420ms cubic-bezier(0.65, 0, 0.35, 1) 260ms forwards;
+  }
+  .save-pulse-ripple {
+    animation: onboard-ripple 1.3s cubic-bezier(0.2, 0.6, 0.3, 1) 420ms forwards;
+  }
+  .save-pulse-ripple-late {
+    animation-delay: 760ms;
+  }
+  .save-pulse-word {
+    animation: onboard-rise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) 380ms both;
+  }
+}
+
+@keyframes save-pulse-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+@keyframes save-pulse-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}

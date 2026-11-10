@@ -233,7 +233,7 @@ Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before tou
 - The dashboard is a union of role bands, and a widget is one declaration in a registry.
 - Owner and Admin land on *Início* (`/dashboard/welcome`); the page sign-in lands on never server-redirects, it hands on with `LandOn` (Rui, 10-11-2026).
 - A page with nothing to work on yet (no pool, no turma) shows `NothingYet` (`components/nothing-yet.tsx`) and the next step, never an empty grid or a form that governs nothing (Rui, 10-11-2026).
-- A save says so, and it says so once.
+- A save says so, and it says so once: a success is the centred pulse (`SavedPulse` in `components/ui/toast.tsx`); a refusal, a warning or a success with a button is a toast (Rui, 10-11-2026).
 - A section that opens and closes moves smoothly
 - Something slow says so in the corner, and the signal comes from where the work starts.
 - The look is tokens, from the design handoff
@@ -261,7 +261,7 @@ Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before tou
 - A side sheet fits the window; the one growable thing inside it takes the slack.
 - Eight level tints, measured in both themes, and always shown at full strength somewhere.
 - A page that fails unexpectedly lands in `dashboard/error.tsx`
-- A message in the family app on a phone is a solid full-width bar above the tab bar (`.toast-card`); the backoffice keeps its quiet toast (Rui, 06-11-2026).
+- A toast in the family app on a phone is a solid full-width bar above the tab bar (`.toast-card`); the backoffice keeps its quiet toast; a success is the pulse in both (Rui, 06-11 and 10-11-2026).
 - A typed cost or purchase is *Faturado* only with a document number; without one it is *Estimado* (Rui, 06-11-2026).
 - A time a family types is `self_reported`: it may be a best, never official or for mínimos. Distance swum is added up from the times, never typed (Rui, 06-11-2026).
 - The family app says the least it can (Rui, 06-11-2026): short labels, *Voltar* with the destination for screen readers only, icons with names for a screen reader, no sentence that repeats a control.

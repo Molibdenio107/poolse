@@ -89,6 +89,8 @@ export function useToast(): ToastApi {
 
 export function ToastProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  /** The success on screen as a pulse, if any — one at a time, the newest. */
+  const [pulse, setPulse] = useState<{ id: number; message: string } | null>(null);
   const nextId = useRef(0);
 
   // Portals need a DOM, and this renders on the server first.
@@ -101,11 +103,22 @@ export function ToastProvider({ children }: { children: React.ReactNode }): Reac
 
   const show = useCallback((tone: ToastTone, message: string, action?: ToastAction) => {
     const id = (nextId.current += 1);
+    // A success with nothing to click is the pulse (Rui, 10-11-2026). With a
+    // button (*Anular*) it stays a box, because the button must be reachable.
+    if (tone === 'success' && action === undefined) {
+      setPulse({ id, message });
+      return;
+    }
     const toast: Toast = action === undefined ? { id, tone, message } : { id, tone, message, action };
     setToasts((was) => [...was, toast].slice(-MOST));
   }, []);
 
   const api = useMemo(() => ({ show }), [show]);
+
+  // Stable, so a toast arriving meanwhile does not restart the pulse's clock.
+  const endPulse = useCallback((id: number) => {
+    setPulse((was) => (was?.id === id ? null : was));
+  }, []);
 
   return (
     <ToastContext.Provider value={api}>
@@ -126,6 +139,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }): Reac
               <ToastCard key={toast.id} toast={toast} onDismiss={dismiss} />
             ))}
           </div>,
+          document.body,
+        )}
+      {mounted &&
+        pulse !== null &&
+        createPortal(
+          <SavedPulse
+            key={pulse.id}
+            id={pulse.id}
+            message={pulse.message}
+            onDone={endPulse}
+          />,
           document.body,
         )}
     </ToastContext.Provider>
@@ -229,6 +253,75 @@ function ToastCard({
       >
         <X aria-hidden="true" className="size-3.5" />
       </button>
+    </div>
+  );
+}
+
+/**
+ * A success, said as a pulse in the middle of the screen (Rui, 10-11-2026).
+ *
+ * The tick from Início, smaller: it pops, draws itself, two ripples go out,
+ * and the word fades in under it, then the whole thing fades away. It never
+ * takes a click (`pointer-events-none`), so somebody saving card after card
+ * keeps working through it. Refusals, warnings and a success with a button
+ * stay toasts.
+ *
+ * Like a toast, it waits while a save or a page is still on its way
+ * (`useBlocking`), so a save that moves to the next page pulses there rather
+ * than over a form about to vanish. A longer sentence stays longer. `status`,
+ * so a screen reader hears the words once, at a pause. Under reduced motion
+ * nothing pops, draws or ripples; the card is simply there, then gone.
+ * The look is `.save-pulse*` in globals.css.
+ */
+function SavedPulse({
+  id,
+  message,
+  onDone,
+}: {
+  id: number;
+  message: string;
+  onDone: (id: number) => void;
+}): React.ReactElement | null {
+  const waiting = useBlocking();
+  const dwell = message.length > 24 ? 2800 : 1900;
+  useEffect(() => {
+    if (waiting) return;
+    const timer = window.setTimeout(() => onDone(id), dwell);
+    return () => window.clearTimeout(timer);
+  }, [waiting, dwell, onDone, id]);
+
+  if (waiting) return null;
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center p-6">
+      <div
+        role="status"
+        className="save-pulse flex max-w-xs flex-col items-center gap-4 rounded-2xl border border-border bg-surface/95 px-10 py-7 text-center shadow-lg backdrop-blur-sm"
+        style={{ '--save-pulse-dwell': `${dwell}ms` } as React.CSSProperties}
+      >
+        <span className="relative inline-flex size-16 items-center justify-center">
+          <span aria-hidden className="save-pulse-ripple absolute inset-0 rounded-full border-2 border-primary" />
+          <span
+            aria-hidden
+            className="save-pulse-ripple save-pulse-ripple-late absolute inset-0 rounded-full border-2 border-primary"
+          />
+          <span className="save-pulse-circle inline-flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-card">
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className="size-8"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path className="save-pulse-mark" d="M5 12.5l4.5 4.5L19 7.5" />
+            </svg>
+          </span>
+        </span>
+        <p className="save-pulse-word text-base font-semibold text-foreground">{message}</p>
+      </div>
     </div>
   );
 }
