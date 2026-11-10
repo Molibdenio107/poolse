@@ -546,6 +546,8 @@ export interface CreatedInvitation {
   token: string;
   /** True when the invitation was actually emailed. False means copy the link. */
   emailed: boolean;
+  /** Whether sending is switched on here at all: false is "share the link" by design (POOLSE-217). */
+  emailConfigured?: boolean;
 }
 
 export type InvitationStatus =
@@ -846,6 +848,12 @@ export interface FacilityDetail extends Facility, Place {
    * dashboard calls it due. Null is not measured and flags nothing.
    */
   waterAnalysisMaxAgeHours: number | null;
+  /** The site's postcode, 0000-000 (10-11-2026); the locality is `city`. */
+  postalCode: string | null;
+  /** The distrito (a `PT_DISTRICTS` name in Portugal, free text elsewhere). */
+  district: string | null;
+  /** The club's and the site's names are the owner's to change (10-11-2026). */
+  canRename: boolean;
   /** Recintos — POOLSE-122. A pool is one (sport `pool`); courts and pitches the others. */
   playingAreas: PlayingArea[];
 }
@@ -1666,6 +1674,14 @@ export interface Guardian {
 }
 
 /** One row of *Fez 18 anos* — POOLSE-207. */
+/** One student's *Fez 18 anos* — POOLSE-213. */
+export interface MajorityState {
+  /** Of age, with a parent's link or a decision already taken: the button shows. */
+  show: boolean;
+  pending: TurnedOfAge | null;
+  decisions: { majorityOn: string; action: 'confirmed' | 'accompanying' | 'invited'; reviewedAt: string; reviewedBy: string }[];
+}
+
 export interface TurnedOfAge {
   studentId: string;
   name: string;
@@ -4173,6 +4189,8 @@ export interface Invoice {
   seriesId: string;
   facilityId: string;
   facilityName: string;
+  /** The site's morada (10-11-2026); null when the site has none. */
+  facilityAddress?: string | null;
   issuedOn: string;
   dueOn: string;
   systemEntryAt: string;
@@ -4430,6 +4448,10 @@ export interface TaxSettings {
   replyEmail: string | null;
   /** Where they go meanwhile: the owner's login email. */
   replyEmailFallback: string | null;
+  /** POOLSE-210: the club's published phone, `+` and digits; null publishes none. */
+  contactPhone: string | null;
+  /** The club's own name (10-11-2026: the owner renames it). */
+  clubName: string;
 }
 
 /** Where families pay the club — POOLSE-94. Null fields were left empty. */
@@ -5004,6 +5026,8 @@ export interface OccupancyTodayWidgetData {
   classes: number;
   swimmers: number;
   withoutInstructor: number;
+  /** Turmas of the published season with no teacher — POOLSE-211. */
+  turmasWithoutInstructor: number;
   /** The busiest moment in one tank. `capacity` null is "not measured". */
   peak: { poolId: string; poolName: string; swimmers: number; capacity: number | null } | null;
   /* What the summary's `sum.today` reads from the same statement (multi-sport Slice 2). */
@@ -6274,4 +6298,12 @@ export interface PlatformTenantAi {
   readers: PlatformTenantAiReader[];
   monthlyCap: number | null;
   usedThisMonth: number;
+}
+
+/** The platform's email, at a glance — POOLSE-217. */
+export interface PlatformEmailStatus {
+  configured: boolean;
+  provider: 'console' | 'resend';
+  from: string;
+  clubs: { organizationId: string; name: string; waiting: number; failed: number }[];
 }

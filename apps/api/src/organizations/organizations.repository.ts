@@ -238,10 +238,14 @@ export interface TaxSettings {
   replyEmail: string | null;
   /** Where they go meanwhile: the owner's login email. */
   replyEmailFallback: string | null;
+  /** POOLSE-210: the club's published phone, `+` and digits; null publishes none. */
+  contactPhone: string | null;
+  /** The club's own name, as every screen and email shows it (10-11-2026: the owner renames it). */
+  clubName: string;
 }
 
 const TAX_COLUMNS = `vat_number, payment_instructions, payment_iban, payment_account_holder, payment_mbway_phone,
-  reply_email::text AS reply_email,
+  reply_email::text AS reply_email, contact_phone, name AS club_name,
   (SELECT u.cached_email::text
      FROM membership_role r
      JOIN membership m ON m.id = r.membership_id AND m.organization_id = r.organization_id
@@ -257,6 +261,8 @@ function toTaxSettings(row: {
   payment_mbway_phone: string | null;
   reply_email: string | null;
   reply_email_fallback: string | null;
+  contact_phone: string | null;
+  club_name: string;
 } | undefined): TaxSettings {
   return {
     taxNumber: row?.vat_number ?? null,
@@ -266,6 +272,8 @@ function toTaxSettings(row: {
     paymentMbwayPhone: row?.payment_mbway_phone ?? null,
     replyEmail: row?.reply_email ?? null,
     replyEmailFallback: row?.reply_email_fallback ?? null,
+    contactPhone: row?.contact_phone ?? null,
+    clubName: row?.club_name ?? '',
   };
 }
 
@@ -297,6 +305,110 @@ export async function setInitialReplyEmail(organizationId: string, replyEmail: s
   await withOrg(organizationId, (tx) =>
     tx.query('UPDATE organization SET reply_email = $2 WHERE id = $1', [organizationId, replyEmail]),
   );
+}
+
+/**
+ * The club's published phone — POOLSE-210. Owner and admin, checked by the
+ * controller, which also normalises it; null clears it (a club may publish none).
+ * Audited with the number, as the reply email is.
+ */
+export async function saveContactPhone(organizationId: string, contactPhone: string | null): Promise<TaxSettings> {
+  return withOrg(organizationId, async (tx) => {
+    await tx.query('UPDATE organization SET contact_phone = $2 WHERE id = $1', [organizationId, contactPhone]);
+    await recordAudit(tx, {
+      action: 'organization.contact_phone_changed',
+      entityType: 'organization',
+      entityId: organizationId,
+      data: { contactPhone },
+    });
+    const { rows } = await tx.query(`SELECT ${TAX_COLUMNS} FROM organization WHERE id = $1`, [organizationId]);
+    return toTaxSettings(rows[0]);
+  });
+}
+
+/**
+ * *Contactos* on Dados do clube — 10-11-2026 (Rui): the reply email and the
+ * phone are one card with one Guardar, so they are saved in one transaction,
+ * both or neither. Each change is audited as its own route audits it.
+ */
+export async function saveClubContacts(
+  organizationId: string,
+  replyEmail: string,
+  contactPhone: string | null,
+): Promise<TaxSettings> {
+  return withOrg(organizationId, async (tx) => {
+    await tx.query('UPDATE organization SET reply_email = $2, contact_phone = $3 WHERE id = $1', [
+      organizationId,
+      replyEmail,
+      contactPhone,
+    ]);
+    await recordAudit(tx, {
+      action: 'organization.reply_email_changed',
+      entityType: 'organization',
+      entityId: organizationId,
+      data: { replyEmail },
+    });
+    await recordAudit(tx, {
+      action: 'organization.contact_phone_changed',
+      entityType: 'organization',
+      entityId: organizationId,
+      data: { contactPhone },
+    });
+    const { rows } = await tx.query(`SELECT ${TAX_COLUMNS} FROM organization WHERE id = $1`, [organizationId]);
+    return toTaxSettings(rows[0]);
+  });
+}
+
+/** The first value, from the create form — POOLSE-210; no audit, as `setInitialReplyEmail`. */
+export async function setInitialContactPhone(organizationId: string, contactPhone: string): Promise<void> {
+  await withOrg(organizationId, (tx) =>
+    tx.query('UPDATE organization SET contact_phone = $2 WHERE id = $1', [organizationId, contactPhone]),
+  );
+}
+
+/**
+ * The club's name — 10-11-2026 (Rui): the owner's alone, checked by the
+ * controller. Audited with the old and new name: it is on every email, invoice
+ * and screen, and "who renamed us" is a fair question.
+ */
+export async function saveClubName(organizationId: string, name: string): Promise<TaxSettings> {
+  return withOrg(organizationId, async (tx) => {
+    const before = await tx.query<{ name: string }>('SELECT name FROM organization WHERE id = $1', [organizationId]);
+    await tx.query('UPDATE organization SET name = $2 WHERE id = $1', [organizationId, name]);
+    await recordAudit(tx, {
+      action: 'organization.renamed',
+      entityType: 'organization',
+      entityId: organizationId,
+      data: { from: before.rows[0]?.name ?? null, to: name },
+    });
+    const { rows } = await tx.query(`SELECT ${TAX_COLUMNS} FROM organization WHERE id = $1`, [organizationId]);
+    return toTaxSettings(rows[0]);
+  });
+}
+
+/** How a family reaches the club — POOLSE-210. */
+export interface ClubContact {
+  name: string;
+  /** Null when the club publishes no phone. */
+  phone: string | null;
+  /** Where a reply goes: the club's email, else the owner's (POOLSE-209). */
+  email: string | null;
+}
+
+/** The club's name, phone and reply address — nothing else of `organization`. */
+export async function readClubContact(organizationId: string): Promise<ClubContact> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ name: string; contact_phone: string | null; reply_email: string | null; reply_email_fallback: string | null }>(
+      `SELECT name, ${TAX_COLUMNS} FROM organization WHERE id = $1`,
+      [organizationId],
+    );
+    const row = rows[0];
+    return {
+      name: row?.name ?? '',
+      phone: row?.contact_phone ?? null,
+      email: row?.reply_email ?? row?.reply_email_fallback ?? null,
+    };
+  });
 }
 
 /** POOLSE-209: one shape for an address, the database's CHECK in words. */

@@ -932,6 +932,69 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
   animation: attention-breathe 2.4s ease-in-out infinite;
 }
 
+/*
+ * A card that holds something pending — POOLSE-214 (Rui, 10-11-2026): a 2px
+ * border in the dots' own colour, drawn inside the card so nothing moves, for
+ * as long as the thing is not done. Never alone: the card's title carries the
+ * breathing dot too, so colour is not the only signal. Every such card is this
+ * class (`ATTENTION_CARD`), so they cannot drift apart.
+ */
+/*
+ * Two or more things to do — POOLSE-215: the dot grown into a small round chip
+ * with the number, in the same colour, breathing more gently than the dot so
+ * the number stays readable. `AttentionMark` draws it; nothing else does.
+ */
+@keyframes attention-breathe-count {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.attention-count {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.3rem;
+  border-radius: 9999px;
+  background-color: rgb(var(--primary));
+  color: rgb(var(--primary-foreground));
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  animation: attention-breathe-count 2.4s ease-in-out infinite;
+}
+
+.attention-card {
+  outline: 2px solid rgb(var(--primary));
+  outline-offset: -2px;
+}
+
+/*
+ * Two or more pending in one list — POOLSE-216 (Rui, 10-11-2026): a box round
+ * every row was too heavy, so each row gets a 3px bar in the dots' colour down
+ * its left edge and a faint tint of the same colour, beside its dot. One pending
+ * item alone keeps the bold box. `attentionClass(n)` chooses; nothing else does.
+ */
+/* On a filled (active) tab or pill the chip inverts, so it stays a chip (POOLSE-215). */
+[role='tab'][data-state='active'] .attention-count,
+[aria-current='page'] .attention-count {
+  background-color: rgb(var(--primary-foreground));
+  color: rgb(var(--primary));
+}
+
+.attention-row {
+  /* Subtler again (Rui, 10-11-2026): a 2px bar at partial strength and a barely-there tint. */
+  box-shadow: inset 2px 0 0 rgb(var(--primary) / 0.7);
+  background-color: rgb(var(--primary) / 0.035);
+}
+
 @media (prefers-reduced-motion: reduce) {
   details > summary svg {
     transition: none;
@@ -942,6 +1005,9 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
   .attention-dot {
     animation: none;
     opacity: 0.6;
+  }
+  .attention-count {
+    animation: none;
   }
 }
 

@@ -184,6 +184,8 @@ export interface PublicWaterPage {
   complaints: PublicComplaints;
   /** The facility's operating regulation in force, or null when none is published. */
   regulation: PublicRegulation | null;
+  /** POOLSE-210: the club's published phone, or null. */
+  contactPhone: string | null;
 }
 
 interface RawPage {
@@ -196,6 +198,7 @@ interface RawPage {
   bands: { metric: string; from: number | string | null; to: number | string | null }[];
   complaintsRegime: string | null;
   complaintsUrl: string | null;
+  contactPhone?: string | null;
   regulation: { effectiveFrom: string; body: string } | null;
   lab: {
     sampledAt: string;
@@ -290,6 +293,7 @@ export async function readPublicWaterPage(
     lab: gradePublicLab(raw.lab, pool),
     complaints: complaintsFor(raw.complaintsRegime, raw.complaintsUrl),
     regulation: regulationFrom(raw.regulation),
+    contactPhone: raw.contactPhone ?? null,
   };
 }
 

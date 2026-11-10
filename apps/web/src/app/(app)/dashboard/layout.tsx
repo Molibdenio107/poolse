@@ -9,6 +9,7 @@ import { modulesOf } from '@/lib/modules';
 import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
 import { CommandPalette } from '@/components/command-palette';
+import { NotificationBell } from '@/components/notification-bell';
 import { readAttention } from '@/lib/attention';
 import { readShell } from '@/lib/shell';
 import { SuspendedNotice } from './suspended-notice';
@@ -252,6 +253,8 @@ export default async function DashboardLayout({
 
         <div className="flex items-center gap-3">
           {/* POOLSE-118: Ctrl+K, or this button, to go anywhere the menu goes. */}
+          {/* POOLSE-212: what needs doing, from the same counts as the menu's dots. */}
+          <NotificationBell badges={badges} />
           <CommandPalette roles={roles} kind={kind} modules={modules} sports={sports} />
           <PreferenceControls languageOnPhone={false} />
           <UserMenu canArchive={roles.includes('owner') || roles.includes('admin')} subscription={subscription} />

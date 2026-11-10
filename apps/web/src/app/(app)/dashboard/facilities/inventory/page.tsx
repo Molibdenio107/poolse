@@ -160,10 +160,6 @@ export default async function InventoryPage({
               facilityId: data.facilityId ?? undefined,
               search: search.trim() || undefined,
             };
-            const outstanding =
-              lost?.state === 'ok'
-                ? lost.data.items.filter((item) => item.status === 'found').length
-                : undefined;
 
             return (
               <>
@@ -174,8 +170,6 @@ export default async function InventoryPage({
                     key,
                     label: t(`inventory.section.${key}`),
                     href: sectionHref(BASE, params, key),
-                    // The store room's size, and what is still waiting to be claimed.
-                    count: key === 'inventory' ? data.items.total : outstanding,
                   }))}
                 />
 

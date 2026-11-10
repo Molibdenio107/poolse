@@ -672,7 +672,8 @@ async function WaterCard({
     <WidgetCard
       widget={widget}
       title={t('facilities.readings')}
-      href={siteHref(scope)}
+      // POOLSE-211: water is about tanks, so it opens Piscinas, not the site list.
+      href="/dashboard/recintos"
       linkLabel={t('dashboard.widget.water.open')}
       emptyMessage={t('dashboard.widget.water.empty')}
     >

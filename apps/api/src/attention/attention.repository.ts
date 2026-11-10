@@ -1,4 +1,5 @@
 import { REQUEST_WAITING } from '../classes/lesson-requests.repository.js';
+import { turmasWithoutInstructor } from '../classes/turmas-without-instructor.js';
 import { withOrg } from '@poolse/db';
 import { excursions, gradeLabResult, isMultiSport, resolveBands } from '@poolse/rules';
 import { readPoolWater } from '../dashboard/management.repository.js';
@@ -35,6 +36,8 @@ export interface Attention {
   sessions: Record<string, number>;
   /** Students the office has something to review on — POOLSE-190. */
   students: Record<string, number>;
+  /** Turmas with no teacher of their own — POOLSE-211. */
+  classGroups: Record<string, number>;
 }
 
 export interface AttentionScope {
@@ -45,12 +48,23 @@ export interface AttentionScope {
   maintenance: boolean;
   /** Person categories expiring within 30 days — POOLSE-202, the office's at reception. */
   categories?: boolean;
+  /** Turmas with no teacher — POOLSE-211: the office's to staff. */
+  classes?: boolean;
   /** Families' answers: `all` for the office, `mine` for a teacher, or none. */
   families: 'all' | 'mine' | null;
   membershipId: string;
 }
 
-export const NOTHING: Attention = { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {} };
+export const NOTHING: Attention = {
+  menu: {},
+  facilities: {},
+  pools: {},
+  spaces: {},
+  sessions: {},
+  students: {},
+  classGroups: {},
+};
+
 
 function add(map: Record<string, number>, key: string | null, by = 1): void {
   if (key === null) return;
@@ -58,7 +72,24 @@ function add(map: Record<string, number>, key: string | null, by = 1): void {
 }
 
 export async function readAttention(organizationId: string, scope: AttentionScope): Promise<Attention> {
-  const out: Attention = { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {} };
+  const out: Attention = {
+    menu: {},
+    facilities: {},
+    pools: {},
+    spaces: {},
+    sessions: {},
+    students: {},
+    classGroups: {},
+  };
+
+  if (scope.classes === true) {
+    // POOLSE-211: each turma dotted, the menu's Turmas counted, each sport's copy its own.
+    for (const turma of await turmasWithoutInstructor(organizationId)) {
+      out.classGroups[turma.id] = 1;
+      add(out.menu, 'classes');
+      add(out.menu, `classes:${turma.sport}`);
+    }
+  }
 
   if (scope.review) {
     // The menu counts students, each sport's copy its own: `students:<sport>`.

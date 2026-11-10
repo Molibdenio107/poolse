@@ -20,6 +20,7 @@ import {
   type LessonFeedback,
   type Me,
   type Student,
+  type MajorityState,
   type StudentFees,
   type StudentIdDocument,
   type Students,
@@ -234,6 +235,28 @@ export default async function StudentPage({
     levels: [],
     ageOfMajority: 18,
   };
+  // POOLSE-213: *Fez 18 anos*, the office's, beside *Dados de saúde* once it applies.
+  const majority = reg.canManage
+    ? await outcome(apiFetch<MajorityState>(`/students/${id}/majority`)).then((r) => (r.state === 'ok' ? r.data : null))
+    : null;
+  const showMajority = majority?.show === true;
+  /*
+   * POOLSE-214: the dot follows the problem down to its tab and pill. What lives
+   * where: *Fez 18 anos* and the date to confirm on *Geral*; what a family sent,
+   * and the date again once an ID is on file, on *Documentos › Identificação*.
+   */
+  const submissionsWaiting = reg.canManage
+    ? await outcome(apiFetch<{ submissions: FamilySubmission[] }>(`/students/${id}/documents/submissions`)).then((r) =>
+        r.state === 'ok' ? r.data.submissions.length : 0,
+      )
+    : 0;
+  const dateToConfirm = reg.canManage && loaded.birthDateState?.declared === true;
+  const dateOnFile = dateToConfirm && loaded.birthDateState?.idDocument === 'on_file';
+  const reviewDot = (count: number): { kind: 'dot'; labelKey: string; count: number } | undefined =>
+    count > 0 ? { kind: 'dot', labelKey: 'detailTabs.badge.toReview', count } : undefined;
+  // How many things wait behind each tab: the mark shows the number from two (POOLSE-215).
+  const generalCount = (majority?.pending != null ? 1 : 0) + (dateToConfirm ? 1 : 0);
+  const documentsCount = submissionsWaiting + (dateOnFile ? 1 : 0);
   // One row per turma, not per slot: a turma that meets on Tuesday and Thursday
   // is one enrolment, and listing it twice would read as two.
   const turmas = [...new Map(timetable.map((entry) => [entry.classGroupId, entry])).values()];
@@ -316,6 +339,7 @@ export default async function StudentPage({
         {
           slug: 'general',
           labelKey: 'detailTabs.general',
+          badge: reviewDot(generalCount),
           content: () => (
             <>
               {/*
@@ -359,7 +383,7 @@ export default async function StudentPage({
                 data about a child should be reached deliberately, not clicked
                 into while doing something else.
               */}
-              {(loaded.canViewProgress !== false || loaded.canViewSensitive !== false) && (
+              {(loaded.canViewProgress !== false || loaded.canViewSensitive !== false || showMajority) && (
                 <div className="flex flex-wrap items-center gap-3">
                   {loaded.canViewProgress !== false && (
                     <ActionButton
@@ -380,6 +404,15 @@ export default async function StudentPage({
                         {t('sensitive.openHint')}
                       </span>
                     </>
+                  )}
+                  {/* POOLSE-213: the student came of age with a parent's link; it breathes until answered. */}
+                  {showMajority && (
+                    <ActionButton
+                      href={`/dashboard/students/${id}/fez-18`}
+                      icon="majority"
+                      label={t('majority.title')}
+                      attention={majority?.pending !== null ? t('majority.toAnswer') : undefined}
+                    />
                   )}
                 </div>
               )}
@@ -415,8 +448,7 @@ export default async function StudentPage({
                 />
               )}
 
-              {/* POOLSE-202: the person's categories and their proof. The office's only. */}
-              {!family && reg.canManage && <PersonCategoriesCard person={{ studentId: id }} />}
+              {/* POOLSE-202's categories moved to Mensalidades › Categorias (POOLSE-216). */}
 
               {/*
                 Who this student is — the name, the level, the birth date. It is
@@ -572,8 +604,9 @@ export default async function StudentPage({
                     studentId={loaded.id}
                     fees={billing.data.fees}
                     periods={billing.data.periods}
-                    {...feesSections(billing.data.fees.seasonCharges.length > 0, section)}
+                    {...feesSections(billing.data.fees.seasonCharges.length > 0, section, !family && reg.canManage)}
                     path={`/dashboard/students/${id}`}
+                    categories={<PersonCategoriesCard person={{ studentId: id }} />}
                   />
                 </>
               )
@@ -583,6 +616,7 @@ export default async function StudentPage({
           slug: 'document',
           labelKey: 'students.document',
           visible: reg.canManage,
+          badge: reviewDot(documentsCount),
           /*
             *Documentos* — POOLSE-132. Three sections behind pills: the ID
             document, the FPN's Anexo 2, and its minors' form only for a minor
@@ -616,6 +650,8 @@ export default async function StudentPage({
                     key,
                     label: t(`documents.section.${key}`),
                     href: sectionHref(path, { tab: 'document', from }, key),
+                    // The date to confirm sits under Identificação (POOLSE-214).
+                    attention: key === 'identificacao' && dateOnFile ? t('detailTabs.badge.toReview') : undefined,
                   }))}
                 />
                 {current === 'identificacao' && (
@@ -689,7 +725,6 @@ export default async function StudentPage({
           slug: 'turmas',
           labelKey: 'students.turmas',
           visible: turmas.length > 0,
-          badge: { kind: 'count', value: turmas.length },
           content: async () => {
             // The last lessons per turma, for the attendance strip (Slice 5). A
             // failure loses the strips, never the list.
@@ -843,7 +878,6 @@ export default async function StudentPage({
           slug: 'credits',
           labelKey: 'reposicao.credits',
           visible: credits.length > 0,
-          badge: { kind: 'count', value: credits.length },
           content: () => (
             <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
@@ -1025,9 +1059,13 @@ type DocumentsSection = 'identificacao' | 'fpn' | 'fpn-menores' | 'boletim';
 function feesSections(
   hasSeasonCharges: boolean,
   requested: string | string[] | undefined,
+  /** The office sees *Categorias* (POOLSE-202, moved here by POOLSE-216). */
+  categories: boolean,
 ): { offered: FeesSection[]; section: FeesSection } {
-  const offered: FeesSection[] = hasSeasonCharges
-    ? ['mensalidade', 'joining']
-    : ['mensalidade'];
+  const offered: FeesSection[] = [
+    'mensalidade',
+    ...(hasSeasonCharges ? (['joining'] as const) : []),
+    ...(categories ? (['categorias'] as const) : []),
+  ];
   return { offered, section: pickSection(offered, requested, 'mensalidade') };
 }

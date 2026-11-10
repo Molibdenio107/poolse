@@ -160,6 +160,11 @@ export interface Invoice {
   seriesId: string;
   facilityId: string;
   facilityName: string;
+  /**
+   * The site's morada, for the document's head (Rui, 10-11-2026). Read live,
+   * not snapshotted: these are internal records, not legal faturas.
+   */
+  facilityAddress: string | null;
   issuedOn: string;
   dueOn: string;
   systemEntryAt: string;
@@ -791,6 +796,8 @@ export const TOTALS_SQL = `
 export const INVOICE_COLUMNS = `
   i.id, i.kind, i.document_no, i.number, i.series_id,
   i.facility_id, f.name AS facility_name,
+  -- The site's morada as two lines: street, then postcode and town (10-11-2026).
+  nullif(concat_ws(chr(10), f.address, nullif(concat_ws(' ', f.postal_code, f.city), '')), '') AS facility_address,
   to_char(i.issued_on, 'YYYY-MM-DD') AS issued_on,
   to_char(i.due_on, 'YYYY-MM-DD') AS due_on,
   /*
@@ -836,6 +843,7 @@ export interface InvoiceRow {
   series_id: string;
   facility_id: string;
   facility_name: string;
+  facility_address: string | null;
   issued_on: string;
   due_on: string;
   system_entry_at: Date;
@@ -869,6 +877,7 @@ export function toInvoice(row: InvoiceRow): Invoice {
     seriesId: row.series_id,
     facilityId: row.facility_id,
     facilityName: row.facility_name,
+    facilityAddress: row.facility_address,
     issuedOn: row.issued_on,
     dueOn: row.due_on,
     systemEntryAt: row.system_entry_at.toISOString(),

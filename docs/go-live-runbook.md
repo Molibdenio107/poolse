@@ -124,6 +124,18 @@ unpaid pilot**: `STRIPE_*` — absent, the Subscrição page says so and the web
 **No `DATABASE_*` here, ever** — the build's tests fail if a `NEXT_PUBLIC_` value looks like one.
 Delete any old `*_AI_ENABLED` flags: nothing reads them (POOLSE-137).
 
+## Real email from a laptop, before go-live (10-11-2026)
+
+On a laptop `EMAIL_PROVIDER=console` writes each email to the API's log and sends nothing, so an invitation shows its link to share and says sending is not switched on here (POOLSE-217). To send for real while developing:
+
+1. Create a free Resend account (3,000 emails a month, 100 a day).
+2. Either verify the domain now (Resend → Domains → add it, then the DNS records it lists at the domain's registrar; wait for *Verified*), or skip this and send only to your own Resend login address: `onboarding@resend.dev` delivers only there.
+3. Resend → API Keys → create one with *Sending access*.
+4. In the local `.env` (never in GitHub): `EMAIL_PROVIDER=resend`, `RESEND_API_KEY=<the key>`, `EMAIL_FROM="Poolse <convites@<verified domain>>"` (or keep `onboarding@resend.dev` for step 2's shortcut).
+5. Restart `pnpm dev`. A club's email then leaves under the club's name from that address, Reply-To the club's email (POOLSE-209).
+
+Set it back to `console` before running the test suites, so they never mail anybody.
+
 ## 5. Clerk webhook, Resend, Sentry
 
 - [ ] Clerk production → webhook `https://<api>/webhooks/clerk`, events `user.created`, `user.updated`,

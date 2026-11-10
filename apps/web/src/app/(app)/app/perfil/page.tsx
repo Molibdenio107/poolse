@@ -5,7 +5,8 @@ import { SignOutButton } from '@clerk/nextjs';
 import {
   Award,
   IdCard,
-  Eye, ChevronRight, FileText, LayoutDashboard, LogOut, Settings, UserPlus, Wallet, Waves } from 'lucide-react';
+  Eye, ChevronRight, FileText, LayoutDashboard, LogOut, Mail, MessageCircle, Phone, Settings, UserPlus, Wallet, Waves } from 'lucide-react';
+import { formatClubPhone, whatsappNumber } from '@poolse/rules';
 import { apiFetch, type ActiveSession, type Me } from '@/lib/api';
 import { ConsentsToConfirm } from './consents-to-confirm';
 import { hatsOf, isHat, landsInTeaching } from '@/lib/app-hats';
@@ -66,7 +67,7 @@ export default async function AppProfilePage({
     );
   }
 
-  const [locale, sessionsLoad, familyLoad, joinLink, categoriesLoad] = await Promise.all([
+  const [locale, sessionsLoad, familyLoad, joinLink, categoriesLoad, contactLoad] = await Promise.all([
     getLocale(),
     outcome(apiFetch<{ sessions: ActiveSession[] }>('/me/sessions')),
     outcome(apiFetch<{ students: { name: string; self: boolean }[] }>('/family')),
@@ -75,7 +76,13 @@ export default async function AppProfilePage({
     hats.homes.includes('family')
       ? outcome(apiFetch<{ categories: { name: string; validUntil: string | null }[] }>('/app/categories'))
       : Promise.resolve(null),
+    // POOLSE-210: how a family reaches the club — its published phone and reply address.
+    hats.homes.includes('family')
+      ? outcome(apiFetch<{ name: string; phone: string | null; email: string | null }>('/app/club-contact'))
+      : Promise.resolve(null),
   ]);
+  const contact = contactLoad !== null && contactLoad.state === 'ok' ? contactLoad.data : null;
+  const whatsapp = contact?.phone ? whatsappNumber(contact.phone) : null;
   // POOLSE-208: what a parent signed before 18, for the young adult to answer. A student login only.
   const consentsLoad = membership.roles.includes('student')
     ? await outcome(apiFetch<{ consents: { id: string; kind: string }[] }>('/app/consents'))
@@ -146,6 +153,54 @@ export default async function AppProfilePage({
 
 
       {consents.length > 0 && <ConsentsToConfirm consents={consents} />}
+
+      {/* POOLSE-210 (Rui, 10-11-2026): the club's phone and email, one tap each. */}
+      {familyRows && contact !== null && (contact.phone !== null || contact.email !== null) && (
+        <section aria-labelledby="club-contact" className="flex flex-col">
+          <h2 id="club-contact" className={label}>
+            {t('app.profile.clubContact', { club: contact.name })}
+          </h2>
+          <div className="flex flex-col divide-y divide-border rounded bg-surface px-4 shadow-card">
+            {contact.phone !== null && (
+              <a
+                href={`tel:${contact.phone}`}
+                className={`${row} focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}
+              >
+                <span className="flex items-center gap-3">
+                  <Phone className="size-5 text-primary" aria-hidden />
+                  {formatClubPhone(contact.phone)}
+                </span>
+                <span className="sr-only">{t('app.profile.callClub')}</span>
+              </a>
+            )}
+            {whatsapp !== null && (
+              <a
+                href={`https://wa.me/${whatsapp}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${row} focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}
+              >
+                <span className="flex items-center gap-3">
+                  <MessageCircle className="size-5 text-primary" aria-hidden />
+                  {t('app.profile.whatsappClub')}
+                </span>
+              </a>
+            )}
+            {contact.email !== null && (
+              <a
+                href={`mailto:${contact.email}`}
+                className={`${row} min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}
+              >
+                <span className="flex min-w-0 items-center gap-3">
+                  <Mail className="size-5 shrink-0 text-primary" aria-hidden />
+                  <span className="truncate">{contact.email}</span>
+                </span>
+                <span className="sr-only">{t('app.profile.emailClub')}</span>
+              </a>
+            )}
+          </div>
+        </section>
+      )}
 
       {familyRows && (
         <Link

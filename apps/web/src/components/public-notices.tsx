@@ -1,4 +1,5 @@
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Phone } from 'lucide-react';
+import { formatClubPhone } from '@poolse/rules';
 import { formatDate } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +43,7 @@ export function PublicNotices({
   labels,
   large = false,
   compact = false,
+  phone = null,
 }: {
   complaints: PublicComplaints;
   regulations: PublicRegulationView[];
@@ -50,7 +52,11 @@ export function PublicNotices({
     complaintsPublic: string;
     regulation: string;
     effectiveFrom: (date: string) => string;
+    /** POOLSE-210: "Telefone do clube", read before the number. */
+    phone: string;
   };
+  /** POOLSE-210: the club's published phone, stored form; null shows nothing. */
+  phone?: string | null;
   large?: boolean;
   compact?: boolean;
 }): React.ReactElement {
@@ -64,6 +70,12 @@ export function PublicNotices({
             <BookOpen aria-hidden className="size-3.5 shrink-0" />
             {complaints.regime === 'public_service' ? labels.complaintsPublic : labels.complaints}
           </a>
+          {phone !== null && (
+            <a href={`tel:${phone}`} className={cn('inline-flex items-center gap-1', link)}>
+              <Phone aria-hidden className="size-3.5 shrink-0" />
+              {labels.phone}: {formatClubPhone(phone)}
+            </a>
+          )}
         </p>
         {/* The rules in force, opened in place: they have no address of their own. */}
         {regulations.map((regulation) => (
@@ -98,6 +110,20 @@ export function PublicNotices({
         <BookOpen aria-hidden className="size-5 shrink-0" />
         {complaints.regime === 'public_service' ? labels.complaintsPublic : labels.complaints}
       </a>
+
+      {/* POOLSE-210: how to reach the club, as words a person can dial. */}
+      {phone !== null && (
+        <a
+          href={`tel:${phone}`}
+          className={cn(
+            'inline-flex items-center gap-2 self-start underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+            large ? 'text-xl' : 'text-base',
+          )}
+        >
+          <Phone aria-hidden className="size-5 shrink-0" />
+          {labels.phone}: {formatClubPhone(phone)}
+        </a>
+      )}
 
       {regulations.map((regulation) => (
         <details

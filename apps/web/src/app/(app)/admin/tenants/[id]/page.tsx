@@ -289,7 +289,6 @@ export default async function TenantRequestsPage({
           slug: 'payments',
           labelKey: 'admin.payments',
           visible: payments !== null && payments.total > 0,
-          badge: payments === null ? undefined : { kind: 'count', value: payments.total },
           content: () =>
             payments !== null && (
               <section className="flex flex-col gap-2">

@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { withOrg } from '@poolse/db';
+import { formatClubPhone } from '@poolse/rules';
 
 export interface Email {
   to: string;
@@ -23,6 +24,10 @@ export function clubEmail(organizationId: string, email: Email): Email {
 export interface ClubIdentity {
   name: string;
   replyTo: string | null;
+  /** POOLSE-210: the club's published phone, stored form; null publishes none. */
+  phone?: string | null;
+  /** The club's language, for the phone line. */
+  locale?: string;
 }
 
 /**
@@ -33,8 +38,8 @@ export interface ClubIdentity {
 export async function clubIdentity(organizationId: string): Promise<ClubIdentity | null> {
   try {
     return await withOrg(organizationId, async (tx) => {
-      const { rows } = await tx.query<{ name: string; reply_to: string | null }>(
-        `SELECT o.name,
+      const { rows } = await tx.query<{ name: string; reply_to: string | null; phone: string | null; locale: string }>(
+        `SELECT o.name, o.contact_phone AS phone, o.locale,
                 coalesce(o.reply_email::text, (
                   SELECT u.cached_email::text
                     FROM membership_role r
@@ -46,7 +51,9 @@ export async function clubIdentity(organizationId: string): Promise<ClubIdentity
         [organizationId],
       );
       const row = rows[0];
-      return row === undefined ? null : { name: row.name, replyTo: row.reply_to };
+      return row === undefined
+        ? null
+        : { name: row.name, replyTo: row.reply_to, phone: row.phone, locale: row.locale };
     });
   } catch (error) {
     logger.warn(`Could not read the club's sender for ${organizationId}: ${error instanceof Error ? error.message : error}`);
@@ -79,6 +86,27 @@ function senderAddress(): string {
 export function addressing(identity: ClubIdentity | null): { from: string; replyTo: string | null } {
   if (identity === null) return { from: sender(), replyTo: null };
   return { from: `"${headerSafeName(identity.name)}" <${senderAddress()}>`, replyTo: identity.replyTo };
+}
+
+/**
+ * Every club email ends with the club's phone when it publishes one — POOLSE-210
+ * (Rui, 10-11-2026). Added here, at the one seam every club email passes, so no
+ * template can forget it; in the club's language, as its emails are. The number
+ * passed the database's CHECK (`+` and digits), so it needs no escaping, and is
+ * escaped anyway.
+ */
+export function withClubPhone(email: Email, identity: ClubIdentity | null): Email {
+  const phone = identity?.phone ?? null;
+  if (phone === null) return email;
+  const line = (identity?.locale ?? 'pt-PT').startsWith('en')
+    ? `Club phone: ${formatClubPhone(phone)}`
+    : `Telefone do clube: ${formatClubPhone(phone)}`;
+  const safe = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return {
+    ...email,
+    text: `${email.text}\n${line}`,
+    html: `${email.html}\n<p style="color:#6b7280;font-size:12px">${safe}</p>`,
+  };
 }
 
 const logger = new Logger('Notifier');
@@ -129,8 +157,9 @@ function sender(): string {
  * just confusing. The caller is told whether it went, and the link stays on
  * screen either way.
  */
-export async function sendEmail(email: Email): Promise<boolean> {
-  const identity = email.organizationId === undefined ? null : await clubIdentity(email.organizationId);
+export async function sendEmail(original: Email): Promise<boolean> {
+  const identity = original.organizationId === undefined ? null : await clubIdentity(original.organizationId);
+  const email = withClubPhone(original, identity);
   const { from, replyTo } = addressing(identity);
   if (provider() === 'console') {
     /*

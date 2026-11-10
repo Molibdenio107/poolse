@@ -1,6 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MajorityController } from './majority.controller.js';
+import { StudentsController } from './students.controller.js';
 import { AttentionController } from '../attention/attention.controller.js';
 import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant, type ScratchTenant } from '../test/harness.js';
 
@@ -107,5 +108,39 @@ test('QA 5: a student not pending, or of another club, is a 404; a bad action a 
       );
       assert.deepEqual((await actingAs(other, { roles: ['owner'] }, () => controller.list())).students, []);
     });
+  });
+});
+
+test('POOLSE-213: a student of age has their own Fez 18 anos, pending then answered; a minor has none; Por rever lists them', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { student } = await cameOfAge(tenant);
+    const [minor] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name, birth_date)
+       VALUES ($1, 'Rita', 'Lopes', (club_today() - interval '12 years')::date) RETURNING id`,
+      [tenant.organizationId],
+    );
+    const controller = new MajorityController();
+
+    const pending = await asOwner(tenant, () => controller.one(student));
+    assert.equal(pending.show, true);
+    assert.equal(pending.pending?.studentId, student);
+    assert.deepEqual(pending.decisions, []);
+    assert.equal((await asOwner(tenant, () => controller.one(minor!.id))).show, false, 'a minor has no Fez 18 anos');
+
+    // Por rever is the dots' own list: the student of age is on it, the minor is not.
+    const listed = await asOwner(tenant, () =>
+      new StudentsController().list(undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+        undefined, undefined, undefined, undefined, undefined, '1'),
+    );
+    assert.deepEqual(listed.students.items.map((one) => one.id), [student]);
+
+    await asOwner(tenant, () => controller.review(student, { action: 'accompanying' }));
+    const answered = await asOwner(tenant, () => controller.one(student));
+    assert.equal(answered.show, true, 'still shown once answered, with the decision');
+    assert.equal(answered.pending, null);
+    assert.deepEqual(answered.decisions.map((one) => one.action), ['accompanying']);
+
+    // A teacher may not read it.
+    await actingAs(tenant, { roles: ['instructor'] }, () => expectStatus(() => controller.one(student), 403));
   });
 });

@@ -839,6 +839,12 @@ export interface StudentQuery {
    */
   overdueOnly?: boolean;
   /**
+   * *Por rever* — POOLSE-213: only these students, the ones `studentsToReview`
+   * names (the dots' own verdict, so the filter and the circles agree). Null is
+   * no filter.
+   */
+  reviewIds?: string[] | null;
+  /**
    * *Por convidar* — POOLSE-129: somebody on the record could be in the app and
    * has neither a login nor a live invitation. The bulk invite reads the same
    * predicate (`HAS_UNINVITED`).
@@ -1072,6 +1078,7 @@ export async function listStudents(
               OR ($7::text = 'none' AND cardinality(${STUDENT_SPORTS('s')}) = 0)
               OR $7::text = ANY(${STUDENT_SPORTS('s')}))
          AND (NOT $8::boolean OR cardinality(${STUDENT_SPORTS('s')}) > 1)
+         AND ($13::uuid[] IS NULL OR s.id = ANY($13::uuid[]))
          -- POOLSE-145: a scoped instructor reads their sports' students only.
          AND ($9::text[] IS NULL OR ${STUDENT_SPORTS('s')} && $9::text[])
          -- POOLSE-164: one turma, and the seguro's state today.
@@ -1113,6 +1120,7 @@ export async function listStudents(
         query.classGroupId ?? null,
         query.insurance ?? null,
         query.order ?? 'name',
+        query.reviewIds ?? null,
       ],
     );
 

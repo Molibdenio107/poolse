@@ -5,11 +5,11 @@ import { TextAreaField, TextField } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
 import type { TaxSettings } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
-import { formatIban, formatMbwayPhone } from '@poolse/rules';
+import { formatClubPhone, formatIban, formatMbwayPhone } from '@poolse/rules';
 import {
   savePaymentDetailsAction,
   savePaymentInstructionsAction,
-  saveReplyEmailAction,
+  saveClubContactsAction,
   saveTaxNumberAction,
 } from './club.actions';
 
@@ -38,11 +38,9 @@ export function TaxPanel({ settings }: { settings: TaxSettings }): React.ReactEl
   const [state, dispatch, pending] = useSavedAction(saveTaxNumberAction, INITIAL);
 
   return (
-    <section className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
-      <div>
-        <h2 className="text-sm font-medium">{t('settings.tax.title')}</h2>
-        <p className="text-sm text-foreground-muted">{t('settings.tax.hint')}</p>
-      </div>
+    // Inside its folded card on Dados do clube (10-11-2026): the card carries the title.
+    <section className="flex flex-col gap-3">
+      <p className="text-sm text-foreground-muted">{t('settings.tax.hint')}</p>
 
       <form action={dispatch} className="flex flex-col gap-3">
         <TextField
@@ -67,22 +65,21 @@ export function TaxPanel({ settings }: { settings: TaxSettings }): React.ReactEl
 }
 
 /**
- * *Respostas das famílias* — POOLSE-209 (Rui, 09-11-2026). Every email the club
- * sends leaves from Poolse under the club's name, and a family's reply goes to
- * this address. Owner and admin, as the route is. Until it is set the owner's
- * login email answers, and the card says which one, in words.
+ * *Contactos* — 10-11-2026 (Rui): where families' replies go (POOLSE-209) and the
+ * phone families see (POOLSE-210), one card and one Guardar. The email is
+ * required (the owner's answers until it is set, and the field says so); the
+ * phone is optional. Inside its folded card, which carries the title.
  */
-export function ReplyEmailPanel({ settings }: { settings: TaxSettings }): React.ReactElement {
+export function ClubContactsPanel({ settings }: { settings: TaxSettings }): React.ReactElement {
   const t = useTranslations();
-  const [state, dispatch, pending] = useSavedAction(saveReplyEmailAction, INITIAL);
+  const [state, dispatch, pending] = useSavedAction(saveClubContactsAction, INITIAL);
+  const error = (key: string): string | undefined =>
+    state.fields?.[key] === undefined ? undefined : t(state.fields[key]);
 
   return (
-    <section className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
-      <div>
-        <h2 className="text-sm font-medium">{t('clubData.replyEmail.title')}</h2>
-        <p className="text-sm text-foreground-muted">{t('clubData.replyEmail.hint')}</p>
-      </div>
-      <form action={dispatch} className="flex flex-col gap-3">
+    <form action={dispatch} className="flex flex-col gap-3">
+      <p className="text-sm text-foreground-muted">{t('clubData.contacts.hint')}</p>
+      <div className="grid max-w-form grid-cols-1 gap-3 sm:grid-cols-2">
         <TextField
           name="replyEmail"
           type="email"
@@ -90,22 +87,34 @@ export function ReplyEmailPanel({ settings }: { settings: TaxSettings }): React.
           initial={settings.replyEmail ?? settings.replyEmailFallback ?? ''}
           autoComplete="email"
           maxLength={254}
-          error={state.fields?.['replyEmail'] === undefined ? undefined : t(state.fields['replyEmail'])}
+          className="max-w-none"
+          error={error('replyEmail')}
           hint={
             settings.replyEmail === null && settings.replyEmailFallback !== null
               ? t('clubData.replyEmail.usingOwner', { email: settings.replyEmailFallback })
-              : undefined
+              : t('clubData.contacts.emailHint')
           }
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary font-semibold text-primary-foreground outline-primary hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
-        >
-          {pending ? t('common.working') : t('common.save')}
-        </button>
-      </form>
-    </section>
+        <TextField
+          name="contactPhone"
+          type="tel"
+          label={t('clubData.contactPhone.title')}
+          initial={settings.contactPhone === null ? '' : formatClubPhone(settings.contactPhone)}
+          autoComplete="tel"
+          maxLength={32}
+          className="max-w-none"
+          error={error('contactPhone')}
+          hint={t('clubData.contacts.phoneHint')}
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={pending}
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary font-semibold text-primary-foreground outline-primary hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
+      >
+        {pending ? t('common.working') : t('common.save')}
+      </button>
+    </form>
   );
 }
 
@@ -128,11 +137,8 @@ export function PaymentInstructionsPanel({ settings }: { settings: TaxSettings }
     fields?.[name] === undefined ? undefined : t(fields[name]);
 
   return (
-    <section className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
-      <div>
-        <h2 className="text-sm font-medium">{t('clubData.paymentTitle')}</h2>
-        <p className="text-sm text-foreground-muted">{t('clubData.payment.hint')}</p>
-      </div>
+    <section className="flex flex-col gap-3">
+      <p className="text-sm text-foreground-muted">{t('clubData.payment.hint')}</p>
 
       <form action={dispatchDetails} className="flex flex-col gap-3">
         <div className="grid gap-3 md:grid-cols-2">

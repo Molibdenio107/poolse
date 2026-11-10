@@ -35,6 +35,8 @@ export function CreateOrganizationForm({ ownerEmail }: { ownerEmail: string }): 
   const [facilityName, setFacilityName] = useSeeded<string>('');
   // POOLSE-209: where families' replies go, the creator's own address to start with.
   const [replyEmail, setReplyEmail] = useSeeded<string>(ownerEmail);
+  // POOLSE-210: the club's phone starts blank — an owner's own mobile is not the club's to publish.
+  const [contactPhone, setContactPhone] = useSeeded<string>('');
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -122,6 +124,30 @@ export function CreateOrganizationForm({ ownerEmail }: { ownerEmail: string }): 
           {state.fields?.['replyEmail'] !== undefined && (
             <p className="text-sm text-danger" role="alert">
               {t(state.fields['replyEmail'])}
+            </p>
+          )}
+
+          {/* POOLSE-210 (Rui, 10-11-2026): optional, changed later in Dados do clube. */}
+          <label htmlFor="organization-contact-phone" className={FIELD_LABEL}>
+            {t('organization.contactPhoneLabel')}
+          </label>
+          <input
+            id="organization-contact-phone"
+            name="contactPhone"
+            type="tel"
+            autoComplete="tel"
+            value={contactPhone}
+            onChange={(event) => setContactPhone(event.target.value)}
+            maxLength={32}
+            className={CONTROL_LINE}
+            aria-describedby="organization-contact-phone-hint"
+          />
+          <p id="organization-contact-phone-hint" className="text-sm text-foreground-muted">
+            {t('organization.contactPhoneHint')}
+          </p>
+          {state.fields?.['contactPhone'] !== undefined && (
+            <p className="text-sm text-danger" role="alert">
+              {t(state.fields['contactPhone'])}
             </p>
           )}
         </>

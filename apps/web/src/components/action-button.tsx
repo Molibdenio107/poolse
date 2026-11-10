@@ -23,6 +23,7 @@ export function ActionButton({
   icon,
   label,
   tone = 'default',
+  attention,
   className,
 }: {
   href: string;
@@ -30,6 +31,8 @@ export function ActionButton({
   label: string;
   /** `sensitive` marks a destination whose opening is recorded. */
   tone?: 'default' | 'sensitive';
+  /** Something here needs doing (POOLSE-120's dot), said to a screen reader in these words. */
+  attention?: string | undefined;
   className?: string;
 }): React.ReactElement {
   return (
@@ -49,6 +52,11 @@ export function ActionButton({
     >
       <EntityIcon kind={icon} />
       {label}
+      {attention !== undefined && (
+        <span className="attention-dot">
+          <span className="sr-only">{attention}</span>
+        </span>
+      )}
     </FromLink>
   );
 }

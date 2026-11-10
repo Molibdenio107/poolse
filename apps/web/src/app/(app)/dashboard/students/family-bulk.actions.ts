@@ -93,7 +93,13 @@ export async function inviteNewStudentAction(
   formData: FormData,
 ): Promise<InviteStudentState> {
   try {
-    const issued = await apiPost<{ studentId: string; link: string; email: string | null; emailed: boolean }>(
+    const issued = await apiPost<{
+      studentId: string;
+      link: string;
+      email: string | null;
+      emailed: boolean;
+      emailConfigured?: boolean;
+    }>(
       '/family-invitations/new-student',
       {
         firstName: String(formData.get('firstName') ?? ''),
@@ -112,7 +118,9 @@ export async function inviteNewStudentAction(
         ? 'familyAccess.toast.emailed'
         : issued.email === null
           ? 'familyAccess.toast.linkReady'
-          : 'familyAccess.toast.notEmailed',
+          : issued.emailConfigured === false
+            ? 'familyAccess.toast.notConfigured'
+            : 'familyAccess.toast.notEmailed',
       ...(issued.email === null ? {} : { values: { email: issued.email } }),
     };
   } catch (error) {

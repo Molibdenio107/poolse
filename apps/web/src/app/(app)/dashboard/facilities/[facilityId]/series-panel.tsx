@@ -46,12 +46,9 @@ export function SeriesPanel({
   if (series.length === 0) return null;
 
   return (
-    // Drawn as its neighbours on Dados do clube are (TaxPanel, Como pagar).
-    <section className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card">
-      <div>
-        <h2 className="text-sm font-medium">{t('invoices.seriesTitle')}</h2>
-        <p className="text-sm text-foreground-muted">{t('invoices.seriesHint')}</p>
-      </div>
+    // Inside its folded card on Dados do clube (10-11-2026), as its neighbours are.
+    <section className="flex flex-col gap-3">
+      <p className="text-sm text-foreground-muted">{t('invoices.seriesHint')}</p>
 
       <ul className="flex flex-col divide-y divide-border">
         {series.map((book) => (

@@ -179,7 +179,7 @@ export default async function InvoicingPage({
         <p className="text-sm text-foreground-muted">
           {t('invoices.settingsMoved')}{' '}
           <FromLink
-            href={`/dashboard/facilities/${chosen}?tab=club`}
+            href={`/dashboard/facilities/${chosen}?tab=general&section=club`}
             className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('invoices.settingsLink')}

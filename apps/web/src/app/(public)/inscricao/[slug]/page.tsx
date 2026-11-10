@@ -163,6 +163,7 @@ export default async function RegistrationPage({
       <PublicNotices
         compact
         complaints={loaded.form.complaints}
+        phone={loaded.form.contactPhone}
         regulations={loaded.form.regulations.map((r) =>
           loaded!.form.regulations.length > 1 ? r : { effectiveFrom: r.effectiveFrom, body: r.body },
         )}
@@ -171,6 +172,7 @@ export default async function RegistrationPage({
           complaintsPublic: t('publicNotices.complaintsPublic'),
           regulation: t('publicNotices.regulation'),
           effectiveFrom: (date) => t('publicNotices.effectiveFrom', { date }),
+          phone: t('publicNotices.phone'),
         }}
       />
     </>,

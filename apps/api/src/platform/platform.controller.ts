@@ -65,6 +65,8 @@ import {
   readTrialEndsAt,
 } from './platform-actions.js';
 import { isPlatformSwitch, listSwitches, setSwitch, type PlatformSwitch } from './platform-switch.js';
+import { readEmailStatus, sendTestEmail, type EmailStatus } from './email-status.js';
+import { currentAuth } from '../auth/auth.context.js';
 
 /**
  * `GET /platform/tenants` — every tenant, one row each.
@@ -125,6 +127,20 @@ export class PlatformController {
     if (!isPlatformSwitch(name)) throw new NotFoundException('No such switch');
     if (typeof body.enabled !== 'boolean') throw new BadRequestException({ fields: { enabled: 'admin.switches.invalid' } });
     return setSwitch(name, body.enabled);
+  }
+
+  /** The platform's email at a glance — POOLSE-217: on or off, from where, and what is unsent per club. */
+  @Get('email')
+  @PlatformAction('email.read')
+  async email(): Promise<EmailStatus> {
+    return readEmailStatus();
+  }
+
+  /** A test email to the admin's own address — POOLSE-217. Recorded and alerted, as every platform write. */
+  @Post('email/test')
+  @PlatformAction('email.test_sent')
+  async emailTest(): Promise<{ to: string | null; sent: boolean }> {
+    return sendTestEmail(currentAuth().clerkUserId);
   }
 
   /**

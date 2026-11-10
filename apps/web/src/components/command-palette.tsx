@@ -1,4 +1,5 @@
 'use client';
+import { OPEN_NOTIFICATIONS } from '@/components/notification-bell';
 
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -147,6 +148,10 @@ export function CommandPalette({
       return;
     }
     setOpen(false);
+    if (command.run.handler === 'openNotifications') {
+      window.dispatchEvent(new Event(OPEN_NOTIFICATIONS));
+      return;
+    }
     if (command.run.handler === 'toggleTheme') {
       const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
       applyTheme(next);

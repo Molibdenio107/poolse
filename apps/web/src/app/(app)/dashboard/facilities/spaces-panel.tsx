@@ -1,5 +1,6 @@
 'use client';
 
+import { attentionClass } from '@/components/attention-dot';
 import { useEffect, useState } from 'react';
 import { FromLink } from '@/components/from-link';
 import { useLocale, useTranslations } from 'next-intl';
@@ -106,6 +107,8 @@ export function SpacesPanel({
   const [open, setOpen] = useState(defaultOpen);
 
   const overdue = spaces.filter((space) => space.overdue).length;
+  // Rows with something to do: one is boxed, more get the accent bar (POOLSE-216).
+  const flaggedSpaces = spaces.filter((space) => (attention[space.id] ?? 0) > 0 || space.overdue).length;
   const issues = spaces.reduce((total, space) => total + space.openIssues, 0);
 
   const [state, dispatch, pending] = useSavedAction<FormState, FormData>(
@@ -207,7 +210,15 @@ export function SpacesPanel({
             const ago = timeAgo(space.lastCleanedAt, locale);
 
             return (
-              <li key={space.id} className="py-3 first:pt-0 last:pb-0">
+              <li
+                key={space.id}
+                // Something to do here (POOLSE-214): the emphasised row, beside its dot.
+                className={cn(
+                  'py-3 first:pt-0 last:pb-0',
+                  ((attention[space.id] ?? 0) > 0 || space.overdue) &&
+                    cn(attentionClass(flaggedSpaces), 'my-1 rounded px-3 first:pt-3 last:pb-3'),
+                )}
+              >
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                   <FromLink
                     href={`/dashboard/facilities/spaces/${space.id}`}
@@ -216,7 +227,8 @@ export function SpacesPanel({
                     {space.name}
                   </FromLink>
                   <AttentionDot
-                    count={attention[space.id]}
+                    // Overdue cleaning is what lights the tab (POOLSE-214), so it lights the row too.
+                    count={(attention[space.id] ?? 0) + (space.overdue ? 1 : 0)}
                     label={t('attention.dot', { count: attention[space.id] ?? 0 })}
                   />
 

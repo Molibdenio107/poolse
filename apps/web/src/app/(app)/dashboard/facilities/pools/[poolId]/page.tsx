@@ -100,6 +100,18 @@ export default async function PoolPage({
   // The same judgement the readings block and the alert email make — never a
   // second one: `excursions` against the API's resolved bands.
   const outOfBand = latest !== undefined && excursions(latest.values, loaded.bands).length > 0;
+  // Laboratory reports — POOLSE-72, read once here since POOLSE-214 so the tab's
+  // dot and Laboratório's agree: the newest graded report failing NP 4542.
+  const lab = loaded.waterQuality
+    ? await outcome(
+        apiFetch<{ results: LabResult[]; chemistryReports: ChemistryReport[] }>(
+          `/facilities/pools/${poolId}/lab-results`,
+        ),
+      )
+    : null;
+  const labFails =
+    lab?.state === 'ok' &&
+    [...lab.data.results].sort((a, b) => b.sampledAt.localeCompare(a.sampledAt))[0]?.grading.grade === 'nao_conforme';
   const energyOn = await moduleIsOn('energy');
 
   return (
@@ -218,15 +230,13 @@ export default async function PoolPage({
           labelKey: 'facilities.readings',
           // POOLSE-87: the water log belongs to water quality, the pool does not.
           visible: loaded.waterQuality,
-          badge: outOfBand ? { kind: 'dot', labelKey: 'detailTabs.badge.waterOutOfBand' } : undefined,
+          badge: outOfBand
+            ? { kind: 'dot', labelKey: 'detailTabs.badge.waterOutOfBand' }
+            : labFails
+              ? { kind: 'dot', labelKey: 'detailTabs.badge.toResolve' }
+              : undefined,
+          // A refusal hides Laboratório; a failure keeps it and says so, never a silent absence.
           content: async () => {
-            // Laboratory reports — POOLSE-72. A refusal hides the section; a
-            // failure keeps it and says so, never a silent absence.
-            const lab = await outcome(
-              apiFetch<{ results: LabResult[]; chemistryReports: ChemistryReport[] }>(
-                `/facilities/pools/${poolId}/lab-results`,
-              ),
-            );
             return (
             <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
@@ -240,9 +250,9 @@ export default async function PoolPage({
                 alerts={loaded.alerts}
                 bands={loaded.bands}
                 reference={loaded.reference}
-                labResults={lab.state === 'ok' ? lab.data.results : null}
-                chemistryReports={lab.state === 'ok' ? lab.data.chemistryReports : []}
-                labFailed={lab.state === 'failed'}
+                labResults={lab?.state === 'ok' ? lab.data.results : null}
+                chemistryReports={lab?.state === 'ok' ? lab.data.chemistryReports : []}
+                labFailed={lab?.state === 'failed'}
                 bandOverrides={loaded.bandOverrides}
                 emailConfigured={loaded.emailConfigured}
                 canManage={loaded.canManage}

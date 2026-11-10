@@ -109,6 +109,8 @@ export async function createOrganizationAction(
         facilityName: String(formData.get('facilityName') ?? '').trim(),
         // POOLSE-209: blank keeps the owner's address answering.
         replyEmail: String(formData.get('replyEmail') ?? '').trim(),
+        // POOLSE-210: blank publishes no phone.
+        contactPhone: String(formData.get('contactPhone') ?? '').trim(),
       },
       clientIp ? { clientIp } : {},
     );

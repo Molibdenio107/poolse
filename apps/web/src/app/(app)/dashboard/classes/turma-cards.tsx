@@ -1,6 +1,8 @@
+import { attentionClass } from '@/components/attention-dot';
 import { getTranslations } from 'next-intl/server';
 import { CalendarDays, Waves, User } from 'lucide-react';
 import { FromLink } from '@/components/from-link';
+import { AttentionDot } from '@/components/attention-dot';
 import { PageEmpty } from '@/components/page-shell';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import type { ClassGroup } from '@/lib/api';
@@ -24,11 +26,16 @@ const TONE: Record<State, BadgeTone> = { open: 'ok', full: 'pending', noInstruct
 export async function TurmaCards({
   groups,
   canManage,
+  flagged = {},
 }: {
   groups: ClassGroup[];
   canManage: boolean;
+  /** POOLSE-211: turmas with nobody teaching them, from the attention map (the office's). */
+  flagged?: Record<string, number>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
+  // How many of these cards are flagged: one is boxed, more get the accent bar (POOLSE-216).
+  const flaggedHere = groups.filter((group) => (flagged[group.id] ?? 0) > 0).length;
   if (groups.length === 0) {
     return (
       <PageEmpty
@@ -56,7 +63,8 @@ export async function TurmaCards({
             key={group.id}
             className={cn(
               'flex flex-col gap-3 rounded bg-surface p-5 shadow-card',
-              state === 'noInstructor' && 'outline outline-2 outline-warning/50',
+              // Nobody teaching it (POOLSE-211, -214): the shared emphasis, beside its dot.
+              (flagged[group.id] ?? 0) > 0 && attentionClass(flaggedHere),
             )}
           >
             <div className="flex items-start justify-between gap-2">
@@ -70,6 +78,7 @@ export async function TurmaCards({
                   {...(colour === null ? {} : { style: { backgroundColor: colour } })}
                 />
                 <span className="truncate">{group.name}</span>
+                <AttentionDot count={flagged[group.id]} label={t('classes.cards.state.noInstructor')} />
               </FromLink>
               <Badge tone={TONE[state]}>{t(`classes.cards.state.${state}`)}</Badge>
             </div>

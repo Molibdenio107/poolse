@@ -43,6 +43,6 @@ export async function reviewMajorityAction(_previous: FormState, formData: FormD
   } catch {
     return { ok: false, errorKey: action === 'invited' ? 'majority.inviteFailed' : 'majority.failed' };
   }
-  revalidatePath('/dashboard/students/fez-18');
+  revalidatePath('/dashboard/students', 'layout');
   return { ok: true, toastKey: `majority.done.${action}` };
 }

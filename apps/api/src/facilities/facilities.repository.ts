@@ -111,6 +111,10 @@ export interface FacilityDetail extends Facility, Place {
    * dashboard calls it due. Null is not measured and enforces nothing.
    */
   waterAnalysisMaxAgeHours: number | null;
+  /** The site's postcode, 0000-000 (10-11-2026); the locality is `city`. */
+  postalCode: string | null;
+  /** The distrito (a `PT_DISTRICTS` name in Portugal, free text elsewhere). */
+  district: string | null;
   /**
    * The site's recintos — POOLSE-122. Today every one is a pool's, the same rows
    * as `pools`; the menu switches to these with POOLSE-125.
@@ -364,6 +368,8 @@ export async function findFacility(
       latitude: number | null;
       longitude: number | null;
       water_analysis_max_age_hours: number | null;
+      postal_code: string | null;
+      district: string | null;
       pools: Pool[] | null;
       photos: Photo[] | null;
       playing_areas: PlayingArea[] | null;
@@ -381,6 +387,7 @@ export async function findFacility(
              f.latitude::float8  AS latitude,
              f.longitude::float8 AS longitude,
              f.water_analysis_max_age_hours,
+             f.postal_code, f.district,
              (
                SELECT coalesce(
                         json_agg(
@@ -461,6 +468,8 @@ export async function findFacility(
       latitude: row.latitude,
       longitude: row.longitude,
       waterAnalysisMaxAgeHours: row.water_analysis_max_age_hours,
+      postalCode: row.postal_code,
+      district: row.district,
       pools: row.pools ?? [],
       photos: row.photos ?? [],
       playingAreas: row.playing_areas ?? [],
@@ -529,6 +538,8 @@ export async function countPeople(organizationId: string): Promise<PeopleCounts>
 export interface UpdateFacilityInput {
   name?: string;
   address?: string | null;
+  /** Filled when a town is chosen and its region is a known distrito (10-11-2026). */
+  district?: string;
   city?: string | null;
   countryCode?: string | null;
   latitude?: number | null;
@@ -557,6 +568,7 @@ export async function updateFacility(
              country_code = CASE WHEN $5::boolean THEN $7 ELSE country_code END,
              latitude     = CASE WHEN $5::boolean THEN $8::numeric ELSE latitude END,
              longitude    = CASE WHEN $5::boolean THEN $9::numeric ELSE longitude END,
+             district     = coalesce($10, district),
              updated_at   = now()
        WHERE id = $1 AND archived_at IS NULL
       RETURNING id
@@ -571,6 +583,7 @@ export async function updateFacility(
         input.countryCode,
         input.latitude,
         input.longitude,
+        input.district ?? null,
       ],
     );
     if (!rows[0]) return false;
@@ -580,6 +593,43 @@ export async function updateFacility(
       entityType: 'facility',
       entityId: facilityId,
       data: { fields: Object.keys(input) },
+    });
+    return true;
+  });
+}
+
+/** The site's street and postcode, already judged by the controller. */
+export interface FacilityAddressInput {
+  address: string | null;
+  postalCode: string | null;
+  district: string | null;
+  countryCode: string | null;
+}
+
+/**
+ * The site's morada and código postal — one save (Rui, 10-11-2026); the
+ * locality is the town picker's `city`, saved apart. False for a site this club
+ * does not have. Audited by field name, as `updateFacility` is.
+ */
+export async function saveFacilityAddress(
+  organizationId: string,
+  facilityId: string,
+  input: FacilityAddressInput,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string }>(
+      `UPDATE facility
+          SET address = $2, postal_code = $3, district = $4, country_code = $5, updated_at = now()
+        WHERE id = $1 AND archived_at IS NULL
+       RETURNING id`,
+      [facilityId, input.address, input.postalCode, input.district, input.countryCode],
+    );
+    if (!rows[0]) return false;
+    await recordAudit(tx, {
+      action: 'facility.updated',
+      entityType: 'facility',
+      entityId: facilityId,
+      data: { fields: ['address', 'postalCode', 'district', 'countryCode'] },
     });
     return true;
   });

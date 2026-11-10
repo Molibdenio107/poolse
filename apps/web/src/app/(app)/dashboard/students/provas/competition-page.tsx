@@ -131,11 +131,12 @@ export async function CompetitionPage({
           current={section}
           items={offered.map((key) => ({
             key,
-            label:
-              key === 'recebidos'
-                ? t('qualifying.section.recebidos', { count: inbox?.pendingCount ?? 0 })
-                : t(`qualifying.section.${key}`),
+            label: t(`qualifying.section.${key}`),
             href: sectionLink(key, params.season),
+            // Results waiting to be imported light the menu (POOLSE-114); the pill says where (POOLSE-214).
+            attention: key === 'recebidos' && (inbox?.pendingCount ?? 0) > 0 ? t('detailTabs.badge.toResolve') : undefined,
+            // The number lives in the mark now, from two (POOLSE-215), not in the words.
+            attentionCount: key === 'recebidos' ? (inbox?.pendingCount ?? 0) : undefined,
           }))}
         />
       )}

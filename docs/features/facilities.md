@@ -29,8 +29,21 @@ Rui's order: the site, how it looks, what it offers.
 - **Instalações** (the list) reads top to bottom: each site's set-up card (*Configurar esta
   instalação*), then the sport cards, then each site's photographs on a card of their own (Rui,
   04-11-2026).
-- **The site page's Geral** is the site's own sections and nothing else (*Pessoas*, *Meteorologia*,
-  *Localização*, *Horário*, *Água*, one at a time). The sports live on Instalações and are not
+- **The site page's Geral** is the club's and the site's own set-up, one pill at a time:
+  *Geral · Pessoas · Dados do clube · Horário · Água · Meteorologia* (Rui, 10-11-2026), and the
+  page opens on the *Geral* pill, a simple page of the site's details: *Nome do clube* and *Nome da
+  instalação* (the owner's alone; a blank site name saves as the club's, as at creation; an admin reads them as text and the API refuses a rename,
+  `PUT /settings/club-name`, `PATCH /facilities/:id` with `name`), *Morada*, *Código postal*
+  (0000-000, normalised) and *Localidade*, which **is** the town picker: one box, the town the
+  weather reads, never a second field for the same value. Then *Distrito* (in Portugal a list of
+  the 18 distritos and the two regiões autónomas, `PT_DISTRICTS`; free text elsewhere; filled in
+  when a chosen town's region names one) and *País* (every ISO country, named on the server; it is
+  the town picker's own `country_code`, one value). One *Guardar* for the rest
+  (`PUT /facilities/:id/address`, owner and admin); the town saves when chosen. The morada prints as
+  two lines (street; postcode and town) under the site's name on invoices and family statements.
+  *Dados do clube* is four folded cards that each say their value while closed: *Dados fiscais*,
+  *Contactos* (the reply email and the club's phone, one save), *Como pagar*, and the numbering
+  books. Old links (`?tab=club`, `?section=location`) land on the right pill. The sports live on Instalações and are not
   repeated here. The logo and the site's photographs are the site page's *Multimédia* tab.
 - **Preços**: *Inscrição* and *Seguro* are separate sections. *Seguro* holds the seguro prices and
   the apólice.

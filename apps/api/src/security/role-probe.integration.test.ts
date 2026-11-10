@@ -1275,6 +1275,103 @@ test('the young adult’s consents refuse everybody but a student login (403) �
   }
 });
 
+test("the club's phone is set by owner and admin only, and read by the app's people (403) — POOLSE-210", async () => {
+  await asEach(async () => {
+    await refused('PUT settings/contact-phone', 403, () =>
+      new SettingsController().saveContactPhone({ contactPhone: '912345678' }),
+    );
+  });
+  await as(fixture.instructorId, ['instructor'], async () => {
+    await refused('PUT settings/contact-phone as instructor', 403, () =>
+      new SettingsController().saveContactPhone({ contactPhone: '912345678' }),
+    );
+  });
+  await as(fixture.maintenanceId, ['maintenance'], async () => {
+    await refused('PUT settings/contact-phone as maintenance', 403, () =>
+      new SettingsController().saveContactPhone({ contactPhone: '912345678' }),
+    );
+    // Maintenance has no family app: the club's contact card is not theirs.
+    await refused('GET app/club-contact as maintenance', 403, () => new AppController().clubContact());
+  });
+
+  // The path that is allowed: an admin types it as people do, a family reads it back.
+  await as(fixture.adminId, ['admin'], async () => {
+    await refused('PUT settings/contact-phone with no number', 400, () =>
+      new SettingsController().saveContactPhone({ contactPhone: 'ligue-nos' }),
+    );
+    const saved = await new SettingsController().saveContactPhone({ contactPhone: '912 345 678' });
+    assert.equal(saved.contactPhone, '+351912345678');
+  });
+  await as(fixture.unlinkedGuardianId, ['guardian'], async () => {
+    const contact = await new AppController().clubContact();
+    assert.equal(contact.phone, '+351912345678');
+    assert.deepEqual(Object.keys(contact).sort(), ['email', 'name', 'phone'], 'nothing else of the club leaves');
+  });
+  await as(fixture.adminId, ['admin'], async () => {
+    const cleared = await new SettingsController().saveContactPhone({ contactPhone: '  ' });
+    assert.equal(cleared.contactPhone, null, 'blank clears it');
+  });
+});
+
+test("the site's address and the club's contacts are owner and admin's (403), and judged per field (400) — 10-11-2026", async () => {
+  const fac = tenantRef.facilityId;
+  const address = { address: 'Rua das Piscinas, 12', postalCode: '3800 001', district: 'Aveiro', countryCode: 'pt' };
+  await asEach(async () => {
+    await refused('PUT facilities/:id/address', 403, () => new FacilitiesController().saveAddress(fac, address));
+    await refused('PUT settings/contacts', 403, () =>
+      new SettingsController().saveContacts({ replyEmail: 'secretaria@clube.pt', contactPhone: '' }),
+    );
+  });
+  for (const [id, roles] of [[fixture.instructorId, ['instructor']], [fixture.maintenanceId, ['maintenance']]] as const) {
+    await as(id, [...roles], async () => {
+      await refused(`PUT facilities/:id/address as ${roles[0]}`, 403, () => new FacilitiesController().saveAddress(fac, address));
+      await refused(`PUT settings/contacts as ${roles[0]}`, 403, () =>
+        new SettingsController().saveContacts({ replyEmail: 'secretaria@clube.pt', contactPhone: '' }),
+      );
+    });
+  }
+  await as(fixture.adminId, ['admin'], async () => {
+    await refused('PUT facilities/:id/address with a bad postcode', 400, () =>
+      new FacilitiesController().saveAddress(fac, { ...address, postalCode: '38000' }),
+    );
+    await refused('PUT settings/contacts with no email', 400, () =>
+      new SettingsController().saveContacts({ replyEmail: '', contactPhone: '912345678' }),
+    );
+    await refused('PUT facilities/:id/address with a distrito Portugal does not have', 400, () =>
+      new FacilitiesController().saveAddress(fac, { ...address, district: 'Galiza' }),
+    );
+    await refused('PUT facilities/:id/address with no such country', 400, () =>
+      new FacilitiesController().saveAddress(fac, { ...address, countryCode: 'XX' }),
+    );
+    // Abroad, the distrito is free text.
+    await new FacilitiesController().saveAddress(fac, { ...address, district: 'Galicia', countryCode: 'ES' });
+    await new FacilitiesController().saveAddress(fac, address);
+    const site = await new FacilitiesController().one(fac);
+    assert.equal(site.postalCode, '3800-001', 'the postcode is stored as 0000-000');
+    assert.equal(site.district, 'Aveiro');
+    assert.equal(site.countryCode, 'PT', 'the country is upper-cased, one value with the town');
+    // The names are the owner's alone (Rui, 10-11-2026).
+    assert.equal(site.canRename, false, 'an admin is not offered the names');
+    await refused('PATCH facilities/:id name as admin', 403, () => new FacilitiesController().update(fac, { name: 'Outro nome' }));
+    await refused('PUT settings/club-name as admin', 403, () => new SettingsController().saveClubName({ name: 'Outro clube' }));
+    const saved = await new SettingsController().saveContacts({ replyEmail: 'secretaria@clube.pt', contactPhone: '' });
+    assert.equal(saved.replyEmail, 'secretaria@clube.pt');
+    assert.equal(saved.contactPhone, null, 'a blank phone publishes none');
+  });
+  await as(tenantRef.ownerMembershipId, ['owner'], async () => {
+    await refused('PUT settings/club-name blank', 400, () => new SettingsController().saveClubName({ name: '  ' }));
+    const renamed = await new SettingsController().saveClubName({ name: `${tenantRef.name} (renomeado)` });
+    assert.equal(renamed.clubName, `${tenantRef.name} (renomeado)`);
+    await new SettingsController().saveClubName({ name: tenantRef.name });
+    assert.equal((await new FacilitiesController().one(fac)).canRename, true);
+    // A blank site name is the club's, as at creation.
+    const siteName = (await new FacilitiesController().one(fac)).name;
+    await new FacilitiesController().update(fac, { name: '  ' });
+    assert.equal((await new FacilitiesController().one(fac)).name, tenantRef.name);
+    await new FacilitiesController().update(fac, { name: siteName });
+  });
+});
+
 test('where the club is paid refuses a guardian and a student (403) — POOLSE-94', async () => {
   await asEach(async () => {
     await refused('PUT settings/payment-details', 403, () =>
@@ -1532,7 +1629,7 @@ test('GET attention answers a guardian and a student with an empty map', async (
   await asEach(async (who) => {
     assert.deepEqual(
       await new AttentionController().read(),
-      { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {} },
+      { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {}, classGroups: {} },
       who.label,
     );
   });
@@ -1544,7 +1641,7 @@ test('GET shell gives a guardian and a student the logo and nothing that is not 
       await new ShellController().read(),
       {
         logoFileId: null,
-        attention: { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {} },
+        attention: { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {}, classGroups: {} },
         meetInboxPending: null,
         subscriptionAlert: null,
         supportStatus: null,

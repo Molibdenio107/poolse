@@ -206,13 +206,11 @@ export default async function PeoplePage({
                 key: 'members',
                 label: t('people.members'),
                 href: sectionHref(path, { from, role: role ?? undefined, search: term || undefined }, 'members'),
-                count: people.counts.total,
               },
               {
                 key: 'invitations',
                 label: t('staff.section.invitations'),
                 href: sectionHref(path, { from }, 'invitations'),
-                count: people.invitations.length,
               },
             ]}
           />

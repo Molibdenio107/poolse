@@ -212,7 +212,6 @@ export default async function MeterPage({
         {
           slug: 'readings',
           labelKey: 'energy.history',
-          badge: { kind: 'count', value: readings.length },
           content: () => (
             <>
               {canRecord && (

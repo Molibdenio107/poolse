@@ -1,8 +1,11 @@
 import type { PoolseSport } from '@poolse/rules';
 import { SportIcon, sportNameKey } from '@/components/sport-icon';
 import { RegulationPanel, type ComplaintsSettingsView, type RegulationVersionView } from './regulation-panel';
-import { PaymentInstructionsPanel, ReplyEmailPanel, TaxPanel } from './tax-panel';
+import { ClubContactsPanel, PaymentInstructionsPanel, TaxPanel } from './tax-panel';
+import { FoldCard } from '@/components/fold-card';
+import { COUNTRY_CODES, formatClubPhone, formatIban, formatMbwayPhone } from '@poolse/rules';
 import { LogoPanel } from './logo-panel';
+import { SiteDetailsForm } from './address-field';
 import { DocumentsTab } from './boletim-template-panel';
 import { SeriesPanel } from './series-panel';
 import { listSeries } from '../../faturacao/invoices.actions';
@@ -18,7 +21,7 @@ import {
 } from '@/components/section-pills';
 import { describeLoad, outcome, type LoadFailure } from '@/lib/load-failure';
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import {
   ApiError,
   apiFetch,
@@ -215,7 +218,8 @@ export default async function FacilityPage({
       subtitle={[loaded.address, loaded.city, loaded.timezone].filter(Boolean).join(' · ')}
       back={back}
       actions={<EntityIcon kind="facility" className="mt-1.5 size-6 text-primary" />}
-      requested={tab}
+      // `?tab=club` was Dados do clube's own tab until 10-11-2026: it is Geral's pill now.
+      requested={tab === 'club' ? 'general' : tab}
       tabs={[
         {
           slug: 'general',
@@ -226,7 +230,7 @@ export default async function FacilityPage({
             sports are on the Instalações page, between the set-up card and the
             photographs, and not repeated here.
           */
-          content: () => <GeneralTab site={loaded} path={path} from={from} section={section} />,
+          content: () => <GeneralTab site={loaded} path={path} from={from} section={tab === 'club' ? 'club' : section} />,
         },
         {
           slug: 'prices',
@@ -372,8 +376,6 @@ export default async function FacilityPage({
           slug: 'partners',
           labelKey: 'partners.title',
           visible: loaded.canManage && partners.state !== 'refused',
-          badge:
-            partners.state === 'ok' ? { kind: 'count', value: partners.data.total } : undefined,
           content: () =>
             partners.state === 'failed' ? (
               <PageError message={t(partners.failure.key)} />
@@ -422,7 +424,12 @@ export default async function FacilityPage({
           visible: spaces.state !== 'refused',
           badge:
             spaces.state === 'ok' && spaces.data.items.some((space) => space.overdue)
-              ? { kind: 'dot', labelKey: 'detailTabs.badge.spacesOverdue' }
+              ? {
+                  kind: 'dot',
+                  labelKey: 'detailTabs.badge.spacesOverdue',
+                  // How many, from two (POOLSE-215).
+                  count: spaces.data.items.filter((space) => space.overdue).length,
+                }
               : undefined,
           content: () =>
             spaces.state === 'failed' ? (
@@ -451,7 +458,11 @@ export default async function FacilityPage({
           visible: tasks.state !== 'refused',
           badge:
             tasks.state === 'ok' && tasks.data.tasks.some((task) => task.state === 'due')
-              ? { kind: 'dot', labelKey: 'detailTabs.badge.maintenanceDue' }
+              ? {
+                  kind: 'dot',
+                  labelKey: 'detailTabs.badge.maintenanceDue',
+                  count: tasks.data.tasks.filter((task) => task.state === 'due').length,
+                }
               : undefined,
           content: () =>
             tasks.state === 'failed' ? (
@@ -504,51 +515,6 @@ export default async function FacilityPage({
         },
         {
           /*
-            The club's own data — its NIPC, and its logo until POOLSE-104 C took
-            that to Fotografias — moved here from Faturação → Configuração on
-            13 October 2026 (Rui): they are defined for the
-            club, and this page is where the club is configured. Club-wide, as
-            the complaints setting on the Regulamento tab is, and the tab says
-            so. Owner and admin, as the endpoints are. The numbering books
-            followed on 23 October 2026 (POOLSE-104 B) — those are this site's.
-          */
-          slug: 'club',
-          labelKey: 'clubData.tab',
-          visible: loaded.canManage,
-          content: async () => {
-            const invoicing = await moduleIsOn('invoicing');
-            // The numbering books are invoicing's, and this site's own (POOLSE-104 B).
-            const [tax, books] = await Promise.all([
-              readTaxSettings(),
-              invoicing ? listSeries(facilityId) : Promise.resolve(null),
-            ]);
-            if (tax.state === 'refused') return <PageError message={t('common.notAllowed')} />;
-            return (
-              <div className="flex flex-col gap-4">
-                <p className="text-sm text-foreground-muted">{t('clubData.hint')}</p>
-                {tax.state === 'failed' ? (
-                  <PageError message={t(tax.failure.key)} />
-                ) : (
-                  <>
-                    <TaxPanel settings={tax.data} />
-                    {/* POOLSE-209: where families' replies go, for every club. */}
-                    <ReplyEmailPanel settings={tax.data} />
-                    {/* Como pagar is read by invoice reminders: invoicing's (POOLSE-87). */}
-                    {invoicing && <PaymentInstructionsPanel settings={tax.data} />}
-                  </>
-                )}
-                {/*
-                  Moved here from Faturação's Configuração view (POOLSE-104 B). A
-                  refusal hides the card; a failure says so in its place.
-                */}
-                {books?.state === 'failed' && <PageError message={t(books.failure.key)} />}
-                {books?.state === 'ok' && <SeriesPanel facilityId={facilityId} series={books.data.series} />}
-              </div>
-            );
-          },
-        },
-        {
-          /*
             The club's own paper forms — POOLSE-142 (Rui, 01-11-2026): the
             boletim de sócio and the FPN declaration, each filled for every
             student when it is printed from the record. The club's, like
@@ -576,8 +542,73 @@ export default async function FacilityPage({
 }
 
 /**
- * General: what the site is — its people, its weather, where it is and when it
- * opens, in the order those questions are asked.
+ * *Dados do clube* — a pill of Geral since 10-11-2026 (Rui), a tab of its own
+ * before. The club's own data — its NIPC, where families' replies go, its phone,
+ * *Como pagar* — moved here from Faturação → Configuração on 13 October 2026,
+ * and this site's numbering books followed (POOLSE-104 B). Club-wide, as the
+ * complaints setting on the Regulamento tab is, and the hint says so. Owner and
+ * admin, as the endpoints are. Old `?tab=club` links land here.
+ */
+async function ClubSection({ facilityId }: { facilityId: string }): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const invoicing = await moduleIsOn('invoicing');
+  // The numbering books are invoicing's, and this site's own (POOLSE-104 B).
+  const [tax, books] = await Promise.all([
+    readTaxSettings(),
+    invoicing ? listSeries(facilityId) : Promise.resolve(null),
+  ]);
+  if (tax.state === 'refused') return <PageError message={t('common.notAllowed')} />;
+  if (tax.state === 'failed') return <PageError message={t(tax.failure.key)} />;
+  const club = tax.data;
+  const unset = t('clubData.fold.unset');
+
+  // What each card says while folded: the value set today, or that nothing is.
+  const contacts = [club.replyEmail ?? club.replyEmailFallback, club.contactPhone && formatClubPhone(club.contactPhone)]
+    .filter(Boolean)
+    .join(' · ');
+  const payment = [
+    club.paymentIban && `IBAN ${formatIban(club.paymentIban)}`,
+    club.paymentMbwayPhone && `MB WAY ${formatMbwayPhone(club.paymentMbwayPhone)}`,
+    club.paymentInstructions && t('clubData.fold.otherWays'),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const series = books?.state === 'ok' ? books.data.series : [];
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-foreground-muted">{t('clubData.hint')}</p>
+      <FoldCard title={t('settings.tax.title')} summary={club.taxNumber === null ? unset : `NIPC ${club.taxNumber}`}>
+        <TaxPanel settings={club} />
+      </FoldCard>
+      {/* POOLSE-209 + POOLSE-210: where replies go and the phone families see, one save. */}
+      <FoldCard title={t('clubData.contacts.title')} summary={contacts === '' ? unset : contacts}>
+        <ClubContactsPanel settings={club} />
+      </FoldCard>
+      {/* Como pagar is read by invoice reminders: invoicing's (POOLSE-87). */}
+      {invoicing && (
+        <FoldCard title={t('clubData.paymentTitle')} summary={payment === '' ? unset : payment}>
+          <PaymentInstructionsPanel settings={club} />
+        </FoldCard>
+      )}
+      {/* This site's numbering books (POOLSE-104 B); a failure says so in its place. */}
+      {books?.state === 'failed' && <PageError message={t(books.failure.key)} />}
+      {series.length > 0 && (
+        <FoldCard
+          title={t('invoices.seriesTitle')}
+          summary={series.map((book) => `${book.name} (${book.prefix})`).join(' · ')}
+        >
+          <SeriesPanel facilityId={facilityId} series={series} />
+        </FoldCard>
+      )}
+    </div>
+  );
+}
+
+/**
+ * General: what the club and the site are — its people, the club's own data,
+ * where it is and when it opens, its water rule, and the weather last (Rui,
+ * 10-11-2026: the things to configure first, the thing to glance at after).
  *
  * **One section at a time**, as on Preços — 12 October 2026. Five independent
  * cards stacked into a page whose last one (the water rule) was found by
@@ -586,7 +617,7 @@ export default async function FacilityPage({
  * send them) and the city picker is a manager's. Only the chosen card is drawn,
  * so the weather is fetched only when somebody asks for it.
  */
-const GENERAL_SECTIONS = ['people', 'weather', 'location', 'hours', 'water'] as const;
+const GENERAL_SECTIONS = ['details', 'people', 'club', 'hours', 'water', 'weather'] as const;
 type GeneralSection = (typeof GENERAL_SECTIONS)[number];
 
 async function GeneralTab({
@@ -609,13 +640,28 @@ async function GeneralTab({
   const offered = GENERAL_SECTIONS.filter((key: GeneralSection) =>
     key === 'people'
       ? site.counts !== undefined
-      : key === 'location'
+      : key === 'details' || key === 'club'
         ? site.canManage
         : key === 'water'
           ? waterOn
           : true,
   );
-  const current = pickSection(offered, section, 'weather');
+  // Opens on Geral, the site's details (Rui, 10-11-2026); `?section=location` was its old name.
+  const current = pickSection(offered, section === 'location' ? 'details' : section, 'details');
+  // País's list, named once here on the server (see `SiteDetailsForm`).
+  const locale = await getLocale();
+  const regionNames = new Intl.DisplayNames([locale], { type: 'region' });
+  const countries =
+    current === 'details'
+      ? COUNTRY_CODES.map((code) => ({ value: code, label: regionNames.of(code) ?? code })).sort((a, b) =>
+          a.label.localeCompare(b.label, locale),
+        )
+      : [];
+  // The club's name for Geral's form: the owner may change it there.
+  const clubName =
+    current === 'details' && site.canManage
+      ? await readTaxSettings().then((r) => (r.state === 'ok' ? r.data.clubName : ''))
+      : '';
 
   return (
     <>
@@ -670,20 +716,34 @@ async function GeneralTab({
         </section>
       )}
 
+      {current === 'club' && site.canManage && <ClubSection facilityId={site.id} />}
+
       {current === 'weather' && (
         <WeatherPanel city={site.city} latitude={site.latitude} longitude={site.longitude} />
       )}
 
-      {current === 'location' && site.canManage && (
+      {/* Geral: the site's details, where the page opens (Rui, 10-11-2026). */}
+      {current === 'details' && site.canManage && (
         <section className="rounded bg-surface p-5 shadow-card">
-          <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('facilities.location')}
-          </h2>
-          <CityPicker
-            organizationId={site.organizationId}
+          <SiteDetailsForm
             facilityId={site.id}
-            city={site.city}
+            canRename={site.canRename}
+            clubName={clubName}
+            facilityName={site.name}
+            address={site.address}
+            postalCode={site.postalCode}
+            district={site.district}
             countryCode={site.countryCode}
+            countries={countries}
+            locality={
+              <CityPicker
+                key="locality"
+                organizationId={site.organizationId}
+                facilityId={site.id}
+                city={site.city}
+                countryCode={site.countryCode}
+              />
+            }
           />
         </section>
       )}

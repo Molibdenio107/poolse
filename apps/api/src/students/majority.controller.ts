@@ -5,6 +5,8 @@ import { CoreRoute } from '../tenant/modules.js';
 import {
   listTurnedOfAge,
   MAJORITY_ACTIONS,
+  studentMajority,
+  type MajorityDecision,
   removeAcompanhante,
   reviewMajority,
   type MajorityAction,
@@ -24,6 +26,20 @@ export class MajorityController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
     return { students: await listTurnedOfAge(organizationId) };
+  }
+
+  /**
+   * One student's *Fez 18 anos* pill — POOLSE-213: whether to show it, what is
+   * pending and what was decided. Owner and admin, as the list was.
+   */
+  @Get(':studentId/majority')
+  async one(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+  ): Promise<{ show: boolean; pending: TurnedOfAge | null; decisions: MajorityDecision[] }> {
+    requireRole('owner', 'admin');
+    const found = await studentMajority(currentTenant().organizationId, studentId);
+    if (found === null) throw new NotFoundException('No such student');
+    return found;
   }
 
   /**

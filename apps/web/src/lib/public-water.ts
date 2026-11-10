@@ -32,6 +32,8 @@ export interface PublicWater {
   complaints: { regime: 'private' | 'public_service'; url: string };
   /** The facility's operating regulation in force, or null. */
   regulation: { effectiveFrom: string; body: string } | null;
+  /** POOLSE-210: the club's published phone, or null. */
+  contactPhone: string | null;
 }
 
 function baseUrl(): string {

@@ -1,5 +1,6 @@
 import { withOrg } from '@poolse/db';
 import type { BandOverride, PoolContext, PoolKind, PoolMetric, PoolUse } from '@poolse/rules';
+import { turmasWithoutInstructor } from '../classes/turmas-without-instructor.js';
 import { OVERDUE, SPACE_JOINS } from '../spaces/spaces.repository.js';
 
 /**
@@ -130,6 +131,11 @@ export interface OccupancyToday {
   swimmers: number;
   /** Classes nobody is teaching and somebody should — `to_define` or `uncovered`. */
   withoutInstructor: number;
+  /**
+   * Turmas of the published season with no teacher of their own, at these sites
+   * — POOLSE-211: what the summary's *Sem professor* counts and opens Turmas on.
+   */
+  turmasWithoutInstructor: number;
   /**
    * The busiest moment in any one tank, against that tank's ceiling. Null when
    * nothing is in a tank today. `capacity` null is "not measured", never zero.
@@ -325,10 +331,13 @@ export async function readOccupancyToday(
     );
 
     const row = rows[0]!;
+    const sites = new Set(facilityIds);
+    const turmas = (await turmasWithoutInstructor(organizationId)).filter((one) => sites.has(one.facilityId));
     return {
       classes: row.classes,
       swimmers: row.swimmers,
       withoutInstructor: row.without_instructor,
+      turmasWithoutInstructor: turmas.length,
       peak: row.peak,
       done: row.done,
       bySport: row.by_sport,

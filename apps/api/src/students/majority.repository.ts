@@ -26,7 +26,11 @@ export interface TurnedOfAge {
 
 /** Every student pending review, oldest majority first. */
 export async function listTurnedOfAge(organizationId: string): Promise<TurnedOfAge[]> {
-  return withOrg(organizationId, async (tx) => {
+  return withOrg(organizationId, (tx) => listTurnedOfAgeIn(tx, organizationId));
+}
+
+async function listTurnedOfAgeIn(tx: Tx, organizationId: string): Promise<TurnedOfAge[]> {
+  {
     const { rows } = await tx.query<TurnedOfAge>(
       `SELECT s.id AS "studentId",
               btrim(s.first_name || ' ' || s.last_name) AS name,
@@ -54,6 +58,51 @@ export async function listTurnedOfAge(organizationId: string): Promise<TurnedOfA
       [organizationId],
     );
     return rows;
+  }
+}
+
+/** One decision the office took when a student came of age — POOLSE-213. */
+export interface MajorityDecision {
+  majorityOn: string;
+  action: MajorityAction;
+  /** `yyyy-MM-ddTHH:mm:ssZ`. */
+  reviewedAt: string;
+  reviewedBy: string;
+}
+
+/**
+ * One student's *Fez 18 anos* — POOLSE-213 (Rui, 10-11-2026): the pill on the
+ * student's *Geral*, which replaced the separate list. Shown for a student of
+ * age who has a parent's link or had one answered (`show`); the pending item is
+ * `majority_pending()`'s own row, never a second definition, and the decisions
+ * are `majority_review`'s, newest first. Null for another club's student.
+ */
+export async function studentMajority(
+  organizationId: string,
+  studentId: string,
+): Promise<{ show: boolean; pending: TurnedOfAge | null; decisions: MajorityDecision[] } | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ of_age: boolean; parental: boolean }>(
+      `SELECT student_of_age(s.organization_id, s.id) AS of_age,
+              EXISTS (SELECT 1 FROM guardian_link g
+                       WHERE g.organization_id = s.organization_id AND g.student_id = s.id
+                         AND g.archived_at IS NULL AND g.kind = 'parental') AS parental
+         FROM student s WHERE s.id = $1 AND s.organization_id = $2`,
+      [studentId, organizationId],
+    );
+    const row = rows[0];
+    if (row === undefined) return null;
+    const { rows: decisions } = await tx.query<MajorityDecision>(
+      `SELECT r.majority_on::text AS "majorityOn", r.action::text AS action,
+              to_char(r.reviewed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "reviewedAt",
+              person_name(r.reviewed_by) AS "reviewedBy"
+         FROM majority_review r
+        WHERE r.organization_id = $1 AND r.student_id = $2 AND r.archived_at IS NULL
+        ORDER BY r.reviewed_at DESC`,
+      [organizationId, studentId],
+    );
+    const pending = (await listTurnedOfAgeIn(tx, organizationId)).find((one) => one.studentId === studentId) ?? null;
+    return { show: row.of_age && (row.parental || decisions.length > 0), pending, decisions };
   });
 }
 

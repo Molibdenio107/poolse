@@ -84,10 +84,10 @@ test('QA 2: with two sports each gets a group, in order, where Turmas stood, and
   const poolCalendar = poolGroup.children?.find((item) => item.key === 'calendar.title');
   assert.equal(poolCalendar?.badge, 'calendar');
   assert.ok((poolCalendar?.children ?? []).length > 0);
-  // Only Alunos and Pedidos carry a circle in a court's group, each that sport's own (POOLSE-143, -190).
+  // Only Turmas, Alunos and Pedidos carry a circle in a court's group, each that sport's own (POOLSE-143, -190, -211).
   assert.deepEqual(
     flat(tennisGroup.children ?? []).filter((item) => item.badge !== undefined).map((item) => [item.badge, item.badgePerSport]),
-    [['students', true], ['leads', true]],
+    [['classes', true], ['students', true], ['leads', true]],
   );
   const tennisTurmas = tennisGroup.children?.find((item) => item.key === 'classes.title');
   assert.deepEqual(tennisTurmas?.children, [], 'Épocas and Reposições read no sport yet');
@@ -98,7 +98,7 @@ test('POOLSE-143: Alunos is shared and copied; Níveis, Avanços and Competiçã
   const shared = sections.find((item) => item.key === 'students.title' && item.sport === undefined);
   assert.deepEqual(
     shared?.children?.map((item) => item.key),
-    ['students.guardiansTitle', 'majority.title', 'messages.title', 'avisos.title'],
+    ['students.guardiansTitle', 'messages.title', 'avisos.title'],
     'the shared register keeps what has no sport dimension; Pedidos sits under Receção (POOLSE-165)',
   );
   const studentsOf = (sport: string): Item | undefined =>

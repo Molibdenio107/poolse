@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type {
@@ -174,6 +175,14 @@ export async function ReadingsBlock({
     .map(([key]): WaterSection => key);
   const current = pickSection(offered, section, 'latest');
   const unsafe = latest === undefined ? [] : excursions(latest.values, bands);
+  /*
+   * POOLSE-214: the dot follows the problem to its pill. The newest graded lab
+   * report failing NP 4542 is what lights the tank (the attention map reads the
+   * same latest report), so Laboratório breathes until a newer one passes.
+   */
+  const newestLab = [...(labResults ?? [])].sort((a, b) => b.sampledAt.localeCompare(a.sampledAt))[0];
+  const labFails = newestLab?.grading.grade === 'nao_conforme';
+  const offMetrics = new Set(unsafe.map((one) => one.metric));
 
   /*
    * Ten a page, like every list that grows (POOLSE-29; Rui, 29-10-2026). Both
@@ -208,11 +217,6 @@ export async function ReadingsBlock({
           ...chemistryReports.map((report): LabEntry => ({ kind: 'chemistry', at: report.takenAt, report })),
         ].sort((one, other) => other.at.localeCompare(one.at));
   const lab = labEntries === null ? null : windowOf(labEntries);
-  const counts: Partial<Record<WaterSection, number>> = {
-    history: analyses.length,
-    alerts: alerts.length,
-    ...(labEntries !== null && labEntries.length > 0 ? { lab: labEntries.length } : {}),
-  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -254,7 +258,10 @@ export async function ReadingsBlock({
           key,
           label: t(`facilities.waterSection.${key}`),
           href: sectionHref(`/dashboard/facilities/pools/${poolId}`, { tab: 'water', from }, key),
-          count: counts[key],
+          attention:
+            (key === 'latest' && unsafe.length > 0) || (key === 'lab' && labFails)
+              ? t('detailTabs.badge.toResolve')
+              : undefined,
         }))}
       />
 
@@ -285,9 +292,18 @@ export async function ReadingsBlock({
               {latest?.values.map((value) => (
                 <div
                   key={value.metric}
-                  className="flex flex-col gap-0.5 rounded border border-border p-3"
+                  // Out of range: the emphasised card and the dot (POOLSE-214).
+                  className={cn(
+                    'flex flex-col gap-0.5 rounded border border-border p-3',
+                    // Always the subtle highlight, one or several (Rui, 10-11-2026): the red
+                    // warning above the pills already says what is wrong.
+                    offMetrics.has(value.metric) && 'attention-row',
+                  )}
                 >
-                  <dt className="text-sm text-foreground-muted">{labelFor(value.metric)}</dt>
+                  <dt className="flex items-center gap-2 text-sm text-foreground-muted">
+                    {labelFor(value.metric)}
+                    {offMetrics.has(value.metric) && <span aria-hidden className="attention-dot" />}
+                  </dt>
                   <dd className="text-lg font-medium">
                     {formatReading(value.value, locale)}{' '}
                     <span className="text-sm font-normal text-foreground-muted">{value.unit}</span>
@@ -517,6 +533,7 @@ export async function ReadingsBlock({
       {current === 'lab' && lab !== null && (
         <LabResultsSection
           poolId={poolId}
+          flaggedId={labFails ? newestLab?.id : undefined}
           entries={lab.items}
           total={lab.total}
           canRecord={canRecord || canManage}

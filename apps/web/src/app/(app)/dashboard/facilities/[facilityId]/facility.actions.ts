@@ -33,6 +33,8 @@ export interface PlaceInput {
   countryCode: string | null;
   latitude: number | null;
   longitude: number | null;
+  /** The chosen town's distrito, when the picker recognised one (10-11-2026). */
+  district?: string | null;
 }
 
 /**
@@ -129,5 +131,34 @@ export async function saveWaterThresholdAction(
   }
 
   revalidatePath(`/dashboard/facilities/${facilityId}`);
+  return { ok: true };
+}
+
+/**
+ * *Geral*'s one save — 10-11-2026 (Rui): the morada and código postal, then, when
+ * the form carried them (an owner's), the club's and the site's names. Each API
+ * route judges its own fields and refuses who may not; a refusal names the field.
+ * The locality is the town picker's, saved when a town is chosen.
+ */
+export async function saveSiteDetailsAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const facilityId = String(formData.get('facilityId') ?? '');
+  const field = (key: string): string => String(formData.get(key) ?? '');
+  try {
+    await apiPut(`/facilities/${facilityId}/address`, {
+      address: field('address'),
+      postalCode: field('postalCode'),
+      district: field('district'),
+      countryCode: field('countryCode'),
+    });
+    if (formData.has('clubName')) await apiPut('/settings/club-name', { name: field('clubName') });
+    // After the club's name, so a blank site name takes the new one (the API's rule).
+    if (formData.has('facilityName')) {
+      await apiPatch(`/facilities/${facilityId}`, { name: field('facilityName').trim() });
+    }
+  } catch (error) {
+    return describeFailure(error, 'facilities.addressSaveFailed');
+  }
+  // The names are on every page's header and the sidebar.
+  revalidatePath('/dashboard', 'layout');
   return { ok: true };
 }

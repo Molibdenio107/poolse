@@ -1,3 +1,5 @@
+import { NotificationBell } from '@/components/notification-bell';
+import { readAttention } from '@/lib/attention';
 import { redirect } from 'next/navigation';
 import { apiFetch, type Me } from '@/lib/api';
 import { hatsOf, viewRoles, type AppHat } from '@/lib/app-hats';
@@ -48,11 +50,16 @@ export default async function AppModeLayout({
   const view = membership.view;
   const homes = view === null ? hatsOf(viewRoles(membership)).homes : [view.hat as AppHat];
 
+  // POOLSE-212: the bell for a home that is told things; a family's map is empty.
+  const told = homes.includes('teaching') || homes.includes('maintenance');
+  const badges = told ? (await readAttention()).menu : {};
+
   return (
     <AppFrame
       organizationName={membership.organizationName}
       logoFileId={(await readShell()).logoFileId}
       homes={homes}
+      bell={told ? <NotificationBell badges={badges} place="app" /> : null}
       banner={
         me.viewing == null ? null : (
           <ViewBanner name={me.viewing.name} hat={me.viewing.hat} expiresAt={me.viewing.expiresAt} />

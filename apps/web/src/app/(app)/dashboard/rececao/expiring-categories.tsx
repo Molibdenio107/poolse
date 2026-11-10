@@ -18,9 +18,14 @@ export async function ExpiringCategories(): Promise<React.ReactElement | null> {
   if (answer.state === 'refused') return null;
 
   return (
-    <section aria-labelledby="reception-expiring" className={PANEL}>
-      <h2 id="reception-expiring" className={PANEL_TITLE}>
+    // Categories about to expire light Receção (POOLSE-202); this card is where (POOLSE-214).
+    <section
+      aria-labelledby="reception-expiring"
+      className={`${PANEL}${answer.state === 'ok' && answer.data.expiring.length > 0 ? ' attention-card' : ''}`}
+    >
+      <h2 id="reception-expiring" className={`${PANEL_TITLE} flex items-center gap-2`}>
         {t('personCategories.expiringTitle')}
+        {answer.state === 'ok' && answer.data.expiring.length > 0 && <span aria-hidden className="attention-dot" />}
       </h2>
       {answer.state === 'failed' ? (
         <p className="text-sm text-danger">{t('personCategories.loadFailed')}</p>

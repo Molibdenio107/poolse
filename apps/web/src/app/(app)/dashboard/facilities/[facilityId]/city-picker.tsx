@@ -2,7 +2,9 @@
 
 import { useEffect, useId, useRef, useState, useTransition } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { MapPin } from 'lucide-react';
+import { MapPin, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ptDistrictFrom } from '@poolse/rules';
 import type { PlaceSuggestion } from '@/lib/api';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { searchPlacesAction, setPlaceAction } from './facility.actions';
@@ -37,6 +39,9 @@ export function CityPicker({
   const listId = useId();
 
   const [query, setQuery] = useState('');
+  // One box (Rui, 10-11-2026): it shows the chosen town until somebody types in it.
+  const [editing, setEditing] = useState(false);
+  const chosen = city === null ? '' : countryCode === null ? city : `${city} (${countryCode})`;
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -97,9 +102,12 @@ export function CityPicker({
         countryCode: place.countryCode,
         latitude: place.latitude,
         longitude: place.longitude,
+        // The distrito comes with the town when its region names one (10-11-2026).
+        district: place.countryCode === 'PT' ? ptDistrictFrom(place.region) : null,
       });
       report(result);
       setQuery('');
+      setEditing(false);
       setSuggestions([]);
     });
   }
@@ -122,42 +130,49 @@ export function CityPicker({
     <div className="flex flex-col gap-3">
       <div className={FIELD_COLUMN}>
         <label htmlFor={`${listId}-input`} className={FIELD_LABEL}>
-          {t('facilities.city')}
+          {t('facilities.siteAddress.locality')}
         </label>
 
-        {city !== null && (
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 font-medium">
-              <MapPin className="size-4 text-primary" aria-hidden />
-              {city}
-              {countryCode !== null && (
-                <span className="text-foreground-muted">({countryCode})</span>
-              )}
-            </span>
+        <div className="relative">
+          <MapPin
+            className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-primary"
+            aria-hidden
+          />
+          <input
+            id={`${listId}-input`}
+            type="text"
+            value={editing ? query : chosen}
+            onFocus={() => {
+              setEditing(true);
+              setQuery('');
+            }}
+            onBlur={() => {
+              if (query.trim() === '') setEditing(false);
+            }}
+            onChange={(event) => setQuery(event.target.value)}
+            // Inside Geral's form (10-11-2026): Enter here picks, it never saves the form.
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter') return;
+              event.preventDefault();
+              const only = suggestions.length === 1 ? suggestions[0] : undefined;
+              if (only !== undefined) choose(only);
+            }}
+            placeholder={t('facilities.cityPlaceholder')}
+            autoComplete="off"
+            className={cn(CONTROL_LINE, 'pl-8', city !== null && 'pr-9')}
+          />
+          {city !== null && (
             <button
               type="button"
               onClick={clear}
               disabled={saving}
-              className="rounded text-sm text-foreground-muted hover:text-danger disabled:opacity-60"
+              aria-label={t('facilities.clearCity')}
+              className="absolute right-1 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-sm text-foreground-muted hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-60"
             >
-              {t('facilities.clearCity')}
+              <X className="size-4" aria-hidden />
             </button>
-          </div>
-        )}
-
-        <input
-          id={`${listId}-input`}
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={t('facilities.cityPlaceholder')}
-          autoComplete="off"
-          aria-describedby={`${listId}-hint`}
-          className={CONTROL_LINE}
-        />
-        <p id={`${listId}-hint`} className="text-sm text-foreground-muted">
-          {t('facilities.cityHint')}
-        </p>
+          )}
+        </div>
       </div>
 
       {searching && <p className="text-sm text-foreground-muted">{t('common.working')}</p>}

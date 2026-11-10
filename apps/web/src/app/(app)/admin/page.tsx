@@ -2,6 +2,7 @@ import { subMenuPillClass } from '@/components/section-pills';
 import { SupportPanel } from './support-panel';
 import { SupportViews } from './support-views';
 import { SwitchesPanel } from './switches-panel';
+import { EmailPanel } from './email-panel';
 import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Building2, User } from 'lucide-react';
@@ -192,6 +193,8 @@ export default async function AdminPage({
 
       {/* Platform-wide switches — Rui, 30-10-2026. */}
       {current === 'platform' && <SwitchesPanel />}
+      {/* POOLSE-217: the platform's email, read-only, with a test send. */}
+      {current === 'platform' && <EmailPanel />}
 
       {/*
         What is falling due, and what pays for what — POOLSE-63. Its own section

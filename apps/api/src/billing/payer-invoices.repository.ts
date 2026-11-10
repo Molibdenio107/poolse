@@ -167,6 +167,8 @@ export async function readPayerInvoice(
       seriesId: one.seriesId,
       facilityId: one.facilityId,
       facilityName: one.facilityName,
+      // The club's own site address, printed under its name (10-11-2026).
+      facilityAddress: one.facilityAddress,
       issuedOn: one.issuedOn,
       dueOn: one.dueOn,
       systemEntryAt: one.systemEntryAt,

@@ -1,5 +1,6 @@
 'use client';
 
+import { AttentionMark } from '@/components/attention-dot';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
@@ -687,20 +688,13 @@ function NavItem({
           palette's colour, blinking gently (`.attention-dot`). The count is
           still said to a screen reader.
         */}
-        {count > 0 && (
-          <span className="attention-dot ml-auto">
-            <span className="sr-only">
-              {item.badge === 'meetInbox'
-                ? t('meetInbox.menuBadge', { count })
-                : t('attention.menuBadge', { count })}
-            </span>
-          </span>
-        )}
-        {inside > 0 && (
-          <span className="attention-dot ml-auto">
-            <span className="sr-only">{t('attention.menuBadge', { count: inside })}</span>
-          </span>
-        )}
+        {/* The dot, a number from two (POOLSE-215); the count is said to a screen reader either way. */}
+        <AttentionMark
+          count={count}
+          className="ml-auto"
+          label={item.badge === 'meetInbox' ? t('meetInbox.menuBadge', { count }) : t('attention.menuBadge', { count })}
+        />
+        <AttentionMark count={inside} className="ml-auto" label={t('attention.menuBadge', { count: inside })} />
         <LinkBusy />
       </Link>
 

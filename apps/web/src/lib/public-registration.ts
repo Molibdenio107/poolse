@@ -17,6 +17,8 @@ export interface RegistrationForm {
     complaints: { regime: 'private' | 'public_service'; url: string };
     /** Each site's operating regulation in force. */
     regulations: { facilityName: string; effectiveFrom: string; body: string }[];
+    /** POOLSE-210: the club's published phone, or null. */
+    contactPhone: string | null;
     facilities: { id: string; name: string }[];
     /** `sportId` only for a club with a second sport — POOLSE-143. */
     levels: { id: string; name: string; sportId?: string }[];

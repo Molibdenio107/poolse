@@ -66,7 +66,11 @@ export function InvitationLink({
             : t('invite.created', { email: invitation.email })}
       </p>
       <p className="text-sm text-foreground-muted">
-        {invitation.emailed ? t('invite.emailedHint') : t('invite.linkHint')}
+        {invitation.emailed
+          ? t('invite.emailedHint')
+          : invitation.email !== null && invitation.emailConfigured === false
+            ? t('invite.notConfiguredHint')
+            : t('invite.linkHint')}
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <code className="min-w-0 flex-1 overflow-x-auto rounded bg-surface-muted px-3 py-2 font-mono text-xs">

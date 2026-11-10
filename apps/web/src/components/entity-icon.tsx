@@ -6,6 +6,7 @@ import {
   ConciergeBell,
   GraduationCap,
   FileText,
+  Cake,
   HeartPulse,
   LayoutDashboard,
   TrendingUp,
@@ -46,6 +47,8 @@ const ICONS = {
   // reads as an emergency the screen is not reporting.
   progress: TrendingUp,
   medical: HeartPulse,
+  // POOLSE-213: *Fez 18 anos*, the birthday that changes who decides.
+  majority: Cake,
   // A bolt for the module about what running the site costs — 5.1.
   energy: Zap,
   // The desk somebody walks up to — POOLSE-68. A bell rather than a ticket,

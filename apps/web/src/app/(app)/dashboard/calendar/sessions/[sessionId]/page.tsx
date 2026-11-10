@@ -10,6 +10,8 @@ import { laneLabel } from '@/lib/lanes';
 import { formatDate } from '@/lib/date-format';
 import { backLabelKey, readFrom } from '@/lib/back';
 import { FeedbackList } from '@/components/feedback-list';
+import { readAttention } from '@/lib/attention';
+import { cn } from '@/lib/utils';
 
 type RegisterResponse = Register & {
   organizationId: string;
@@ -50,6 +52,14 @@ export default async function AttendancePage({
     else failure = describeLoad(error);
   }
 
+  /*
+   * POOLSE-214: what lit this lesson's dot, drawn on its card. The attention map
+   * is the verdict (Não vou on a lesson to come, feedback this week, for whoever
+   * may act); the cards say which part of the page it is.
+   */
+  const lit = ((await readAttention()).sessions[sessionId] ?? 0) > 0;
+  const notGoing = lit ? (register?.notices ?? []).filter((one) => !one.going).length : 0;
+  const freshFeedback = lit && (register?.feedback ?? []).length > 0;
   // Back to the week the instructor came from, not to today's. Marking last
   // Tuesday and being returned to this week is the kind of thing that makes
   // somebody give up halfway through a backlog of registers.
@@ -161,8 +171,15 @@ export default async function AttendancePage({
               *Não vou* beside its name; nothing can be marked, and the API
               refuses a save the same way.
             */
-            <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
-              <p className="font-medium">
+            <section
+              className={cn(
+                'flex flex-col gap-3 rounded bg-surface p-5 shadow-card',
+                // A family said *Não vou* (POOLSE-214): the card the calendar's dot points at.
+                notGoing > 0 && 'attention-card',
+              )}
+            >
+              <p className="flex items-center gap-2 font-medium">
+                {notGoing > 0 && <span aria-hidden className="attention-dot" />}
                 {t('attendance.notStarted', {
                   date: formatDate(register.localDate),
                   time: register.localTime,
@@ -176,7 +193,10 @@ export default async function AttendancePage({
                     );
                     return (
                       <li key={entry.studentId} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                        <span>{entry.shortName}</span>
+                        <span className="flex items-center gap-2">
+                          {entry.shortName}
+                          {notice !== undefined && !notice.going && <span aria-hidden className="attention-dot" />}
+                        </span>
                         {notice !== undefined && (
                           <span className="rounded border border-border px-2 py-0.5 text-xs text-foreground-muted">
                             {t(notice.going ? 'attendance.noticeGoing' : 'attendance.noticeNotGoing')}
@@ -202,8 +222,17 @@ export default async function AttendancePage({
             the office); a colleague's register carries none, so no strip.
           */}
           {register.status !== 'cancelled' && register.started && (register.canRecord || register.canEndSeries) && (
-            <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
-              <h2 className="font-medium">{t('feedback.title')}</h2>
+            <section
+              className={cn(
+                'flex flex-col gap-3 rounded bg-surface p-5 shadow-card',
+                // Feedback this week is what lights the lesson (POOLSE-120, -214).
+                freshFeedback && 'attention-card',
+              )}
+            >
+              <h2 className="flex items-center gap-2 font-medium">
+                {t('feedback.title')}
+                {freshFeedback && <span aria-hidden className="attention-dot" />}
+              </h2>
               {(register.feedback ?? []).length === 0 ? (
                 <p className="text-sm text-foreground-muted">{t('feedback.noneForLesson')}</p>
               ) : (

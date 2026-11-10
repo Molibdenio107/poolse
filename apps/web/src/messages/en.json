@@ -1,4 +1,19 @@
 {
+  "notifications": {
+    "title": "Notifications",
+    "open": "Notifications: nothing to do",
+    "openWith": "{count, plural, one {Notifications: # thing to do} other {Notifications: # things to do}}",
+    "nothing": "Nothing to do.",
+    "item": {
+      "classes": "{count, plural, one {# class with no teacher} other {# classes with no teacher}}",
+      "calendar": "{count, plural, one {# answer or request on lessons} other {# answers and requests on lessons}}",
+      "facilities": "{count, plural, one {# thing to do at the sites} other {# things to do at the sites}}",
+      "leads": "{count, plural, one {# registration request} other {# registration requests}}",
+      "students": "{count, plural, one {# student with something to review} other {# students with something to review}}",
+      "categories": "{count, plural, one {# category expiring} other {# categories expiring}}",
+      "meetInbox": "{count, plural, one {# meet result to import} other {# meet results to import}}"
+    }
+  },
   "kinship": {
     "label": "Relationship",
     "choose": "Choose",
@@ -565,6 +580,10 @@
       "settings": "Settings",
       "backTo": "Back to my profile",
       "guardianOf": "Guardian of {names}",
+      "clubContact": "Contact {club}",
+      "callClub": "Call the club",
+      "emailClub": "Email the club",
+      "whatsappClub": "Message on WhatsApp",
       "ownAccount": "Your account",
       "preferences": "Preferences",
       "homes": "My areas",
@@ -792,6 +811,8 @@
   },
   "organization": {
     "replyEmailLabel": "Club's email (for families' replies)",
+    "contactPhoneLabel": "Club phone (optional)",
+    "contactPhoneHint": "Shown to families so they can call or message on WhatsApp. You can leave it blank and add it later in Club details.",
     "replyEmailHint": "When a family replies to a club email, the reply arrives here. You can change it later in Club details.",
     "nameLabel": "Organization name",
     "namePlaceholder": "e.g. Aveiro Municipal Pools",
@@ -1670,7 +1691,7 @@
     "location": "Location",
     "city": "City",
     "cityPlaceholder": "Type a city name",
-    "cityHint": "Choose from the list so the coordinates are stored too — the weather panel uses them. Street, number and postcode are typed separately.",
+    "cityHint": "Choose from the list: it is the town the weather is read for.",
     "clearCity": "Remove city",
     "cityLookupFailed": "City search is unavailable right now. Try again in a moment.",
     "measurements": "Measurements (metres)",
@@ -1843,12 +1864,35 @@
     "waterThresholdFailed": "The limit could not be saved.",
     "section": {
       "nav": "Site sections",
+      "details": "General",
       "people": "People",
+      "club": "Club details",
       "weather": "Weather",
       "location": "Location",
       "hours": "Hours",
       "water": "Water"
     },
+    "general": {
+      "clubName": "Club name",
+      "commandLabel": "Site details (address, district, country)",
+      "facilityName": "Site name",
+      "facilityNameHint": "Left blank, it takes the club's name.",
+      "nameRequired": "Enter a name.",
+      "ownerOnly": "Only the owner can change the names."
+    },
+    "siteAddress": {
+      "street": "Address",
+      "district": "District",
+      "country": "Country",
+      "districtShape": "Choose a district from the list.",
+      "countryShape": "Choose a country from the list.",
+      "postalCode": "Postcode",
+      "locality": "Town",
+      "hint": "The address prints on this site's invoices and statements.",
+      "tooLong": "Text too long.",
+      "postalCodeShape": "Enter the postcode as 0000-000."
+    },
+    "addressSaveFailed": "Could not save the address.",
     "open": "Open",
     "openSite": "Open {name}",
     "waterSection": {
@@ -1911,6 +1955,11 @@
     }
   },
   "classes": {
+    "instructorFilter": {
+      "label": "Teacher",
+      "any": "All",
+      "none": "No teacher"
+    },
     "recintoFilter": {
       "pool": { "label": "Pool", "any": "All pools", "none": "No pool" },
       "other": { "label": "Venue", "any": "All venues", "none": "No venue" }
@@ -2612,6 +2661,16 @@
     "saveFailed": "The policy could not be saved."
   },
   "majority": {
+    "studentSubtitle": "What changes when a student comes of age with a parent still linked.",
+    "toAnswer": "To answer",
+    "decisionsTitle": "Decisions",
+    "decidedBy": "{who}, {when} (came of age on {date})",
+    "nothingDecided": "Nothing to decide.",
+    "decided": {
+      "confirmed": "Confirmed: the parent stays only as the payer.",
+      "accompanying": "Kept as an accompanied adult.",
+      "invited": "Invited to the app."
+    },
     "banner": "{count, plural, one {# student turned 18 with a parent linked} other {# students turned 18 with a parent linked}}",
     "open": "Review",
     "title": "Turned 18",
@@ -3066,6 +3125,7 @@
       "failed": "Could not save the level."
     },
     "filters": {
+      "review": "To review",
       "title": "Filters",
       "sport": "Sport",
       "turma": "Class",
@@ -3304,6 +3364,7 @@
     "submit": "Create invitation",
     "created": "Invitation created for {email}.",
     "linkHint": "Copy this link and send it to them. It is shown once, and expires in seven days.",
+    "notConfiguredHint": "Sending email is not switched on here: copy this link and send it to the person. It is shown only once and expires in seven days.",
     "delivery": {
       "pending": "Delivery unconfirmed",
       "failed": "Send failed",
@@ -3539,7 +3600,7 @@
         "due": "Last analysed {on}",
         "never": "Never analysed",
         "empty": "Every tank is in range and up to date.",
-        "open": "Open sites"
+        "open": "See pools"
       },
       "maintenance": {
         "fault": "{count, plural, one {# open fault} other {# open faults}}",
@@ -3672,6 +3733,7 @@
       "payments": "{count, plural, =0 {No payments yet} one {# fee payment} other {# fee payments}}",
       "noInstructor": "No instructor",
       "noInstructorToday": "Today's lessons to sort out",
+      "noInstructorTurmas": "Classes with no teacher",
       "allCovered": "Every lesson today has an instructor",
       "byHour": "Today, hour by hour",
       "hourLine": "{hour, number}:00: {people, plural, =0 {nobody} one {# person} other {# people}} in the water",
@@ -5334,6 +5396,19 @@
     "emailInvalid": "That is not a valid email address."
   },
   "admin": {
+    "email": {
+      "title": "Email sending",
+      "on": "Sending on · Resend · {from}",
+      "off": "Sending off ({provider}): emails go to the API's log and do not leave.",
+      "hint": "The provider's key is a server secret and is neither shown nor changed here. Clubs' emails leave from this address under each club's name.",
+      "nothingUnsent": "No unsent email in the last 48 hours.",
+      "waiting": "{count, plural, one {# waiting for a retry} other {# waiting for a retry}}",
+      "failed": "{count, plural, one {# failed} other {# failed}}",
+      "test": "Send a test email",
+      "testSent": "Test email sent to {to}.",
+      "testFailed": "The test email did not leave. See the API's log.",
+      "testNoAddress": "Your account has no email to send the test to."
+    },
     "modules": {
       "title": "Modules",
       "hint": "On, the club sees and uses the module. Switching off hides and refuses and never deletes data: switching back on restores everything as it was.",
@@ -5712,6 +5787,8 @@
     "discard": "Discard",
     "keepEditing": "Keep editing",
     "badge": {
+      "toReview": "Something to review",
+      "toResolve": "Something to resolve",
       "spacesOverdue": "A space is overdue for cleaning",
       "maintenanceDue": "Maintenance is due",
       "waterOutOfBand": "The latest analysis is out of range",
@@ -6729,6 +6806,7 @@
     "withdrawConfirm": "It comes off the public pages and the previous version is back in force. It stays in the history as withdrawn; to restore it, publish it again."
   },
   "publicNotices": {
+    "phone": "Club phone",
     "complaints": "Livro de Reclamações (complaints book)",
     "complaintsPublic": "Complaints, suggestions and compliments",
     "regulation": "Operating regulation",
@@ -6746,6 +6824,21 @@
     "saveFailed": "The complaints book setting could not be saved."
   },
   "clubData": {
+    "contacts": {
+      "title": "Contacts",
+      "hint": "The club's emails leave Poolse under the club's name and replies reach the email below. The phone is shown to families in the app, at the end of every email and on the public pages; Poolse never sends messages from it.",
+      "emailHint": "Families' replies arrive here.",
+      "phoneHint": "Optional. Blank shows no phone.",
+      "saveFailed": "Could not save the contacts."
+    },
+    "fold": {
+      "unset": "Not set",
+      "otherWays": "other ways"
+    },
+    "contactPhone": {
+      "title": "Club phone",
+      "shape": "Enter a phone number, for example 912 345 678 or +34 612 345 678."
+    },
     "replyEmail": {
       "title": "Families' replies",
       "hint": "The club's emails leave Poolse under the club's name. When a family replies, the reply reaches this address.",
@@ -7133,7 +7226,7 @@
       "meets": "Meets",
       "minimos": "Qualifying times",
       "escaloes": "Age groups",
-      "recebidos": "Received by email{count, plural, =0 {} other { (#)}}"
+      "recebidos": "Received by email"
     },
     "season": "Season",
     "noSeason": "There is no season yet.",
@@ -7595,6 +7688,7 @@
     "toast": {
       "emailed": "Invitation sent to {email}",
       "notEmailed": "Invitation created for {email}, but the email did not go out. Share the link.",
+      "notConfigured": "Invitation created for {email}. Sending email is not switched on here: share the link.",
       "linkReady": "Link created. Share it now.",
       "revoked": "Invitation cancelled"
     },

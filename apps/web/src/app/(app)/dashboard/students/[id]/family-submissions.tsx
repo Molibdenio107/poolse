@@ -43,10 +43,12 @@ export function FamilySubmissions({
   const t = useTranslations();
   if (submissions.length === 0) return null;
   return (
-    <section aria-labelledby="family-submissions" className="flex flex-col gap-3 rounded border border-primary/40 bg-surface p-5 shadow-card">
+    // Pending until the office decides (POOLSE-214): the emphasised card and the dot.
+    <section aria-labelledby="family-submissions" className="attention-card flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
       <h2 id="family-submissions" className="flex items-center gap-2 font-semibold">
         <Inbox aria-hidden className="size-4" />
         {t('documents.submissions.title', { count: submissions.length })}
+        <span aria-hidden className="attention-dot" />
       </h2>
       <ul className="flex flex-col divide-y divide-border">
         {submissions.map((one) => (

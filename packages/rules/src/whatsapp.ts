@@ -27,3 +27,20 @@ export function whatsappUrl(phone: string | null | undefined, text: string): str
   const number = whatsappNumber(phone);
   return number === null ? null : `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
 }
+
+/**
+ * The club's published phone, as it is stored — POOLSE-210: `+` and 8 to 15
+ * digits, the database's CHECK. Typed the ways people type it (nine Portuguese
+ * digits, `+351`, `00351`, spaces); null for anything that is not a number.
+ * The same judgement as `whatsappNumber`, so a stored number always opens one.
+ */
+export function normalizeClubPhone(raw: string): string | null {
+  const number = whatsappNumber(raw);
+  return number === null ? null : `+${number}`;
+}
+
+/** "+351 212 345 678" for a Portuguese number; any other as stored. */
+export function formatClubPhone(phone: string): string {
+  const pt = /^\+351(\d{3})(\d{3})(\d{3})$/.exec(phone);
+  return pt === null ? phone : `+351 ${pt[1]} ${pt[2]} ${pt[3]}`;
+}

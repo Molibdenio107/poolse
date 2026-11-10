@@ -1,3 +1,4 @@
+import { emailIsConfigured } from '../notifications/notifier.js';
 import {
   BadRequestException,
   Body,
@@ -60,6 +61,8 @@ interface InvitationIssued {
   email: string | null;
   emailed: boolean;
   expiresAt: string;
+  /** Whether sending is switched on here: false means a link to share by design, not a failed send. */
+  emailConfigured: boolean;
 }
 
 async function mayInviteFor(studentId: string): Promise<boolean> {
@@ -190,6 +193,7 @@ export class StudentInvitationsController {
       link: joinLink(token),
       email: outcome.email,
       emailed,
+      emailConfigured: emailIsConfigured(),
       expiresAt: outcome.expiresAt,
     };
   }
@@ -221,6 +225,7 @@ export class StudentInvitationsController {
       link: joinLink(token),
       email: replacement.email,
       emailed,
+      emailConfigured: emailIsConfigured(),
       expiresAt: replacement.expiresAt,
     };
   }
@@ -361,6 +366,7 @@ export class FamilyInvitationsBulkController {
       link: joinLink(token),
       email: created.outcome.email,
       emailed,
+      emailConfigured: emailIsConfigured(),
       expiresAt: created.outcome.expiresAt,
     };
   }

@@ -41,11 +41,15 @@ export function BirthDateConfirm({
   const beside = documentHref === undefined;
   const hint = idDocument === 'none' ? 'hintNoDocument' : beside ? 'hintBeside' : 'hint';
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded border border-primary bg-primary/[0.08] p-4">
+    // Pending until confirmed (POOLSE-214): the emphasised card, and the dot by the date.
+    <div className="attention-card mb-4 flex flex-wrap items-center justify-between gap-3 rounded bg-primary/[0.08] p-4">
       <div className="flex min-w-0 flex-col items-start gap-1">
         <Badge tone="pending">{t('birthDateConfirm.pending')}</Badge>
         {birthDate !== null && (
-          <p className="text-sm font-medium">{t('birthDateConfirm.declaredDate', { date: formatDate(birthDate) })}</p>
+          <p className="flex items-center gap-2 text-sm font-medium">
+            {t('birthDateConfirm.declaredDate', { date: formatDate(birthDate) })}
+            <span aria-hidden className="attention-dot" />
+          </p>
         )}
         <p className="text-sm">{t(`birthDateConfirm.${hint}`)}</p>
       </div>

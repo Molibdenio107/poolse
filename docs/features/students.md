@@ -23,10 +23,12 @@ Two consequences worth stating, because both are easy to get wrong from age alon
   *Tipo de ligação* (encarregado de educação / acompanhante); adding a guardian to somebody of
   age asks *"É um adulto acompanhado?"* first (*Cancelar* adds nobody). An adult with an
   acompanhante carries a warning on *Geral* with *Retirar acompanhante*, which blocks nothing.
-  *Alunos › Fez 18 anos* (owner, admin) lists who came of age in the last 60 days with a parent
-  still linked: *Confirmar* (the parent stays payer only), *É acompanhante*, or *Convidar para a
+  Since POOLSE-213 (10-11-2026) *Fez 18 anos* is a button on the student's *Geral*, beside *Notas
+  médicas* (owner, admin), shown for a student of age with a parent's link or a recorded decision;
+  it breathes while unanswered, and *Alunos › Por rever* (`?review=1`, the bell's line) lists who
+  is waiting. The old list's address redirects there. Pending, it offers *Confirmar* (the parent stays payer only), *É acompanhante*, or *Convidar para a
   app* (the student invitation, sent only on that press). Acting clears the row and the circle;
-  each act and change of kind is in Atividade.
+  each act and change of kind is in Atividade, and the screen shows each decision, who took it and when.
 - **At 18 the family is told, and the young adult answers** (POOLSE-208). On the day, one email
   to each parent with a parental link and one to the student (their locale, from the club,
   once, retried hourly); none for an acompanhante. On *Perfil* the young adult sees each
@@ -772,3 +774,7 @@ Routes: `GET` and `POST /students/:id/medical-exam-schedule`, `POST …/:schedul
 **Archiving from the record (07-11-2026, Rui).** The Owner and an Admin also archive a student from the bottom
 of the record's *Atividade* tab: the same question and route as the list's button, then back to *Alunos* with
 *Anular* in the toast.
+
+## Categorias under Mensalidades — POOLSE-216 (10-11-2026)
+
+A student's categories and their proof (POOLSE-202) are the *Categorias* pill of the *Mensalidades* tab, beside *Mensalidades* and *Inscrição e seguro*, owner and admin only; they left *Geral* because a category changes what the student pays.

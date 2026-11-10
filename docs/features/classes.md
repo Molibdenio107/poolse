@@ -102,3 +102,7 @@ lessons in a row. The rule is in `docs/data-model.md`.
 ## The Desafio — POOLSE-195
 
 An optional short text beside a turma's lesson plan, 200 characters, written by whoever may write the plan (`PUT /sessions/:id/challenge`). Emptying it ends it. Families read it with the plan, below it, in a colour of its own. After the lesson it is answered *Consegui* or *Não consegui* inside the feedback, under the feedback's own rules, and it is optional. The instructor and the office read the answers on the feedback list. Classmates see them under POOLSE-194's rules: by name for adults, a count for minors. It is the student's own word, never a grade.
+
+## Turmas with no teacher — POOLSE-211 (10-11-2026)
+
+A *Professor* filter (*Todos* / *Sem professor*, `?instructor=none`) on *Lista* and *Semana*, offered while some turma has no teacher. Each such turma carries the breathing dot on its card, and *Turmas* carries one in the menu (`attention.classGroups`, `menu.classes` and `classes:<sport>`), for the office only. Both clear the moment a teacher is assigned; there is no "seen". Ctrl+K: *Turmas sem professor*.

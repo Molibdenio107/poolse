@@ -1,3 +1,5 @@
+import { attentionClass } from '@/components/attention-dot';
+import { cn } from '@/lib/utils';
 import { getTranslations } from 'next-intl/server';
 import { Building2, Plus } from 'lucide-react';
 import { BASE_SPORT, type PoolseSport } from '@poolse/rules';
@@ -94,7 +96,18 @@ export default async function RecintosPage({
               ) : (
                 <ul className="flex flex-col divide-y divide-border">
                   {site.pools.map((pool) => (
-                    <li key={pool.id} className="py-3 first:pt-0 last:pb-0">
+                    <li
+                      key={pool.id}
+                      // A tank to see to (POOLSE-214): the emphasised row, beside its dot.
+                      className={cn(
+                        'py-3 first:pt-0 last:pb-0',
+                        (attention.pools[pool.id] ?? 0) > 0 &&
+                          cn(
+                            attentionClass(site.pools.filter((one) => (attention.pools[one.id] ?? 0) > 0).length),
+                            'my-1 rounded px-3 first:pt-3 last:pb-3',
+                          ),
+                      )}
+                    >
                       <FromLink
                         href={`/dashboard/facilities/pools/${pool.id}`}
                         className="flex items-center gap-3 rounded hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"

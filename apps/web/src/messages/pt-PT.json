@@ -1,4 +1,19 @@
 {
+  "notifications": {
+    "title": "Notificações",
+    "open": "Notificações: nada por tratar",
+    "openWith": "{count, plural, one {Notificações: # coisa por tratar} other {Notificações: # coisas por tratar}}",
+    "nothing": "Nada por tratar.",
+    "item": {
+      "classes": "{count, plural, one {# turma sem professor} other {# turmas sem professor}}",
+      "calendar": "{count, plural, one {# resposta ou pedido nas aulas} other {# respostas e pedidos nas aulas}}",
+      "facilities": "{count, plural, one {# coisa por tratar nas instalações} other {# coisas por tratar nas instalações}}",
+      "leads": "{count, plural, one {# pedido de inscrição} other {# pedidos de inscrição}}",
+      "students": "{count, plural, one {# aluno com algo a rever} other {# alunos com algo a rever}}",
+      "categories": "{count, plural, one {# categoria a expirar} other {# categorias a expirar}}",
+      "meetInbox": "{count, plural, one {# resultado de prova por importar} other {# resultados de provas por importar}}"
+    }
+  },
   "kinship": {
     "label": "Grau de parentesco",
     "choose": "Escolha",
@@ -110,7 +125,6 @@
     "fees": {
       "cameOfAge": "{name} fez 18 anos: vê apenas os pagamentos.",
       "overdue": "Em dívida",
-      "overdueCount": "{count, plural, one {# período em atraso} other {# períodos em atraso}}",
       "overdueCount": "{count, plural, one {# período em atraso} other {# períodos em atraso}}",
       "upcoming": "Próximos pagamentos",
       "paid": "Pagos",
@@ -566,6 +580,10 @@
       "settings": "Definições",
       "backTo": "Voltar ao perfil",
       "guardianOf": "Encarregado de educação de {names}",
+      "clubContact": "Contactar {club}",
+      "callClub": "Ligar para o clube",
+      "emailClub": "Enviar email ao clube",
+      "whatsappClub": "Escrever pelo WhatsApp",
       "ownAccount": "A sua conta",
       "preferences": "Preferências",
       "homes": "As minhas áreas",
@@ -793,6 +811,8 @@
   },
   "organization": {
     "replyEmailLabel": "Email do clube (para respostas das famílias)",
+    "contactPhoneLabel": "Telefone do clube (opcional)",
+    "contactPhoneHint": "Aparece às famílias para ligarem ou escreverem pelo WhatsApp. Pode deixar em branco e acrescentar depois em Dados do clube.",
     "replyEmailHint": "Quando uma família responde a um email do clube, a resposta chega aqui. Pode mudar depois em Dados do clube.",
     "nameLabel": "Nome da organização",
     "namePlaceholder": "Ex.: Piscinas Municipais de Aveiro",
@@ -1671,7 +1691,7 @@
     "location": "Localização",
     "city": "Cidade",
     "cityPlaceholder": "Escreva o nome da cidade",
-    "cityHint": "Escolha da lista para guardar também as coordenadas, usadas na meteorologia. A morada, o número e o código postal escrevem-se à parte.",
+    "cityHint": "Escolha da lista: é a cidade usada na meteorologia.",
     "clearCity": "Remover cidade",
     "cityLookupFailed": "Não foi possível procurar cidades neste momento. Tente novamente daqui a pouco.",
     "measurements": "Medidas (metros)",
@@ -1844,12 +1864,35 @@
     "waterThresholdFailed": "Não foi possível guardar o limite.",
     "section": {
       "nav": "Secções do local",
+      "details": "Geral",
       "people": "Pessoas",
+      "club": "Dados do clube",
       "weather": "Meteorologia",
       "location": "Localização",
       "hours": "Horário",
       "water": "Água"
     },
+    "general": {
+      "clubName": "Nome do clube",
+      "commandLabel": "Dados da instalação (morada, distrito, país)",
+      "facilityName": "Nome da instalação",
+      "facilityNameHint": "Em branco, fica com o nome do clube.",
+      "nameRequired": "Indique um nome.",
+      "ownerOnly": "Só o proprietário pode mudar os nomes."
+    },
+    "siteAddress": {
+      "street": "Morada",
+      "district": "Distrito",
+      "country": "País",
+      "districtShape": "Escolha um distrito da lista.",
+      "countryShape": "Escolha um país da lista.",
+      "postalCode": "Código postal",
+      "locality": "Localidade",
+      "hint": "A morada sai nas faturas e nos extratos deste local.",
+      "tooLong": "Texto demasiado longo.",
+      "postalCodeShape": "Indique o código postal como 0000-000."
+    },
+    "addressSaveFailed": "Não foi possível guardar a morada.",
     "open": "Abrir",
     "openSite": "Abrir {name}",
     "waterSection": {
@@ -1912,6 +1955,11 @@
     }
   },
   "classes": {
+    "instructorFilter": {
+      "label": "Professor",
+      "any": "Todos",
+      "none": "Sem professor"
+    },
     "recintoFilter": {
       "pool": { "label": "Piscina", "any": "Todas as piscinas", "none": "Sem piscina" },
       "other": { "label": "Recinto", "any": "Todos os recintos", "none": "Sem recinto" }
@@ -2302,7 +2350,6 @@
     "penaltyQuotaApplied": "Multa por quota em atraso: {amount}",
     "dueBy": "Pagar até {date}",
     "olderUnpaid": "{count, plural, one {# período anterior por pagar} other {# períodos anteriores por pagar}}",
-    "olderUnpaid": "{count, plural, one {# período anterior por pagar} other {# períodos anteriores por pagar}}",
     "overdueSince": "Em atraso desde {date}",
     "overduePayment": "Pagamento em atraso",
     "showOverdueOnly": "Só quem tem pagamento em atraso",
@@ -2614,6 +2661,16 @@
     "saveFailed": "Não foi possível guardar a apólice."
   },
   "majority": {
+    "studentSubtitle": "O que muda quando o aluno chega à maioridade com um encarregado ligado.",
+    "toAnswer": "Por responder",
+    "decisionsTitle": "Decisões",
+    "decidedBy": "{who}, {when} (maioridade a {date})",
+    "nothingDecided": "Nada por decidir.",
+    "decided": {
+      "confirmed": "Confirmado: o encarregado fica só como quem paga.",
+      "accompanying": "Ficou como adulto acompanhado.",
+      "invited": "Convidado para a app."
+    },
     "banner": "{count, plural, one {# aluno fez 18 anos com encarregado ligado} other {# alunos fizeram 18 anos com encarregado ligado}}",
     "open": "Rever",
     "title": "Fez 18 anos",
@@ -3068,6 +3125,7 @@
       "failed": "Não foi possível guardar o nível."
     },
     "filters": {
+      "review": "Por rever",
       "title": "Filtros",
       "sport": "Desporto",
       "turma": "Turma",
@@ -3306,6 +3364,7 @@
     "submit": "Criar convite",
     "created": "Convite criado para {email}.",
     "linkHint": "Copie esta ligação e envie-a à pessoa. Só é mostrada uma vez, e expira dentro de sete dias.",
+    "notConfiguredHint": "O envio de emails não está ligado neste ambiente: copie esta ligação e envie-a à pessoa. Só é mostrada uma vez, e expira dentro de sete dias.",
     "delivery": {
       "pending": "Envio por confirmar",
       "failed": "Falha no envio",
@@ -3541,7 +3600,7 @@
         "due": "Última análise a {on}",
         "never": "Nunca analisado",
         "empty": "Todos os tanques dentro dos limites e em dia.",
-        "open": "Ver instalações"
+        "open": "Ver piscinas"
       },
       "maintenance": {
         "fault": "{count, plural, one {# avaria aberta} other {# avarias abertas}}",
@@ -3674,6 +3733,7 @@
       "payments": "{count, plural, =0 {Nenhum pagamento ainda} one {# pagamento} other {# pagamentos}} em mensalidades",
       "noInstructor": "Sem professor",
       "noInstructorToday": "Aulas de hoje por resolver",
+      "noInstructorTurmas": "Turmas sem professor",
       "allCovered": "Todas as aulas de hoje têm professor",
       "byHour": "Hoje, hora a hora",
       "hourLine": "{hour, number}h: {people, plural, =0 {ninguém} one {# pessoa} other {# pessoas}} na água",
@@ -4297,7 +4357,7 @@
     "locationLabel": "Localização",
     "locationHint": "Onde pertence — um balneário, o escritório, um armário.",
     "lostAndFound": {
-      "title": "Achados e perdidos",
+      "title": "Perdidos e achados",
       "outstanding": "{count, plural, one {# por entregar} other {# por entregar}}",
       "empty": "Não foi entregue nada.",
       "add": "Registar um achado",
@@ -4321,7 +4381,7 @@
       "returnTitle": "Marcar \"{name}\" como entregue?",
       "returnConfirm": "Fica na lista mais 7 dias e depois sai, se nada mudar. Continua no registo.",
       "archiveTitle": "Arquivar \"{name}\"?",
-      "archiveConfirm": "O objeto sai dos achados e perdidos. Fica no registo e pode ser restaurado em Arquivados.",
+      "archiveConfirm": "O objeto sai dos perdidos e achados. Fica no registo e pode ser restaurado em Arquivados.",
       "archiveLabel": "Arquivar {name}",
       "leavesOn": "Sai da lista a {date}",
       "placeUnknown": "Não indicado"
@@ -4329,7 +4389,7 @@
     "section": {
       "nav": "Secções do inventário",
       "inventory": "Inventário",
-      "lost": "Achados e perdidos"
+      "lost": "Perdidos e achados"
     },
     "noSitesHint": "Crie uma primeiro e o inventário passa a ter onde ficar.",
     "place": {
@@ -5336,6 +5396,19 @@
     "emailInvalid": "Este endereço de email não é válido."
   },
   "admin": {
+    "email": {
+      "title": "Envio de emails",
+      "on": "Envio ligado · Resend · {from}",
+      "off": "Envio desligado ({provider}): os emails ficam no registo da API e não saem.",
+      "hint": "A chave do fornecedor é um segredo do servidor e não se vê nem se altera aqui. Os emails dos clubes saem deste endereço com o nome de cada clube.",
+      "nothingUnsent": "Nenhum email por enviar nas últimas 48 horas.",
+      "waiting": "{count, plural, one {# à espera de nova tentativa} other {# à espera de nova tentativa}}",
+      "failed": "{count, plural, one {# falhou} other {# falharam}}",
+      "test": "Enviar email de teste",
+      "testSent": "Email de teste enviado para {to}.",
+      "testFailed": "O email de teste não saiu. Veja o registo da API.",
+      "testNoAddress": "A sua conta não tem um email para onde enviar o teste."
+    },
     "modules": {
       "title": "Módulos",
       "hint": "Ligado, o clube vê e usa o módulo. Desligar esconde e recusa, e nunca apaga dados: voltar a ligar repõe tudo como estava.",
@@ -5714,6 +5787,8 @@
     "discard": "Descartar",
     "keepEditing": "Continuar a editar",
     "badge": {
+      "toReview": "Há algo por rever",
+      "toResolve": "Há algo por resolver",
       "spacesOverdue": "Há espaços com limpeza em atraso",
       "maintenanceDue": "Há manutenção por fazer",
       "waterOutOfBand": "A última análise está fora dos limites",
@@ -6731,6 +6806,7 @@
     "withdrawConfirm": "A versão sai das páginas públicas e a anterior volta a estar em vigor. Fica no histórico como retirada; para a repor, publique-a de novo."
   },
   "publicNotices": {
+    "phone": "Telefone do clube",
     "complaints": "Livro de Reclamações",
     "complaintsPublic": "Reclamações, sugestões e elogios",
     "regulation": "Regulamento de funcionamento",
@@ -6748,6 +6824,21 @@
     "saveFailed": "Não foi possível guardar a definição do livro de reclamações."
   },
   "clubData": {
+    "contacts": {
+      "title": "Contactos",
+      "hint": "Os emails do clube saem do Poolse com o nome do clube e as respostas chegam ao email abaixo. O telefone aparece às famílias na app, no fim de cada email e nas páginas públicas; o Poolse nunca envia mensagens a partir dele.",
+      "emailHint": "As respostas das famílias chegam aqui.",
+      "phoneHint": "Opcional. Em branco, nenhum telefone é mostrado.",
+      "saveFailed": "Não foi possível guardar os contactos."
+    },
+    "fold": {
+      "unset": "Por preencher",
+      "otherWays": "outras formas"
+    },
+    "contactPhone": {
+      "title": "Telefone do clube",
+      "shape": "Indique um número de telefone, por exemplo 912 345 678 ou +34 612 345 678."
+    },
     "replyEmail": {
       "title": "Respostas das famílias",
       "hint": "Os emails do clube saem do Poolse com o nome do clube. Quando uma família responde, a resposta chega a este endereço.",
@@ -7135,7 +7226,7 @@
       "meets": "Provas",
       "minimos": "Mínimos",
       "escaloes": "Escalões",
-      "recebidos": "Recebidos por email{count, plural, =0 {} other { (#)}}"
+      "recebidos": "Recebidos por email"
     },
     "season": "Época",
     "noSeason": "Ainda não há nenhuma época.",
@@ -7597,6 +7688,7 @@
     "toast": {
       "emailed": "Convite enviado para {email}",
       "notEmailed": "Convite criado para {email}, mas o email não saiu. Partilhe o link.",
+      "notConfigured": "Convite criado para {email}. O envio de emails não está ligado neste ambiente: partilhe o link.",
       "linkReady": "Link criado. Partilhe-o agora.",
       "revoked": "Convite cancelado"
     },

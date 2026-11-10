@@ -1,5 +1,7 @@
 'use client';
 
+import { attentionClass } from '@/components/attention-dot';
+import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { FromLink } from '@/components/from-link';
 import { useLocale, useTranslations } from 'next-intl';
@@ -139,10 +141,20 @@ export function MaintenancePanel({
           <p className="text-sm text-foreground-muted">{t('maintenance.emptyHint')}</p>
         </div>
       ) : (
-        <ul className="flex flex-col divide-y divide-border rounded border border-border">
+        // The same rhythm as Espaços' list (Rui, 10-11-2026): open rows, hairlines between.
+        <ul className="flex flex-col divide-y divide-border">
           {list.tasks.map((task) => (
-            <li key={task.id} className="flex flex-col gap-2 p-3">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <li
+              key={task.id}
+              // Due (POOLSE-214): the emphasised row and the dot, until it is done.
+              className={cn(
+                // Text on the left, *Feito* on the right across both lines, so the row is as
+                // tall as its words, as Espaços' rows are (Rui, 10-11-2026); the button keeps h-control.
+                'flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0',
+                task.state === 'due' && cn(attentionClass(due), 'my-1 rounded px-3 first:pt-3 last:pb-3'),
+              )}
+            >
+              <div className="flex min-w-0 flex-col gap-1.5">
                 <span className="flex flex-wrap items-center gap-2">
                   <FromLink
                     href={`/dashboard/facilities/tasks/${task.id}`}
@@ -150,6 +162,7 @@ export function MaintenancePanel({
                   >
                     {task.title}
                   </FromLink>
+                  {task.state === 'due' && <span aria-hidden className="attention-dot" />}
                   <StateBadge
                     state={task.state}
                     label={
@@ -163,15 +176,6 @@ export function MaintenancePanel({
                     }
                   />
                 </span>
-
-                {list.canComplete && task.state !== 'paused' && (
-                  <DoneButton
-                    facilityId={facilityId}
-                    taskId={task.id}
-                    label={t('maintenance.done')}
-                  />
-                )}
-              </div>
 
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground-muted">
                 <span>{t('maintenance.everyDays', { days: task.intervalDays })}</span>
@@ -201,6 +205,11 @@ export function MaintenancePanel({
                       })}
                 </span>
               </div>
+              </div>
+
+              {list.canComplete && task.state !== 'paused' && (
+                <DoneButton facilityId={facilityId} taskId={task.id} label={t('maintenance.done')} />
+              )}
             </li>
           ))}
         </ul>

@@ -30,7 +30,8 @@ export async function InboxList({
   const t = await getTranslations();
 
   return (
-    <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
+    // Results waiting (POOLSE-214): the emphasised card until each is imported or discarded.
+    <section className={`flex flex-col gap-4 rounded bg-surface p-5 shadow-card${inbox.total > 0 ? ' attention-card' : ''}`}>
       <p className="text-sm text-foreground-muted">{t('meetInbox.intro')}</p>
       {inbox.total === 0 ? (
         <p>{t('meetInbox.empty')}</p>

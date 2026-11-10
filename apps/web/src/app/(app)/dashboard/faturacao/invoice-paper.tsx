@@ -72,6 +72,8 @@ export async function InvoicePaper({
             {kind} {invoice.documentNo}
           </h1>
           <p className="mt-0.5">{invoice.facilityName}</p>
+          {/* The site's morada under its name (Rui, 10-11-2026), when it has one. */}
+          {invoice.facilityAddress ? <p className="whitespace-pre-line">{invoice.facilityAddress}</p> : null}
           {/* The state in words — on paper there is no badge to colour. */}
           <p className="mt-0.5 font-medium">{status}</p>
         </div>

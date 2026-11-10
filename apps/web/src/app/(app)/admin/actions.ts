@@ -373,3 +373,12 @@ export async function setSwitchAction(
   revalidatePath('/admin');
   return { ok: true };
 }
+
+/** POOLSE-217: a test email to the operator's own address. Never throws to the screen. */
+export async function sendTestEmailAction(): Promise<{ to: string | null; sent: boolean }> {
+  try {
+    return await apiPost<{ to: string | null; sent: boolean }>('/platform/email/test', {});
+  } catch {
+    return { to: '', sent: false };
+  }
+}

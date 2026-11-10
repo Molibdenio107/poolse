@@ -238,6 +238,9 @@ Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before tou
 - On a phone the same tokens take a second value, and the shell clears the notch.
 - Form fields are controlled, never `defaultValue`.
 - A circle means something needs doing, and it clears when it is done
+- A number on a tab, pill or menu entry means "things to do", never "things here": `AttentionMark` (dot for 1, breathing number from 2); plain counts are gone (POOLSE-215).
+- A circle follows the problem down — menu, tab (`badge: { kind: 'dot' }`), pill (`attention`) — and the card holding it is `attentionClass(n)` until solved: one alone boxed, two or more in a list an accent bar (POOLSE-214, -216).
+- The bell lists the circles' own counts (`attentionLines` in `lib/attention-items.ts`); a new badge key needs a line there or typecheck fails.
 - The menu's entries live in `lib/nav-entries.ts`
 - A document on paper is a route with print styles; the one PDF library is `lib/form-pdf.ts`, for a club's forms on the phone
 - A decision asks first
@@ -249,6 +252,7 @@ Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before tou
 - Voltar goes back to where you came from, and every in-app link is a `FromLink`.
 - A record's page uses `DetailPage`; one card is one tab, and the first is General.
 - A page or tab that stacks independent sections shows one at a time, behind `SectionPills`.
+- A section of settings too long to scroll is `FoldCard`s (`components/fold-card.tsx`): folded, each says its current value in words.
 - One content width, and the calendar is the single exception.
 - A fetch that answers `null` for both "not yet" and "it failed" produces a control that is disabled with no explanation.
 - A side sheet fits the window; the one growable thing inside it takes the slack.
@@ -294,10 +298,11 @@ Read [`docs/conventions/students-and-families.md`](docs/conventions/students-and
 
 - Every email is sent once after its commit, rendered from its row, and retried hourly if it did not leave.
 - A club's email is `clubEmail(organizationId, ...)`: From the club's name at Poolse's address, Reply-To the club's `reply_email` (POOLSE-209).
+- A club's phone (`organization.contact_phone`) is published, never sent from; `withClubPhone` closes every club email with it (POOLSE-210).
 - A NIF is checksum-validated, and `isValidNif` in `@poolse/rules` is the one definition.
 - A family asks for a place from the app, and it is a pedido in the same queue.
 - An adult is the absence of an acompanhante's edge, never a flag: a `parental` link stops granting at majority, and a family read goes through `guardian_access`, never `guardian_link` (POOLSE-206).
-- Who came of age with a parent's link is `majority_pending()`, and the office answers on *Fez 18 anos* with a `majority_review` (POOLSE-207).
+- Who came of age with a parent's link is `majority_pending()`, and the office answers on the student's own *Fez 18 anos* button with a `majority_review` (POOLSE-207, -213); *Alunos › Por rever* is `studentsToReview`.
 - At 18 a `majority_notice` tells parent and student once, and a parent's consent stays in force until the young adult answers it (`consent_awaits_self()`, POOLSE-208).
 - A warning about a person never gates what a club does with them.
 - A student holds one level per sport

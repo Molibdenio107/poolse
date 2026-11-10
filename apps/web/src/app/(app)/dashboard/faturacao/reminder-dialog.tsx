@@ -179,7 +179,7 @@ export function ReminderDialog({
             {preview.payment === null ? (
               <p className="text-foreground-muted">
                 {t('invoices.reminders.noInstructions')}{' '}
-                <FromLink href={`/dashboard/facilities/${facilityId}?tab=club`} className="text-primary underline">
+                <FromLink href={`/dashboard/facilities/${facilityId}?tab=general&section=club`} className="text-primary underline">
                   {t('invoices.reminders.setInstructions')}
                 </FromLink>
               </p>

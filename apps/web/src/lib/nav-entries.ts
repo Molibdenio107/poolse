@@ -105,7 +105,7 @@ export interface Item {
  * `meetInbox` is POOLSE-114's count; the rest are POOLSE-120's circles — what
  * needs doing, from `GET /attention`, cleared when it is done.
  */
-export type BadgeKey = 'meetInbox' | 'leads' | 'facilities' | 'calendar' | 'students' | 'categories';
+export type BadgeKey = 'meetInbox' | 'leads' | 'facilities' | 'calendar' | 'students' | 'categories' | 'classes';
 /** By badge key, and `<key>:<sport>` for a per-sport copy (POOLSE-143). */
 export type Badges = Partial<Record<string, number>>;
 
@@ -318,6 +318,9 @@ export const SECTIONS: Item[] = [
     roles: STAFF,
     kinds: ['business'],
     perSport: true,
+    // POOLSE-211: turmas with nobody teaching them, each sport's copy its own.
+    badge: 'classes',
+    badgePerSport: true,
     // Épocas sits under Turmas because that is what a season contains. Visible to
     // everyone — knowing which year is running is not privileged — while the
     // reset itself is owner and admin only, refused by the API rather than
@@ -428,8 +431,7 @@ export const SECTIONS: Item[] = [
       // Encarregados de educação belong with the families, not with the staff —
       // POOLSE-35.
       { href: '/dashboard/students/guardians', key: 'students.guardiansTitle' },
-      // Fez 18 anos — POOLSE-207: who came of age with a parent's link. The office's list.
-      { href: '/dashboard/students/fez-18', key: 'majority.title', roles: OFFICE },
+      // Fez 18 anos left the menu (POOLSE-213): it is each student's own, on their Geral.
       // Pedidos de inscrição — POOLSE-69. The shared list lives under Receção
       // since POOLSE-165; this entry is each sport's filtered copy (POOLSE-143,
       // under that sport's Alunos, Rui 04-11-2026), and the shared one only for

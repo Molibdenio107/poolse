@@ -131,11 +131,12 @@ export async function SummaryBand({ widgets }: { widgets: DashboardWidget[] }): 
         {todayWidget !== undefined && (
           <Tile
             label={t('dashboard.summary.noInstructor')}
-            value={today === null ? '0' : String(today.withoutInstructor)}
-            href="/dashboard/calendar"
+            // POOLSE-211 (Rui, 10-11-2026): turmas with nobody teaching them, opened on Turmas.
+            value={today === null ? '0' : String(today.turmasWithoutInstructor)}
+            href="/dashboard/classes?instructor=none"
             sub={
-              today !== null && today.withoutInstructor > 0
-                ? { text: t('dashboard.summary.noInstructorToday'), tone: 'late' }
+              today !== null && today.turmasWithoutInstructor > 0
+                ? { text: t('dashboard.summary.noInstructorTurmas'), tone: 'late' }
                 : { text: t('dashboard.summary.allCovered'), tone: 'ok' }
             }
           />

@@ -77,6 +77,7 @@ import {
   revokeRole,
   listLevels,
   listStudents,
+  studentsToReview,
   listTurmaOptions,
   studentSportCounts,
   reorderLevels,
@@ -481,6 +482,7 @@ export class StudentsController {
     @Query('insurance') insurance?: string,
     @Query('order') order?: string,
     @Query('overdue') overdue?: string,
+    @Query('review') review?: string,
   ): Promise<StudentsResponse> {
     // Security review, 12 October 2026: this answered any member, a guardian included.
     requireRole('owner', 'admin', 'instructor');
@@ -492,6 +494,11 @@ export class StudentsController {
     // sports are all the club's — a pool-only club reads as before).
     requireSport(sportFilter);
     const scope = sportFilter === null ? sportScope() : null;
+    // *Por rever* — POOLSE-213: the office's (the circles are), so a teacher's asking is no filter.
+    const reviewIds =
+      review === '1' && hasRole('owner', 'admin')
+        ? (await studentsToReview(organizationId)).map((one) => one.id)
+        : null;
 
     // All three are tenant-scoped reads on the same organization; together they
     // cost one round trip instead of three.
@@ -517,6 +524,7 @@ export class StudentsController {
           classGroupId: UUID_PATTERN.test(classGroupId ?? '') ? classGroupId! : null,
           insurance: insurance === 'insured' || insurance === 'lapsed' || insurance === 'never' ? insurance : null,
           order: order === 'age' ? 'age' : 'name',
+          reviewIds,
         },
         readPageQuery(page, limit),
       ),

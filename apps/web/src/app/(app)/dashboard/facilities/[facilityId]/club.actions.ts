@@ -62,15 +62,21 @@ export async function savePaymentDetailsAction(
   return { ok: true };
 }
 
-/** Where families' replies go — POOLSE-209. Required; the API judges the shape. */
-export async function saveReplyEmailAction(
+/**
+ * *Contactos* — the reply email and the phone, one card and one save
+ * (10-11-2026). Both or neither: the API saves them in one transaction.
+ */
+export async function saveClubContactsAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
   try {
-    await apiPut('/settings/reply-email', { replyEmail: String(formData.get('replyEmail') ?? '') });
+    await apiPut('/settings/contacts', {
+      replyEmail: String(formData.get('replyEmail') ?? ''),
+      contactPhone: String(formData.get('contactPhone') ?? ''),
+    });
   } catch (error) {
-    return describeFailure(error, 'clubData.replyEmail.saveFailed');
+    return describeFailure(error, 'clubData.contacts.saveFailed');
   }
   revalidatePath('/dashboard/facilities', 'layout');
   return { ok: true };

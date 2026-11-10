@@ -56,7 +56,7 @@ const SYNONYMS: Record<string, Synonyms> = {
 };
 
 /** A thing the palette can do rather than a page it can open. */
-export type CommandRun = { href: string } | { handler: 'toggleTheme' | 'toggleLocale' };
+export type CommandRun = { href: string } | { handler: 'toggleTheme' | 'toggleLocale' | 'openNotifications' };
 
 export interface Command {
   id: string;
@@ -158,10 +158,37 @@ const ACTIONS: Omit<Command, 'kind'>[] = [
   {
     id: 'siteClub',
     labelKey: 'clubData.tab',
-    run: { href: '/dashboard/facilities/site?tab=club' },
+    run: { href: '/dashboard/facilities/site?tab=general&section=club' },
     roles: OFFICE,
     kinds: ['business'],
-    synonyms: { 'pt-PT': ['dados do clube', 'iban', 'mb way', 'pagamentos', 'morada do clube', 'nif do clube'], en: ['club details', 'iban', 'mb way', 'payment details'] },
+    synonyms: { 'pt-PT': ['dados do clube', 'iban', 'mb way', 'pagamentos', 'nif do clube', 'nipc', 'telefone do clube', 'email do clube', 'contactos'], en: ['club details', 'iban', 'mb way', 'payment details', 'contacts'] },
+  },
+  {
+    // The site's Geral (10-11-2026): the names, the morada, distrito and país.
+    id: 'siteDetails',
+    labelKey: 'facilities.general.commandLabel',
+    run: { href: '/dashboard/facilities/site?tab=general&section=details' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['morada', 'morada do clube', 'codigo postal', 'distrito', 'pais', 'localidade', 'nome do clube', 'nome da instalacao'], en: ['address', 'postcode', 'district', 'country', 'club name', 'site name'] },
+  },
+  {
+    // POOLSE-213: who has something to review, turning 18 included (the old Fez 18 anos list).
+    id: 'studentsToReview',
+    labelKey: 'students.filters.review',
+    run: { href: '/dashboard/students?review=1' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['fez 18 anos', 'maioridade', 'alunos por rever', 'rever alunos', 'documentos enviados'], en: ['turned 18', 'coming of age', 'students to review'] },
+  },
+  {
+    // POOLSE-211: the turmas nobody teaches.
+    id: 'turmasNoTeacher',
+    labelKey: 'dashboard.summary.noInstructorTurmas',
+    run: { href: '/dashboard/classes?instructor=none' },
+    roles: OFFICE,
+    kinds: ['business'],
+    synonyms: { 'pt-PT': ['sem professor', 'turmas sem professor', 'professor em falta'], en: ['no teacher', 'unstaffed classes', 'missing instructor'] },
   },
   {
     id: 'siteOccupancy',
@@ -342,6 +369,14 @@ const ACTIONS: Omit<Command, 'kind'>[] = [
     roles: [...FAMILY, 'instructor', 'maintenance'],
     surface: 'app',
     synonyms: { 'pt-PT': ['perfil', 'conta', 'definicoes', 'palavra-passe'], en: ['profile', 'account', 'settings', 'password'] },
+  },
+  {
+    // POOLSE-212: opens the bell beside the search.
+    id: 'notifications',
+    labelKey: 'notifications.title',
+    run: { handler: 'openNotifications' },
+    roles: ['owner', 'admin', 'instructor', 'maintenance'],
+    synonyms: { 'pt-PT': ['notificacoes', 'avisos', 'por tratar', 'alertas', 'sino'], en: ['notifications', 'alerts', 'to do', 'bell'] },
   },
   {
     id: 'theme',

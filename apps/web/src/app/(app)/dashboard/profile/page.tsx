@@ -239,7 +239,6 @@ export default async function ProfilePage({
           slug: 'organizations',
           labelKey: 'account.organizations',
           visible: account.memberships.length > 1,
-          badge: { kind: 'count', value: account.memberships.length },
           content: () => (
             <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-foreground-muted">

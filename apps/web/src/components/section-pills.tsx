@@ -1,3 +1,4 @@
+import { AttentionMark } from '@/components/attention-dot';
 import { FromLink } from '@/components/from-link';
 import { ScrollArrows } from '@/components/scroll-arrows';
 import { StickyUnderHeader } from '@/components/sticky-under-header';
@@ -24,8 +25,14 @@ export interface SectionPill {
   key: string;
   label: string;
   href: string;
-  /** A count beside the label, where the section is a list worth sizing. */
-  count?: number | undefined;
+  /**
+   * Something in this section needs doing (POOLSE-214): the breathing mark, and
+   * these words for a screen reader. Absent is nothing to do. A plain count of
+   * what the section holds is never drawn (POOLSE-215): it read as missing work.
+   */
+  attention?: string | undefined;
+  /** How many things to do, when more than one: the mark shows the number (POOLSE-215). */
+  attentionCount?: number | undefined;
 }
 
 export function SectionPills({
@@ -60,10 +67,8 @@ export function SectionPills({
                 className={subMenuPillClass(on)}
               >
                 {item.label}
-                {item.count !== undefined && (
-                  <span className={cn('tabular-nums text-sm', on ? 'opacity-90' : 'text-foreground-muted')}>
-                    {item.count}
-                  </span>
+                {item.attention !== undefined && (
+                  <AttentionMark count={item.attentionCount ?? 1} label={item.attention} />
                 )}
               </FromLink>
             );
@@ -89,7 +94,7 @@ export function subMenuPillClass(current: boolean): string {
     'inline-flex h-control shrink-0 items-center justify-center gap-2 rounded-sm px-3.5 text-control transition-colors',
     'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
     current
-      ? 'bg-primary font-medium text-primary-foreground [&_.attention-dot]:bg-primary-foreground'
+      ? 'bg-primary font-medium text-primary-foreground [&_.attention-dot]:bg-primary-foreground [&_.attention-count]:bg-primary-foreground [&_.attention-count]:text-primary'
       : 'bg-surface text-foreground shadow-card hover:bg-surface-muted',
   );
 }

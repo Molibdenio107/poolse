@@ -1,3 +1,4 @@
+import { readAttention } from '@/lib/attention';
 import { TurmaCards } from './turma-cards';
 import { ClashList } from './clash-list';
 import { AlertTriangle, CalendarDays } from 'lucide-react';
@@ -37,7 +38,14 @@ import { FilterSelect } from '@/components/filter-select';
 export default async function ClassesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scope?: string; section?: string; from?: string; sport?: string; recinto?: string }>;
+  searchParams: Promise<{
+    scope?: string;
+    section?: string;
+    from?: string;
+    sport?: string;
+    recinto?: string;
+    instructor?: string;
+  }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
@@ -51,7 +59,11 @@ export default async function ClassesPage({
     roles, so an absent parameter is not "all" — it is "whichever is useful to
     you", and the answer comes back in `scope`.
   */
-  const { scope, section, from, sport, recinto } = await searchParams;
+  const { scope, section, from, sport, recinto, instructor } = await searchParams;
+  // POOLSE-211: `?instructor=none` shows the turmas nobody teaches (the dashboard's tile opens it).
+  const onlyUncovered = instructor === 'none';
+  // Their dots, for whoever is told (the office): the attention map's own verdict.
+  const flagged = (await readAttention()).classGroups ?? {};
   // POOLSE-125: another sport's Turmas — what exists of it, in words.
   const other = await addonSportAsked(sport);
   if (other !== null) return <SportPending sport={other} page="classes" from={from} />;
@@ -154,7 +166,10 @@ export default async function ClassesPage({
   const recintoOfPool = new Map(
     recintoOptions.flatMap((one) => (one.poolId === null ? [] : [[one.poolId, one.id] as const])),
   );
-  const filteredGroups = (data?.groups ?? []).filter((group) => inRecinto(group.playingAreaId));
+  const filteredGroups = (data?.groups ?? []).filter(
+    (group) => inRecinto(group.playingAreaId) && (!onlyUncovered || group.instructorMembershipId === null),
+  );
+  const someUncovered = (data?.groups ?? []).some((group) => group.instructorMembershipId === null);
   const recintoWords = pageSport === 'pool' ? 'pool' : 'other';
 
   // One entry per slot per turma: a turma running Tuesday and Thursday appears
@@ -463,12 +478,12 @@ export default async function ClassesPage({
                       ? t('classes.clashes.pill')
                       : t('partnerClasses.title'),
               href: sectionLink(key),
-              ...(key === 'unscheduled'
-                ? { count: unscheduled.length }
-                : key === 'clashes'
-                  ? { count: clashes.length }
-                : key === 'partners'
-                  ? { count: new Set(partnerBookings.map((booking) => booking.partnerGroupId ?? booking.id)).size }
+              // Turmas with no timetable and students booked twice are to-dos (POOLSE-215):
+              // the breathing mark, a number from two. Parcerias is a list, so no number.
+              ...(key === 'unscheduled' && unscheduled.length > 0
+                ? { attention: t('detailTabs.badge.toResolve'), attentionCount: unscheduled.length }
+                : key === 'clashes' && clashes.length > 0
+                  ? { attention: t('detailTabs.badge.toResolve'), attentionCount: clashes.length }
                   : {}),
             }))}
           />
@@ -533,6 +548,17 @@ export default async function ClassesPage({
                 />
               )}
 
+              {/* POOLSE-211: the turmas nobody teaches, offered while there are any (or it is on). */}
+              {(someUncovered || onlyUncovered) && (current === 'cards' || current === 'week') && (
+                <FilterSelect
+                  name="instructor"
+                  label={t('classes.instructorFilter.label')}
+                  value={onlyUncovered ? 'none' : ''}
+                  anyLabel={t('classes.instructorFilter.any')}
+                  options={[{ value: 'none', label: t('classes.instructorFilter.none') }]}
+                />
+              )}
+
               {data.canManage && (
                 <FromLink
                   href="/dashboard/classes/new"
@@ -544,7 +570,7 @@ export default async function ClassesPage({
             </div>
           )}
 
-          {current === 'cards' && <TurmaCards groups={filteredGroups} canManage={data.canManage} />}
+          {current === 'cards' && <TurmaCards groups={filteredGroups} canManage={data.canManage} flagged={flagged} />}
 
           {current === 'clashes' && <ClashList students={clashes} />}
 

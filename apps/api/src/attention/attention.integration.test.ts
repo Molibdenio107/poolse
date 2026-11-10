@@ -147,7 +147,60 @@ test("QA 4: a family's Não vou lights the calendar for that lesson's teacher, n
       assert.equal((await attention.read()).menu['calendar'], 1);
     });
     await actingAs(tenant, { membershipId: parent, roles: ['guardian'] }, async () => {
-      assert.deepEqual(await attention.read(), { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {} });
+      assert.deepEqual(await attention.read(), { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {}, classGroups: {} });
+    });
+  });
+});
+
+test('POOLSE-211: a turma nobody teaches lights itself and Turmas for the office only, and clears when a teacher is set', async () => {
+  await withScratchTenant(async (tenant) => {
+    const coach = await addMember(tenant, 'Sandra', 'Moreira', ['instructor']);
+    const [pool] = await tenant.sql<{ id: string }>(
+      `INSERT INTO pool (organization_id, facility_id, name, kind) VALUES ($1, $2, 'Tanque', 'indoor') RETURNING id`,
+      [tenant.organizationId, tenant.facilityId],
+    );
+    const turma = async (name: string, instructor: string | null): Promise<string> =>
+      (
+        await tenant.sql<{ id: string }>(
+          `INSERT INTO class_group (organization_id, season_id, facility_id, pool_id, name, instructor_membership_id)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+          [tenant.organizationId, tenant.seasonId, tenant.facilityId, pool!.id, name, instructor],
+        )
+      )[0]!.id;
+    const nobody = await turma('Golfinhos', null);
+    // An archived season's turma is not on the page, so it is never counted.
+    const [old] = await tenant.sql<{ id: string }>(
+      `INSERT INTO season (organization_id, name, starts_on, ends_on, status, archived_at)
+       VALUES ($1, 'Antiga', '2020-09-01', '2021-07-31', 'draft', now()) RETURNING id`,
+      [tenant.organizationId],
+    );
+    await tenant.sql(
+      `INSERT INTO class_group (organization_id, season_id, facility_id, pool_id, name) VALUES ($1, $2, $3, $4, 'De outra época')`,
+      [tenant.organizationId, old!.id, tenant.facilityId, pool!.id],
+    );
+    await turma('Tubarões', coach);
+    const archived = await turma('Antiga', null);
+    await tenant.sql(`UPDATE class_group SET archived_at = now() WHERE id = $1`, [archived]);
+
+    const attention = new AttentionController();
+    await actingAs(tenant, { membershipId: tenant.ownerMembershipId, roles: ['owner'] }, async () => {
+      const seen = await attention.read();
+      assert.deepEqual(seen.classGroups, { [nobody]: 1 }, 'only the live turma with nobody teaching it');
+      assert.equal(seen.menu['classes'], 1);
+      assert.equal(seen.menu['classes:pool'], 1, "its sport's copy counts it too");
+    });
+    // A teacher is not told about turmas they cannot staff.
+    await actingAs(tenant, { membershipId: coach, roles: ['instructor'] }, async () => {
+      const seen = await attention.read();
+      assert.equal(seen.menu['classes'], undefined);
+      assert.deepEqual(seen.classGroups ?? {}, {});
+    });
+    // Solved: a teacher assigned, and the dot and the count are gone.
+    await tenant.sql(`UPDATE class_group SET instructor_membership_id = $2 WHERE id = $1`, [nobody, coach]);
+    await actingAs(tenant, { membershipId: tenant.ownerMembershipId, roles: ['owner'] }, async () => {
+      const seen = await attention.read();
+      assert.equal(seen.menu['classes'], undefined);
+      assert.deepEqual(seen.classGroups, {});
     });
   });
 });

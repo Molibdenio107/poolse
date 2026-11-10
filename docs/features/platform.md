@@ -538,3 +538,7 @@ Per-tenant feature flags, support "view as", the Clerk MAU pull and cross-tenant
 **Deleting a tenant is deliberately still impossible from here** — `archived_at` was granted on
 14-09-2026 so the trial clock could close its ladder, which is a soft delete the same login can
 undo; `DELETE` is refused for every login but the owner's, and the purge is its own ticket.
+
+## Email on Plataforma — POOLSE-217 (10-11-2026)
+
+*Plataforma* has an *Envio de emails* card, read-only: whether sending is on (`EMAIL_PROVIDER=resend` with a key) and from which `EMAIL_FROM`, and per club what has not left in the retry's 48-hour window, waiting for the hourly retry or failed after five tries (`GET /platform/email`, the same tables as `DeliveryRetryService`). *Enviar email de teste* sends, as Poolse, to the operator's own sign-in address (`POST /platform/email/test`), recorded and alerted as every platform write. The provider key is a server secret: never shown, stored or set from `/admin`. Invitations are not counted (never retried). When sending is off, an invitation says so ("o envio de emails não está ligado neste ambiente") rather than calling it a failure.

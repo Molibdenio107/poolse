@@ -62,6 +62,8 @@ interface CreateInvitationResponse {
    * above is the fallback, and the UI says which happened.
    */
   emailed: boolean;
+  /** Whether sending is switched on here at all (POOLSE-217): false is \"share the link\" by design. */
+  emailConfigured: boolean;
 }
 
 /**
@@ -264,7 +266,7 @@ export class InvitationsController {
 
     const emailed = email === null ? false : await deliver(organizationId, id, email, roles, token, expiresAt);
 
-    return { id, email, roles, expiresAt: expiresAt.toISOString(), token, emailed };
+    return { id, email, roles, expiresAt: expiresAt.toISOString(), token, emailed, emailConfigured: emailIsConfigured() };
   }
 
   /**
@@ -299,7 +301,7 @@ export class InvitationsController {
       ? false
       : await deliver(organizationId, replacement.id, replacement.email, replacement.roles, token, expiresAt);
 
-    return { ...replacement, email: replacement.email ?? '', token, emailed };
+    return { ...replacement, email: replacement.email ?? '', token, emailed, emailConfigured: emailIsConfigured() };
   }
 
   /**

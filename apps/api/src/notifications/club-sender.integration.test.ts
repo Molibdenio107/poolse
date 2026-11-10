@@ -2,7 +2,7 @@ import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import pg from 'pg';
 import { closeHarness, withScratchTenant, type ScratchTenant } from '../test/harness.js';
-import { addressing, clubEmail, clubIdentity, headerSafeName } from './notifier.js';
+import { addressing, clubEmail, clubIdentity, headerSafeName, withClubPhone } from './notifier.js';
 
 /**
  * POOLSE-209 — a club's email leaves under the club's name, from Poolse's own
@@ -76,5 +76,33 @@ test('the database refuses a malformed reply or billing email', async () => {
       sql('UPDATE organization SET billing_email = $2 WHERE id = $1', [tenant.organizationId, 'x@y']),
       /organization_billing_email_format/,
     );
+  });
+});
+
+test('a published club phone closes every club email, in its language (POOLSE-210)', async () => {
+  await withScratchTenant(async (tenant) => {
+    const email = { to: 'a@b.c', subject: 's', text: 'corpo', html: '<p>corpo</p>' };
+    assert.deepEqual(withClubPhone(email, await clubIdentity(tenant.organizationId)), email, 'none published: unchanged');
+
+    await sql('UPDATE organization SET contact_phone = $2, locale = $3 WHERE id = $1', [tenant.organizationId, '+351212345678', 'pt-PT']);
+    const signed = withClubPhone(email, await clubIdentity(tenant.organizationId));
+    assert.equal(signed.text, 'corpo\nTelefone do clube: +351 212 345 678');
+    assert.ok(signed.html.endsWith('Telefone do clube: +351 212 345 678</p>'));
+
+    await sql('UPDATE organization SET locale = $2 WHERE id = $1', [tenant.organizationId, 'en']);
+    assert.ok(withClubPhone(email, await clubIdentity(tenant.organizationId)).text.endsWith('Club phone: +351 212 345 678'));
+    assert.deepEqual(withClubPhone(email, null), email, "Poolse's own mail: unchanged");
+  });
+});
+
+test('the database refuses a club phone that is not + and digits (POOLSE-210)', async () => {
+  await withScratchTenant(async (tenant) => {
+    for (const bad of ['912345678', '+351 912 345 678', '+12', 'ligue']) {
+      await assert.rejects(
+        sql('UPDATE organization SET contact_phone = $2 WHERE id = $1', [tenant.organizationId, bad]),
+        /organization_contact_phone_format/,
+        bad,
+      );
+    }
   });
 });

@@ -281,17 +281,17 @@ a ‹ or › (`ScrollArrows`) on each side with more past it. Where:
 
 | Screen | Pills |
 |---|---|
-| Site → General | Pessoas · Meteorologia · Localização · Horário · Água |
+| Site → General | Geral · Pessoas · Dados do clube · Horário · Água · Meteorologia (opens on Geral, the site's details) |
 | Site → Preços | Mensalidades · Quota de sócio · Inscrição e seguro · Natação livre · Descontos · Pagamentos |
 | Tank → Água | Última análise · Tendências · Histórico · Alertas · Registar · Limites (the unsafe-water warning stays above the pills) |
 | Meter → General | Consumo · Ano a ano · Custo estimado |
-| Inventário | Inventário · Achados e perdidos |
+| Inventário | Inventário · Perdidos e achados |
 | Equipa | Membros · Convites |
 | Qualificações | A tratar · Tipos |
 | Aluno → Mensalidade | Mensalidades (with the period total) · Inscrição e seguro · Quota de sócio |
 | Turmas | Semana · Sem horário · Parcerias |
 | Épocas | Épocas · Planeamento · Iniciar nova época |
-| Faturação | Este mês · Em dívida (the existing view switch; Configuração went to the site's *Dados do clube* tab, POOLSE-104) |
+| Faturação | Este mês · Em dívida (the existing view switch; Configuração went to the site's *Dados do clube*, a pill of Geral since 10-11-2026, POOLSE-104) |
 | `/admin` | Clientes · Faturação |
 
 Not split, on purpose: the dashboard (an overview read at a glance), the calendar, documents
@@ -415,3 +415,7 @@ children show while the reader is inside Competição (Rui, 04-11-2026: kept as 
 ## The search bar
 
 Ctrl+K or the search button, on every backoffice page and in the phone app (POOLSE-118, Rui 07-11-2026). It opens pages by a word, in the reader's language, and does not search for people or records. Each role sees only what it may open: a family sees its own app screens and no backoffice page, an instructor or maintenance person their own app and the pages their role reaches, and a view only the person's app. The list decides what is offered; the API still answers for every page. The corner says it is working while a page loads. `/admin` has none: an operator has no club there. A tab of the site is reached through `/dashboard/facilities/site?tab=`.
+
+## The bell — POOLSE-212 (10-11-2026)
+
+Left of the search: a bell whose list is one line per kind of thing that lights a menu dot (*7 turmas sem professor*, *1 pedido de inscrição*…), each opening the page where that dot breathes; *Nada por tratar* when there is nothing. The icon breathes with the shared dot while anything is listed. Lines go only when the thing is solved. Who sees what is the dots' rule: the office its queues, a teacher their lessons' answers, maintenance its site work; a family's app has no bell. Ctrl+K *Notificações* opens it.

@@ -320,7 +320,6 @@ export default async function ProgressPage({
           slug: 'history',
           labelKey: 'progress.history',
           visible: hasRecords,
-          badge: { kind: 'count', value: loaded.records.length },
           content: () => (
             <section className="rounded bg-surface p-5 shadow-card">
               <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">

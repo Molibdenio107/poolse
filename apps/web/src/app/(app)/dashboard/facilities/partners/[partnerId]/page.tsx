@@ -73,7 +73,6 @@ export default async function PartnerPage({
         {
           slug: 'contacts',
           labelKey: 'partners.contacts',
-          badge: { kind: 'count', value: partner.contacts.length },
           content: () => (
             <PartnerContacts
               partnerId={partner.id}
@@ -101,7 +100,6 @@ export default async function PartnerPage({
         {
           slug: 'groups',
           labelKey: 'partners.groups',
-          badge: { kind: 'count', value: partner.groups.length },
           content: async () => {
             /*
              * The levels, for the optional level a group can be pointed at.

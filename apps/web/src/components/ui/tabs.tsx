@@ -53,6 +53,7 @@ export const TabsTrigger = forwardRef<
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
         'data-[state=active]:bg-primary data-[state=active]:font-medium data-[state=active]:text-primary-foreground',
         'data-[state=active]:[&_.attention-dot]:bg-primary-foreground',
+        'data-[state=active]:[&_.attention-count]:bg-primary-foreground data-[state=active]:[&_.attention-count]:text-primary',
         className,
       )}
       {...props}

@@ -39,6 +39,8 @@ export interface PublicLeadForm {
   complaints: PublicComplaints;
   /** Each site's operating regulation in force; sites with none are left out. */
   regulations: ({ facilityName: string } & PublicRegulation)[];
+  /** POOLSE-210: the club's published phone, or null. */
+  contactPhone: string | null;
   /** Under this a swimmer needs a guardian — the club's own setting. */
   ageOfMajority: number;
   facilities: { id: string; name: string }[];
@@ -52,6 +54,7 @@ interface RawForm {
   clubName: string;
   complaintsRegime: string | null;
   complaintsUrl: string | null;
+  contactPhone?: string | null;
   regulations: { facilityName: string; effectiveFrom: string; body: string }[];
   ageOfMajority: number;
   facilities: { id: string; name: string }[];
@@ -72,6 +75,7 @@ export async function readLeadForm(slug: string): Promise<PublicLeadForm | null>
   return {
     clubName: raw.clubName,
     complaints: complaintsFor(raw.complaintsRegime, raw.complaintsUrl),
+    contactPhone: raw.contactPhone ?? null,
     regulations: (raw.regulations ?? []).map((r) => ({
       facilityName: r.facilityName,
       ...regulationFrom(r)!,

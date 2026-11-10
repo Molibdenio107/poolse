@@ -1,3 +1,5 @@
+import { attentionClass } from '@/components/attention-dot';
+import { cn } from '@/lib/utils';
 import { getTranslations } from 'next-intl/server';
 import { ChevronRight, Settings, Building2 } from 'lucide-react';
 import { BASE_SPORT, type PoolseSport } from '@poolse/rules';
@@ -113,7 +115,12 @@ export default async function FacilitiesPage({
             data.facilities.map((facility) => (
               <section
                 key={facility.id}
-                className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card"
+                // Something to do at this site (POOLSE-214): the emphasised card, beside its dot.
+                className={cn(
+                  'flex flex-col gap-4 rounded bg-surface p-5 shadow-card',
+                  (attention.facilities[facility.id] ?? 0) > 0 &&
+                    attentionClass(data.facilities.filter((one) => (attention.facilities[one.id] ?? 0) > 0).length),
+                )}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-col">

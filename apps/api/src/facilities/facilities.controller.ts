@@ -61,6 +61,7 @@ import {
   setFacilityHours,
   setWaterThreshold,
   updateFacility,
+  saveFacilityAddress,
   updatePool,
   type Facility,
   type FacilityDay,
@@ -73,12 +74,23 @@ import {
 } from './facilities.repository.js';
 import { SampleInFutureError, sampleMoment, type SampleMoment } from './sample-moment.js';
 import { SITE_PAGE_ROLES } from './site-access.js';
-import { BASE_SPORT, isPoolseSport, POOL_USES, type PoolContext, type PoolseSport } from '@poolse/rules';
+import { readClubContact } from '../organizations/organizations.repository.js';
+import {
+  BASE_SPORT,
+  isCountryCode,
+  isPoolseSport,
+  isPtDistrict,
+  POOL_USES,
+  type PoolContext,
+  type PoolseSport,
+} from '@poolse/rules';
 import { CoreRoute, moduleIsOn, PoolseModule } from '../tenant/modules.js';
 
 interface FacilityDetailResponse extends FacilityDetail {
   organizationId: string;
   canManage: boolean;
+  /** The club's and the site's names are the owner's to change (Rui, 10-11-2026). */
+  canRename: boolean;
   /**
    * Absent for anybody who is not an owner or an admin.
    *
@@ -489,6 +501,7 @@ export class FacilitiesController {
       ...detail,
       organizationId,
       canManage: privileged,
+      canRename: hasRole('owner'),
       hours: await facilityHours(organizationId, facilityId),
       ...(privileged ? { counts: await countPeople(organizationId) } : {}),
     };
@@ -578,7 +591,10 @@ export class FacilitiesController {
     const input: Parameters<typeof updateFacility>[2] = {};
 
     if (body['name'] !== undefined) {
-      input.name = text(body['name'], 'name', { required: true })!;
+      // A site's name is the owner's alone (Rui, 10-11-2026); an admin keeps the rest.
+      requireRole('owner');
+      // Blank is the club's name, as at creation (`provision_organization`, Rui 10-11-2026).
+      input.name = text(body['name'], 'name') ?? (await readClubContact(organizationId)).name;
     }
     if (body['address'] !== undefined) {
       input.address = text(body['address'], 'address', { max: 500 });
@@ -597,6 +613,10 @@ export class FacilitiesController {
         input.longitude = null;
       } else {
         input.countryCode = countryCode(body['countryCode']);
+        // The chosen town's distrito, when the picker recognised one (10-11-2026).
+        if (typeof body['district'] === 'string' && input.countryCode === 'PT' && isPtDistrict(body['district'])) {
+          input.district = body['district'];
+        }
         input.latitude = coordinate(body['latitude'], 'latitude', 90);
         input.longitude = coordinate(body['longitude'], 'longitude', 180);
 
@@ -609,6 +629,52 @@ export class FacilitiesController {
     if (!(await updateFacility(organizationId, facilityId, input))) {
       throw new NotFoundException('No such site');
     }
+    return { updated: true };
+  }
+
+  /**
+   * The site's morada and código postal — 10-11-2026 (Rui). Both together, as
+   * the form sends them; blank clears one. Field errors come back as i18n keys,
+   * so the form says which field and why. The locality is the town picker's.
+   */
+  @Put(':facilityId/address')
+  async saveAddress(
+    @Param('facilityId') facilityId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ updated: true }> {
+    requireRole('owner', 'admin');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(facilityId)) {
+      throw new NotFoundException('No such site');
+    }
+    const { organizationId } = currentTenant();
+    const fields: Record<string, string> = {};
+    const typed = (key: string, max: number): string | null => {
+      const value = typeof body[key] === 'string' ? (body[key] as string).trim() : '';
+      if (value.length > max) fields[key] = 'facilities.siteAddress.tooLong';
+      return value === '' ? null : value;
+    };
+
+    const address = typed('address', 500);
+    const rawPostal = typed('postalCode', 16);
+    const postal = rawPostal === null ? null : /^(\d{4})[\s-]?(\d{3})$/.exec(rawPostal);
+    if (rawPostal !== null && postal === null) fields['postalCode'] = 'facilities.siteAddress.postalCodeShape';
+    // País is the town picker's country, one value (10-11-2026); any ISO code, or none.
+    const country = typed('countryCode', 2)?.toUpperCase() ?? null;
+    if (country !== null && !isCountryCode(country)) fields['countryCode'] = 'facilities.siteAddress.countryShape';
+    // In Portugal the distrito is one of the twenty; elsewhere it is free text.
+    const district = typed('district', 80);
+    if (district !== null && country === 'PT' && !isPtDistrict(district)) {
+      fields['district'] = 'facilities.siteAddress.districtShape';
+    }
+    if (Object.keys(fields).length > 0) throw new BadRequestException({ fields });
+
+    const saved = await saveFacilityAddress(organizationId, facilityId, {
+      address,
+      postalCode: postal === null ? null : `${postal[1]}-${postal[2]}`,
+      district,
+      countryCode: country,
+    });
+    if (!saved) throw new NotFoundException('No such site');
     return { updated: true };
   }
 

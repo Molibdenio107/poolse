@@ -142,7 +142,8 @@ export default async function SpacePage({
         {
           slug: 'issues',
           labelKey: 'spaces.issues',
-          badge: open > 0 ? { kind: 'count', value: open } : undefined,
+          // Open faults are to-dos (POOLSE-215): the mark, a number from two.
+          badge: open > 0 ? { kind: 'dot', labelKey: 'detailTabs.badge.toResolve', count: open } : undefined,
           content: () => (
             <IssuesPanel
               spaceId={loaded.space.id}

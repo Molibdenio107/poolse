@@ -16,6 +16,8 @@ export interface Attention {
   sessions: Record<string, number>;
   /** Students with something to review — POOLSE-190. */
   students: Record<string, number>;
+  /** Turmas with no teacher — POOLSE-211. */
+  classGroups?: Record<string, number>;
 }
 
 const NOTHING: Attention = { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {} };

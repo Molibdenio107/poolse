@@ -32,12 +32,16 @@ export async function attentionForReader(): Promise<Attention> {
     leads: office,
     review: office,
     categories: office && moduleIsOn('reception'),
+    // POOLSE-211: turmas with nobody teaching them, the office's to staff.
+    classes: office,
     water: upkeep && moduleIsOn('water_quality'),
     maintenance: upkeep && moduleIsOn('maintenance'),
     families: office ? ('all' as const) : hasRole('instructor') ? ('mine' as const) : null,
     membershipId,
   };
-  if (!scope.leads && !scope.categories && !scope.water && !scope.maintenance && scope.families === null) return NOTHING;
+  if (!scope.leads && !scope.classes && !scope.categories && !scope.water && !scope.maintenance && scope.families === null) {
+    return NOTHING;
+  }
   // A support session sees the club as an admin would, but is nobody's teacher.
   if (support === true && scope.families === 'mine') scope.families = null;
   return readAttention(organizationId, scope);

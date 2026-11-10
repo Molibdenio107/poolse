@@ -54,6 +54,7 @@ export default async function StudentsPage({
     multi?: string;
     modalidade?: string;
     overdue?: string;
+    review?: string;
     classGroupId?: string;
     insurance?: string;
     order?: string;
@@ -72,6 +73,7 @@ export default async function StudentsPage({
     multi,
     modalidade,
     overdue,
+    review,
     classGroupId: requestedTurma = '',
     insurance: requestedInsurance,
     order: requestedOrder,
@@ -101,6 +103,8 @@ export default async function StudentsPage({
   // *Por convidar* — POOLSE-129: somebody on the record could use the app and
   // has neither a login nor a live invitation.
   const pendingOnly = invite === 'pending';
+  // *Por rever* — POOLSE-213: the students whose dot breathes; the bell's line opens it.
+  const reviewOnly = review === '1';
   /*
    * Two ways to name a sport, and they must not be one (Rui, 04-11-2026).
    * `?sport=` is a sport's own *Alunos*, reached from its tab — the menu reads
@@ -115,6 +119,7 @@ export default async function StudentsPage({
   const multiOnly = ownSport === null && (multi === '1' || sport === 'multi' || modalidade === 'multi');
   const flags = {
     overdue: overdueOnly ? '1' : undefined,
+    review: reviewOnly ? '1' : undefined,
     invite: pendingOnly ? 'pending' : undefined,
     sport: ownSport ?? undefined,
     modalidade: pickedSport ?? (multiOnly ? 'multi' : undefined),
@@ -145,6 +150,7 @@ export default async function StudentsPage({
   if (search.trim()) query.set('search', search.trim());
   if (levelId.trim()) query.set('levelId', levelId.trim());
   if (overdueOnly) query.set('overdue', '1');
+  if (reviewOnly) query.set('review', '1');
   if (pendingOnly) query.set('invite', 'pending');
   if (sportFilter !== null) query.set('sport', sportFilter);
   if (multiOnly) query.set('multi', '1');
@@ -199,6 +205,7 @@ export default async function StudentsPage({
     search.trim().length > 0 ||
     levelId.trim().length > 0 ||
     overdueOnly ||
+    reviewOnly ||
     pendingOnly ||
     sportFilter === 'none' ||
     pickedSport !== null ||
@@ -263,7 +270,7 @@ export default async function StudentsPage({
 
       {turnedCount > 0 && (
         <FromLink
-          href="/dashboard/students/fez-18"
+          href="/dashboard/students?review=1"
           className="flex items-center justify-between gap-3 rounded border border-primary bg-primary/[0.08] p-4 text-sm font-medium hover:bg-primary/[0.12]"
         >
           <span>{t('majority.banner', { count: turnedCount })}</span>
@@ -363,6 +370,30 @@ export default async function StudentsPage({
                       {overdueOnly && <Check className="size-3" />}
                     </span>
                     {t('fees.showOverdueOnly')}
+                  </FromLink>
+                )}
+
+                {/* *Por rever* — POOLSE-213: who has a breathing dot, the office's. */}
+                {data.canManage && (
+                  <FromLink
+                    href={pageHref('/dashboard/students', { search, levelId, ...flags, review: reviewOnly ? undefined : '1' }, 1)}
+                    role="checkbox"
+                    aria-checked={reviewOnly}
+                    className={cn(
+                      'flex min-h-control shrink-0 items-center gap-2 rounded-sm border px-4 py-1 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                      reviewOnly ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-surface-muted',
+                    )}
+                  >
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'flex size-4 shrink-0 items-center justify-center rounded-sm border',
+                        reviewOnly ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
+                      )}
+                    >
+                      {reviewOnly && <Check className="size-3" />}
+                    </span>
+                    {t('students.filters.review')}
                   </FromLink>
                 )}
 

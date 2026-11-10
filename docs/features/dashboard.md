@@ -415,3 +415,7 @@ enrolments, or a partnership group's headcount, counted by `readOccupancyToday` 
 *Hoje* card. A sentence above gives the day's total and its busiest hour, a hint says what a bar is,
 and a bar is a button: opening it lists that hour's lessons (time, turma or group, place, instructor,
 people) from the same statement's `lessons`, with a link to the calendar. Opening an hour also turns the *Recintos* card beside it to that hour (*Recintos · às 17h*): how many people are in each tank then, in how many lessons, beside its water (`TodayRow`, which holds the one open hour for both cards; each lesson carries its `poolId`).
+
+## Sem professor and the water card — POOLSE-211 (10-11-2026)
+
+The summary's *Sem professor* tile counts **turmas** with no teacher of their own (any season the Turmas page lists, a draft one included; `turmasWithoutInstructor` in `classes/turmas-without-instructor.ts`, the one definition) at the dashboard's sites, and opens `/dashboard/classes?instructor=none`. Today's lessons with nobody teaching stay a line in the *Hoje* card. The water card's link is *Ver piscinas* and opens the swimming recintos page (`/dashboard/recintos`); *Avarias* still opens *Instalações*.

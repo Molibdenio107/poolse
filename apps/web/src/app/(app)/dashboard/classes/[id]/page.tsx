@@ -156,7 +156,6 @@ export default async function ClassPage({
         {
           slug: 'schedule',
           labelKey: 'classes.pattern',
-          badge: { kind: 'count', value: loaded.schedules.length },
           content: () => (
             <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
               <div>
@@ -210,7 +209,6 @@ export default async function ClassPage({
         {
           slug: 'students',
           labelKey: 'detailTabs.students',
-          badge: { kind: 'count', value: active.length },
           content: async () => {
             /*
               What this turma's hours in the water cost — POOLSE-28 AC 6, beside

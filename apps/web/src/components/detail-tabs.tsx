@@ -1,5 +1,6 @@
 'use client';
 
+import { AttentionMark } from '@/components/attention-dot';
 import {
   createContext,
   useCallback,
@@ -253,17 +254,7 @@ export function DetailTabStrip(): React.ReactElement {
             ref={tab.slug === value ? activeRef : undefined}
           >
             {t(tab.labelKey)}
-            {tab.badge?.kind === 'count' && (
-              <span className="rounded-full bg-foreground/10 px-1.5 text-xs tabular-nums">
-                {tab.badge.value}
-              </span>
-            )}
-            {tab.badge?.kind === 'dot' && (
-              <>
-                <span aria-hidden className="attention-dot" />
-                <span className="sr-only">{t(tab.badge.labelKey)}</span>
-              </>
-            )}
+            {tab.badge !== undefined && <AttentionMark count={tab.badge.count ?? 1} label={t(tab.badge.labelKey)} />}
           </TabsTrigger>
         ))}
       </TabsList>

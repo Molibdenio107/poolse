@@ -117,8 +117,6 @@ export default async function QualificationsPage({
               key: 'attention',
               label: t('qualifications.attention'),
               href: sectionHref(base, { from }, 'attention'),
-              // The whole list's size; a filtered total here would read as the list shrinking.
-              count: withoutCertificate ? undefined : list.total,
             },
             { key: 'types', label: t('qualifications.section.types'), href: sectionHref(base, { from }, 'types') },
           ]}

@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { ChemistryReport, LabEntry, LabResult } from '@/lib/api';
 import { formatStamp } from '@/lib/date-format';
@@ -22,6 +23,7 @@ import { ArchiveLabResultButton, LabResultForm } from './lab-result-form';
  */
 export async function LabResultsSection({
   poolId,
+  flaggedId,
   entries,
   total,
   canRecord,
@@ -31,6 +33,8 @@ export async function LabResultsSection({
   pagination,
 }: {
   poolId: string;
+  /** The newest graded report, when it fails NP 4542 — drawn emphasised (POOLSE-214). */
+  flaggedId?: string | undefined;
   /** This page's rows — ten at a time since 29-10-2026; lab results and chemistry reports. */
   entries: LabEntry[];
   /** Every result, across the pages, so "none yet" is about the pool. */
@@ -67,7 +71,11 @@ export async function LabResultsSection({
             const result: LabResult = entry.result;
             const { grading } = result;
             return (
-              <li key={result.id} className="flex flex-col gap-3 rounded border border-border p-4">
+              <li
+                key={result.id}
+                // The newest report failing NP 4542, until a newer one passes (POOLSE-214).
+                className={cn('flex flex-col gap-3 rounded border border-border p-4', result.id === flaggedId && 'attention-card')}
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="flex flex-col">
                     <span className="flex flex-wrap items-baseline gap-x-2 font-medium">
@@ -79,7 +87,10 @@ export async function LabResultsSection({
                         t('labResults.noLaboratory')}
                     </span>
                   </span>
-                  <LabGradeChip grade={grading.grade} label={gradeLabel(t, grading.grade)} />
+                  <span className="flex items-center gap-2">
+                    {result.id === flaggedId && <span aria-hidden className="attention-dot" />}
+                    <LabGradeChip grade={grading.grade} label={gradeLabel(t, grading.grade)} />
+                  </span>
                 </div>
 
                 {grading.failures.length > 0 && (

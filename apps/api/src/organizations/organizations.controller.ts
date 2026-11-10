@@ -1,4 +1,4 @@
-import { ibanChecksumOk, normalizeIban, normalizeMbwayPhone } from '@poolse/rules';
+import { ibanChecksumOk, normalizeClubPhone, normalizeIban, normalizeMbwayPhone } from '@poolse/rules';
 import { savePaymentDetails } from '../billing/payment-destinations.js';
 import { deliverPaymentChangeNotice } from '../billing/payment-change-delivery.js';
 import {
@@ -28,6 +28,10 @@ import {
   saveTaxNumber,
   saveReplyEmail,
   setInitialReplyEmail,
+  saveContactPhone,
+  saveClubContacts,
+  saveClubName,
+  setInitialContactPhone,
   EMAIL_SHAPE,
   savePaymentInstructions,
   TaxNumberTakenError,
@@ -47,6 +51,8 @@ interface CreateOrganizationBody {
   kind?: unknown;
   /** POOLSE-209: where families' replies go; blank leaves the owner's. */
   replyEmail?: unknown;
+  /** POOLSE-210: the club's published phone; blank publishes none. */
+  contactPhone?: unknown;
 }
 
 interface CreateOrganizationResponse {
@@ -114,6 +120,11 @@ export class OrganizationsController {
     if (replyEmail !== '' && (replyEmail.length > 254 || !EMAIL_SHAPE.test(replyEmail))) {
       throw new BadRequestException({ fields: { replyEmail: 'clubData.replyEmail.shape' } });
     }
+    // POOLSE-210: optional; what is typed must be a number.
+    const contactPhone = clubPhoneFrom(body.contactPhone);
+    if (contactPhone === undefined) {
+      throw new BadRequestException({ fields: { contactPhone: 'clubData.contactPhone.shape' } });
+    }
 
     /*
      * One person, one trial — POOLSE-62.
@@ -148,6 +159,7 @@ export class OrganizationsController {
       );
       // After the club exists, inside its own context, as the owner it now has.
       if (replyEmail !== '') await setInitialReplyEmail(made.organizationId, replyEmail);
+      if (contactPhone !== null) await setInitialContactPhone(made.organizationId, contactPhone);
       return made;
     } catch (error) {
       if (error instanceof TrialAlreadyClaimedError) {
@@ -283,6 +295,44 @@ export class SettingsController {
     return saveReplyEmail(organizationId, value);
   }
 
+  /**
+   * The club's published phone — POOLSE-210. Owner and admin, on *Dados do
+   * clube*. Blank clears it; anything else must be a number.
+   */
+  /** The club's name — the owner's alone (Rui, 10-11-2026). */
+  @Put('club-name')
+  async saveClubName(@Body() body: { name?: unknown }): Promise<TaxSettings> {
+    requireRole('owner');
+    const { organizationId } = currentTenant();
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    if (name === '') throw new BadRequestException({ fields: { clubName: 'facilities.general.nameRequired' } });
+    if (name.length > MAX_NAME_LENGTH) throw new BadRequestException({ fields: { clubName: 'facilities.siteAddress.tooLong' } });
+    return saveClubName(organizationId, name);
+  }
+
+  @Put('contacts')
+  async saveContacts(@Body() body: { replyEmail?: unknown; contactPhone?: unknown }): Promise<TaxSettings> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    const fields: Record<string, string> = {};
+    const email = typeof body.replyEmail === 'string' ? body.replyEmail.trim() : '';
+    if (email === '') fields['replyEmail'] = 'clubData.replyEmail.required';
+    else if (email.length > 254 || !EMAIL_SHAPE.test(email)) fields['replyEmail'] = 'clubData.replyEmail.shape';
+    const phone = clubPhoneFrom(body.contactPhone);
+    if (phone === undefined) fields['contactPhone'] = 'clubData.contactPhone.shape';
+    if (Object.keys(fields).length > 0) throw new BadRequestException({ fields });
+    return saveClubContacts(organizationId, email, phone ?? null);
+  }
+
+  @Put('contact-phone')
+  async saveContactPhone(@Body() body: { contactPhone?: unknown }): Promise<TaxSettings> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    const value = clubPhoneFrom(body.contactPhone);
+    if (value === undefined) throw new BadRequestException({ fields: { contactPhone: 'clubData.contactPhone.shape' } });
+    return saveContactPhone(organizationId, value);
+  }
+
   @Put('tax')
   async saveTax(@Body() body: { taxNumber?: unknown }): Promise<TaxSettings> {
     requireRole('owner', 'admin');
@@ -400,4 +450,15 @@ function readFlag(value: unknown, field: string): boolean {
   if (value === true || value === 'true') return true;
   if (value === false || value === 'false') return false;
   throw new BadRequestException(`${field} must be true or false`);
+}
+
+/**
+ * A typed club phone — POOLSE-210: null for blank, the stored form for a number,
+ * undefined for anything else (the caller refuses it). Length-capped first.
+ */
+function clubPhoneFrom(raw: unknown): string | null | undefined {
+  const typed = typeof raw === 'string' ? raw.trim() : '';
+  if (typed === '') return null;
+  if (typed.length > 32) return undefined;
+  return normalizeClubPhone(typed) ?? undefined;
 }

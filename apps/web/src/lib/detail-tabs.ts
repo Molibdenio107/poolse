@@ -13,9 +13,11 @@
  * else, because the tab's content already says it in full: the dot only says
  * "look in here".
  */
-export type TabBadge =
-  | { kind: 'count'; value: number }
-  | { kind: 'dot'; labelKey: string };
+/**
+ * Something to do behind a tab — POOLSE-120's dot, a number from two (POOLSE-215).
+ * There is no plain count any more: "Turmas 3" read as three things missing.
+ */
+export type TabBadge = { kind: 'dot'; labelKey: string; count?: number };
 
 export interface TabSpec {
   /** What `?tab=` carries. English, kebab-case, never translated. */

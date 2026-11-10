@@ -154,12 +154,14 @@ export default async function PublicWaterPage({
       <PublicNotices
         complaints={page.complaints}
         regulations={page.regulation === null ? [] : [page.regulation]}
+        phone={page.contactPhone}
         large={lobby}
         labels={{
           complaints: t('publicNotices.complaints'),
           complaintsPublic: t('publicNotices.complaintsPublic'),
           regulation: t('publicNotices.regulation'),
           effectiveFrom: (date) => t('publicNotices.effectiveFrom', { date }),
+          phone: t('publicNotices.phone'),
         }}
       />
 

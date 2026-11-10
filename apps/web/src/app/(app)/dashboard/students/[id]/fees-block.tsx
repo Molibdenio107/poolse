@@ -414,13 +414,15 @@ function Problem({ state }: { state: FormState }): React.ReactElement | null {
  * as Preços. `joining` is offered only when a season has a price to charge,
  * which the page decides from the same `seasonCharges` this block renders.
  */
-export type FeesSection = 'mensalidade' | 'joining';
+export type FeesSection = 'mensalidade' | 'joining' | 'categorias';
 
 // The card headings the sections already carry, so a pill and the card it
 // opens say the same words.
 const SECTION_LABEL: Record<FeesSection, string> = {
   mensalidade: 'fees.section.mensalidade',
   joining: 'fees.seasonCharges',
+  // POOLSE-216 (Rui, 10-11-2026): a person's categories change what they pay, so they live here.
+  categorias: 'personCategories.title',
 };
 
 /**
@@ -472,6 +474,7 @@ export function FeesBlock({
   section,
   offered,
   path,
+  categories = null,
 }: {
   studentId: string;
   fees: StudentFees;
@@ -481,6 +484,8 @@ export function FeesBlock({
   offered: readonly FeesSection[];
   /** The record's own path, which each pill's link keeps `tab=fees` on. */
   path: string;
+  /** *Categorias*' content, the office's (`PersonCategoriesCard`), drawn under its pill. */
+  categories?: React.ReactNode;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -560,6 +565,8 @@ export function FeesBlock({
         href: sectionHref(path, { tab: 'fees' }, key),
       }))}
     />
+
+    {section === 'categorias' && categories}
 
     {section === 'joining' && (
       <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">

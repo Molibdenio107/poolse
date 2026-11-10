@@ -26,6 +26,8 @@ interface Issued {
   link: string;
   email: string | null;
   emailed: boolean;
+  /** Whether sending is switched on here at all (POOLSE-217). */
+  emailConfigured?: boolean;
   expiresAt: string;
 }
 
@@ -61,11 +63,14 @@ function done(studentId: string, rowKey: string, issued: Issued): FamilyInviteSt
     link: issued.link,
     email: issued.email,
     emailed: issued.emailed,
+    // Not sent because sending is off here is said as such, never as a failure (POOLSE-217).
     toastKey: issued.emailed
       ? 'familyAccess.toast.emailed'
       : issued.email === null
         ? 'familyAccess.toast.linkReady'
-        : 'familyAccess.toast.notEmailed',
+        : issued.emailConfigured === false
+          ? 'familyAccess.toast.notConfigured'
+          : 'familyAccess.toast.notEmailed',
     ...(issued.email === null ? {} : { values: { email: issued.email } }),
   };
 }

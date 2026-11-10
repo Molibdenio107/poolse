@@ -78,6 +78,7 @@ import {
   type TeachingStudentCard,
 } from './teaching-students.repository.js';
 import { readRegistrationSettings } from '../leads/leads.repository.js';
+import { readClubContact, type ClubContact } from '../organizations/organizations.repository.js';
 import {
   appRequestOptions,
   AppRequestRefused,
@@ -676,6 +677,18 @@ export class AppController {
     requireRole('instructor', 'guardian', 'student');
     const settings = await readRegistrationSettings(currentTenant().organizationId);
     return { slug: settings.open ? settings.slug : null };
+  }
+
+  /**
+   * How to reach the club — POOLSE-210 (Rui, 10-11-2026): its published phone and
+   * the address a reply goes to, on the family app's profile. Only those three
+   * fields leave; the club publishes the phone, and the email already answers
+   * every message it sends.
+   */
+  @Get('club-contact')
+  async clubContact(): Promise<ClubContact> {
+    requireRole('instructor', 'guardian', 'student');
+    return readClubContact(currentTenant().organizationId);
   }
 
   /** One student's card: level, turmas, bests, insurance and who to call. 404 outside their turmas. */

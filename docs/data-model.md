@@ -3461,6 +3461,14 @@ same shape as a complete one and nothing on it says which.
 
 `organization.reply_email citext` is where families' replies go: every club email leaves From the club's name at Poolse's address with Reply-To this (the owner's login email while null). `organization.billing_email citext` is the Stripe customer's email. Both carry a format CHECK (`organization_reply_email_format`, `organization_billing_email_format`, the same shape `EMAIL_SHAPE` checks in the API) and are written by the app login through column grants, like `payment_iban`; neither is a platform column. Set at creation through an ordinary UPDATE after `provision_organization`, which is unchanged.
 
+### The club's phone — POOLSE-210, 10 November 2026
+
+`organization.contact_phone text` is the number a club publishes for families: shown on the family app, at the foot of every club email and on both public pages (`public_water_page` and `public_lead_form` carry it as `contactPhone`). Stored as `+` and 8 to 15 digits (CHECK `organization_contact_phone_format`, the shape `normalizeClubPhone` in `@poolse/rules` produces). It is optional, with no fallback: null publishes none. It is written by the app login through a column grant, like `reply_email`. Poolse never sends from it.
+
+### A site's postcode — 10 November 2026
+
+`facility.address` is now the street and number, and `facility.postal_code` (CHECK `^[0-9]{4}-[0-9]{3}$`, typed `3800001` or `3800 001` and normalised by the API) sits beside it, with `facility.district` (1–80 characters; in Portugal the API takes only a `PT_DISTRICTS` name from `@poolse/rules`, elsewhere free text). *País* edits the existing `country_code`. The locality is `city`, the geocoded town the weather reads; there is no second locality column. Both written by `PUT /facilities/:id/address` (owner, admin). Invoices read `facility_address` as `address` and `postal_code city` on two lines. `organization.name` and `facility.name` are renamed by the owner only (`PUT /settings/club-name`, audited `organization.renamed` with from and to; `PATCH /facilities/:id`).
+
 ### The operator's subscription — slice 2.4, 13 September 2026
 
 ```
