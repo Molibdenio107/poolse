@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guia do Poolse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Poolse's own look: the water teal and the lane-rope green, Poppins over Montserrat.
+     Layout: a sticky contents rail beside one reading column; each step sits with its screenshot. */
+  :root {
+    --bg: #f4f8f9;
+    --surface: #ffffff;
+    --ink: #1b292d;
+    --muted: #546569;
+    --accent: #2b6b7c;
+    --accent-fill: #67a6b6;
+    --green: #b3d49d;
+    --line: #d8e3e6;
+    --shadow: 0 1px 2px rgba(20, 50, 60, .06), 0 8px 24px rgba(20, 50, 60, .08);
+    --font-display: "Poppins", "Montserrat", ui-sans-serif, system-ui, sans-serif;
+    --font-body: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1719; --surface: #172226; --ink: #e5eef0; --muted: #9db1b6;
+      --accent: #8ccbdb; --accent-fill: #67a6b6; --green: #8fb877; --line: #28393e;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1719; --surface: #172226; --ink: #e5eef0; --muted: #9db1b6;
+    --accent: #8ccbdb; --accent-fill: #67a6b6; --green: #8fb877; --line: #28393e;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 var(--font-body); }
+  a { color: var(--accent); }
+  a:focus-visible, button:focus-visible, img:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.2; text-wrap: balance; }
+
+  .layout { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 3rem; max-width: 76rem; margin: 0 auto; padding: 0 1.25rem; }
+  nav.rail { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 2rem 0; }
+  nav.rail .brand { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; display: flex; align-items: center; gap: .5rem; margin-bottom: 1.25rem; }
+  nav.rail .brand span { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 6px; background: var(--accent-fill); color: #fff; font-size: .95rem; }
+  nav.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; }
+  nav.rail li.group { margin-top: 1rem; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  nav.rail a { display: block; padding: .3rem .6rem; border-radius: 6px; text-decoration: none; color: var(--ink); font-size: .92rem; }
+  nav.rail a:hover { background: var(--surface); }
+  main { padding: 2.5rem 0 5rem; min-width: 0; }
+
+  .hero h1 { font-size: 2.4rem; margin: 0 0 .5rem; }
+  .hero p { color: var(--muted); font-size: 1.1rem; max-width: 60ch; margin: 0; }
+  .roles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 2rem 0 0; }
+  .role { display: block; padding: 1.1rem 1.2rem; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; text-decoration: none; color: var(--ink); box-shadow: var(--shadow); }
+  .role b { display: block; font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; margin-bottom: .25rem; }
+  .role span { color: var(--muted); font-size: .9rem; }
+  .role i { display: block; width: 2rem; height: .3rem; border-radius: 3px; background: var(--accent-fill); margin-bottom: .75rem; }
+  .role:nth-child(2) i { background: var(--green); }
+  .role:nth-child(3) i { background: linear-gradient(90deg, var(--accent-fill), var(--green)); }
+
+  section { scroll-margin-top: 1rem; }
+  .part { margin-top: 4rem; padding-top: 1rem; border-top: 3px solid var(--line); }
+  .part > .eyebrow { font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; color: var(--accent); }
+  .part > h2 { font-size: 1.9rem; margin: .25rem 0 .5rem; }
+  .part > p.intro { color: var(--muted); max-width: 62ch; margin: 0 0 1rem; }
+  h3 { font-size: 1.25rem; margin: 2.5rem 0 .5rem; }
+  p, li { max-width: 66ch; }
+
+  figure { margin: 1rem 0 0; }
+  figure img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); box-shadow: var(--shadow); cursor: zoom-in; background: var(--surface); }
+  figcaption { margin-top: .5rem; color: var(--muted); font-size: .88rem; }
+
+  .step { display: grid; grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); gap: 1.75rem; align-items: start; margin-top: 2.25rem; }
+  .step.wide { grid-template-columns: 1fr; }
+  .step .text h3 { margin-top: 0; }
+  ol.do { margin: .5rem 0 0; padding-left: 1.3rem; }
+  ol.do li { margin: .35rem 0; padding-left: .2rem; }
+  .ui { font-weight: 600; white-space: nowrap; }
+  kbd { font: 600 .82em var(--font-body); padding: .1rem .45rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; background: var(--surface); }
+
+  .annotated { position: relative; }
+  .pin { position: absolute; transform: translate(-50%, -50%); width: 1.6rem; height: 1.6rem; border-radius: 50%; background: #e2583e; color: #fff; font: 600 .82rem/1.6rem var(--font-display); text-align: center; box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,.3); }
+  .legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem 1.5rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+  .legend li { display: grid; grid-template-columns: 1.6rem 1fr; gap: .6rem; align-items: start; }
+  .legend b.n { width: 1.6rem; height: 1.6rem; border-radius: 50%; background: #e2583e; color: #fff; font: 600 .82rem/1.6rem var(--font-display); text-align: center; }
+
+  .phones { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
+  .phone { margin: 0; }
+  .phone .frame { padding: .5rem; border-radius: 2rem; background: #1b292d; box-shadow: var(--shadow); }
+  .phone img { border-radius: 1.55rem; border: 0; box-shadow: none; }
+  .phone figcaption b { display: block; color: var(--ink); font-family: var(--font-display); font-weight: 600; font-size: .98rem; margin-bottom: .1rem; }
+
+  .tip { margin-top: 1.5rem; padding: 1rem 1.2rem; border-left: 4px solid var(--green); background: var(--surface); border-radius: 0 10px 10px 0; box-shadow: var(--shadow); }
+  .tip b { font-family: var(--font-display); font-weight: 600; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; margin-top: 1rem; }
+  .card { padding: 1rem 1.1rem; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+  .card b { font-family: var(--font-display); font-weight: 600; display: block; margin-bottom: .2rem; }
+  .card span { color: var(--muted); font-size: .92rem; }
+
+  dialog { padding: 0; border: 0; background: transparent; max-width: 96vw; max-height: 94vh; }
+  dialog::backdrop { background: rgba(10, 20, 24, .85); }
+  dialog img { display: block; max-width: 96vw; max-height: 90vh; border-radius: 10px; }
+  dialog button { position: fixed; top: 1rem; right: 1rem; width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 0; background: #fff; color: #1b292d; font: 600 1.2rem var(--font-display); cursor: pointer; }
+
+  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 0; }
+    nav.rail { position: static; max-height: none; padding-bottom: 0; }
+    nav.rail ol { grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); }
+    .step { grid-template-columns: 1fr; }
+    .roles { grid-template-columns: 1fr; }
+    .legend { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="rail" aria-label="Conteúdo">
+    <div class="brand"><span aria-hidden="true">P</span>Guia do Poolse</div>
+    <ol>
+      <li><a href="#comecar">Começar</a></li>
+      <li><a href="#ecra">Conhecer o ecrã</a></li>
+      <li><a href="#procurar">Procurar e avisos</a></li>
+      <li class="group">Secretaria</li>
+      <li><a href="#alunos">Alunos</a></li>
+      <li><a href="#ficha">A ficha do aluno</a></li>
+      <li><a href="#mensalidades">Mensalidades</a></li>
+      <li><a href="#familia">Dar acesso à família</a></li>
+      <li><a href="#turmas">Turmas</a></li>
+      <li><a href="#calendario">Calendário e presenças</a></li>
+      <li><a href="#encerramentos">Encerramentos</a></li>
+      <li><a href="#pedidos">Pedidos de inscrição</a></li>
+      <li><a href="#avisos">Avisos às famílias</a></li>
+      <li><a href="#rececao">Receção</a></li>
+      <li class="group">No telemóvel</li>
+      <li><a href="#professores">Professores</a></li>
+      <li><a href="#familias">Famílias</a></li>
+      <li class="group">Mais</li>
+      <li><a href="#ajuda">Ajuda</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <h1>Guia do Poolse</h1>
+      <p>Tudo o que precisa para usar o Poolse no dia a dia do clube: onde está cada coisa e como fazer as tarefas mais comuns, passo a passo. Clique numa imagem para a ver em grande.</p>
+      <div class="roles">
+        <a class="role" href="#alunos"><i></i><b>Secretaria</b><span>Alunos, mensalidades, turmas, calendário e famílias, no computador.</span></a>
+        <a class="role" href="#professores"><i></i><b>Professores</b><span>As aulas do dia e as presenças, no telemóvel.</span></a>
+        <a class="role" href="#familias"><i></i><b>Famílias</b><span>Aulas, progressos e pagamentos dos filhos, no telemóvel.</span></a>
+      </div>
+    </header>
+
+    <!-- COMEÇAR -->
+    <section id="comecar" class="part">
+      <div class="eyebrow">Primeiros passos</div>
+      <h2>Começar</h2>
+      <p class="intro">O Poolse funciona no navegador, no computador e no telemóvel. Não é preciso instalar nada.</p>
+      <div class="cards">
+        <div class="card"><b>1. Abra o convite</b><span>O clube envia-lhe um convite por email (ou um link por WhatsApp). Abra-o e crie a conta com esse email. O convite vale 24 horas.</span></div>
+        <div class="card"><b>2. Entre sempre no mesmo endereço</b><span>Com o seu email e a sua palavra-passe. A mesma conta serve no computador e no telemóvel.</span></div>
+        <div class="card"><b>3. No telemóvel, adicione ao ecrã</b><span>No menu do navegador, escolha <span class="ui">Adicionar ao ecrã principal</span>. O Poolse passa a abrir como uma app.</span></div>
+      </div>
+      <div class="tip"><b>Computador ou telemóvel?</b> No computador, o Poolse abre a área de gestão, com o menu à esquerda. No telemóvel, abre a app, com separadores em baixo. Cada pessoa vê só o que a sua função permite.</div>
+    </section>
+
+    <!-- ECRÃ -->
+    <section id="ecra" class="part">
+      <div class="eyebrow">Computador</div>
+      <h2>Conhecer o ecrã</h2>
+      <p class="intro">O Painel é a primeira página: o resumo de hoje, as aulas por hora e o estado das piscinas.</p>
+      <figure>
+        <div class="annotated">
+          <img src="img/01-painel.png" alt="O Painel do Poolse no computador, com o menu à esquerda e a barra de cima" width="1440" height="900" tabindex="0">
+          <span class="pin" style="left:10.6%;top:3%">1</span>
+          <span class="pin" style="left:19.6%;top:3%">2</span>
+          <span class="pin" style="left:8%;top:42%">3</span>
+          <span class="pin" style="left:70.5%;top:6.5%">4</span>
+          <span class="pin" style="left:79.5%;top:6.5%">5</span>
+          <span class="pin" style="left:89%;top:6.5%">6</span>
+          <span class="pin" style="left:97.8%;top:6.5%">7</span>
+        </div>
+      </figure>
+      <ul class="legend">
+        <li><b class="n">1</b><span><b>O clube.</b> O menu do clube: Painel, Instalações, Receção e Alunos.</span></li>
+        <li><b class="n">2</b><span><b>Natação.</b> O menu da modalidade: Piscinas, Calendário, Turmas e Alunos.</span></li>
+        <li><b class="n">3</b><span><b>O menu.</b> Muda conforme escolha o clube (1) ou a modalidade (2).</span></li>
+        <li><b class="n">4</b><span><b>O sino.</b> Tudo o que está à sua espera, numa lista.</span></li>
+        <li><b class="n">5</b><span><b>Procurar.</b> Vá para qualquer página com <kbd>Ctrl</kbd> + <kbd>K</kbd>.</span></li>
+        <li><b class="n">6</b><span><b>Idioma.</b> Português ou inglês.</span></li>
+        <li><b class="n">7</b><span><b>A sua conta.</b> Os seus dados, o tema claro ou escuro e sair.</span></li>
+      </ul>
+      <div class="tip"><b>Voltar.</b> Em cada página, <span class="ui">← Voltar</span> leva-o ao sítio de onde veio, não apenas à página anterior do menu.</div>
+    </section>
+
+    <!-- PROCURAR -->
+    <section id="procurar" class="part">
+      <div class="eyebrow">Computador</div>
+      <h2>Procurar, e o que precisa de atenção</h2>
+      <div class="step">
+        <div class="text">
+          <h3>Ir para qualquer sítio</h3>
+          <ol class="do">
+            <li>Carregue em <kbd>Ctrl</kbd> + <kbd>K</kbd>, ou clique em <span class="ui">Procurar…</span> no topo.</li>
+            <li>Escreva o nome de uma página ou do que quer fazer: “turmas”, “encarregados”, “novo aluno”.</li>
+            <li><kbd>Enter</kbd> abre; <kbd>Esc</kbd> fecha.</li>
+          </ol>
+          <p>As ações, como <span class="ui">Turmas sem professor</span>, aparecem marcadas com <i>Ação</i>.</p>
+        </div>
+        <figure><img src="img/02-procurar.png" alt="A janela Ir para…, com a pesquisa turm e dois resultados" width="1440" height="900" tabindex="0"><figcaption>A pesquisa encontra páginas e ações.</figcaption></figure>
+      </div>
+      <h3>Os círculos e os números</h3>
+      <p>Um círculo ao lado de uma entrada do menu quer dizer <b>há uma coisa para fazer</b>; um número quer dizer que há várias. Siga-o: aparece no menu, depois no separador, depois no cartão onde está o problema. Quando o resolve, desaparece. Na imagem acima, <span class="ui">Instalações</span> tem 2 coisas pendentes e <span class="ui">Receção</span> tem uma.</p>
+    </section>
+
+    <!-- ALUNOS -->
+    <section id="alunos" class="part">
+      <div class="eyebrow">Secretaria</div>
+      <h2>Alunos</h2>
+      <p class="intro">Todos os alunos do clube, com filtros por nível, turma e seguro.</p>
+      <figure><img src="img/03-alunos.png" alt="A lista de alunos com os filtros e os botões Adicionar aluno, Importar e Exportar" width="1440" height="900" tabindex="0"></figure>
+      <div class="cards">
+        <div class="card"><b>Adicionar aluno</b><span>Um aluno novo, à mão. Depois escolha-lhe a turma.</span></div>
+        <div class="card"><b>Importar / Exportar</b><span>Trazer os alunos de uma folha de Excel, ou levá-los para uma.</span></div>
+        <div class="card"><b>Filtros rápidos</b><span><span class="ui">Só quem tem pagamento em atraso</span>, <span class="ui">Por rever</span> e <span class="ui">Por convidar</span>.</span></div>
+      </div>
+    </section>
+
+    <section id="ficha" class="part">
+      <div class="eyebrow">Secretaria</div>
+      <h2>A ficha do aluno</h2>
+      <div class="step">
+        <div class="text">
+          <h3>Um aluno, vários separadores</h3>
+          <p>Clique num aluno para abrir a ficha. Cada separador mostra uma parte: <span class="ui">Geral</span>, <span class="ui">Mensalidades</span>, <span class="ui">Documentos</span>, <span class="ui">Semana</span>, <span class="ui">Feedback</span>, <span class="ui">Acesso à app</span>, <span class="ui">Mensagens</span> e <span class="ui">Atividade</span>.</p>
+          <p>Em <span class="ui">Geral</span> estão os contactos da família e os dados do aluno. Os dados de saúde ficam à parte, em <span class="ui">Notas médicas e consentimentos</span>: só a secretaria e a família os veem, e cada consulta fica registada.</p>
+          <p>Em <span class="ui">Atividade</span> vê quem mudou o quê, e quando.</p>
+        </div>
+        <figure><img src="img/04-aluno-geral.png" alt="A ficha de um aluno no separador Geral, com os contactos e o botão Notas médicas e consentimentos" width="1440" height="900" tabindex="0"></figure>
+      </div>
+    </section>
+
+    <section id="mensalidades" class="part">
+      <div class="eyebrow">Secretaria</div>
+      <h2>Marcar uma mensalidade como paga</h2>
+      <div class="step">
+        <div class="text">
+          <ol class="do">
+            <li>Abra a ficha do aluno e escolha o separador <span class="ui">Mensalidades</span>.</li>
+            <li>Em <span class="ui">Que período</span>, confirme o mês (o atual vem escolhido).</li>
+            <li>Marque <span class="ui">Pago</span>. Fica registado o dia.</li>
+          </ol>
+          <p>Para um mês anterior, escolha-o em <span class="ui">Que período</span> antes de marcar.</p>
+          <div class="tip"><b>Mês já faturado?</b> Se o mês estiver numa fatura do Poolse, o pagamento regista-se nessa fatura, em Faturação. O Poolse avisa com o número da fatura.</div>
+        </div>
+        <figure><img src="img/05-aluno-mensalidades.png" alt="O separador Mensalidades, com a caixa Pago e o período atual escolhido" width="1440" height="900" tabindex="0"></figure>
+      </div>
+    </section>
+
+    <section id="familia" class="part">
+      <div class="eyebrow">Secretaria</div>
+      <h2>Dar acesso à família</h2>
+      <div class="step">
+        <div class="text">
+          <ol class="do">
+            <li>Na ficha do aluno, abra <span class="ui">Acesso à app</span>.</li>
+            <li>Ao lado do encarregado, escolha <span class="ui">Criar link para partilhar</span> e envie-o por WhatsApp ou SMS. (<span class="ui">Enviar convite por email</span> faz o mesmo por email, quando o envio de emails estiver ligado.)</li>
+            <li>Quando a família entrar, aparece <span class="ui">Usa a app</span> e quando foi o último acesso.</li>
+          </ol>
+          <p>A partir dos 12 anos, o próprio aluno também pode ser convidado.</p>
+        </div>
+        <figure><img src="img/06-aluno-acesso.png" alt="O separador Acesso à app, com os botões Enviar convite por email e Criar link para partilhar" width="1440" height="900" tabindex="0"></figure>
+      </div>
+    </section>
+
+    <section id="turmas" class="part">
+      <div class="eyebrow">Secretaria · menu Natação</div>
+      <h2>Turmas</h2>
+      <div class="step">
+        <div class="text">
+          <p>Abra <span class="ui">Natação</span> no topo e depois <span class="ui">Turmas</span>. Cada cartão mostra o nível, o horário, o professor e a lotação.</p>
+          <ol class="do">
+            <li><span class="ui">Nova turma</span> cria uma turma.</li>
+            <li><span class="ui">Atribuir professor</span> aparece nas turmas que ainda não têm professor.</li>
+            <li><span class="ui">Alunos</span> mostra quem está inscrito e a lista de espera.</li>
+          </ol>
+          <p>Os separadores <span class="ui">Semana</span> e <span class="ui">Sem horário</span> mostram o horário semanal e as turmas que ainda não têm dia e hora.</p>
+        </div>
+        <figure><img src="img/07-turmas.png" alt="A lista de turmas, com os cartões de cada turma e o botão Nova turma" width="1440" height="900" tabindex="0"></figure>
+      </div>
+    </section>
+
+    <section id="calendario" class="part">
+      <div class="eyebrow">Secretaria · menu Natação</div>
+      <h2>Calendário e presenças</h2>
+      <div class="step">
+        <div class="text">
+          <p>O <span class="ui">Calendário</span> mostra a semana de aulas por piscina e por pista, já com feriados e encerramentos.</p>
+          <ol class="do">
+            <li>Escolha a <span class="ui">Piscina</span> e use as setas para mudar de semana.</li>
+            <li>Clique numa aula para a abrir e <b>registar as presenças</b>.</li>
+            <li>Arraste uma aula para outra pista ou outra hora para a mudar.</li>
+          </ol>
+          <p>Em cima aparecem os <span class="ui">Pedidos dos professores</span>, como uma aula cancelada. Marque <span class="ui">Visto</span> quando tratar.</p>
+        </div>
+        <figure><img src="img/08-calendario.png" alt="O calendário da semana, com os pedidos dos professores em cima e a grelha por pista" width="1440" height="900" tabindex="0"></figure>
+      </div>
+    </section>
+
+    <section id="encerramentos" class="part">
+      <div class="eyebrow">Secretaria · menu Natação</div>
+      <h2>Fechar a piscina num dia</h2>
+      <div class="step">
+        <div class="text">
+          <p>Em <span class="ui">Calendário → Encerramentos</span> marca feriados, obras ou dias fechados, para todo o local ou só para alguns tanques.</p>
+          <p>As aulas desse dia deixam de acontecer e as famílias são avisadas na app. Os feriados nacionais já vêm marcados.</p>
+        </div>
+        <figure><img src="img/09-encerramentos.png" alt="A página Encerramentos, com o calendário de dias fechados" width="1440" height="900" tabindex="0"></figure>
+      </div>
+    </section>
+
+    <section id="pedidos" class="part">
+      <div class="eyebrow">Secretaria · Receção</div>
+      <h2>Pedidos de inscrição</h2>
+      <div class="step">
+        <div class="text">
+          <p>O que as famílias enviam pelo formulário do clube chega a <span class="ui">Receção → Pedidos de inscrição</span>. Para cada pedido:</p>
+          <ol class="do">
+            <li><span class="ui">Inscrever</span>, para criar o aluno e o colocar numa turma;</li>
+            <li><span class="ui">Lista de espera</span> ou <span class="ui">Aula experimental</span>;</li>
+            <li><span class="ui">Dispensar</span>, se não avança.</li>
+          </ol>
+          <p>Em <span class="ui">Formulário público</span> encontra o link para pôr no site do clube.</p>
+        </div>
+        <figure><img src="img/10-pedidos.png" alt="Um pedido de inscrição com os botões Inscrever, Lista de espera, Aula experimental e Dispensar" width="1440" height="900" tabindex="0"></figure>
+      </div>
+    </section>
+
+    <section id="avisos" class="part">
+      <div class="eyebrow">Secretaria</div>
+      <h2>Avisos e mensagens às famílias</h2>
+      <div class="step">
+        <div class="text">
+          <p><span class="ui">Alunos → Avisos</span>: um aviso aparece na app das famílias e dos alunos entre duas datas, por exemplo “Piscina fechada no dia 8”. Abra <span class="ui">Novo aviso</span>, escreva e escolha as datas.</p>
+          <p><span class="ui">Alunos → Mensagens</span>: escreva às famílias de uma turma, de um nível, de uma instalação ou de todo o clube. Fica o registo de quem foi avisado.</p>
+          <p>Para falar só com uma família, use o separador <span class="ui">Mensagens</span> na ficha do aluno.</p>
+        </div>
+        <figure><img src="img/11-avisos.png" alt="A página Avisos, com Novo aviso e os separadores Ativos, Próximos e Passados" width="1440" height="900" tabindex="0"></figure>
+      </div>
+    </section>
+
+    <section id="rececao" class="part">
+      <div class="eyebrow">Secretaria</div>
+      <h2>Receção</h2>
+      <div class="step">
+        <div class="text">
+          <p>Quem está na água agora, em cada tanque, e as entradas de natação livre: vender uma entrada ou um pack, e dar entrada a quem já tem passe.</p>
+          <p>Se a instalação ainda não vende entradas, o link <span class="ui">Preços</span> na própria página leva-o a definir as entradas e os packs.</p>
+        </div>
+        <figure><img src="img/13-rececao.png" alt="A Receção, com quantas pessoas estão na água em cada tanque" width="1440" height="900" tabindex="0"></figure>
+      </div>
+    </section>
+
+    <!-- PROFESSORES -->
+    <section id="professores" class="part">
+      <div class="eyebrow">No telemóvel</div>
+      <h2>Professores</h2>
+      <p class="intro">No telemóvel, o Poolse abre a app do professor, com quatro separadores em baixo.</p>
+      <div class="phones">
+        <figure class="phone"><div class="frame"><img src="img/20-prof-inicio.png" alt="Início do professor: a próxima aula e as aulas com presenças por marcar" width="780" height="1688" tabindex="0"></div><figcaption><b>Início</b>A próxima aula e as que ainda têm <span class="ui">Falta marcar as presenças</span>. Toque numa aula para registar quem veio.</figcaption></figure>
+        <figure class="phone"><div class="frame"><img src="img/21-prof-aulas.png" alt="As aulas do professor na semana" width="780" height="1688" tabindex="0"></div><figcaption><b>Aulas</b>O seu calendário da semana.</figcaption></figure>
+        <figure class="phone"><div class="frame"><img src="img/22-prof-alunos.png" alt="Os alunos das turmas do professor" width="780" height="1688" tabindex="0"></div><figcaption><b>Alunos</b>Os alunos das suas turmas.</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- FAMÍLIAS -->
+    <section id="familias" class="part">
+      <div class="eyebrow">No telemóvel</div>
+      <h2>Famílias</h2>
+      <p class="intro">A app da família mostra os filhos de quem é encarregado. Com mais de um filho, escolha um no topo ou veja <span class="ui">Todos</span>.</p>
+      <div class="phones">
+        <figure class="phone"><div class="frame"><img src="img/30-familia-inicio.png" alt="Início da família: a próxima aula de cada filho" width="780" height="1688" tabindex="0"></div><figcaption><b>Início</b>A próxima aula de cada filho, o professor e se os pagamentos estão <span class="ui">Em dia</span>.</figcaption></figure>
+        <figure class="phone"><div class="frame"><img src="img/31-familia-aulas.png" alt="As aulas da semana dos filhos" width="780" height="1688" tabindex="0"></div><figcaption><b>Aulas</b>A semana de aulas. Abra uma aula para dizer <span class="ui">Vou</span> ou <span class="ui">Não vou</span>.</figcaption></figure>
+        <figure class="phone"><div class="frame"><img src="img/32-familia-progressos.png" alt="Os progressos dos filhos" width="780" height="1688" tabindex="0"></div><figcaption><b>Progressos</b>A distância nadada, o estilo preferido e os melhores tempos de cada filho.</figcaption></figure>
+        <figure class="phone"><div class="frame"><img src="img/34-familia-perfil.png" alt="O perfil da família, com Pagamentos e Documentos" width="780" height="1688" tabindex="0"></div><figcaption><b>Perfil</b>Os seus dados, o contacto do clube, <span class="ui">Pagamentos</span> e <span class="ui">Documentos</span>.</figcaption></figure>
+        <figure class="phone"><div class="frame"><img src="img/33-familia-pagamentos.png" alt="Os pagamentos de cada filho: em dívida e próximos pagamentos" width="780" height="1688" tabindex="0"></div><figcaption><b>Pagamentos</b>O que está em dívida, os próximos pagamentos com a data limite, e os pagos.</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- AJUDA -->
+    <section id="ajuda" class="part">
+      <div class="eyebrow">Mais</div>
+      <h2>Ajuda</h2>
+      <div class="cards">
+        <div class="card"><b>Famílias e professores</b><span>Fale com a secretaria do clube. O contacto está no seu Perfil.</span></div>
+        <div class="card"><b>Secretaria</b><span>Escreva ao suporte do Poolse. O dono do clube pode abrir um acesso temporário para o suporte ajudar.</span></div>
+        <div class="card"><b>Privacidade</b><span>A política de privacidade e os termos estão no rodapé do site do Poolse.</span></div>
+      </div>
+    </section>
+
+    <footer>Guia para a fase piloto · 10-11-2026 · As imagens são de um clube de teste, com dados inventados.</footer>
+  </main>
+</div>
+
+<dialog id="zoom" aria-label="Imagem em grande">
+  <button type="button" id="zoom-close" aria-label="Fechar">×</button>
+  <img id="zoom-img" alt="">
+</dialog>
+<script>
+  (function () {
+    var dialog = document.getElementById('zoom');
+    var big = document.getElementById('zoom-img');
+    function open(img) {
+      big.src = img.currentSrc || img.src;
+      big.alt = img.alt;
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+    }
+    document.querySelectorAll('main figure img').forEach(function (img) {
+      img.addEventListener('click', function () { open(img); });
+      img.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(img); }
+      });
+    });
+    document.getElementById('zoom-close').addEventListener('click', function () { dialog.close(); });
+    dialog.addEventListener('click', function (event) { if (event.target === dialog) dialog.close(); });
+  })();
+</script>
+</body>
+</html>
