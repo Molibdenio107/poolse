@@ -9,6 +9,12 @@ export const OTHER: Record<MarketingLocale, { locale: MarketingLocale; href: str
   en: { locale: 'pt-PT', href: '/' },
 };
 
+/** Where the privacy policy and the terms live, per locale — footer, sign-up, public form. */
+export const LEGAL_HREF: Record<MarketingLocale, { privacy: string; terms: string }> = {
+  'pt-PT': { privacy: '/privacidade', terms: '/termos' },
+  en: { privacy: '/en/privacy', terms: '/en/terms' },
+};
+
 const CATALOGUES: Record<MarketingLocale, unknown> = { 'pt-PT': pt, en };
 
 /**

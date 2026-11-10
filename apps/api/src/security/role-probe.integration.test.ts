@@ -37,6 +37,7 @@ import { AttachmentsController } from '../files/attachments.controller.js';
 import { QualificationsController } from '../staff/qualifications.controller.js';
 import { FilesController } from '../files/files.controller.js';
 import { SensitiveController } from '../sensitive/sensitive.controller.js';
+import { AttendanceController } from '../classes/attendance.controller.js';
 import { InventoryController } from '../inventory/inventory.controller.js';
 import { CostsController } from '../costs/costs.controller.js';
 import { FamilyProgressController } from '../students/family-progress.controller.js';
@@ -1678,6 +1679,13 @@ test('a tennis-only instructor is refused every swimming route (403) — POOLSE-
       await refused('GET qualifying', 403, () => new QualifyingController().read());
       await refused('GET meets', 403, () => new MeetsController().list());
       await refused('GET students/:alice/progression', 403, () => new RecordsController().read(fixture.aliceId));
+      // Go-live review, 10-11-2026: four reads that skipped the sport.
+      await refused('GET students/:alice/sensitive', 403, () => new SensitiveController().read(fixture.aliceId));
+      await refused('GET students/:alice/medical-exams', 403, () => new MedicalExamsController().list(fixture.aliceId));
+      await refused('GET sessions/attendance/student/:alice', 403, () =>
+        new AttendanceController().forStudent(fixture.aliceId, '2026-09-01', '2026-09-30'),
+      );
+      await refused('GET students/:alice/invitations', 403, () => new StudentInvitationsController().list(fixture.aliceId));
       // No sport asked for is an absence, never a row of swimming.
       const mine = await students.list();
       assert.ok(mine.students.items.every((one) => (one.sports ?? []).includes('tennis')));

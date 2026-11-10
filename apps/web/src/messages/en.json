@@ -8525,5 +8525,109 @@
     "estimatedCell": "Includes a calculated figure, not a bill.",
     "exportCsv": "Export CSV",
     "exportFailed": "The costs could not be exported."
+  },
+  "legal": {
+    "footerPrivacy": "Privacy",
+    "footerTerms": "Terms",
+    "updated": "Last updated: 10-11-2026",
+    "contact": "Contact",
+    "signUpNotice": "By creating an account you accept the",
+    "and": "and the",
+    "privacy": {
+      "title": "Privacy policy",
+      "intro": "Poolse is software for running clubs, swimming schools and pools. This page explains what personal data Poolse processes, why, for how long and who it is shared with.",
+      "sections": {
+        "roles": {
+          "title": "Who is responsible for the data",
+          "body": "The data of a club's students, guardians and staff belongs to the club. The club is the controller; Poolse processes that data on the club's behalf, as a processor (Article 28 GDPR), and only to provide the service.\n\nFor requests about that data — access, correction, erasure — please contact your club first. Poolse helps the club answer.\n\nThe data of whoever creates an account to run a club (name, email and the subscription's billing details) is processed by Poolse as controller."
+        },
+        "data": {
+          "title": "What data we process",
+          "body": "- Identity and contact: name, date of birth, gender, tax number, address, email, phone and, with consent, a photograph.\n- Club life: classes, attendance, levels, race times and comments about lessons.\n- Payments: monthly fees, the club's internal documents and recorded payments. Poolse does not store card details.\n- Health: medical and mobility notes, medical exams, medical certificates and the emergency contact. This is special-category data: it is encrypted, only the club office and the family itself see it, and every read is logged.\n- Identity documents: encrypted, and every read is logged.\n- Staff: contract, qualifications, pay and holidays.\n- Technical records: when an account signs in, and a history of the changes made."
+        },
+        "purposes": {
+          "title": "Why",
+          "body": "- To provide the service the club signed up for: organising lessons, communicating with families, collecting fees and meeting its safety and health obligations.\n- To keep accounts and data secure.\n- To meet legal obligations, such as tax rules.\n\nThe legal basis is the contract with the club, the club's legal obligations and, where the club asks for it, consent (for photographs, for example). Poolse does not sell data or use it for advertising."
+        },
+        "children": {
+          "title": "Children",
+          "body": "Many students are minors. Their record is managed by the club and by their guardian. A student can only have their own account from the age of 12, invited by the club.\n\nAt 18, a parent's link stops giving access to the record, and the young adult decides on the consents given on their behalf."
+        },
+        "access": {
+          "title": "Who sees what",
+          "body": "- The club office (owner and administrators) sees the full record.\n- Instructors see the students of their own sports, without the health documents.\n- Each family sees only its own children.\n- An adult student is shown to classmates in their class with their first name, surname initial and photograph. This cannot be switched off. Minors are never shown to other families.\n- The club and Poolse support can see the app as a person sees it, read-only, to help with a problem. The person is not told, but every visit is logged.\n- Poolse support only enters a club with the club owner's permission, for a limited time, and never sees health data or identity documents."
+        },
+        "retention": {
+          "title": "For how long",
+          "body": "- While a student attends the club, the data is kept.\n- One year after they leave, medical and mobility notes, consents, the emergency contact and medical justifications are erased.\n- Five years after they leave, the name and contact details are anonymised; only figures such as attendance and amounts remain.\n- Billing documents keep the payer's name and tax number for ten years, as tax law requires.\n- A registration request that never becomes an enrolment is archived after 12 months, and its details are anonymised five years later.\n- Backups are kept for 30 days. An erasure is complete when the oldest backup holding the data expires.\n- If a club stops using Poolse, the account becomes read-only with export available; after 60 days, the account and its data are deleted."
+        },
+        "processors": {
+          "title": "Who we share with (processors)",
+          "body": "- Clerk (US): accounts and sign-in — name and email.\n- Vercel (EU and US): hosting of the web app.\n- Railway (EU): server and database.\n- Cloudflare R2 (EU): files and encrypted backups.\n- GitHub (US): runs the nightly backup; the backup is encrypted before it leaves the server.\n- Resend (US): sending email, when switched on.\n- Stripe (EU and US): the club's subscription payment; it receives no student data.\n- Sentry (EU and US): error tracking, when switched on, with no personal data.\n- Anthropic (US): automatic reading of documents (energy bills, membership forms), only if the club switches it on; the document is sent to be read.\n- Open-Meteo (Europe): weather; it receives only the facility's town.\n\nTransfers outside the European Union rely on the European Commission's standard contractual clauses or the EU-US Data Privacy Framework."
+        },
+        "rights": {
+          "title": "Your rights",
+          "body": "You have the right to access your data, correct it, ask for it to be erased or its processing restricted, object, and receive it in a portable format. You can withdraw consent at any time, without affecting what was done before.\n\nSend your request to your club or to the contact below; we answer within 30 days. You can also complain to the Portuguese data protection authority, the CNPD (www.cnpd.pt)."
+        },
+        "security": {
+          "title": "Security",
+          "body": "- Each club's data is kept separate in the database itself.\n- Connections are encrypted (HTTPS).\n- Health data and identity documents are encrypted.\n- Backups are encrypted, and the key is kept offline.\n- Each person reaches only what their role allows."
+        },
+        "cookies": {
+          "title": "Cookies",
+          "body": "Poolse uses only necessary cookies: the session, the active club, the language and the theme. It uses no third-party advertising or analytics cookies."
+        },
+        "changes": {
+          "title": "Changes",
+          "body": "If this policy changes, the date at the top is updated, and an important change is announced in the app."
+        }
+      }
+    },
+    "terms": {
+      "title": "Terms of use",
+      "intro": "These terms apply to the club that creates a Poolse account (\"the club\") and to the people the club invites.",
+      "sections": {
+        "pilot": {
+          "title": "Pilot phase",
+          "body": "Poolse is in a pilot phase. The service is provided as it is: it may have faults, and features may change. We tell the club in advance of any change that affects its work."
+        },
+        "accounts": {
+          "title": "Accounts",
+          "body": "Each person uses their own account and keeps their password safe. The club is responsible for whom it invites and the roles it gives them."
+        },
+        "clubData": {
+          "title": "The club's data",
+          "body": "The data the club enters belongs to the club. The club confirms it has a basis for processing it and that it informs families and staff, including about the consents it asks for. The club can export its data at any time."
+        },
+        "processing": {
+          "title": "Processing data on the club's behalf (Article 28 GDPR)",
+          "body": "In this relationship the club is the controller and Poolse is the processor. Poolse undertakes to:\n\n- process the data only to provide the service and on the club's instructions;\n- ensure that anyone with access to the data is bound by confidentiality;\n- apply the security measures described in the privacy policy;\n- use only the processors listed in the privacy policy, and tell the club before adding another;\n- help the club answer people's requests about their data;\n- tell the club without undue delay if a data breach occurs;\n- at the end of the service, allow export and delete the data within the periods in the privacy policy;\n- make available the information needed to show these obligations are met."
+        },
+        "use": {
+          "title": "Acceptable use",
+          "body": "Poolse may not be used for unlawful purposes, to try to reach another club's data, or to disrupt the service."
+        },
+        "trial": {
+          "title": "Trial and payment",
+          "body": "A new club has a 15-day trial, with no card. After that, the account is read-only until there is a subscription. Prices are on the pricing page."
+        },
+        "documents": {
+          "title": "Documents issued",
+          "body": "Billing documents issued in Poolse are the club's internal records. They are not invoices certified by the Portuguese Tax Authority."
+        },
+        "liability": {
+          "title": "Availability and liability",
+          "body": "We make a reasonable effort to keep the service available and take daily backups. As far as the law allows, Poolse is not liable for indirect damage or loss of profit."
+        },
+        "end": {
+          "title": "End of service",
+          "body": "The club can stop using Poolse at any time. Its data remains available for export and is then deleted, as the privacy policy describes."
+        },
+        "law": {
+          "title": "Governing law and changes",
+          "body": "Portuguese law applies. If these terms change, the date at the top is updated, and an important change is announced to the club."
+        }
+      }
+    }
   }
 }

@@ -107,6 +107,7 @@ export default async function RegistrationPage({
     note: label('note'),
     noteHint: label('noteHint'),
     consent: t('leads.public.consent', { club, months: 12 }),
+    privacy: t('legal.privacy.title'),
     submit: label('submit'),
     sending: label('sending'),
     sentTitle: label('sentTitle'),

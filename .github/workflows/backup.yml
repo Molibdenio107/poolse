@@ -10,6 +10,9 @@
 #   BACKUP_SOURCE_URL              the owner connection string (never DATABASE_APP_URL)
 #   BACKUP_AGE_RECIPIENT           age1… — the public key
 #   BACKUP_S3_ENDPOINT / BACKUP_S3_BUCKET / BACKUP_S3_ACCESS_KEY_ID / BACKUP_S3_SECRET_ACCESS_KEY
+#   FILES_S3_BUCKET / FILES_S3_ACCESS_KEY_ID / FILES_S3_SECRET_ACCESS_KEY
+#                                  the uploads bucket (poolse-production) and a token that may
+#                                  only READ it; the backup token still cannot see it (QA 7)
 #   PLATFORM_ALERT_EMAIL / RESEND_API_KEY / EMAIL_FROM   for the failure alert
 # Variable: PG_TOOLS_IMAGE — postgres:<production's major>, e.g. postgres:16
 
@@ -55,6 +58,48 @@ jobs:
         run: pnpm --filter @poolse/db backup
       - name: Check what was written
         run: pnpm --filter @poolse/db check-backups
+      # The uploads — atestados, ID photos, contracts (go-live review, 10-11-2026).
+      # A mirror into the backups bucket under files/, through the runner with two
+      # tokens: one that only reads the uploads, the backup one that only writes
+      # its own bucket — neither reaches both (deploy.md QA 7). Deletions
+      # are mirrored on purpose: the only thing the app ever deletes from the bucket
+      # is a plaintext ID photo the re-seal script replaced, and a copy that kept it
+      # would keep what the re-seal exists to remove. So a source that suddenly
+      # holds far fewer files than its copy is refused, not mirrored: an emptied
+      # bucket must not empty its backup the same night. Health files are
+      # ciphertext already; the rest stays private to the bucket.
+      - name: Mirror uploaded files
+        env:
+          FILES_S3_BUCKET: ${{ secrets.FILES_S3_BUCKET }}
+          FILES_S3_ACCESS_KEY_ID: ${{ secrets.FILES_S3_ACCESS_KEY_ID }}
+          FILES_S3_SECRET_ACCESS_KEY: ${{ secrets.FILES_S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+          AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+        run: |
+          set -euo pipefail
+          if [ -z "$FILES_S3_BUCKET" ] || [ -z "$FILES_S3_ACCESS_KEY_ID" ]; then
+            echo "::error::FILES_S3_BUCKET or its read token is not set: uploaded files are not being backed up."
+            exit 1
+          fi
+          # The uploads token reads; the backup token writes. Never one for both.
+          uploads() { AWS_ACCESS_KEY_ID="$FILES_S3_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$FILES_S3_SECRET_ACCESS_KEY" \
+                      aws --endpoint-url "$BACKUP_S3_ENDPOINT" s3 "$@"; }
+          backups() { AWS_ACCESS_KEY_ID="$BACKUP_S3_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$BACKUP_S3_SECRET_ACCESS_KEY" \
+                      aws --endpoint-url "$BACKUP_S3_ENDPOINT" s3 "$@"; }
+          work="$RUNNER_TEMP/uploads"
+          mkdir -p "$work"
+          uploads sync "s3://$FILES_S3_BUCKET/" "$work/" --only-show-errors
+          source_count=$(find "$work" -type f | wc -l)
+          copy_count=$( (backups ls --recursive "s3://$BACKUP_S3_BUCKET/files/" || true) | wc -l)
+          echo "uploads: $source_count file(s); copy before tonight: $copy_count file(s)"
+          if [ "$copy_count" -gt 20 ] && [ $((source_count * 10)) -lt $((copy_count * 9)) ]; then
+            echo "::error::The uploads bucket holds over 10% fewer files than its copy. Not mirroring; check the bucket."
+            exit 1
+          fi
+          backups sync "$work/" "s3://$BACKUP_S3_BUCKET/files/" --delete --only-show-errors
+          rm -rf "$work"
+          echo "mirrored: $( (backups ls --recursive "s3://$BACKUP_S3_BUCKET/files/" || true) | wc -l) file(s)"
       - name: Alert
         if: failure()
         env:

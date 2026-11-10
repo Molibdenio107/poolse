@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, refuseSupport, requireRole } from '../tenant/roles.js';
+import { requireActsForStudent } from '../students/student-access.js';
 import {
   archiveMedicalLeave,
   attachCertificate,
@@ -100,6 +101,8 @@ export class SensitiveController {
   async read(@Param('studentId') studentId: string): Promise<SensitiveResponse> {
     requireRole('owner', 'admin', 'instructor');
     refuseSupport();
+    // POOLSE-145: an instructor reads only their sports' students (go-live review).
+    await requireActsForStudent(studentId);
     const { organizationId } = currentTenant();
 
     // The read itself is the audited event — see readSensitive.

@@ -14,6 +14,7 @@ import {
 import { withOrg } from '@poolse/db';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
+import { requireActsForStudent } from './student-access.js';
 import { CoreRoute } from '../tenant/modules.js';
 import { readSearch } from '../common/search.js';
 import { deliver, joinLink } from '../invitations/invitations.controller.js';
@@ -126,6 +127,7 @@ export class StudentInvitationsController {
   @Get()
   async list(@Param('studentId', ParseUUIDPipe) studentId: string): Promise<InviteesResponse> {
     requireRole('owner', 'admin', 'instructor');
+    await requireActsForStudent(studentId);
     const { organizationId } = currentTenant();
     const found = await listInvitees(organizationId, studentId);
     if (found === null) throw new NotFoundException('No such student');

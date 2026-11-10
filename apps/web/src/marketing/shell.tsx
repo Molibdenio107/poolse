@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { OTHER, translator, type MarketingLocale } from './content';
+import { LEGAL_HREF, OTHER, translator, type MarketingLocale } from './content';
 import { MarketingThemeToggle } from './theme-toggle';
 
 /**
@@ -79,9 +79,17 @@ export function MarketingShell({
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-6 text-sm text-foreground-muted">
           <span>{t('marketing.footerNote')}</span>
-          <Link href={pricing} className="hover:text-foreground">
-            {t('marketing.pricingLink')}
-          </Link>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link href={pricing} className="hover:text-foreground">
+              {t('marketing.pricingLink')}
+            </Link>
+            <Link href={LEGAL_HREF[locale].privacy} className="hover:text-foreground">
+              {t('legal.footerPrivacy')}
+            </Link>
+            <Link href={LEGAL_HREF[locale].terms} className="hover:text-foreground">
+              {t('legal.footerTerms')}
+            </Link>
+          </div>
         </div>
       </footer>
     </div>

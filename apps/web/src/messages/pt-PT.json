@@ -8525,5 +8525,109 @@
     "estimatedCell": "Inclui um valor calculado, não uma fatura.",
     "exportCsv": "Exportar CSV",
     "exportFailed": "Não foi possível exportar os custos."
+  },
+  "legal": {
+    "footerPrivacy": "Privacidade",
+    "footerTerms": "Termos",
+    "updated": "Última atualização: 10-11-2026",
+    "contact": "Contacto",
+    "signUpNotice": "Ao criar uma conta, aceita os",
+    "and": "e a",
+    "privacy": {
+      "title": "Política de privacidade",
+      "intro": "O Poolse é um software para gerir clubes, escolas de natação e piscinas. Esta página explica que dados pessoais o Poolse trata, para quê, durante quanto tempo e com quem os partilha.",
+      "sections": {
+        "roles": {
+          "title": "Quem é responsável pelos dados",
+          "body": "Os dados dos alunos, encarregados de educação e equipa de um clube pertencem ao clube. O clube é o responsável pelo tratamento; o Poolse trata esses dados por conta do clube, como subcontratante (artigo 28.º do RGPD), e apenas para prestar o serviço.\n\nPara pedidos sobre esses dados — acesso, retificação, apagamento — fale primeiro com o seu clube. O Poolse ajuda o clube a responder.\n\nOs dados de quem cria uma conta para gerir um clube (nome, email e dados de faturação da subscrição) são tratados pelo Poolse como responsável."
+        },
+        "data": {
+          "title": "Que dados tratamos",
+          "body": "- Identificação e contacto: nome, data de nascimento, género, NIF, morada, email, telefone e, com consentimento, fotografia.\n- Vida no clube: turmas, presenças, níveis, tempos de competição e comentários sobre as aulas.\n- Pagamentos: mensalidades, documentos internos do clube e pagamentos registados. O Poolse não guarda dados de cartões.\n- Saúde: notas médicas e de mobilidade, exames médicos, atestados e o contacto de emergência. São dados de categoria especial: ficam cifrados, só a secretaria do clube e a própria família os veem, e cada leitura fica registada.\n- Documentos de identificação: ficam cifrados e cada leitura fica registada.\n- Equipa: contrato, qualificações, remuneração e férias.\n- Registos técnicos: quando uma conta entra e um histórico das alterações feitas."
+        },
+        "purposes": {
+          "title": "Para quê",
+          "body": "- Prestar o serviço que o clube contratou: organizar aulas, comunicar com as famílias, cobrar mensalidades e cumprir as suas obrigações de segurança e de saúde.\n- Manter as contas e os dados seguros.\n- Cumprir obrigações legais, como as fiscais.\n\nO fundamento é o contrato com o clube, as obrigações legais do clube e, quando o clube o pede, o consentimento (por exemplo, para fotografias). O Poolse não vende dados nem os usa para publicidade."
+        },
+        "children": {
+          "title": "Crianças",
+          "body": "Muitos alunos são menores. O seu registo é gerido pelo clube e pelo encarregado de educação. Um aluno só pode ter conta própria a partir dos 12 anos, por convite do clube.\n\nAos 18 anos, a ligação de um pai deixa de dar acesso ao registo, e o jovem adulto passa a decidir sobre os consentimentos dados em seu nome."
+        },
+        "access": {
+          "title": "Quem vê o quê",
+          "body": "- A secretaria do clube (dono e administradores) vê o registo completo.\n- Os professores veem os alunos das suas modalidades, sem os documentos de saúde.\n- Cada família vê apenas os seus filhos.\n- Um aluno adulto aparece aos colegas da sua turma com o nome próprio, a inicial do apelido e a fotografia. Não é possível desligar esta opção. Os menores nunca são mostrados a outras famílias.\n- O clube e o suporte do Poolse podem ver a aplicação tal como uma pessoa a vê, apenas para leitura, para ajudar com um problema. A pessoa não é avisada, mas cada visita fica registada.\n- O suporte do Poolse só entra num clube com autorização do dono do clube, por tempo limitado, e nunca vê dados de saúde nem documentos de identificação."
+        },
+        "retention": {
+          "title": "Durante quanto tempo",
+          "body": "- Enquanto o aluno frequenta o clube, os dados ficam guardados.\n- Um ano depois de sair, apagam-se as notas médicas e de mobilidade, os consentimentos, o contacto de emergência e as justificações médicas.\n- Cinco anos depois de sair, o nome e os contactos são anonimizados; ficam apenas números, como presenças e valores.\n- Os documentos de faturação guardam o nome e o NIF de quem paga durante dez anos, como exige a lei fiscal.\n- Um pedido de inscrição que não chega a inscrição é arquivado ao fim de 12 meses, e os seus dados são anonimizados cinco anos depois.\n- As cópias de segurança são guardadas 30 dias. Um apagamento fica completo quando expira a cópia mais antiga que o contém.\n- Se um clube deixar de usar o Poolse, a conta fica só para leitura, com exportação disponível; ao fim de 60 dias, a conta e os seus dados são apagados."
+        },
+        "processors": {
+          "title": "Com quem partilhamos (subcontratantes)",
+          "body": "- Clerk (EUA): contas e início de sessão — nome e email.\n- Vercel (UE e EUA): alojamento da aplicação web.\n- Railway (UE): servidor e base de dados.\n- Cloudflare R2 (UE): ficheiros e cópias de segurança cifradas.\n- GitHub (EUA): executa a cópia de segurança noturna; a cópia é cifrada antes de sair do servidor.\n- Resend (EUA): envio de emails, quando ativado.\n- Stripe (UE e EUA): pagamento da subscrição do clube; não recebe dados de alunos.\n- Sentry (UE e EUA): registo de erros, quando ativado, sem dados pessoais.\n- Anthropic (EUA): leitura automática de documentos (faturas de energia, boletins), apenas se o clube a ativar; o documento é enviado para ser lido.\n- Open-Meteo (Europa): meteorologia; recebe apenas a localidade das instalações.\n\nAs transferências para fora da União Europeia seguem as cláusulas contratuais-tipo da Comissão Europeia ou o Quadro de Privacidade de Dados UE-EUA."
+        },
+        "rights": {
+          "title": "Os seus direitos",
+          "body": "Tem direito a aceder aos seus dados, a corrigi-los, a pedir o seu apagamento ou a limitação do tratamento, a opor-se e a recebê-los num formato que possa levar consigo. Pode retirar um consentimento a qualquer momento, sem afetar o que foi feito antes.\n\nFaça o pedido ao seu clube ou ao contacto abaixo; respondemos no prazo de 30 dias. Pode também apresentar queixa à Comissão Nacional de Proteção de Dados (www.cnpd.pt)."
+        },
+        "security": {
+          "title": "Segurança",
+          "body": "- Os dados de cada clube estão separados na própria base de dados.\n- As ligações são cifradas (HTTPS).\n- Os dados de saúde e os documentos de identificação ficam cifrados.\n- As cópias de segurança são cifradas, e a chave é guardada fora de linha.\n- Cada pessoa só acede ao que a sua função permite."
+        },
+        "cookies": {
+          "title": "Cookies",
+          "body": "O Poolse usa apenas cookies necessários: a sessão, o clube ativo, o idioma e o tema. Não usa cookies de publicidade nem de análise de terceiros."
+        },
+        "changes": {
+          "title": "Alterações",
+          "body": "Se esta política mudar, a data no topo é atualizada, e uma alteração importante é comunicada na aplicação."
+        }
+      }
+    },
+    "terms": {
+      "title": "Termos de utilização",
+      "intro": "Estes termos aplicam-se ao clube que cria uma conta no Poolse («o clube») e às pessoas que o clube convida.",
+      "sections": {
+        "pilot": {
+          "title": "Fase piloto",
+          "body": "O Poolse está em fase piloto. O serviço é fornecido tal como está: pode ter falhas, e as funcionalidades podem mudar. Avisamos o clube com antecedência de qualquer mudança que afete o seu trabalho."
+        },
+        "accounts": {
+          "title": "Contas",
+          "body": "Cada pessoa usa a sua própria conta e guarda a sua palavra-passe. O clube é responsável por quem convida e pelas funções que lhe atribui."
+        },
+        "clubData": {
+          "title": "Os dados do clube",
+          "body": "Os dados que o clube introduz são do clube. O clube garante que tem fundamento para os tratar e que informa as famílias e a equipa, incluindo os consentimentos que pede. O clube pode exportar os seus dados a qualquer momento."
+        },
+        "processing": {
+          "title": "Tratamento de dados por conta do clube (artigo 28.º do RGPD)",
+          "body": "Nesta relação, o clube é o responsável pelo tratamento e o Poolse é o subcontratante. O Poolse compromete-se a:\n\n- tratar os dados apenas para prestar o serviço e segundo as instruções do clube;\n- garantir que quem tem acesso aos dados está obrigado a confidencialidade;\n- aplicar as medidas de segurança descritas na política de privacidade;\n- usar apenas os subcontratantes listados na política de privacidade e avisar o clube antes de acrescentar outro;\n- ajudar o clube a responder aos pedidos das pessoas sobre os seus dados;\n- avisar o clube sem demora injustificada se ocorrer uma violação de dados;\n- no fim do serviço, permitir a exportação e apagar os dados nos prazos da política de privacidade;\n- disponibilizar a informação necessária para demonstrar o cumprimento destas obrigações."
+        },
+        "use": {
+          "title": "Utilização aceitável",
+          "body": "Não é permitido usar o Poolse para fins ilegais, tentar aceder a dados de outro clube ou perturbar o funcionamento do serviço."
+        },
+        "trial": {
+          "title": "Experiência e pagamento",
+          "body": "Um clube novo tem 15 dias de experiência, sem cartão. Depois, a conta fica só para leitura até haver uma subscrição. Os preços estão na página de preços."
+        },
+        "documents": {
+          "title": "Documentos emitidos",
+          "body": "Os documentos de faturação emitidos no Poolse são registos internos do clube. Não são faturas certificadas pela Autoridade Tributária."
+        },
+        "liability": {
+          "title": "Disponibilidade e responsabilidade",
+          "body": "Fazemos um esforço razoável para manter o serviço disponível e fazemos cópias de segurança diárias. Na medida permitida por lei, o Poolse não responde por danos indiretos nem por perda de lucros."
+        },
+        "end": {
+          "title": "Fim do serviço",
+          "body": "O clube pode deixar de usar o Poolse a qualquer momento. Os dados ficam disponíveis para exportação e são depois apagados, como descreve a política de privacidade."
+        },
+        "law": {
+          "title": "Lei aplicável e alterações",
+          "body": "Aplica-se a lei portuguesa. Se estes termos mudarem, a data no topo é atualizada, e uma alteração importante é comunicada ao clube."
+        }
+      }
+    }
   }
 }

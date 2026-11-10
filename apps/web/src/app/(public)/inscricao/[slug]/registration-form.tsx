@@ -16,7 +16,7 @@ export type RegistrationLabels = Record<
   | 'guardianRelationshipHint' | 'guardianTaxNumber' | 'contact' | 'email' | 'emailHint'
   | 'phone' | 'preferences' | 'facility' | 'level' | 'sport' | 'noPreference' | 'days' | 'daysHint'
   | 'note' | 'noteHint' | 'consent' | 'submit' | 'sending' | 'sentTitle' | 'sentBody' | 'sentOn' | 'another'
-  | 'failed' | 'optional' | 'honeypot' | 'kinshipChoose',
+  | 'failed' | 'optional' | 'honeypot' | 'kinshipChoose' | 'privacy',
   string
 >;
 
@@ -266,6 +266,15 @@ export function RegistrationForm({
           />
           <span className="text-sm">{labels.consent}</span>
         </label>
+        {/* Go-live review, 10-11-2026: what is done with a child's data, one click away. */}
+        <a
+          href="/privacidade"
+          target="_blank"
+          rel="noopener"
+          className="ml-7 text-sm underline underline-offset-2 text-foreground-muted hover:text-foreground"
+        >
+          {labels.privacy}
+        </a>
         {error('consent') !== undefined && (
           <span className="text-sm text-danger">{error('consent')}</span>
         )}

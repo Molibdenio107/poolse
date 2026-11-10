@@ -9,6 +9,10 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 const isPublicRoute = createRouteMatcher([
   '/',
   '/pricing',
+  // The privacy policy and the terms (go-live review, 10-11-2026): read before
+  // anybody has an account, and linked from sign-up and the public form.
+  '/privacidade',
+  '/termos',
   // The English marketing pages. `/en(.*)` rather than listing each one, because
   // marketing pages will keep being added and forgetting to make one public
   // would send a visitor to a sign-in screen from a search result.

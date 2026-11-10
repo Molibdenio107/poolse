@@ -214,8 +214,8 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       and Quicksand from Google at build time and, if that fails, builds with a fallback font and only
       a warning (`Failed to download … Using fallback font instead`). Read the Vercel build log for
       that line after every production build; seen once in dev on 31-10-2026.
-- [ ] **Privacy notice, app views** (POOLSE-188, security review 07-11-2026): the person viewed is not told (Rui, 06-11-2026), so the notice must say that the club and Poolse support can see the app as a person sees it, read-only and on the record. It covers staff as well as families.
-- [ ] **Privacy notice, classmates** (POOLSE-194, Rui 06-11-2026): tell adult students that classmates in their turma see their first name, surname initial and photo, with no opt-out. Minors are never shown.
+- [x] **Privacy notice, app views** (written 10-11-2026, `/privacidade` → *Quem vê o quê*) (POOLSE-188, security review 07-11-2026): the person viewed is not told (Rui, 06-11-2026), so the notice must say that the club and Poolse support can see the app as a person sees it, read-only and on the record. It covers staff as well as families.
+- [x] **Privacy notice, classmates** (written 10-11-2026, `/privacidade` → *Quem vê o quê*) (POOLSE-194, Rui 06-11-2026): tell adult students that classmates in their turma see their first name, surname initial and photo, with no opt-out. Minors are never shown.
 - [ ] **The energy bill reader** (POOLSE-106, Rui 22-10-2026; gates POOLSE-137): `ANTHROPIC_API_KEY`
       on Vercel, staging and production; `energy_invoice_ai` on at `/admin` → Plataforma; the pilot
       club ticked for *Leitura de faturas de energia* on its page. Check the club's card after the
@@ -388,6 +388,12 @@ takes one `pg_dump` of production. The row counts, migrations, RLS tables and ap
 from the same snapshot. The dump is encrypted with `age` to a public key, and it is uploaded with
 its manifest to the backups' own bucket. Backups older than 30 days are deleted. At midday UTC,
 `backup-check.yml` checks, without any key, that the newest backup is under 36 hours old and whole.
+**The uploaded files** (atestados, ID photos, contracts) are mirrored into `files/` of the same
+bucket by the same job (10-11-2026). Deletions are mirrored, because the only thing the app deletes
+is a plaintext ID photo the re-seal replaced; a source with over 10% fewer files than its copy is
+refused and alerts instead, so an emptied bucket never empties its backup. Health files are
+ciphertext in both places; the rest is private to the bucket, not age-encrypted, so the backup
+token in GitHub can read a non-health file there (a photo, a contract) — never a database backup.
 Either failure emails `PLATFORM_ALERT_EMAIL`. **Nothing in GitHub can open a backup** (Rui,
 28-10-2026). Opening one takes the age secret key and `SENSITIVE_DATA_KEY`, which live in Rui's
 password manager, so the restore drill runs on Rui's machine.
@@ -406,10 +412,16 @@ no Postgres client is needed. `PG_TOOLS_IMAGE` must match production's major ver
 3. **The bucket.** In Cloudflare R2, create `poolse-backups-production`, private, separate from
    the uploads bucket. Create an API token with **Object Read & Write on that bucket only**.
    Check it by hand (QA 7): with that token, listing the uploads bucket must be refused.
+   **A second token for the uploaded files** (10-11-2026): **Object Read only, on the uploads
+   bucket only** (`poolse-production`). The nightly job reads the uploads with it and writes them
+   with the first token into `files/` of the backups bucket, so neither token reaches both.
 4. **GitHub.** Add a `production` environment with these secrets:
    - `BACKUP_SOURCE_URL`: the owner connection string, never the app's.
    - `BACKUP_AGE_RECIPIENT`: the `age1…` public key.
    - `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`.
+   - `FILES_S3_BUCKET`, `FILES_S3_ACCESS_KEY_ID`, `FILES_S3_SECRET_ACCESS_KEY`: the uploads bucket
+     and its read-only token. Without them the job fails and alerts, rather than quietly backing up
+     the database alone.
    - `PLATFORM_ALERT_EMAIL`, `RESEND_API_KEY`, `EMAIL_FROM`, for the alerts.
 
    Set the repository variables `PG_TOOLS_IMAGE=postgres:<production major>` and, last,

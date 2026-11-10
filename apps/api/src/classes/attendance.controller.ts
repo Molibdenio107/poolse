@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
+import { requireActsForStudent } from '../students/student-access.js';
 import { cancelState, isOwnClass, mayCancel } from './sessions.repository.js';
 import { isMySession, requireMySession } from '../tenant/assignment.js';
 import {
@@ -211,6 +212,7 @@ export class AttendanceController {
     @Query('to') to: string,
   ): Promise<AttendanceSummary> {
     requireRole('owner', 'admin', 'instructor');
+    await requireActsForStudent(studentId);
     const { organizationId } = currentTenant();
 
     return summaryForStudent(organizationId, studentId, date(from, 'from'), date(to, 'to'));

@@ -53,6 +53,7 @@ const SAME_ON_PURPOSE = new Map([
   ['clubData.payment.mbwayTitle', 'IBAN and MB WAY are the same names in both languages'],
   ['payTo.mbway', 'IBAN and MB WAY are the same names in both languages'],
   ['app.name', 'the product is called Poolse in every language'],
+  ['legal.privacy.sections.cookies.title', '"Cookies" is the word European Portuguese law and sites use'],
   ['marketing.pricing.planName', 'the one plan is named after the product — POOLSE-60'],
   // A colour whose name is the same word in both languages, like "beige".
   // Renaming the pt-PT one to "fúcsia" purely to satisfy this check would be
