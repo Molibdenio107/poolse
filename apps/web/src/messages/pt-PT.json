@@ -3406,7 +3406,7 @@
     "expiresOn": "Expira a {date}",
     "revoke": "Anular",
     "revokeFailed": "Não foi possível anular o convite.",
-    "duplicate": "Já existe um convite pendente para esta pessoa. Use Novo link na lista de convites.",
+    "duplicate": "Já existe um convite pendente para esta pessoa. Use Reenviar na lista de convites para gerar uma nova ligação.",
     "failed": "Não foi possível criar o convite.",
     "emailInvalid": "Email inválido. Verifique o endereço e tente de novo.",
     "emailRequired": "Indique um email.",

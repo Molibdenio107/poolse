@@ -3406,7 +3406,7 @@
     "expiresOn": "Expires on {date}",
     "revoke": "Revoke",
     "revokeFailed": "Could not revoke the invitation.",
-    "duplicate": "This person already has a pending invitation. Use New link in the invitations list.",
+    "duplicate": "This person already has a pending invitation. Use Resend in the invitations list to get a new link.",
     "failed": "Could not create the invitation.",
     "emailInvalid": "That is not a valid email address. Check it and try again.",
     "emailRequired": "An email address is required.",
