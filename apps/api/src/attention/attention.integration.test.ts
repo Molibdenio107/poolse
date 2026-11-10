@@ -204,3 +204,51 @@ test('POOLSE-211: a turma nobody teaches lights itself and Turmas for the office
     });
   });
 });
+
+test('pending staff invitations light Pessoas for who could send them, and clear when answered (Rui, 10-11-2026)', async () => {
+  await withScratchTenant(async (tenant) => {
+    const invite = async (roles: string, email: string): Promise<string> => {
+      const [placeholder] = await tenant.sql<{ id: string }>(
+        `INSERT INTO membership (organization_id, status) VALUES ($1, 'invited') RETURNING id`,
+        [tenant.organizationId],
+      );
+      return (
+        await tenant.sql<{ id: string }>(
+          `INSERT INTO invitation (organization_id, email, roles, token_hash, expires_at, membership_id, invited_by_membership_id)
+           VALUES ($1, $2, $3::member_role[], $4, now() + interval '1 day', $5, $6) RETURNING id`,
+          [tenant.organizationId, email, roles, `hash-${email}`, placeholder!.id, tenant.ownerMembershipId],
+        )
+      )[0]!.id;
+    };
+    const admin = await invite('{admin}', 'a@example.test');
+    await invite('{instructor,maintenance}', 'b@example.test');
+    // A family's invitation lives on the student, never on Pessoas.
+    await invite('{guardian}', 'c@example.test');
+
+    const coach = await addMember(tenant, 'Sandra', 'Moreira', ['instructor']);
+    const fixer = await addMember(tenant, 'Pedro', 'Nogueira', ['maintenance']);
+    const attention = new AttentionController();
+
+    for (const roles of [['owner'], ['admin']] as const) {
+      await actingAs(tenant, { membershipId: tenant.ownerMembershipId, roles: [...roles] }, async () => {
+        assert.equal((await attention.read()).menu['staff'], 2, `${roles[0]} sees both staff invitations`);
+      });
+    }
+    // Nobody is told about invitations they could not have sent.
+    await actingAs(tenant, { membershipId: coach, roles: ['instructor'] }, async () => {
+      assert.equal((await attention.read()).menu['staff'], undefined);
+    });
+    await actingAs(tenant, { membershipId: fixer, roles: ['maintenance'] }, async () => {
+      assert.equal((await attention.read()).menu['staff'], undefined);
+    });
+    // A support session invites nobody, so it is told nothing.
+    await actingAs(tenant, { membershipId: tenant.ownerMembershipId, roles: ['admin'], support: true }, async () => {
+      assert.equal((await attention.read()).menu['staff'], undefined);
+    });
+    // Answered or withdrawn, it clears.
+    await tenant.sql(`UPDATE invitation SET revoked_at = now() WHERE id = $1`, [admin]);
+    await actingAs(tenant, { membershipId: tenant.ownerMembershipId, roles: ['owner'] }, async () => {
+      assert.equal((await attention.read()).menu['staff'], 1);
+    });
+  });
+});

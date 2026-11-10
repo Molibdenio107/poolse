@@ -52,6 +52,12 @@ export interface AttentionScope {
   classes?: boolean;
   /** Families' answers: `all` for the office, `mine` for a teacher, or none. */
   families: 'all' | 'mine' | null;
+  /**
+   * The staff roles this reader may grant (Rui, 10-11-2026): a pending staff
+   * invitation is counted only when every role on it is one of these, the
+   * same test as Reenviar and Revogar. Empty or absent counts nothing.
+   */
+  invitations?: readonly string[];
   membershipId: string;
 }
 
@@ -81,6 +87,23 @@ export async function readAttention(organizationId: string, scope: AttentionScop
     students: {},
     classGroups: {},
   };
+
+  if (scope.invitations !== undefined && scope.invitations.length > 0) {
+    // Pending staff invitations, as Pessoas › Convites lists them (a family's
+    // lives on the student), that this reader could resend or withdraw.
+    const pending = await withOrg(organizationId, async (tx) =>
+      (
+        await tx.query<{ n: number }>(
+          `SELECT count(*)::int AS n FROM invitation i
+            WHERE i.accepted_at IS NULL AND i.revoked_at IS NULL
+              AND NOT i.roles <@ ARRAY['guardian', 'student']::member_role[]
+              AND i.roles <@ $1::member_role[]`,
+          [scope.invitations],
+        )
+      ).rows[0]?.n ?? 0,
+    );
+    if (pending > 0) out.menu['staff'] = pending;
+  }
 
   if (scope.classes === true) {
     // POOLSE-211: each turma dotted, the menu's Turmas counted, each sport's copy its own.

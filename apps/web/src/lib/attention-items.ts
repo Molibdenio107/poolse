@@ -26,10 +26,11 @@ export const ATTENTION_ITEMS: Record<BadgeKey, AttentionItem> = {
   calendar: { key: 'notifications.item.calendar', href: '/dashboard/calendar', app: '/app/aulas' },
   categories: { key: 'notifications.item.categories', href: '/dashboard/rececao' },
   meetInbox: { key: 'notifications.item.meetInbox', href: '/dashboard/students/provas' },
+  staff: { key: 'notifications.item.staff', href: '/dashboard/facilities/staff?section=invitations' },
 };
 
 /** The order lines are listed in: what blocks a lesson first, then the office's queues. */
-const ORDER: BadgeKey[] = ['classes', 'calendar', 'facilities', 'leads', 'students', 'categories', 'meetInbox'];
+const ORDER: BadgeKey[] = ['classes', 'calendar', 'facilities', 'leads', 'students', 'staff', 'categories', 'meetInbox'];
 
 export interface AttentionLine {
   kind: BadgeKey;

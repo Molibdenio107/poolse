@@ -105,7 +105,7 @@ export interface Item {
  * `meetInbox` is POOLSE-114's count; the rest are POOLSE-120's circles — what
  * needs doing, from `GET /attention`, cleared when it is done.
  */
-export type BadgeKey = 'meetInbox' | 'leads' | 'facilities' | 'calendar' | 'students' | 'categories' | 'classes';
+export type BadgeKey = 'meetInbox' | 'leads' | 'facilities' | 'calendar' | 'students' | 'categories' | 'classes' | 'staff';
 /** By badge key, and `<key>:<sport>` for a per-sport copy (POOLSE-143). */
 export type Badges = Partial<Record<string, number>>;
 
@@ -275,6 +275,8 @@ export const SECTIONS: Item[] = [
         href: '/dashboard/facilities/staff',
         key: 'staff.title',
         roles: OFFICE,
+        // Pending staff invitations this reader could have sent (Rui, 10-11-2026).
+        badge: 'staff',
         kinds: ['business'],
         // Férias is staff leave, so it belongs to Staff — POOLSE-34 as amended.
         // The chain is Instalações → Staff → Férias.

@@ -1,12 +1,42 @@
 'use client';
 
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
+import { Dialog } from '@/components/ui/dialog';
+import type { CreatedInvitation } from '@/lib/api';
 import { ConfirmButton } from '@/components/confirm-action';
 import { reissueAction, type InviteState } from '../../actions';
 import { InvitationLink } from './invitation-link';
 
 const INITIAL: InviteState = { ok: false };
+
+/*
+ * Where a reissued link is shown (Rui, 10-11-2026). A reissue replaces the
+ * invitation with a new row, so the list redraws without the old one, and the
+ * button that held the link went with it: Reenviar looked like it did nothing.
+ * The link now lives above the list, in a dialog that outlasts the redraw.
+ */
+const ShowLink = createContext<(invitation: CreatedInvitation) => void>(() => undefined);
+
+export function ReissuedLinks({ children }: { children: React.ReactNode }): React.ReactElement {
+  const t = useTranslations();
+  const [shown, setShown] = useState<CreatedInvitation | null>(null);
+  return (
+    <ShowLink.Provider value={setShown}>
+      {children}
+      <Dialog
+        open={shown !== null}
+        onClose={() => setShown(null)}
+        title={t('invite.reissuedTitle')}
+        closeLabel={t('common.close')}
+        className="max-w-lg"
+      >
+        {shown !== null && <InvitationLink invitation={shown} tone="neutral" />}
+      </Dialog>
+    </ShowLink.Provider>
+  );
+}
 
 /**
  * The way out of the dead end.
@@ -26,6 +56,10 @@ export function ReissueButton({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(reissueAction, INITIAL);
+  const showLink = useContext(ShowLink);
+  useEffect(() => {
+    if (state.invitation !== undefined) showLink(state.invitation);
+  }, [state.invitation, showLink]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -43,10 +77,6 @@ export function ReissueButton({
           {pending ? t('common.working') : t('invite.reissue')}
         </ConfirmButton>
       </form>
-
-      {state.invitation !== undefined && (
-        <InvitationLink invitation={state.invitation} tone="neutral" />
-      )}
     </div>
   );
 }

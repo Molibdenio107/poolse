@@ -11,7 +11,8 @@
       "leads": "{count, plural, one {# pedido de inscrição} other {# pedidos de inscrição}}",
       "students": "{count, plural, one {# aluno com algo a rever} other {# alunos com algo a rever}}",
       "categories": "{count, plural, one {# categoria a expirar} other {# categorias a expirar}}",
-      "meetInbox": "{count, plural, one {# resultado de prova por importar} other {# resultados de provas por importar}}"
+      "meetInbox": "{count, plural, one {# resultado de prova por importar} other {# resultados de provas por importar}}",
+      "staff": "{count, plural, one {# convite por aceitar} other {# convites por aceitar}}"
     }
   },
   "kinship": {
@@ -987,7 +988,8 @@
     "searchPlaceholder": "Nome ou email",
     "section": {
       "nav": "Secções da equipa",
-      "invitations": "Convites"
+      "invitations": "Convites",
+      "invitationsPending": "{count, plural, one {# convite por aceitar} other {# convites por aceitar}}"
     },
     "sports": {
       "title": "Desportos",
@@ -3414,6 +3416,7 @@
     "reissue": "Reenviar",
     "reissueHint": "Emite uma nova ligação e mais 24 horas.",
     "reissueFailed": "Não foi possível gerar uma nova ligação.",
+    "reissuedTitle": "Nova ligação de convite",
     "emailed": "Convite enviado por email para {email}.",
     "emailedHint": "A ligação também está aqui, caso o email demore. Só é mostrada uma vez.",
     "expired": "Convite expirado",

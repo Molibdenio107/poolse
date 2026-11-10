@@ -14,7 +14,8 @@ import { SearchInput, SearchStatus } from '@/components/search-input';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { Hint } from '@/components/ui/tooltip';
 import { InvitePanel } from './invite-panel';
-import { ReissueButton } from './reissue-button';
+import { ReissueButton, ReissuedLinks } from './reissue-button';
+import { readAttention } from '@/lib/attention';
 import { RevokeButton } from './revoke-button';
 import { PageError, PageShell } from '@/components/page-shell';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
@@ -128,6 +129,7 @@ export default async function PeoplePage({
 
   const path = '/dashboard/facilities/staff';
   const current = pickSection(['members', 'invitations'] as const, section, 'members');
+  const pendingInvitations = (await readAttention()).menu['staff'] ?? 0;
 
   if (people !== null && isPastEnd(page, people.members.total, people.members.limit)) {
     redirect(
@@ -211,6 +213,14 @@ export default async function PeoplePage({
                 key: 'invitations',
                 label: t('staff.section.invitations'),
                 href: sectionHref(path, { from }, 'invitations'),
+                // The menu's circle followed down (Rui, 10-11-2026): only the
+                // invitations this reader could resend, counted by the API.
+                ...(pendingInvitations > 0
+                  ? {
+                      attention: t('staff.section.invitationsPending', { count: pendingInvitations }),
+                      attentionCount: pendingInvitations,
+                    }
+                  : {}),
               },
             ]}
           />
@@ -323,6 +333,7 @@ export default async function PeoplePage({
           )}
 
           {current === 'invitations' && (
+          <ReissuedLinks>
           <section className="rounded bg-surface p-5 shadow-card">
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('people.invitations')}
@@ -393,6 +404,7 @@ export default async function PeoplePage({
               </ul>
             )}
           </section>
+          </ReissuedLinks>
           )}
         </>
       )}

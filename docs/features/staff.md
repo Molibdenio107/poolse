@@ -264,3 +264,8 @@ A student with a login becomes staff on their record: the invitation refuses and
 `qualification_document` they uploaded and nobody's record holds. It is filed with `confirmed_at` null,
 shown as *Por confirmar*, and counts for nothing until an Owner or Admin presses *Confirmar*
 (`POST /qualifications/:id/confirm`, audited `qualification.confirmed`). Anybody else's record is 403.
+
+## Pending invitations: the circle and Reenviar (10-11-2026)
+
+- **The circle.** A pending staff invitation (not accepted, not withdrawn, expired or not) lights *Pessoas* in the menu, rolls up to *Instalações*, the *Convites* tab and the bell (*N convites por aceitar*). It counts only invitations whose every role the reader may grant (`grantableRoles`, the same test as Reenviar and Revogar). In practice that is Owner and Admin. An instructor, maintenance or a support session sees no circle, and a family's invitation lives on the student. Counted in `GET /attention` as `menu.staff`.
+- **Reenviar shows the new link in a dialog.** A reissue replaces the invitation with a new row, so the list redraws without the old one. The link used to sit under the old row's button and vanished with it. `ReissuedLinks` holds it above the list.

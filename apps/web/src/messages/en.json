@@ -11,7 +11,8 @@
       "leads": "{count, plural, one {# registration request} other {# registration requests}}",
       "students": "{count, plural, one {# student with something to review} other {# students with something to review}}",
       "categories": "{count, plural, one {# category expiring} other {# categories expiring}}",
-      "meetInbox": "{count, plural, one {# meet result to import} other {# meet results to import}}"
+      "meetInbox": "{count, plural, one {# meet result to import} other {# meet results to import}}",
+      "staff": "{count, plural, one {# invitation not yet accepted} other {# invitations not yet accepted}}"
     }
   },
   "kinship": {
@@ -987,7 +988,8 @@
     "searchPlaceholder": "Name or email",
     "section": {
       "nav": "Team sections",
-      "invitations": "Invitations"
+      "invitations": "Invitations",
+      "invitationsPending": "{count, plural, one {# invitation not yet accepted} other {# invitations not yet accepted}}"
     },
     "sports": {
       "title": "Sports",
@@ -3414,6 +3416,7 @@
     "reissue": "Resend",
     "reissueHint": "Issues a new link and a fresh 24 hours.",
     "reissueFailed": "Could not generate a new link.",
+    "reissuedTitle": "New invitation link",
     "emailed": "Invitation emailed to {email}.",
     "emailedHint": "The link is here too, in case the email is slow. It is shown only once.",
     "expired": "Invitation expired",
