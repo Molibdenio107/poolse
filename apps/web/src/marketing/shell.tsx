@@ -89,6 +89,14 @@ export function MarketingShell({
             <Link href={LEGAL_HREF[locale].terms} className="hover:text-foreground">
               {t('legal.footerTerms')}
             </Link>
+            {/*
+              The pilot's user guide (Rui, 10-11-2026): a static page in
+              public/guia, so a plain <a> and not a route. pt-PT only for now,
+              which the English label says.
+            */}
+            <a href="/guia/index.html" hrefLang="pt-PT" className="hover:text-foreground">
+              {t('legal.footerGuide')}
+            </a>
           </div>
         </div>
       </footer>

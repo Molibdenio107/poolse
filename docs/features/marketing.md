@@ -18,3 +18,7 @@ Hero, who it is for, three pillars (lessons, fees, the pool), the phone apps, tr
 - **Re-taking them**: desk shots from Clube Medida (`pnpm --filter @poolse/db seed --size=club`, the e2e owner is
   its admin; set the `poolse_org` cookie), 1280×800 at 1.5×; the phone shot from the e2e instructor, 390 wide at 2×.
   Hide `nextjs-portal` before the capture.
+
+## User guide
+
+The footer links *Guia* (en: *Guide (in Portuguese)*) to `/guia/index.html`, a static pt-PT page in `apps/web/public/guia` with its screenshots under `img/`. It is a static file, so the middleware never sees it and it needs no public-route entry. To update the guide, edit that folder. Screenshots come from the dev test club and hold only invented data.
