@@ -545,3 +545,12 @@ previewed or written until a recinto is chosen; a club with one recinto has it c
 sport's recintos** (each site's own read): a pool is choosable, and a court or pitch is listed *em breve*
 and greyed out until it has bookable units (POOLSE-123) — so the file shape stays one when other sports
 arrive.
+
+## Nothing to draw yet
+
+When the week has nothing to draw, the page shows a card instead of an empty grid (Rui, 10-11-2026):
+
+- **No pools** (no site, or a site with no pool): *Ainda não há piscinas*, with a link to Instalações. A file dropped on the page opens a dialog that says a pool is needed first and links to Instalações. Nothing is read, because the timetable import needs a pool and is not on the page.
+- **Pools but nothing scheduled** (no turma, booking or session): *Ainda não há turmas*, with a link to Turmas. *Importar horário* stays in the header and still takes a dropped file.
+
+Readers who cannot manage see one line, *Ainda não há aulas marcadas*. The card shows only after a read that succeeded; a read that failed shows its error and the grid. As soon as one turma, booking or session exists, the grid comes back.

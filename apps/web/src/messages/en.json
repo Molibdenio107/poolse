@@ -4110,6 +4110,18 @@
     "effectNote": "Note only — classes still run",
     "emptyWeek": "No classes this week.",
     "emptyWeekHint": "Either the pool is closed, or the season has not been generated yet. Check the closures and generate the season below.",
+    "nothingYet": {
+      "noPoolsTitle": "No pools yet",
+      "noPoolsBody": "The calendar shows each pool's classes, lane by lane. Create the first pool in Facilities; then you can create classes or import the timetable you already use.",
+      "noPoolsLink": "Go to Facilities",
+      "noClassesTitle": "No classes yet",
+      "noClassesBody": "The calendar appears with the first class. Create them in Class groups, or import the timetable you already use with Import timetable, at the top of this page.",
+      "noClassesLink": "Go to Class groups",
+      "readerBody": "No classes are scheduled yet.",
+      "dropNoPool": "Create a pool first to import the timetable",
+      "dropNoPoolTitle": "Nowhere to put the timetable yet",
+      "dropNoPoolBody": "A timetable is imported into a pool's lanes, and this club has none yet. Create the pool in Facilities, then drop the file here again."
+    },
     "endBeforeStart": "The end date is before the start date.",
     "endsOn": "To",
     "endsOnHint": "Leave empty to close for a single day.",

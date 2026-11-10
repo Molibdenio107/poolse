@@ -4110,6 +4110,18 @@
     "effectNote": "Apenas nota — as aulas mantêm-se",
     "emptyWeek": "Não há aulas nesta semana.",
     "emptyWeekHint": "Ou a piscina está encerrada, ou a época ainda não foi gerada. Verifique os encerramentos e gere a época abaixo.",
+    "nothingYet": {
+      "noPoolsTitle": "Ainda não há piscinas",
+      "noPoolsBody": "O calendário mostra as aulas de cada piscina, pista a pista. Crie a primeira piscina em Instalações; depois pode criar turmas ou importar o horário que já usa.",
+      "noPoolsLink": "Ir para Instalações",
+      "noClassesTitle": "Ainda não há turmas",
+      "noClassesBody": "O calendário aparece com a primeira turma. Crie turmas em Turmas, ou importe o horário que já usa com Importar horário, no topo desta página.",
+      "noClassesLink": "Ir para Turmas",
+      "readerBody": "Ainda não há aulas marcadas.",
+      "dropNoPool": "Crie primeiro uma piscina para importar o horário",
+      "dropNoPoolTitle": "Ainda não há onde pôr o horário",
+      "dropNoPoolBody": "O horário é importado para as pistas de uma piscina, e este clube ainda não tem nenhuma. Crie a piscina em Instalações e volte a largar o ficheiro aqui."
+    },
     "endBeforeStart": "A data de fim é anterior à de início.",
     "endsOn": "Até",
     "endsOnHint": "Deixe em branco para encerrar só um dia.",

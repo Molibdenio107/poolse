@@ -1,7 +1,7 @@
 import type { PoolseSport } from '@poolse/rules';
 import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import {
   ApiError,
@@ -25,6 +25,7 @@ import {
 } from '@/lib/dates';
 import type { SessionControls } from '../classes/schedule-board';
 import { CalendarWeek } from './calendar-week';
+import { NoPoolDrop } from './no-pool-drop';
 import { LessonRequests } from './lesson-requests';
 import { CalendarAgenda } from './calendar-agenda';
 import { bookingKey, slotKey } from '@/lib/slot-key';
@@ -453,6 +454,24 @@ export default async function CalendarPage({
           .then((perSite) => perSite.flat(), () => [])
       : [];
 
+  /*
+    Whether there is anything to draw. 'pools': the club has no site or no
+    pool yet, so the grid would have no columns. 'classes': pools, but not one
+    turma, booking or session. Null when there is something, or when a read
+    failed and the page cannot know.
+  */
+  const nothingYet: 'pools' | 'classes' | null =
+    calendar === null || classes === null || unread.length > 0
+      ? null
+      : classes.facilities.length === 0 || (grid !== null && grid.pools.length === 0)
+        ? 'pools'
+        : grid !== null &&
+            classes.groups.length === 0 &&
+            grid.bookings.length === 0 &&
+            calendar.sessions.length === 0
+          ? 'classes'
+          : null;
+
   return (
     <PageShell
       back={backProp(back, t)}
@@ -495,7 +514,43 @@ export default async function CalendarPage({
         <PageError key={key} message={t(key as never)} />
       ))}
 
-      {calendar !== null && (
+      {/*
+        Nothing to draw yet (Rui, 10-11-2026): a grid with no pistas or no class
+        reads as broken, so the week gives way to the next step. Only on a read
+        that succeeded; a load that failed says so above, never "nothing yet".
+        Turmas, sessions or bookings, any one brings the grid back.
+      */}
+      {calendar !== null && nothingYet !== null && (
+        <section className="flex flex-col items-start gap-3 rounded bg-surface p-5 shadow-card sm:p-8">
+          <span
+            aria-hidden
+            className="inline-flex size-12 items-center justify-center rounded-full bg-primary/15 text-primary"
+          >
+            <CalendarDays className="size-6" />
+          </span>
+          {calendar.canManage ? (
+            <>
+              <h2 className="text-lg font-semibold">
+                {t(nothingYet === 'pools' ? 'calendar.nothingYet.noPoolsTitle' : 'calendar.nothingYet.noClassesTitle')}
+              </h2>
+              <p className="max-w-prose text-sm text-foreground-muted">
+                {t(nothingYet === 'pools' ? 'calendar.nothingYet.noPoolsBody' : 'calendar.nothingYet.noClassesBody')}
+              </p>
+              {nothingYet === 'pools' && <NoPoolDrop />}
+              <FromLink
+                href={nothingYet === 'pools' ? '/dashboard/facilities' : '/dashboard/classes'}
+                className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-5 text-control font-semibold text-primary-foreground"
+              >
+                {t(nothingYet === 'pools' ? 'calendar.nothingYet.noPoolsLink' : 'calendar.nothingYet.noClassesLink')}
+              </FromLink>
+            </>
+          ) : (
+            <p className="text-sm text-foreground-muted">{t('calendar.nothingYet.readerBody')}</p>
+          )}
+        </section>
+      )}
+
+      {calendar !== null && nothingYet === null && (
         <>
           <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
             {/*
