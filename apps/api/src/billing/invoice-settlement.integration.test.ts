@@ -1,8 +1,10 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { InvoicesController } from './invoices.controller.js';
+import { StudentFeesController } from './fees.controller.js';
 import {
   actingAs,
+  ownerSql,
   addMember,
   closeHarness,
   expectStatus,
@@ -473,6 +475,70 @@ test("an instructor may not record one, and another club's document is not found
       await actingAs(tenant, { roles: ['owner'] }, async () => {
         await expectStatus(() => new InvoicesController().pay(tenant.facilityId, theirs.invoiceId, body), 404);
       });
+    });
+  });
+});
+
+/*
+ * The desk tick and the invoice, read together — go-live review, 10-11-2026.
+ * Before this a family whose invoice was paid in full still saw the month
+ * "em atraso", and a month paid at the desk was invoiced again.
+ */
+test('a month paid on its invoice is paid on the fee, and a desk tick on it points at the invoice', async () => {
+  await withScratchTenant(async (tenant) => {
+    const document = await issued(tenant);
+    const [fee] = await tenant.sql<{ id: string }>(
+      'SELECT id FROM student_fee WHERE student_id = $1',
+      [document.studentId],
+    );
+    // Entered in September: a month that ended before a line was entered is
+    // never owed (POOLSE-187 rule 8), so a line typed in today owes no October.
+    await ownerSql(`UPDATE student_fee SET created_at = TIMESTAMPTZ '2026-09-01 10:00+01' WHERE id = $1`, [fee!.id]);
+    const fees = new StudentFeesController();
+    const olderUnpaid = async (): Promise<string[]> =>
+      (await fees.list(document.studentId)).lines[0]!.olderUnpaid.map((one) => one.periodStart);
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      assert.ok((await olderUnpaid()).includes('2026-10-01'), 'October is owed before anything is paid');
+
+      // Ticked at the desk while the invoice stands: refused, naming the invoice.
+      await expectStatus(
+        () => fees.paid(document.studentId, fee!.id, { isPaid: true, periodStart: '2026-10-01' }),
+        409,
+      );
+
+      // Half paid settles nothing: which month half a payment was for is unknowable.
+      const invoices = new InvoicesController();
+      await invoices.pay(tenant.facilityId, document.invoiceId, { amountCents: 1000 });
+      assert.ok((await olderUnpaid()).includes('2026-10-01'), 'a part payment does not settle the month');
+
+      await invoices.pay(tenant.facilityId, document.invoiceId, {
+        amountCents: document.totalCents - 1000,
+      });
+      assert.ok(!(await olderUnpaid()).includes('2026-10-01'), 'paid on the invoice, paid on the fee');
+    });
+  });
+});
+
+test('a month ticked at the desk is left out of the invoice run', async () => {
+  await withScratchTenant(async (tenant) => {
+    const document = await issued(tenant);
+    const [fee] = await tenant.sql<{ id: string }>(
+      'SELECT id FROM student_fee WHERE student_id = $1',
+      [document.studentId],
+    );
+    const thisMonth = `${inDays(0).slice(0, 7)}-01`;
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const before = await new InvoicesController().preview(tenant.facilityId, { periodStart: thisMonth });
+      assert.equal(before.drafts.length, 1, 'this month is billable before the tick');
+
+      await new StudentFeesController().paid(document.studentId, fee!.id, {
+        isPaid: true,
+        periodStart: thisMonth,
+      });
+      const after = await new InvoicesController().preview(tenant.facilityId, { periodStart: thisMonth });
+      assert.equal(after.drafts.length, 0, 'paid at the desk, not invoiced again');
     });
   });
 });

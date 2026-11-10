@@ -784,10 +784,13 @@ const PAYMENT_STATE = `(
                ELSE current_period_start(sf.starts_on, sf.ends_on, fp.months)
              END AS period_start
     ) cur
-    -- Settled: a payment, or invoiced outside Poolse (POOLSE-163).
+    -- Settled: a payment, invoiced outside Poolse (POOLSE-163), or a Poolse
+    -- invoice paid in full (10-11-2026).
     LEFT JOIN LATERAL (
       SELECT p0.id FROM student_fee_payment p0
        WHERE p0.student_fee_id = sf.id AND p0.period_start = cur.period_start
+      UNION ALL
+      SELECT sf.id WHERE fee_paid_by_invoice(sf.organization_id, sf.id, cur.period_start)
       UNION ALL
       SELECT x.id FROM student_fee_external_charge x
        WHERE x.student_fee_id = sf.id AND x.organization_id = sf.organization_id

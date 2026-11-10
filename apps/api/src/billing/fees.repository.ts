@@ -1003,8 +1003,9 @@ async function readStudentFees(
               to_char(sf.ends_on, 'YYYY-MM-DD') AS ends_on,
               to_char(cur.period_start, 'YYYY-MM-DD') AS current_period_start,
               to_char(fee_due_on(cur.period_start, f.payment_due_day), 'YYYY-MM-DD') AS due_on,
-              -- Settled by a payment, or invoiced outside Poolse (POOLSE-163).
-              (pay.id IS NOT NULL OR ext_now.id IS NOT NULL) AS is_paid,
+              -- Settled by a payment, invoiced outside Poolse (POOLSE-163), or
+              -- on a Poolse invoice paid in full (go-live review, 10-11-2026).
+              (pay.id IS NOT NULL OR ext_now.id IS NOT NULL OR inv_now.paid) AS is_paid,
               coalesce(paid_hist.periods, ARRAY[]::text[]) AS paid_periods,
               ext_all.charges AS external_charges,
               to_char(pay.paid_on, 'YYYY-MM-DD') AS paid_on,
@@ -1012,6 +1013,7 @@ async function readStudentFees(
               -- on the client, where a stale page would age into a wrong answer.
               (pay.id IS NULL
                AND ext_now.id IS NULL
+               AND NOT inv_now.paid
                AND cur.period_start IS NOT NULL
                AND fee_due_on(cur.period_start, f.payment_due_day) < club_today()) AS is_overdue,
               older.periods AS older_unpaid,
@@ -1064,6 +1066,10 @@ async function readStudentFees(
          LEFT JOIN student_fee_external_charge ext_now
                 ON ext_now.student_fee_id = sf.id AND ext_now.organization_id = sf.organization_id
                AND ext_now.occurrence_on = cur.period_start AND ext_now.archived_at IS NULL
+         CROSS JOIN LATERAL (
+           SELECT cur.period_start IS NOT NULL
+                  AND fee_paid_by_invoice(sf.organization_id, sf.id, cur.period_start) AS paid
+         ) inv_now
          LEFT JOIN LATERAL (
            SELECT json_agg(json_build_object(
                     'id', x.id,
@@ -1108,6 +1114,7 @@ async function readStudentFees(
                 SELECT 1 FROM student_fee_external_charge x
                  WHERE x.student_fee_id = sf.id AND x.organization_id = sf.organization_id
                    AND x.occurrence_on = o.period_start AND x.archived_at IS NULL)
+              AND NOT fee_paid_by_invoice(sf.organization_id, sf.id, o.period_start)
          ) older ON true
          /*
           * Every period this line has been settled for — round 5, ticket 10.0.
@@ -1197,10 +1204,13 @@ async function readStudentFees(
            CROSS JOIN LATERAL (
              SELECT current_period_start(sf.starts_on, sf.ends_on, fp.months) AS period_start
            ) cur
-           -- Settled: a payment, or invoiced outside Poolse (POOLSE-163).
+           -- Settled: a payment, invoiced outside Poolse (POOLSE-163), or a
+           -- Poolse invoice paid in full (10-11-2026).
            LEFT JOIN LATERAL (
              SELECT p0.id FROM student_fee_payment p0
               WHERE p0.student_fee_id = sf.id AND p0.period_start = cur.period_start
+             UNION ALL
+             SELECT sf.id WHERE fee_paid_by_invoice(sf.organization_id, sf.id, cur.period_start)
              UNION ALL
              SELECT x.id FROM student_fee_external_charge x
               WHERE x.student_fee_id = sf.id AND x.organization_id = sf.organization_id
@@ -1916,6 +1926,26 @@ export async function markFeePaid(
     );
     if (line[0] === undefined) return false;
 
+    // A month on a live Poolse invoice is paid on that invoice, never ticked
+    // here as well: two records of one payment that never read each other is
+    // how a family that paid gets chased (Rui, 10-11-2026, go-live review).
+    if (isPaid) {
+      const { rows: invoiced } = await tx.query<{ id: string; document_no: string }>(
+        `SELECT i.id, i.document_no
+           FROM invoice_line l
+           JOIN invoice i ON i.id = l.invoice_id AND i.organization_id = l.organization_id
+          WHERE l.organization_id = $1 AND l.student_fee_id = $2 AND l.period_start = $3::date
+            AND l.document_kind = 'invoice'
+            AND NOT EXISTS (SELECT 1 FROM invoice c
+                             WHERE c.corrects_invoice_id = i.id AND c.organization_id = i.organization_id
+                               AND c.kind = 'credit_note')
+          ORDER BY i.issued_on, i.number
+          LIMIT 1`,
+        [organizationId, feeId, periodStart],
+      );
+      if (invoiced[0] !== undefined) throw new FeeOnInvoiceError(invoiced[0].id, invoiced[0].document_no);
+    }
+
     if (isPaid) {
       await tx.query(
         `INSERT INTO student_fee_payment (organization_id, student_fee_id, period_start,
@@ -1971,7 +2001,16 @@ export async function setStudentPaid(
                   END AS period_start
          ) cur
         WHERE sf.student_id = $1 AND sf.archived_at IS NULL
-          AND cur.period_start IS NOT NULL`,
+          AND cur.period_start IS NOT NULL
+          -- A month on a live Poolse invoice is paid on the invoice (10-11-2026).
+          AND NOT EXISTS (
+            SELECT 1 FROM invoice_line l
+              JOIN invoice i ON i.id = l.invoice_id AND i.organization_id = l.organization_id
+             WHERE l.organization_id = sf.organization_id AND l.student_fee_id = sf.id
+               AND l.period_start = cur.period_start AND l.document_kind = 'invoice'
+               AND NOT EXISTS (SELECT 1 FROM invoice c
+                                WHERE c.corrects_invoice_id = i.id AND c.organization_id = i.organization_id
+                                  AND c.kind = 'credit_note'))`,
       [studentId],
     );
 
@@ -2364,6 +2403,16 @@ export async function setSocio(
 }
 
 /** The occurrence is already on a live Poolse document (or marked already): `document` names it. */
+/** The month is on a live Poolse invoice: its payment is recorded there. */
+export class FeeOnInvoiceError extends Error {
+  constructor(
+    readonly invoiceId: string,
+    readonly documentNo: string,
+  ) {
+    super('fee period is on an invoice');
+  }
+}
+
 export class AlreadyChargedError extends Error {
   constructor(readonly document: string) {
     super('already charged');

@@ -508,6 +508,11 @@ const CANDIDATE_SQL = `
               ELSE step.k % fp.months = 0 END
      -- A line that has ended is not asking for anything after it ended.
      AND (sf.ends_on IS NULL OR occ.period_start <= sf.ends_on)
+     -- Already paid at the desk: not invoiced, or the family is asked twice for
+     -- money it has paid (go-live review, 10-11-2026).
+     AND NOT EXISTS (
+       SELECT 1 FROM student_fee_payment desk
+        WHERE desk.student_fee_id = sf.id AND desk.period_start = occ.period_start)
      AND ($3::uuid[] IS NULL OR sf.student_id = ANY($3::uuid[]))`;
 
 /**

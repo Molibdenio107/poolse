@@ -88,7 +88,8 @@ async function nextOccurrences(
             SELECT 1 FROM student_fee_external_charge x
              WHERE x.student_fee_id = sf.id AND x.organization_id = sf.organization_id
                AND x.occurrence_on = occ.period_start AND x.archived_at IS NULL
-          )`,
+          )
+          AND NOT fee_paid_by_invoice(sf.organization_id, sf.id, occ.period_start)`,
       [studentId],
     );
     return rows;

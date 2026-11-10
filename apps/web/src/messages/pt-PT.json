@@ -2528,6 +2528,7 @@
       "number": "N.º da fatura externa",
       "numberRequired": "Indique o número da fatura externa (até 60 caracteres).",
       "alreadyCharged": "Este período já está faturado em {document}.",
+      "onInvoice": "Este período está na fatura {document}. Registe o pagamento nessa fatura, em Faturação.",
       "recorded": "Marcado como faturado fora do Poolse.",
       "invoiced": "Faturado externamente n.º {number} · período de {date}",
       "invoicedShort": "Faturado externamente n.º {number}",

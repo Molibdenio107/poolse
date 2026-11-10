@@ -227,12 +227,25 @@ was last asked and how many times.
 When the notification subsystem lands it writes into this same history with a channel of its
 own; nothing about these screens has to change.
 
+## The desk tick and the invoice — 10-11-2026
+
+A fee period is settled once, in one place (Rui, go-live review):
+
+- **Paid on its invoice is paid.** When a live (uncredited) invoice carrying the period has
+  received its whole total, the student's Mensalidades, the family app, the late penalty, the
+  dashboard and the student list all read the period as paid (`fee_paid_by_invoice`). A partly
+  paid invoice settles none of its periods.
+- **A month on an invoice is paid on the invoice.** Ticking it *Pago* at the desk is refused
+  (409 `fee_on_invoice`) with the document's number; the office records the payment in
+  Faturação. *Marcar como pago* for the whole student skips those months.
+- **A month ticked at the desk is not invoiced.** The run, the per-student action and the
+  preview leave it out.
+
 ## Not here yet
 
 Automated collection — Stripe, débito direto, MB WAY — needs the payer to authorise it, and
-the payer has no account until the student app. `student_fee_payment` is still where a settled
-*fee period* is marked, separately from a document; joining the two is work nobody has asked
-for yet. The ATCUD, the QR code and the SAF-T export arrive with certification, if it is ever
+the payer has no account until the student app. `student_fee_payment` (the desk tick) is still where a settled *fee period* is marked
+without a document. The ATCUD, the QR code and the SAF-T export arrive with certification, if it is ever
 pursued.
 
 ## PDF — 12 October 2026

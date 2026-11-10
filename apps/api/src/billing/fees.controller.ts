@@ -27,6 +27,7 @@ import {
   setBillingSettings,
   markFeePaid,
   AlreadyChargedError,
+  FeeOnInvoiceError,
   archiveExternalCharge,
   recordExternalCharge,
   setSocio,
@@ -379,14 +380,27 @@ export class StudentFeesController {
       throw new BadRequestException('periodStart is required — which occurrence is this');
     }
 
-    const marked = await markFeePaid(
-      organizationId,
-      studentId,
-      id,
-      periodStart,
-      body['isPaid'] === true,
-      optionalDate(body['paidOn'], 'paidOn'),
-    );
+    let marked: boolean;
+    try {
+      marked = await markFeePaid(
+        organizationId,
+        studentId,
+        id,
+        periodStart,
+        body['isPaid'] === true,
+        optionalDate(body['paidOn'], 'paidOn'),
+      );
+    } catch (error) {
+      if (error instanceof FeeOnInvoiceError) {
+        throw new ConflictException({
+          code: 'fee_on_invoice',
+          message: 'This period is on an invoice; record the payment there',
+          invoiceId: error.invoiceId,
+          document: error.documentNo,
+        });
+      }
+      throw error;
+    }
     if (!marked) throw new BadRequestException('No such fee line');
     return { updated: true };
   }

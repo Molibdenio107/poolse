@@ -267,6 +267,11 @@ export async function markPaidAction(
       paidOn: String(formData.get('paidOn') ?? '').trim() || null,
     });
   } catch (error) {
+    // On a live invoice: paid there, not here (Rui, 10-11-2026), said with its number.
+    if (error instanceof ApiError && error.status === 409 && error.code === 'fee_on_invoice') {
+      const document = (error.details as { document?: string } | null)?.document ?? '';
+      return { ok: false, errorKey: 'fees.external.onInvoice', values: { document } };
+    }
     return failure(error, 'fees.saveFailed');
   }
 

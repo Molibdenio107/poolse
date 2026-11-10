@@ -2528,6 +2528,7 @@
       "number": "External invoice no.",
       "numberRequired": "Give the external invoice number (up to 60 characters).",
       "alreadyCharged": "This period is already invoiced on {document}.",
+      "onInvoice": "This period is on invoice {document}. Record the payment on that invoice, in Invoicing.",
       "recorded": "Marked as invoiced outside Poolse.",
       "invoiced": "Invoiced externally, no. {number} · period from {date}",
       "invoicedShort": "Invoiced externally, no. {number}",
