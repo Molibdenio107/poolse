@@ -317,6 +317,9 @@ export async function openFile(
   if (!fileOpensInView(row.purpose)) return 'viewing_as';
 
   const sealed = SEALED_PURPOSES.has(row.purpose);
+  // Poolse support never opens a sealed file — health data or an ID document
+  // (Rui, 10-11-2026). Refused before any role is weighed, Admin or not.
+  if (sealed && currentTenant().support === true) return 'refused';
   const allowed = row.purpose === 'student_photo'
     ? row.photo_attached
       ? row.photo_consented && (hasRole(...RULES.student_photo.read) || row.own_child_photo || row.classmate_photo)

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { MaintenanceController } from './maintenance.controller.js';
 import { listTasks } from './maintenance.repository.js';
 import {
+  ownerSql,
   actingAs,
   addMember,
   closeHarness,
@@ -323,7 +324,7 @@ test('4.3 — a target at another site is refused as a sentence, not a 500', asy
     // A second site in the same club, which the licence trigger allows once the
     // plan says so. The composite keys are what stop a task at site A naming a
     // room at site B, and this proves the refusal is legible.
-    await tenant.sql(`UPDATE organization SET max_facilities = 5 WHERE id = $1`, [
+    await ownerSql(`UPDATE organization SET max_facilities = 5 WHERE id = $1`, [
       tenant.organizationId,
     ]);
     const [other] = await tenant.sql<{ id: string }>(

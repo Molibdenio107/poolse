@@ -1,6 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ownerSql,
   actingAs,
   addMember,
   closeHarness,
@@ -284,7 +285,7 @@ test('66.2b occupancy — today, at the site, without the cancelled class', asyn
 test('66.2b maintenance — open requests by kind and severity, and overdue rooms', async () => {
   await withScratchTenant(async (tenant) => {
     // A second site with nothing outstanding, so the per-site figures have a site to leave out.
-    await tenant.sql('UPDATE organization SET max_facilities = 2 WHERE id = $1', [tenant.organizationId]);
+    await ownerSql('UPDATE organization SET max_facilities = 2 WHERE id = $1', [tenant.organizationId]);
     await tenant.sql(`INSERT INTO facility (organization_id, name) VALUES ($1, 'Polo Quieto')`, [
       tenant.organizationId,
     ]);

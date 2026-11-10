@@ -10,7 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole, requireRole } from '../tenant/roles.js';
+import { hasRole, refuseSupport, requireRole } from '../tenant/roles.js';
 import { CoreRoute } from '../tenant/modules.js';
 import { judgeUpload } from '../files/upload-check.js';
 import {
@@ -54,6 +54,7 @@ export class MedicalExamsController {
   @Get()
   async list(@Param('studentId', ParseUUIDPipe) studentId: string): Promise<StudentExams> {
     requireRole('owner', 'admin', 'instructor');
+    refuseSupport();
     const found = await listExams(currentTenant().organizationId, studentId, hasRole('owner', 'admin'));
     if (found === null) throw new NotFoundException('No such student');
     return found;

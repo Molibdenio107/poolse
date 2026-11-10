@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { isValidCcNumber, normalizeCcNumber } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { requireRole } from '../tenant/roles.js';
+import { refuseSupport, requireRole } from '../tenant/roles.js';
 import { parseBirthDate } from './students.controller.js';
 import { recordFamilyPrint } from './family-documents.repository.js';
 import {
@@ -249,6 +249,7 @@ export class StudentDocumentsController {
   @Get('id-document')
   async idDocument(@Param('studentId', ParseUUIDPipe) studentId: string): Promise<IdDocumentFull> {
     requireRole('owner', 'admin');
+    refuseSupport();
     const found = await readIdDocumentFull(currentTenant().organizationId, studentId);
     if (found === null) throw new NotFoundException('No such student');
     return found;

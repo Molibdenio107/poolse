@@ -106,8 +106,14 @@ DECLARE n int; v_locale text;
 BEGIN
   PERFORM set_config('app.organization_id', '', true);
 
-  UPDATE app_user SET locale = 'pt-PT' WHERE clerk_user_id = 'user_pref';
-  GET DIAGNOSTICS n = ROW_COUNT;
+  -- Since 10-11-2026 the app holds no UPDATE on `locale` at all (it writes only
+  -- birth_date and contact_phone), so the ordinary path is refused outright.
+  BEGIN
+    UPDATE app_user SET locale = 'pt-PT' WHERE clerk_user_id = 'user_pref';
+    GET DIAGNOSTICS n = ROW_COUNT;
+  EXCEPTION WHEN insufficient_privilege THEN
+    n := 0;
+  END;
   IF n <> 0 THEN
     RAISE EXCEPTION 'FAIL test 4a: the ordinary path updated % rows it should not see', n;
   END IF;

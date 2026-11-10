@@ -20,6 +20,11 @@ import {
 import { InvitationsController } from '../invitations/invitations.controller.js';
 import { MeController } from '../identity/me.controller.js';
 import { SupportGrantsController } from './support.controller.js';
+import { FilesController } from '../files/files.controller.js';
+import { SensitiveController } from '../sensitive/sensitive.controller.js';
+import { StudentDocumentsController } from '../students/documents.controller.js';
+import { MedicalExamsController } from '../students/medical-exams.controller.js';
+import { StaffController } from '../staff/staff.controller.js';
 
 /**
  * Support access — POOLSE-79 slice 1, QA 1–6 and 9.
@@ -490,5 +495,40 @@ test('the Owner sees what support did, and only what support did', async () => {
     await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, () =>
       expectStatus(() => grants.activity(), 403),
     );
+  });
+});
+
+test('support never reads health data or an ID document, though an Admin does (Rui, 10-11-2026)', async () => {
+  await withScratchTenant(async (tenant) => {
+    const org = tenant.organizationId;
+    const [child] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name)
+       VALUES ($1, 'Rita', 'Saúde') RETURNING id`,
+      [org],
+    );
+    // A sealed atestado row; the refusal happens before the bucket is asked.
+    const [atestado] = await tenant.sql<{ id: string }>(
+      `INSERT INTO stored_file (organization_id, purpose, storage_key, content_type, byte_size, original_name,
+                                uploaded_by, wrapped_key)
+       VALUES ($1, 'medical_certificate', $3, 'application/pdf', 10, 'atestado.pdf', $2, 'v1.aa.bb.cc')
+       RETURNING id`,
+      [org, tenant.ownerMembershipId, `${org}/medical_certificate/support-probe.sealed`],
+    );
+    const coach = await addMember(tenant, 'Carla', 'Treinadora', ['instructor']);
+
+    await actingAs(tenant, { roles: ['admin'], support: true }, async () => {
+      await expectStatus(() => new SensitiveController().read(child!.id), 403);
+      await expectStatus(() => new SensitiveController().write(child!.id, { medicalNotes: 'x' }), 403);
+      await expectStatus(() => new MedicalExamsController().list(child!.id), 403);
+      await expectStatus(() => new FilesController().read(atestado!.id), 403);
+      await expectStatus(() => new StudentDocumentsController().idDocument(child!.id), 403);
+      await expectStatus(() => new StaffController().identity(coach), 403);
+    });
+
+    // The same role without the support flag still reads the notes.
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      const seen = await new SensitiveController().read(child!.id);
+      assert.equal(seen.organizationId, org);
+    });
   });
 });

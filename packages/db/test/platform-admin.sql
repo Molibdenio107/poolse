@@ -769,4 +769,66 @@ END $$;
 
 RESET ROLE;
 
+-- ---------------------------------------------------------------------------
+-- Test 19 — the two logins hold no more than they use (go-live review, 10-11-2026)
+--
+-- Asked of the catalog rather than by trying: a grant is a property of the
+-- schema, and a column added next month must not arrive readable by the
+-- platform because nobody thought to say otherwise.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE v_col text;
+BEGIN
+  -- a. The platform reads a membership's name and state, never the person's papers.
+  FOREACH v_col IN ARRAY ARRAY['tax_number', 'niss', 'address', 'postal_code', 'locality',
+                               'birth_date', 'nationality', 'birthplace', 'phone', 'notes',
+                               'emergency_name', 'emergency_phone', 'emergency_relation',
+                               'id_document_number_encrypted', 'id_document_type'] LOOP
+    IF has_column_privilege('poolse_platform', 'membership', v_col, 'SELECT') THEN
+      RAISE EXCEPTION 'FAIL test 19a: the platform reads membership.%', v_col;
+    END IF;
+  END LOOP;
+  IF NOT has_column_privilege('poolse_platform', 'membership', 'first_name', 'SELECT') THEN
+    RAISE EXCEPTION 'FAIL test 19a: the platform lost membership.first_name, which /admin names staff by';
+  END IF;
+  RAISE NOTICE 'PASS test 19a: the platform reads a membership''s name and state, not the person''s papers';
+
+  -- b. A club cannot write its own licence.
+  FOREACH v_col IN ARRAY ARRAY['plan', 'subscription_status', 'trial_ends_at', 'suspended_at',
+                               'read_only_at', 'pending_delete_at', 'max_management_users',
+                               'max_facilities', 'billing_mode', 'paid_through',
+                               'stripe_subscription_id', 'archived_at', 'kind', 'id'] LOOP
+    IF has_column_privilege('poolse_app', 'organization', v_col, 'UPDATE') THEN
+      RAISE EXCEPTION 'FAIL test 19b: the app can write organization.%', v_col;
+    END IF;
+  END LOOP;
+  IF has_table_privilege('poolse_app', 'organization', 'INSERT') THEN
+    RAISE EXCEPTION 'FAIL test 19b: the app can insert an organization';
+  END IF;
+  RAISE NOTICE 'PASS test 19b: a club cannot write its own licence or mint a club';
+
+  -- c. One account across every club is written by the reviewed functions only.
+  IF has_column_privilege('poolse_app', 'app_user', 'clerk_user_id', 'UPDATE')
+     OR has_column_privilege('poolse_app', 'app_user', 'deleted_at', 'UPDATE')
+     OR has_table_privilege('poolse_app', 'app_user', 'DELETE')
+     OR has_table_privilege('poolse_app', 'app_user', 'INSERT') THEN
+    RAISE EXCEPTION 'FAIL test 19c: the app can rewrite or remove a login';
+  END IF;
+  RAISE NOTICE 'PASS test 19c: the app cannot rewrite which login a person is';
+
+  -- d. Migration history, and history the app only archives.
+  IF has_table_privilege('poolse_app', 'schema_migration', 'SELECT')
+     OR has_table_privilege('poolse_app', 'schema_migration', 'DELETE') THEN
+    RAISE EXCEPTION 'FAIL test 19d: the app reaches schema_migration';
+  END IF;
+  FOREACH v_col IN ARRAY ARRAY['invoice_payment', 'staff_compensation', 'guardian_link',
+                               'student', 'student_sensitive', 'membership'] LOOP
+    IF has_table_privilege('poolse_app', v_col, 'DELETE') THEN
+      RAISE EXCEPTION 'FAIL test 19d: the app can delete from %', v_col;
+    END IF;
+  END LOOP;
+  RAISE NOTICE 'PASS test 19d: the app cannot touch migration history or delete what it archives';
+END $$;
+
 ROLLBACK;

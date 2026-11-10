@@ -1,6 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ownerSql,
   actingAs,
   addMember,
   closeHarness,
@@ -172,7 +173,7 @@ test('QA 5 and 7 — a cancelled week gives the following one, and a moved week 
 
 test('QA 8 — three children, one at another site: each child resolves to their own pool', async () => {
   await withScratchTenant(async (tenant) => {
-    await tenant.sql('UPDATE organization SET max_facilities = 2 WHERE id = $1', [tenant.organizationId]);
+    await ownerSql('UPDATE organization SET max_facilities = 2 WHERE id = $1', [tenant.organizationId]);
     const [second] = await tenant.sql<{ id: string }>(
       `INSERT INTO facility (organization_id, name) VALUES ($1, 'Piscina Norte') RETURNING id`,
       [tenant.organizationId],

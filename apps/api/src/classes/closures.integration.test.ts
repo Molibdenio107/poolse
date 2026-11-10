@@ -9,6 +9,7 @@ import { MessagesController } from '../messages/messages.controller.js';
 import { clubToday } from '../common/club-day.js';
 import { holidaysBetween } from './holidays.js';
 import {
+  ownerSql,
   actingAs,
   addMember,
   closeHarness,
@@ -80,7 +81,7 @@ async function twoSites(tenant: ScratchTenant): Promise<{
   tank2: string;
   otherTank: string;
 }> {
-  await tenant.sql(`UPDATE organization SET max_facilities = 5 WHERE id = $1`, [
+  await ownerSql(`UPDATE organization SET max_facilities = 5 WHERE id = $1`, [
     tenant.organizationId,
   ]);
   const [other] = await tenant.sql<{ id: string }>(

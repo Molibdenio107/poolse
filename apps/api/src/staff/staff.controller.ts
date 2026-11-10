@@ -57,7 +57,7 @@ import {
   type StaffIdentity,
 } from './identity.repository.js';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole, requireRole } from '../tenant/roles.js';
+import { hasRole, refuseSupport, requireRole } from '../tenant/roles.js';
 import { removeClerkPhoto, updateClerkName, updateClerkPhoto } from '../identity/identity.service.js';
 import { withOrg } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
@@ -113,6 +113,7 @@ export class StaffController {
   @Get(':membershipId/identity')
   async identity(@Param('membershipId', new ParseUUIDPipe()) membershipId: string): Promise<StaffIdentity> {
     const actor = requireOwnOrManaged(membershipId);
+    refuseSupport();
     const found = await readIdentity(currentTenant().organizationId, membershipId, actor);
     if (found === null) throw new NotFoundException('No such staff member');
     return found;

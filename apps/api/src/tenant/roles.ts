@@ -70,6 +70,21 @@ export function requireRole(...allowed: readonly MemberRole[]): void {
   }
 }
 
+/**
+ * Poolse support works in a club as an Admin, but never reads a child's health
+ * data — medical notes, exams, atestados — or a sealed ID document (Rui,
+ * 10-11-2026, go-live review). Called after `requireRole`, on every route that
+ * opens one; the Owner can show support the screen if a case ever needs it.
+ */
+export function refuseSupport(): void {
+  if (currentTenant().support === true) {
+    throw new ForbiddenException({
+      code: 'support_no_health_data',
+      message: 'Poolse support does not read health data or ID documents',
+    });
+  }
+}
+
 export function hasRole(...allowed: readonly MemberRole[]): boolean {
   const { roles } = currentTenant();
   return allowed.some((role) => roles.includes(role));

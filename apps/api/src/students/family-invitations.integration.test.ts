@@ -11,6 +11,7 @@ import {
 import { FAMILY_INVITATION_DAILY_CEILING } from './family-invitations.repository.js';
 import { withoutTenantScope } from '@poolse/db';
 import {
+  ownerSql,
   actingAs,
   addMember,
   closeHarness,
@@ -297,6 +298,34 @@ test('QA 10, 12 — an instructor reaches their own turmas only; another club’
   });
 });
 
+test('a family invitation is reissued only from its child’s record, never by the Pessoas route below the office', async () => {
+  await withScratchTenant(async (tenant) => {
+    const f = await seed(tenant);
+    const issued = await asAdmin(tenant, f, () =>
+      new StudentInvitationsController().create(f.childId, { membershipId: f.motherId, channel: 'link' }),
+    );
+    const pessoas = new InvitationsController();
+
+    // Go-live review, 10-11-2026: the list showed the id to any instructor, and
+    // this route handed back a fresh link to the mother's place.
+    for (const membershipId of [f.otherInstructorId, f.instructorId]) {
+      await actingAs(tenant, { membershipId, roles: ['instructor'] }, async () => {
+        await expectStatus(() => pessoas.reissue(issued.invitationId), 404);
+        await expectStatus(() => pessoas.revoke(issued.invitationId), 404);
+      });
+    }
+    await actingAs(tenant, { membershipId: f.otherInstructorId, roles: ['instructor'] }, () =>
+      expectStatus(() => new StudentInvitationsController().reissue(f.childId, issued.invitationId), 403),
+    );
+
+    // The child's own instructor still sends a new link, from the record.
+    const again = await actingAs(tenant, { membershipId: f.instructorId, roles: ['instructor'] }, () =>
+      new StudentInvitationsController().reissue(f.childId, issued.invitationId),
+    );
+    assert.ok(again.link.length > 0);
+  });
+});
+
 test('QA 8, 9 — Convidar famílias previews, sends to the addresses, then stops at the ceiling', async () => {
   await withScratchTenant(async (tenant) => {
     const f = await seed(tenant);
@@ -486,7 +515,7 @@ test('POOLSE-130 — the row says when the login last opened Poolse, stamped at 
       assert.equal((await mother()).lastSeenAt, first);
 
       // Past the window it moves.
-      await tenant.sql(`UPDATE app_user SET last_seen_at = now() - interval '16 minutes' WHERE id = $1`, [appUserId]);
+      await ownerSql(`UPDATE app_user SET last_seen_at = now() - interval '16 minutes' WHERE id = $1`, [appUserId]);
       await withoutTenantScope((tx) => tx.query('SELECT touch_app_user_seen($1)', [clerk]));
       assert.ok(new Date((await mother()).lastSeenAt!).getTime() > Date.now() - 60_000);
     } finally {

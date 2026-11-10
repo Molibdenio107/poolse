@@ -14,7 +14,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole, requireRole } from '../tenant/roles.js';
+import { hasRole, refuseSupport, requireRole } from '../tenant/roles.js';
 import {
   archiveMedicalLeave,
   attachCertificate,
@@ -99,6 +99,7 @@ export class SensitiveController {
   @Get('sensitive')
   async read(@Param('studentId') studentId: string): Promise<SensitiveResponse> {
     requireRole('owner', 'admin', 'instructor');
+    refuseSupport();
     const { organizationId } = currentTenant();
 
     // The read itself is the audited event — see readSensitive.
@@ -283,6 +284,7 @@ export class SensitiveController {
     @Body() body: Record<string, unknown>,
   ): Promise<{ saved: true }> {
     requireRole('owner', 'admin');
+    refuseSupport();
     const { organizationId } = currentTenant();
 
     const raw = typeof body['medicalNotes'] === 'string' ? body['medicalNotes'].trim() : '';

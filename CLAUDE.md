@@ -163,6 +163,7 @@ Read [`docs/conventions/platform-and-licence.md`](docs/conventions/platform-and-
 - A club may pay outside Stripe, and a manual subscription cannot be forgotten.
 - A trial ends in read-only, which is a third access state.
 - Poolse support enters a club only through a grant the Owner opened, and is never one of the club's people.
+- Poolse support never reads health data or an ID document: a route that opens one calls `refuseSupport()` after `requireRole`.
 - A view of a person's app is an `app_view` row read on every request, and what it opens is the list in `tenant/app-view.ts`.
 - Platform administration is not a tenant role, and it has its own database login.
 - A personal tenant is `organization.kind`, read in exactly two places.

@@ -350,6 +350,13 @@ function requireCanInvite(): void {
 async function requireOwnKind(organizationId: string, invitationId: string): Promise<void> {
   const roles = await pendingInvitationRoles(organizationId, invitationId);
   if (roles === null) throw new NotFoundException('No pending invitation with that id');
+  // A family's invitation is the child's record's (`students/:id/invitations`),
+  // which asks whether this caller teaches the child. Below the office this
+  // route would skip that question and hand back a fresh link to a parent's
+  // place — go-live review, 10-11-2026. Same answer as a missing one.
+  if (roles.some((role) => role === 'guardian' || role === 'student') && !hasRole('owner', 'admin')) {
+    throw new NotFoundException('No pending invitation with that id');
+  }
   requireGrantable(roles);
 }
 

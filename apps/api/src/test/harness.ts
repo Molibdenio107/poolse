@@ -452,6 +452,16 @@ let ownerPool: pg.Pool | undefined;
 const owner = (): pg.Pool =>
   (ownerPool ??= new pg.Pool({ connectionString: process.env['DATABASE_URL'], max: 2 }));
 
+/**
+ * A fixture write the application login is not allowed to make — a club's
+ * licence (`max_facilities`, `trial_ends_at`, `subscription_status`) or a
+ * login's `last_seen_at`. Those belong to the platform and the definer
+ * functions since 10-11-2026, so a test that needs one sets it as the owner.
+ */
+export async function ownerSql(text: string, values: unknown[] = []): Promise<void> {
+  await owner().query(text, values);
+}
+
 let scratchCount = 0;
 let swept = false;
 

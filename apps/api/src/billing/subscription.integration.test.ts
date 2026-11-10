@@ -9,6 +9,7 @@ import { SubscriptionController, resetPriceCache } from './subscription.controll
 import { readSubscription } from './subscription.repository.js';
 import { resetStripeClient } from './stripe.js';
 import {
+  ownerSql,
   actingAs,
   addMember,
   closeHarness,
@@ -407,7 +408,7 @@ test('63 — a stray event never takes over a club that pays by hand', async () 
     const customer = `cus_${tenant.organizationId.slice(0, 8)}`;
     await giveCustomer(tenant, customer);
 
-    await tenant.sql(
+    await ownerSql(
       `UPDATE organization
           SET billing_mode = 'manual', subscription_status = 'active',
               paid_through = current_date + 30
@@ -445,7 +446,7 @@ test('the avatar warning: owner and admin see a trial ending, only the owner may
     const fresh = await actingAs(tenant, { roles: ['owner'] }, () => controller.alert());
     assert.equal(fresh.alert, null);
 
-    await tenant.sql(`UPDATE organization SET trial_ends_at = now() + interval '3 days' WHERE id = $1`, [
+    await ownerSql(`UPDATE organization SET trial_ends_at = now() + interval '3 days' WHERE id = $1`, [
       tenant.organizationId,
     ]);
     const owner = await actingAs(tenant, { roles: ['owner'] }, () => controller.alert());

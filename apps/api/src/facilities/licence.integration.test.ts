@@ -1,7 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FacilitiesController } from './facilities.controller.js';
-import { actingAs, closeHarness, expectStatus, withScratchTenant } from '../test/harness.js';
+import { ownerSql, actingAs, closeHarness, expectStatus, withScratchTenant } from '../test/harness.js';
 import type { ScratchTenant } from '../test/harness.js';
 
 /**
@@ -31,7 +31,7 @@ after(closeHarness);
 
 /** The default a real organization is provisioned with. */
 async function onePlan(tenant: { sql: ScratchTenant['sql']; organizationId: string }): Promise<void> {
-  await tenant.sql('UPDATE organization SET max_facilities = 1 WHERE id = $1', [
+  await ownerSql('UPDATE organization SET max_facilities = 1 WHERE id = $1', [
     tenant.organizationId,
   ]);
 }
@@ -64,7 +64,7 @@ test('a second facility is refused, and the refusal is about money', async () =>
 test('raising the plan raises the limit, and nothing else has to change', async () => {
   await withScratchTenant(async (tenant) => {
     await actingAs(tenant, { roles: ['owner'] }, async () => {
-      await tenant.sql('UPDATE organization SET max_facilities = 2 WHERE id = $1', [
+      await ownerSql('UPDATE organization SET max_facilities = 2 WHERE id = $1', [
         tenant.organizationId,
       ]);
 
@@ -123,7 +123,7 @@ test('the database refuses it even when nothing goes through the API', async () 
 test('un-archiving is an insert as far as the licence is concerned', async () => {
   await withScratchTenant(async (tenant) => {
     await actingAs(tenant, { roles: ['owner'] }, async () => {
-      await tenant.sql('UPDATE organization SET max_facilities = 2 WHERE id = $1', [
+      await ownerSql('UPDATE organization SET max_facilities = 2 WHERE id = $1', [
         tenant.organizationId,
       ]);
 
@@ -135,7 +135,7 @@ test('un-archiving is an insert as far as the licence is concerned', async () =>
 
       // Now the plan shrinks under them — two live sites, one allowed. The
       // existing rows stay; what is refused is bringing a third back to life.
-      await tenant.sql('UPDATE organization SET max_facilities = 1 WHERE id = $1', [
+      await ownerSql('UPDATE organization SET max_facilities = 1 WHERE id = $1', [
         tenant.organizationId,
       ]);
       await new FacilitiesController().archive(second.id);

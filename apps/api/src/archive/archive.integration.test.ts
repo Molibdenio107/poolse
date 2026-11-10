@@ -17,6 +17,7 @@ import { FacilitiesController } from '../facilities/facilities.controller.js';
 import { FeePeriodsController, FeePlansController } from '../billing/fees.controller.js';
 import { archiveMeet } from '../meets/meets.repository.js';
 import {
+  ownerSql,
   actingAs,
   addMember,
   closeHarness,
@@ -190,7 +191,7 @@ test('QA 4: a tank whose site is archived is refused, naming the site and its en
 test('QA 5: a site restored over the licence is refused with its figures', async () => {
   await withScratchTenant(async (tenant) => {
     // The harness gives scratch tenants room for twenty; this one is a one-site plan.
-    await tenant.sql('UPDATE organization SET max_facilities = 1 WHERE id = $1', [
+    await ownerSql('UPDATE organization SET max_facilities = 1 WHERE id = $1', [
       tenant.organizationId,
     ]);
     await actingAs(tenant, { roles: ['owner'] }, async () => {
