@@ -14,7 +14,9 @@ import {
 } from '../../../lib/api';
 import { readTheme } from '../../../lib/preferences';
 import { PreferenceSync } from './preference-sync';
+import { Waves } from 'lucide-react';
 import { CreateOrganizationForm } from './create-organization-form';
+import { WaterBanner } from './water-banner';
 import { PageError, PageShell } from '@/components/page-shell';
 import { NewNoteButton } from '@/components/staff-board-forms';
 import { MyPoolPanel } from './my-pool-panel';
@@ -158,8 +160,14 @@ export default async function DashboardPage({
 
   return (
     <PageShell
-      title={name ?? t('nav.dashboard')}
-      subtitle={t('dashboard.subtitle')}
+      title={
+        me !== null && membership === null
+          ? me.user.firstName
+            ? t('onboarding.title', { name: me.user.firstName })
+            : t('onboarding.titleNoName')
+          : (name ?? t('nav.dashboard'))
+      }
+      subtitle={me !== null && membership === null ? t('onboarding.subtitle') : t('dashboard.subtitle')}
       actions={canPin ? <NewNoteButton /> : undefined}
       filters={
         // The selector, where there is a choice: the API sends the list only to
@@ -220,12 +228,21 @@ export default async function DashboardPage({
 
 
           {membership === null && (
-            <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
-              <div className="flex flex-col gap-1">
-                <h2 className="text-lg font-medium">{t('account.noOrganizations')}</h2>
-                <p className="text-sm text-foreground-muted">{t('account.noOrganizationsHint')}</p>
+            // The first screen of a new account (Rui, 10-11-2026): water across the
+            // top, then the form as three short numbered steps.
+            <section className="overflow-hidden rounded bg-surface shadow-card">
+              <WaterBanner>
+                <span className="onboard-check-circle inline-flex size-14 items-center justify-center rounded-full bg-surface text-primary shadow-card">
+                  <Waves aria-hidden className="size-7" />
+                </span>
+              </WaterBanner>
+              <div className="flex flex-col gap-6 p-5 sm:p-8">
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-lg font-semibold">{t('onboarding.formTitle')}</h2>
+                  <p className="text-sm text-foreground-muted">{t('account.noOrganizationsHint')}</p>
+                </div>
+                <CreateOrganizationForm ownerEmail={me?.user.email ?? ''} />
               </div>
-              <CreateOrganizationForm ownerEmail={me?.user.email ?? ''} />
             </section>
           )}
 

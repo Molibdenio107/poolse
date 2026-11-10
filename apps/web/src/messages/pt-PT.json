@@ -832,6 +832,35 @@
     "personalHint": "Criamos já a piscina com este nome, pronta para a primeira análise. Pode mudar o nome e as dimensões depois.",
     "trialNotAvailable": "Não é possível iniciar um período experimental com este endereço. Se já tem conta, inicie sessão; se acha que é engano, fale connosco."
   },
+  "onboarding": {
+    "title": "Boas-vindas ao Poolse, {name}",
+    "titleNoName": "Boas-vindas ao Poolse",
+    "subtitle": "Falta só um passo: diga-nos o que vai gerir.",
+    "formTitle": "Três passos rápidos",
+    "stepClub": "O clube",
+    "stepPool": "A piscina",
+    "stepContacts": "Contactos",
+    "createPersonal": "Criar a piscina",
+    "changeLater": "Tudo isto pode ser alterado mais tarde."
+  },
+  "welcome": {
+    "title": "Tudo pronto",
+    "subtitle": "{club} já está no Poolse.",
+    "trial": "O período experimental vai até {date}. Até lá, tem acesso a tudo.",
+    "nextTitle": "Por onde começar",
+    "nextHint": "Sugestões para os primeiros minutos, por qualquer ordem.",
+    "facilityTitle": "A instalação e as piscinas",
+    "facilityBody": "Confirme os tanques, as pistas e o horário de funcionamento.",
+    "classesTitle": "As turmas",
+    "classesBody": "Crie as turmas da época e coloque-as no calendário.",
+    "studentsTitle": "Os alunos",
+    "studentsBody": "Importe a lista de alunos a partir de uma folha de Excel.",
+    "staffTitle": "A equipa",
+    "staffBody": "Convide professores, administrativos e a manutenção.",
+    "poolTitle": "A primeira análise",
+    "poolBody": "Registe o pH e o cloro e acompanhe a água a partir de hoje.",
+    "goToDashboard": "Ir para o painel"
+  },
   "profile": {
     "title": "O meu perfil",
     "subtitle": "Os seus dados. Só o próprio os pode alterar.",

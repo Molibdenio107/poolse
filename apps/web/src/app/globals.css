@@ -1362,3 +1362,82 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
 [data-surface='app'] {
   --app-bar-clear: calc(4.75rem + var(--safe-bottom));
 }
+
+/*
+ * The first two screens a new club sees — creating it, and the welcome after
+ * (Rui, 10-11-2026). Water that drifts behind the heading, a tick that draws
+ * itself inside two ripples, and cards that rise in one after another
+ * (`--i` is each card's place in the stagger). All of it is decoration: under
+ * reduced motion nothing moves and everything is simply there.
+ */
+.onboard-wave {
+  transform-origin: center;
+}
+.onboard-ripple {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .onboard-wave-a {
+    animation: onboard-drift 9s linear infinite;
+  }
+  .onboard-wave-b {
+    animation: onboard-drift 14s linear infinite reverse;
+  }
+  .onboard-rise {
+    animation: onboard-rise 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 110ms + 150ms);
+  }
+  .onboard-check-circle {
+    animation: onboard-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .onboard-check-mark {
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: onboard-draw 520ms cubic-bezier(0.65, 0, 0.35, 1) 420ms forwards;
+  }
+  .onboard-ripple {
+    animation: onboard-ripple 2.8s cubic-bezier(0.2, 0.6, 0.3, 1) 700ms infinite;
+  }
+  .onboard-ripple-late {
+    animation-delay: 2.1s;
+  }
+}
+
+@keyframes onboard-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes onboard-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes onboard-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@keyframes onboard-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes onboard-ripple {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}

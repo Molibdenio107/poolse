@@ -832,6 +832,35 @@
     "personalHint": "We create the pool under this name straight away, ready for its first analysis. The name and the dimensions can be changed later.",
     "trialNotAvailable": "A trial cannot be started with this address. If you already have an account, sign in; if you think this is a mistake, get in touch."
   },
+  "onboarding": {
+    "title": "Welcome to Poolse, {name}",
+    "titleNoName": "Welcome to Poolse",
+    "subtitle": "One step left: tell us what you will run.",
+    "formTitle": "Three quick steps",
+    "stepClub": "The club",
+    "stepPool": "The pool",
+    "stepContacts": "Contacts",
+    "createPersonal": "Create the pool",
+    "changeLater": "All of this can be changed later."
+  },
+  "welcome": {
+    "title": "All set",
+    "subtitle": "{club} is now on Poolse.",
+    "trial": "The trial runs until {date}. Until then, everything is available.",
+    "nextTitle": "Where to start",
+    "nextHint": "Suggestions for the first few minutes, in any order.",
+    "facilityTitle": "The site and its pools",
+    "facilityBody": "Check the tanks, the lanes and the opening hours.",
+    "classesTitle": "Classes",
+    "classesBody": "Create the season’s classes and place them on the calendar.",
+    "studentsTitle": "Students",
+    "studentsBody": "Import the student list from an Excel sheet.",
+    "staffTitle": "The team",
+    "staffBody": "Invite instructors, office staff and maintenance.",
+    "poolTitle": "The first reading",
+    "poolBody": "Log pH and chlorine and follow the water from today.",
+    "goToDashboard": "Go to the dashboard"
+  },
   "profile": {
     "title": "My profile",
     "subtitle": "Your own details. Only you can change them.",

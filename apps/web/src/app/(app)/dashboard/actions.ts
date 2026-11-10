@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { describeFailure } from '@/lib/form-failure';
 import { ApiError, apiPost, type AcceptResult, type CreatedInvitation } from '../../../lib/api';
 
@@ -129,9 +130,12 @@ export async function createOrganizationAction(
     return failure(error, 'organization.createFailed');
   }
 
-  // The dashboard reads memberships; it is now wrong.
-  revalidatePath('/dashboard');
-  return { ok: true };
+  /*
+   * Straight to the welcome (Rui, 10-11-2026). No `revalidatePath` first: it
+   * would re-render the dashboard under this form, which unmounts it before the
+   * redirect runs. `/dashboard` reads `/me` on every request, so nothing is stale.
+   */
+  redirect('/dashboard/welcome');
 }
 
 /**
