@@ -441,6 +441,24 @@ BEGIN
     RAISE EXCEPTION 'FAIL test 7b-b: an ordinary due day moved';
   END IF;
 
+  -- A period that starts after the payment day is due on the next one, never
+  -- before it begins (Rui, 10-11-2026): 14 Nov → 8 Dec, 14 Dec → 8 Jan.
+  IF fee_due_on(DATE '2026-11-14', 8::smallint) <> DATE '2026-12-08' THEN
+    RAISE EXCEPTION 'FAIL test 7b-c: a mid-month start was due before it began';
+  END IF;
+  IF fee_due_on(DATE '2026-12-14', 8::smallint) <> DATE '2027-01-08' THEN
+    RAISE EXCEPTION 'FAIL test 7b-c: the year did not roll over';
+  END IF;
+  -- Starting on the payment day itself is due that day.
+  IF fee_due_on(DATE '2026-11-08', 8::smallint) <> DATE '2026-11-08' THEN
+    RAISE EXCEPTION 'FAIL test 7b-c: a start on the payment day moved a month';
+  END IF;
+  -- Starting 31 January with payment day 30: January's 30th has passed, so the
+  -- next is February's, clamped to the 28th.
+  IF fee_due_on(DATE '2026-01-31', 30::smallint) <> DATE '2026-02-28' THEN
+    RAISE EXCEPTION 'FAIL test 7b-c: the next month did not clamp';
+  END IF;
+
   -- A quarterly line is asked for one payment a quarter, not one a month.
   -- Whatever today is (this pinned 15-07-2026 and failed the day the next
   -- quarter began, 15-10-2026): the occurrence is a whole number of quarters

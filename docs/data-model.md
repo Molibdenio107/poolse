@@ -493,7 +493,7 @@ quota_band_for(birth_date) -> fee_age_band                STABLE (reads current_
   -- Adult when no birth date is recorded: the ordinary rate, never the cheaper
   -- one, because guessing in the member's favour is what has to be explained.
 fee_penalty_cents(kind, cents, percent, monthly_base) -> integer   IMMUTABLE
-fee_due_on(period_start, due_day) -> date                 IMMUTABLE
+fee_due_on(period_start, due_day) -> date                 IMMUTABLE  -- first payment day on or after the period starts (14 Nov, day 8 -> 8 Dec), 10-11-2026
 current_period_start(starts_on, ends_on, months) -> date  STABLE (reads current_date)
 fee_total_cents(amount_cents, months, discount_percent) -> integer
 fee_payable_cents(..., manual_discount_percent, manual_discount_cents) -> integer
