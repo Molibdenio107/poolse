@@ -231,6 +231,7 @@ Read [`docs/conventions/water-and-maintenance.md`](docs/conventions/water-and-ma
 Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before touching any screen: look, forms, dialogs, navigation, the phone, the app shell, the dashboard.
 
 - The dashboard is a union of role bands, and a widget is one declaration in a registry.
+- Owner and Admin land on *Início* (`/dashboard/welcome`); the page sign-in lands on never server-redirects, it hands on with `LandOn` (Rui, 10-11-2026).
 - A save says so, and it says so once.
 - A section that opens and closes moves smoothly
 - Something slow says so in the corner, and the signal comes from where the work starts.

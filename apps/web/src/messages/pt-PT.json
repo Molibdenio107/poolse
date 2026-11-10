@@ -833,9 +833,8 @@
     "trialNotAvailable": "Não é possível iniciar um período experimental com este endereço. Se já tem conta, inicie sessão; se acha que é engano, fale connosco."
   },
   "onboarding": {
-    "title": "Boas-vindas ao Poolse, {name}",
-    "titleNoName": "Boas-vindas ao Poolse",
-    "subtitle": "Falta só um passo: diga-nos o que vai gerir.",
+    "title": "Bem-vindo ao Poolse, {name}",
+    "titleNoName": "Bem-vindo ao Poolse",
     "formTitle": "Três passos rápidos",
     "stepClub": "O clube",
     "stepPool": "A piscina",
@@ -3544,6 +3543,7 @@
     "guardian": "Encarregado de educação"
   },
   "nav": {
+    "home": "Início",
     "label": "Navegação principal",
     "openMenu": "Abrir o menu",
     "dashboard": "Painel",

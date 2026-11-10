@@ -194,6 +194,12 @@ function withoutSportOnly(items: Item[]): Item[] {
  * the logo and the post-sign-in redirect both land on it.
  */
 export const SECTIONS: Item[] = [
+  /*
+   * Início — the welcome page made permanent (Rui, 10-11-2026). Owner and Admin
+   * land here after signing in; its cards are office pages, so nobody else sees
+   * it, and the page itself sends them on to Painel.
+   */
+  { href: '/dashboard/welcome', key: 'nav.home', icon: 'home', roles: ['owner', 'admin'] },
   { href: '/dashboard', key: 'nav.dashboard', icon: 'dashboard' },
   {
     href: '/dashboard/facilities',

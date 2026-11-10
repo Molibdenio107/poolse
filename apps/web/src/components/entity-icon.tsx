@@ -8,6 +8,7 @@ import {
   FileText,
   Cake,
   HeartPulse,
+  House,
   LayoutDashboard,
   TrendingUp,
   Users,
@@ -32,6 +33,7 @@ import { cn } from '@/lib/utils';
  */
 const ICONS = {
   dashboard: LayoutDashboard,
+  home: House,
   facility: Building2,
   pool: Waves,
   student: GraduationCap,

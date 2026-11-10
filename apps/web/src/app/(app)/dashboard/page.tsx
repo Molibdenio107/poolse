@@ -167,7 +167,7 @@ export default async function DashboardPage({
             : t('onboarding.titleNoName')
           : (name ?? t('nav.dashboard'))
       }
-      subtitle={me !== null && membership === null ? t('onboarding.subtitle') : t('dashboard.subtitle')}
+      subtitle={me !== null && membership === null ? undefined : t('dashboard.subtitle')}
       actions={canPin ? <NewNoteButton /> : undefined}
       filters={
         // The selector, where there is a choice: the API sends the list only to

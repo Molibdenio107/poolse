@@ -835,7 +835,6 @@
   "onboarding": {
     "title": "Welcome to Poolse, {name}",
     "titleNoName": "Welcome to Poolse",
-    "subtitle": "One step left: tell us what you will run.",
     "formTitle": "Three quick steps",
     "stepClub": "The club",
     "stepPool": "The pool",
@@ -3544,6 +3543,7 @@
     "guardian": "Guardian"
   },
   "nav": {
+    "home": "Home",
     "label": "Main navigation",
     "openMenu": "Open the menu",
     "dashboard": "Dashboard",

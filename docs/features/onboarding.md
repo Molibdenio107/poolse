@@ -1,11 +1,13 @@
-# Onboarding: creating the club, and the welcome
+# Onboarding and Início: creating the club, the welcome, and the home
 
-The first two screens a new account sees (Rui, 10-11-2026).
+The first two screens a new account sees, the second of which stays as the Owner's and Admin's
+home, *Início* (Rui, 10-11-2026).
 
 ## Creating the club
 
-A login with no membership lands on `/dashboard`, which shows the creation card in place of
-the dashboard: a water banner, then one form in three numbered steps.
+A login with no membership ends up on `/dashboard`, which shows the creation card in place of
+the dashboard. The card is headed *Bem-vindo ao Poolse, {nome}*, with no subtitle, and holds a
+water banner, then one form in three numbered steps.
 
 1. **O que vai gerir?** A club or site (`business`) or one's own pool (`personal`), as two
    cards. The chosen card shows a border, a tint and a tick, so colour is never the only sign.
@@ -18,14 +20,24 @@ Choosing *A minha própria piscina* folds step 3 and the site field away with `R
 still one screen and one submit, never a wizard. Nothing is asked here that cannot be changed
 later, and the page says so.
 
-On success `createOrganizationAction` redirects to `/dashboard/welcome`. It does not
+On success `createOrganizationAction` redirects to `/dashboard/welcome?new=1`. It does not
 `revalidatePath` first, because re-rendering the dashboard would unmount the form before
 the redirect ran. A refused trial (POOLSE-62) or a bad field stays on the form, as before.
 
-## The welcome
+## Início (`/dashboard/welcome`)
 
-`/dashboard/welcome` reads `/me`. With no membership it redirects to `/dashboard`, so it is
-safe to bookmark or revisit. It shows:
+**The Owner's and Admin's home.** Sign-in and sign-up land here (Clerk's `fallbackRedirectUrl`;
+a `redirect_url` from a followed link still wins), and it is the first menu entry, *Início*,
+above *Painel*, for `owner` and `admin` only. Its heading is *Tudo pronto* with *{clube} já está no
+Poolse.* on the `?new=1` visit right after creation, and *Início* on every other visit.
+
+Every other reader (no membership, or any other role) is sent on to `/dashboard` by `LandOn`
+with a **full page load**, never a server `redirect()` or `router.replace`. Clerk's navigation
+after sign-in lands here, and the next in-app navigation after it never commits: the address
+stays and the page is blank (walk, 10-11-2026). `/dashboard` then sends a family or a teacher's
+phone on, as before.
+
+It shows:
 
 - a tick that draws itself inside two ripples, over the water banner;
 - the club's name, and for a club the trial's last day as visible text (`dd-MM-yyyy`);

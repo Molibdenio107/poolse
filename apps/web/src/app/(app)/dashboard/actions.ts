@@ -135,7 +135,7 @@ export async function createOrganizationAction(
    * would re-render the dashboard under this form, which unmounts it before the
    * redirect runs. `/dashboard` reads `/me` on every request, so nothing is stale.
    */
-  redirect('/dashboard/welcome');
+  redirect('/dashboard/welcome?new=1');
 }
 
 /**

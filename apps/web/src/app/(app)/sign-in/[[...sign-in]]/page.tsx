@@ -14,8 +14,12 @@ export default function SignInPage(): React.ReactElement {
         followed a link to a turma and had to sign in first still arrives at that
         turma. Forcing it would send them to the landing page and lose the link
         they clicked.
+
+        Início, not Painel, since 10-11-2026 (Rui): Owner and Admin start there,
+        and the page sends every other role on to /dashboard, which already
+        knows where a family or a teacher's phone belongs.
       */}
-      <SignIn fallbackRedirectUrl="/dashboard" />
+      <SignIn fallbackRedirectUrl="/dashboard/welcome" />
     </main>
   );
 }

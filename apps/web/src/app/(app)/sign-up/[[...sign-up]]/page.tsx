@@ -22,7 +22,7 @@ export default async function SignUpPage({
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 py-12">
       <SignUp
-        fallbackRedirectUrl="/dashboard"
+        fallbackRedirectUrl="/dashboard/welcome"
         {...(email === undefined ? {} : { initialValues: { emailAddress: email } })}
       />
       <p className="max-w-sm text-center text-sm text-foreground-muted">
