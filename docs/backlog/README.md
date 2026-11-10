@@ -239,6 +239,7 @@ up front and the wave order inside them is not negotiable.
 | POOLSE-217 | **Built 10-11-2026.** Invitations say when sending is off (not "failed"); /admin › Plataforma *Envio de emails*: status, unsent per club, a test send to the operator; laptop email steps in the runbook (no ticket file) | Email / Platform | High (pre go-live) | 86, 209 | 0 |
 | [POOLSE-196](./POOLSE-196-the-owner-can-do-anything-in-the-club.md) | **Built 07-11-2026.** The Owner can do anything in their club, an Admin some things, and the search bar reaches the site's tabs | Roles / Search | High (pre go-live) | 39, 118 | 0 |
 | [POOLSE-195](./POOLSE-195-desafio-in-the-training-plan.md) | **Built 06-11-2026.** The instructor sets a *Desafio* in the training plan, and the student says after class whether they did it | Classes / Mobile app | Medium (pilot) | 116, 194 | 0 |
+| [POOLSE-218](./POOLSE-218-a-child-s-access-is-the-guardian-s.md) | *Convidar aluno* asks who will use the app (student 12+ or encarregado), and a too-young student's own login can be handed to the guardian | Students / Families / Invitations | High (pre go-live) | 129, 186, 206 | 1 |
 
 ## To discuss — raised 01-11-2026, parked until after the pilot has used the app
 
