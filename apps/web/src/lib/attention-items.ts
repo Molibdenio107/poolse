@@ -9,7 +9,9 @@ import type { BadgeKey, Badges } from './nav-entries';
  * fails the typecheck rather than going silently missing from the bell.
  *
  * `app` is where the line goes in app mode (the teacher's and maintenance's
- * homes on a phone); the backoffice's page otherwise.
+ * homes on a phone); the backoffice's page otherwise. A kind with no `app` is
+ * not listed in app mode at all (Rui, 10-11-2026): the phone's bell only leads
+ * to phone screens, so meet results to import wait for the backoffice.
  */
 export interface AttentionItem {
   /** The line, a plural ICU message taking `{count}`. */
@@ -55,6 +57,7 @@ export function attentionLines(badges: Badges, place: 'backoffice' | 'app' = 'ba
     }
     if (count <= 0) continue;
     const item = ATTENTION_ITEMS[kind];
+    if (place === 'app' && item.app === undefined) continue;
     lines.push({ kind, count, key: item.key, href: place === 'app' ? (item.app ?? item.href) : item.href });
   }
   return lines;

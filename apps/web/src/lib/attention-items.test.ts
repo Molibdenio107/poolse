@@ -24,3 +24,9 @@ test("in app mode a teacher's and maintenance's lines open their own homes", () 
   assert.deepEqual(lines.map((line) => line.href), ['/app/aulas', '/app/manutencao']);
   assert.equal(attentionLines({ calendar: 2 })[0]!.href, '/dashboard/calendar');
 });
+
+test('in app mode a line with no phone screen is not listed, and its count goes with it', () => {
+  const lines = attentionLines({ calendar: 2, meetInbox: 3 }, 'app');
+  assert.deepEqual(lines.map((line) => [line.kind, line.count]), [['calendar', 2]]);
+  assert.equal(attentionLines({ meetInbox: 3 }).length, 1, 'the backoffice still lists it');
+});
