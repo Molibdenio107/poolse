@@ -9,6 +9,7 @@ import { InvoiceList } from './invoice-list';
 import { OutstandingList } from './outstanding-list';
 import { ViewTabs, type InvoiceView } from './view-tabs';
 import { FromLink } from '@/components/from-link';
+import { today } from '@/lib/dates';
 import { listInvoices, listOutstanding, previewRun } from './invoices.actions';
 import { Pagination } from '@/components/pagination';
 import { lastPage, PAGE_SIZE, readPage, type Paginated } from '@/lib/pagination';
@@ -36,8 +37,8 @@ const BASE = '/dashboard/faturacao';
 
 /** The month a club is most likely to be billing: this one. */
 function thisMonth(): string {
-  const now = new Date();
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  // The club's month, not UTC's (go-live review, 10-11-2026).
+  return today().slice(0, 7);
 }
 
 export default async function InvoicingPage({

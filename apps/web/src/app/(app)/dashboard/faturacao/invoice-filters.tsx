@@ -4,9 +4,11 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { today } from '@/lib/dates';
 
 /**
- * The months a picker offers: two years back, three ahead.
+ * The months a picker offers: this one and two years back, never the future —
+ * nothing is billed for a month that has not begun (Rui, 10-11-2026).
  *
  * Newest first, because a club billing in September is far more likely to want
  * September than a month from 2024. The month currently in the URL is always
@@ -14,13 +16,14 @@ import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
  * must not silently select a different month than the page is showing.
  */
 function months(selected: string): string[] {
-  const now = new Date();
+  // The club's month, not the server's: UTC is still last month for the first
+  // hour of the 1st in a Lisbon summer.
+  const [year, month] = today().split('-').map(Number) as [number, number];
   const values = new Set<string>();
 
-  // From three months ahead down to twenty-four behind: `back` is how many
-  // months to subtract, so a negative one is the future.
-  for (let back = -3; back <= 24; back += 1) {
-    const at = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
+  // This month down to twenty-four behind.
+  for (let back = 0; back <= 24; back += 1) {
+    const at = new Date(Date.UTC(year, month - 1 - back, 1));
     values.add(`${at.getUTCFullYear()}-${String(at.getUTCMonth() + 1).padStart(2, '0')}`);
   }
 
@@ -84,8 +87,8 @@ export function InvoiceFilters({
           options are formatted with the app's own named `month` format, which is
           the same one any heading would use.
 
-          Bounded to the months a club actually bills — two years back, three
-          ahead for a season being priced early. An older month is still
+          Bounded to the months a club actually bills — this one and two years
+          back, no future month (Rui, 10-11-2026). An older month is still
           reachable: the value lives in the URL and the API takes any date.
         */}
         <select
