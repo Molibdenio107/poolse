@@ -2154,6 +2154,10 @@
   },
   "reposicao": {
     "title": "Aulas de reposição",
+    "nothingYet": {
+      "noPoolsBody": "As aulas de reposição marcam-se nas turmas de uma piscina, e este clube ainda não tem nenhuma. Crie a primeira piscina em Instalações; as regras ficam aqui à espera.",
+      "noClassesBody": "As regras de reposição aplicam-se às faltas nas turmas, e ainda não há nenhuma. Crie a primeira turma em Turmas e volte aqui para definir as regras."
+    },
     "subtitle": "Quando uma falta justificada dá direito a uma aula de reposição, e por quanto tempo.",
     "credits": "Reposições",
     "enabled": "Emitir reposições por falta justificada",

@@ -42,6 +42,8 @@ something to say before an empty one**. **The summary band (multi-sport Slice 2)
 
 **Owner and Admin land on *Início*, and the page sign-in lands on never server-redirects** (Rui, 10-11-2026). Clerk's `fallbackRedirectUrl` on sign-in and sign-up is `/dashboard/welcome`, the first menu entry for `owner` and `admin`. Anybody else is handed on to `/dashboard` by `LandOn` (`dashboard/welcome/land-on.tsx`) with `window.location.replace`. The trap: after Clerk's own post-sign-in navigation, the next in-app navigation never commits. A server `redirect()` and a `router.replace` both fetched the target and left the old address on a blank page, and only a full load works. If the landing page changes again, the new one inherits the rule. `docs/features/onboarding.md`.
 
+**A page with nothing to work on yet shows `NothingYet` and the next step** (Rui, 10-11-2026). An empty grid with no columns, or a settings form for classes that do not exist, reads as broken. `components/nothing-yet.tsx` is the card: what is missing, why it matters on this page, and one button to where it is made. A reader who cannot make it gets one quiet line. Show it only after a read that succeeded, because a failed read must say it failed, never "nothing yet". Used by the calendar (no pool: Instalações; no turma: Turmas) and the make-up lessons (`classes/reposicoes`). When the calendar has no pool, the timetable import is not on the page, so `NoPoolDrop` catches a dropped file and explains.
+
 **A save says so, and it says so once.** `useSavedAction` raises the toast — one place, every
 form — so no screen has to remember to report an outcome and none of them can word it
 differently. Where "Guardado" is the wrong word, an action returns `toastKey` (and `values`) — a

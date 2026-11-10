@@ -1,7 +1,7 @@
 import type { PoolseSport } from '@poolse/rules';
 import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import {
   ApiError,
@@ -26,6 +26,7 @@ import {
 import type { SessionControls } from '../classes/schedule-board';
 import { CalendarWeek } from './calendar-week';
 import { NoPoolDrop } from './no-pool-drop';
+import { NothingYet } from '@/components/nothing-yet';
 import { LessonRequests } from './lesson-requests';
 import { CalendarAgenda } from './calendar-agenda';
 import { bookingKey, slotKey } from '@/lib/slot-key';
@@ -520,35 +521,19 @@ export default async function CalendarPage({
         that succeeded; a load that failed says so above, never "nothing yet".
         Turmas, sessions or bookings, any one brings the grid back.
       */}
-      {calendar !== null && nothingYet !== null && (
-        <section className="flex flex-col items-start gap-3 rounded bg-surface p-5 shadow-card sm:p-8">
-          <span
-            aria-hidden
-            className="inline-flex size-12 items-center justify-center rounded-full bg-primary/15 text-primary"
+      {calendar !== null && nothingYet !== null &&
+        (calendar.canManage ? (
+          <NothingYet
+            title={t(nothingYet === 'pools' ? 'calendar.nothingYet.noPoolsTitle' : 'calendar.nothingYet.noClassesTitle')}
+            body={t(nothingYet === 'pools' ? 'calendar.nothingYet.noPoolsBody' : 'calendar.nothingYet.noClassesBody')}
+            href={nothingYet === 'pools' ? '/dashboard/facilities' : '/dashboard/classes'}
+            linkLabel={t(nothingYet === 'pools' ? 'calendar.nothingYet.noPoolsLink' : 'calendar.nothingYet.noClassesLink')}
           >
-            <CalendarDays className="size-6" />
-          </span>
-          {calendar.canManage ? (
-            <>
-              <h2 className="text-lg font-semibold">
-                {t(nothingYet === 'pools' ? 'calendar.nothingYet.noPoolsTitle' : 'calendar.nothingYet.noClassesTitle')}
-              </h2>
-              <p className="max-w-prose text-sm text-foreground-muted">
-                {t(nothingYet === 'pools' ? 'calendar.nothingYet.noPoolsBody' : 'calendar.nothingYet.noClassesBody')}
-              </p>
-              {nothingYet === 'pools' && <NoPoolDrop />}
-              <FromLink
-                href={nothingYet === 'pools' ? '/dashboard/facilities' : '/dashboard/classes'}
-                className="inline-flex h-control items-center justify-center rounded-sm bg-primary px-5 text-control font-semibold text-primary-foreground"
-              >
-                {t(nothingYet === 'pools' ? 'calendar.nothingYet.noPoolsLink' : 'calendar.nothingYet.noClassesLink')}
-              </FromLink>
-            </>
-          ) : (
-            <p className="text-sm text-foreground-muted">{t('calendar.nothingYet.readerBody')}</p>
-          )}
-        </section>
-      )}
+            {nothingYet === 'pools' && <NoPoolDrop />}
+          </NothingYet>
+        ) : (
+          <NothingYet body={t('calendar.nothingYet.readerBody')} />
+        ))}
 
       {calendar !== null && nothingYet === null && (
         <>

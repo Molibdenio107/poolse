@@ -554,3 +554,5 @@ When the week has nothing to draw, the page shows a card instead of an empty gri
 - **Pools but nothing scheduled** (no turma, booking or session): *Ainda não há turmas*, with a link to Turmas. *Importar horário* stays in the header and still takes a dropped file.
 
 Readers who cannot manage see one line, *Ainda não há aulas marcadas*. The card shows only after a read that succeeded; a read that failed shows its error and the grid. As soon as one turma, booking or session exists, the grid comes back.
+
+The make-up lessons page (`/dashboard/classes/reposicoes`) applies the same check. With no pool or no turma, it shows the card instead of its rules form.

@@ -2154,6 +2154,10 @@
   },
   "reposicao": {
     "title": "Make-up classes",
+    "nothingYet": {
+      "noPoolsBody": "Make-up lessons are booked into a pool's classes, and this club has no pool yet. Create the first pool in Facilities; the rules will wait here.",
+      "noClassesBody": "Make-up rules apply to absences from classes, and there are none yet. Create the first class in Class groups, then come back to set the rules."
+    },
     "subtitle": "When a justified absence earns a make-up class, and how long it lasts.",
     "credits": "Make-up classes",
     "enabled": "Issue a make-up class for a justified absence",

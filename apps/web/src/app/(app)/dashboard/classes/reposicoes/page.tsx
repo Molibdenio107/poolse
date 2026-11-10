@@ -1,9 +1,10 @@
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { backProp, originBack } from '@/lib/back';
-import { ApiError, apiFetch, type Me, type ReposicaoSettings } from '@/lib/api';
+import { ApiError, apiFetch, type Classes, type Facilities, type Me, type ReposicaoSettings } from '@/lib/api';
 import { PageError, PageShell } from '@/components/page-shell';
 import { ReposicaoSettingsForm } from './reposicoes-form';
+import { NothingYet } from '@/components/nothing-yet';
 
 /**
  * Aulas de reposição — the club's rules — POOLSE-21.
@@ -48,6 +49,21 @@ export default async function ReposicoesPage({
     else failure = describeLoad(error);
   }
 
+  /*
+    Nothing to set rules for yet (Rui, 10-11-2026): with no pool or no turma
+    the form governs nothing, so the page says what comes first, as the
+    calendar does. Best-effort: if either read fails the form shows as before.
+  */
+  let nothingYet: 'pools' | 'classes' | null = null;
+  if (settings !== null) {
+    const [sites, classes] = await Promise.all([
+      apiFetch<Facilities>('/facilities').catch(() => null),
+      apiFetch<Classes>('/class-groups').catch(() => null),
+    ]);
+    if (sites !== null && sites.facilities.every((site) => site.pools.length === 0)) nothingYet = 'pools';
+    else if (classes !== null && classes.groups.length === 0) nothingYet = 'classes';
+  }
+
   return (
     <PageShell
       title={t('reposicao.title')}
@@ -72,7 +88,16 @@ export default async function ReposicoesPage({
         />
       )}
 
-      {settings !== null && (
+      {nothingYet !== null && (
+        <NothingYet
+          title={t(nothingYet === 'pools' ? 'calendar.nothingYet.noPoolsTitle' : 'calendar.nothingYet.noClassesTitle')}
+          body={t(nothingYet === 'pools' ? 'reposicao.nothingYet.noPoolsBody' : 'reposicao.nothingYet.noClassesBody')}
+          href={nothingYet === 'pools' ? '/dashboard/facilities' : '/dashboard/classes'}
+          linkLabel={t(nothingYet === 'pools' ? 'calendar.nothingYet.noPoolsLink' : 'calendar.nothingYet.noClassesLink')}
+        />
+      )}
+
+      {settings !== null && nothingYet === null && (
         <section className="rounded bg-surface p-5 shadow-card">
           <ReposicaoSettingsForm organizationId={organizationId} settings={settings} />
         </section>
