@@ -2,8 +2,8 @@
 
 import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
 import { revalidatePath } from 'next/cache';
-import { ApiError, apiPost } from '@/lib/api';
-import { readSheet, type ReadFailure } from '@/lib/read-sheet';
+import { ApiError, apiFetch, apiPost, apiPut, type FacilityDetail } from '@/lib/api';
+import { readSheet, readFailureKey } from '@/lib/read-sheet';
 import { readTimetableGrid, type GridCandidate } from '@/lib/timetable-grid';
 import type { NamedSheet } from '@/lib/sheet';
 
@@ -45,18 +45,6 @@ export interface ReadState {
   fromFile?: number;
 }
 
-const READ_ERRORS: Record<ReadFailure, string> = {
-  fileMissing: 'students.import.errorFileMissing',
-  fileTooLarge: 'students.import.errorFileTooLarge',
-  fileType: 'students.import.errorFileType',
-  fileEmpty: 'students.import.errorFileEmpty',
-  fileUnreadable: 'students.import.errorFileUnreadable',
-  // The PDF reader is off — said, so a PDF is not mistaken for a broken file.
-  pdfDisabled: 'import.pdfDisabled',
-  pdfNoKey: 'import.pdfNoKey',
-  pdfCapReached: 'import.pdfCapReached',
-};
-
 /** Step one: the file becomes a grid, already read into candidate bookings. */
 export async function readTimetableAction(
   previous: ReadState,
@@ -71,7 +59,7 @@ export async function readTimetableAction(
 
   const outcome = await readSheet(file, { pdf: true });
   if ('error' in outcome) {
-    return { ok: false, errorKey: READ_ERRORS[outcome.error], attempt };
+    return { ok: false, errorKey: readFailureKey(outcome.error), attempt };
   }
 
   const [first] = outcome.sheets;
@@ -163,7 +151,46 @@ export interface TimetableResult {
     flagged: number;
   };
   committable: boolean;
+  /** Days whose hours keep rows out — *Alargar o horário* (11-11-2026). */
+  hoursNeeded?: TimetableHoursNeeded[];
   created?: number;
+}
+
+export interface TimetableHoursNeeded {
+  weekday: number;
+  current: { available: boolean; opens: string; closes: string } | null;
+  needed: { opens: string; closes: string };
+  rows: number;
+}
+
+/**
+ * *Alargar o horário* (Rui, 11-11-2026): the site's week, with the days the file
+ * needs opened and widened to what it needs, every other day as it was. The same
+ * `PUT …/hours` the site's own form uses, so its rules (owner or admin, a closing
+ * after the opening) apply unchanged.
+ */
+export async function extendHoursAction(
+  facilityId: string,
+  needed: TimetableHoursNeeded[],
+): Promise<{ ok: boolean; errorKey?: string }> {
+  try {
+    const site = await apiFetch<FacilityDetail>(`/facilities/${encodeURIComponent(facilityId)}`);
+    const days = [1, 2, 3, 4, 5, 6, 7].map((weekday) => {
+      const now = site.hours.find((day) => day.weekday === weekday);
+      const want = needed.find((day) => day.weekday === weekday);
+      if (want !== undefined) return { weekday, available: true, opensAt: want.needed.opens, closesAt: want.needed.closes };
+      return now === undefined
+        ? { weekday, available: false, opensAt: '00:00', closesAt: '24:00' }
+        : { weekday, available: now.available, opensAt: now.opensAt.slice(0, 5), closesAt: now.closesAt.slice(0, 5) };
+    });
+    await apiPut(`/facilities/${encodeURIComponent(facilityId)}/hours`, { days });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 400) return { ok: false, errorKey: 'facilities.hoursInvalid' };
+    return { ok: false, errorKey: 'facilities.hoursSaveFailed' };
+  }
+  revalidatePath(`/dashboard/facilities/${facilityId}`);
+  revalidatePath('/dashboard/calendar');
+  return { ok: true };
 }
 
 export interface ImportState {

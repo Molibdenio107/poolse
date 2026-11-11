@@ -228,3 +228,17 @@ overshoot. Exactly one Owner per tenant, enforced; transfer is the only way to c
 **The layout reads `/me` and `GET /shell`, and nothing else** (POOLSE-172). A new thing the shell draws is a part of `shell.controller.ts`, with its gate in a function its own route also calls, and `readShell` (`lib/shell.ts`) on the web, never another call in the layout. A part is `null` when it is not this reader's or it failed. Never cache memberships across requests: a suspension or a removed role takes effect on the next one.
 
 **A hydration mismatch costs `<html>` its attributes** (05-11-2026): React rebuilds the document from the root and strips `class` (the dark theme) and `style`. A Clerk widget's first render depends on whether its script has loaded, so `UserMenu` draws `UserButton` only after hydration (`useSyncExternalStore`), with a placeholder holding its place.
+
+**A page left open re-reads itself, lightly** (Rui, 11-11-2026). `KeepFresh` (`components/keep-fresh.tsx`), mounted once in the backoffice shell and once in the phone app, calls `router.refresh()` every 2 minutes while the tab is visible, and at once on coming back to a tab hidden for more than 30 seconds. It does nothing while the tab is hidden. It skips a tick while a field has focus, was typed in during the last minute, a dialog is open, or the app is already loading or saving, and simply tries again at the next one. A refresh re-reads the server's part (the layout's `/me` + `/shell`, the page's own reads) and keeps the client's state, so it is invisible unless something changed, and it raises no busy indicator. Cost: one shell read and the page's reads per open, visible tab every 2 minutes, inside the free tiers for the pilot. A live connection (WebSockets or SSE) is deliberately not built until a club needs seconds rather than minutes. `/admin` keeps its own status poll and does not mount it.
+
+**A model read that fails says why** (Rui, 11-11-2026). Every AI reader (PDF tables for the list importers, water lab reports, energy bills, ID documents, boletim templates, qualification certificates) used to turn every failure into "could not read the file", so a rejected API key looked like a broken PDF. Each now classifies the failure in `lib/ai-failure.ts` from the SDK's typed errors, never by matching message text:
+
+- `keyRejected`: 401 or 403, the server's key.
+- `rateLimited`: 429.
+- `unavailable`: 5xx, 529 or the network.
+- `timeout`.
+- `fileRejected`: 400 or 413, a password-protected, too long or too large file. A 400 whose message names the API key or a workspace is `keyRejected`: a key not scoped to a workspace answers 400, and it is not the file.
+- `refused` and `tooLong`: from the stop reason.
+- `unreadable`: anything else.
+
+It logs `[ai:<reader>] <code> — HTTP <status> <message>` on the server, never the document. Screens show `ai.failure.<code>` through `aiNoteKey(namespace, code)` (`lib/ai-failure-codes.ts`, client-safe); `unreadable` keeps the screen's own sentence. The list importers share one map, `readFailureKey` in `lib/read-sheet.ts`, instead of seven copies. Column matching still falls back silently to the operator, but logs the cause.

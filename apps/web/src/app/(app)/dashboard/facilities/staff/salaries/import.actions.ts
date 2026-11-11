@@ -13,7 +13,7 @@ import {
   type SalaryMapping,
 } from '@/lib/salary-sheet';
 import type { MatchResult, NamedSheet, Sheet } from '@/lib/sheet';
-import { readSheet, type ReadFailure } from '@/lib/read-sheet';
+import { readSheet, readFailureKey } from '@/lib/read-sheet';
 
 /**
  * The salaries importer's three steps, as server actions — POOLSE-59.
@@ -81,18 +81,6 @@ export interface MatchState {
   attempt: number;
 }
 
-const READ_ERRORS: Record<ReadFailure, string> = {
-  fileMissing: 'students.import.errorFileMissing',
-  fileTooLarge: 'students.import.errorFileTooLarge',
-  fileType: 'students.import.errorFileType',
-  fileEmpty: 'students.import.errorFileEmpty',
-  fileUnreadable: 'students.import.errorFileUnreadable',
-  // The PDF reader is off — said, so a PDF is not mistaken for a broken file.
-  pdfDisabled: 'import.pdfDisabled',
-  pdfNoKey: 'import.pdfNoKey',
-  pdfCapReached: 'import.pdfCapReached',
-};
-
 /** The matcher, for a sheet the operator switched to. */
 export async function matchSheetAction(
   previous: MatchState,
@@ -129,7 +117,7 @@ export async function readSheetAction(previous: ReadState, formData: FormData): 
 
   const outcome = await readSheet(file, { pdf: true });
   if ('error' in outcome) {
-    return { ok: false, errorKey: READ_ERRORS[outcome.error], attempt };
+    return { ok: false, errorKey: readFailureKey(outcome.error), attempt };
   }
 
   const [first] = outcome.sheets;

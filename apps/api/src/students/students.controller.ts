@@ -1340,7 +1340,7 @@ function readNif(value: unknown, field: string): string | null {
  * instant — read in a local timezone west of Greenwich it would make somebody a
  * day younger and flip this answer on their eighteenth birthday.
  */
-function isMinor(birthDate: string, majority: number): boolean {
+export function isMinor(birthDate: string, majority: number): boolean {
   const born = new Date(`${birthDate}T00:00:00Z`);
   // The club's day, not the server's: between midnight and one in a Lisbon
   // summer the UTC day is yesterday (19-10-2026 sweep).

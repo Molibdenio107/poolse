@@ -1,6 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { readShell } from './shell';
+import type { AttentionLesson, AttentionPlace } from './attention-items';
 
 /**
  * Where something needs doing — POOLSE-120, read once per request: the layout's
@@ -18,8 +19,12 @@ export interface Attention {
   students: Record<string, number>;
   /** Turmas with no teacher — POOLSE-211. */
   classGroups?: Record<string, number>;
+  /** What the site circles stand for, named — the bell's lines (Rui, 11-11-2026). */
+  places?: AttentionPlace[];
+  /** The lessons behind the calendar's count, named — the bell's lines. */
+  lessons?: AttentionLesson[];
 }
 
-const NOTHING: Attention = { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {} };
+const NOTHING: Attention = { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {}, places: [], lessons: [] };
 
 export const readAttention = cache(async (): Promise<Attention> => (await readShell()).attention ?? NOTHING);

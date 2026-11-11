@@ -19,7 +19,7 @@ import {
   type QualifyingMapping,
   type SheetAgeGroup,
 } from '@/lib/qualifying-sheet';
-import { readSheet, type ReadFailure } from '@/lib/read-sheet';
+import { readSheet, readFailureKey } from '@/lib/read-sheet';
 import type { MatchResult, NamedSheet, Sheet } from '@/lib/sheet';
 
 /**
@@ -62,17 +62,6 @@ export interface RunState {
   attempt: number;
 }
 
-const READ_ERRORS: Record<ReadFailure, string> = {
-  fileMissing: 'students.import.errorFileMissing',
-  fileTooLarge: 'students.import.errorFileTooLarge',
-  fileType: 'students.import.errorFileType',
-  fileEmpty: 'students.import.errorFileEmpty',
-  fileUnreadable: 'students.import.errorFileUnreadable',
-  pdfDisabled: 'import.pdfDisabled',
-  pdfNoKey: 'import.pdfNoKey',
-  pdfCapReached: 'import.pdfCapReached',
-};
-
 async function groupsOf(standardId: string): Promise<SheetAgeGroup[] | null> {
   try {
     const standard = await apiFetch<QualifyingStandard>(`/qualifying/standards/${encodeURIComponent(standardId)}`);
@@ -94,7 +83,7 @@ export async function readSheetAction(previous: ReadState, formData: FormData): 
   const upload = formData.get('file');
   const file = upload instanceof File ? upload : null;
   const outcome = await readSheet(file, { pdf: true });
-  if ('error' in outcome) return { ok: false, errorKey: READ_ERRORS[outcome.error], attempt };
+  if ('error' in outcome) return { ok: false, errorKey: readFailureKey(outcome.error), attempt };
 
   const [first] = outcome.sheets;
   return {

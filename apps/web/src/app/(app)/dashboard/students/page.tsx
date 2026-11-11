@@ -20,7 +20,7 @@ import { PaymentMark } from './payment-mark';
 import { PageError, PageShell } from '@/components/page-shell';
 import { FamilyBulkInvite } from './family-bulk';
 import { InviteStudent } from './invite-student';
-import { Check } from 'lucide-react';
+import { AlertTriangle, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isMultiSport, isPoolseSport, type PoolseSport } from '@poolse/rules';
 import { SportChip } from '@/components/sport-chip';
@@ -582,6 +582,13 @@ export default async function StudentsPage({
                               {student.isGuardian && (
                                 <span className="rounded border border-primary/40 px-2 py-0.5 text-xs text-primary">
                                   {t('students.badgeGuardian')}
+                                </span>
+                              )}
+                              {/* A minor nobody answers for (Rui, 11-11-2026): in words, and counted in Por rever. */}
+                              {student.minorWithoutGuardian === true && (
+                                <span className="inline-flex items-center gap-1 rounded bg-danger/10 px-1.5 py-0.5 text-xs font-medium text-danger">
+                                  <AlertTriangle className="size-3" aria-hidden="true" />
+                                  {t('students.badgeMinorNoGuardian')}
                                 </span>
                               )}
                             </span>

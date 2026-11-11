@@ -1132,13 +1132,14 @@ test('support access refuses a guardian and a student (403)', async () => {
     await refused('GET support-grants', 403, () => support.list());
     await refused('POST support-grants', 403, () => support.open({ hours: 24 }));
     await refused('POST support-grants/:id/revoke', 403, () => support.revoke(NO_SUCH_ID));
+    await refused('POST support-grants/:id/acknowledge', 403, () => support.acknowledge(NO_SUCH_ID));
     await refused('GET support-grants/status', 403, () => support.status());
     await refused('GET support-grants/activity', 403, () => support.activity());
     await refused('GET support-grants/requests', 403, () => support.requests());
     await refused('POST support-grants/requests/:id/approve', 403, () =>
       support.approve(NO_SUCH_ID, { hours: 24 }),
     );
-    await refused('POST support-grants/requests/:id/decline', 403, () => support.decline(NO_SUCH_ID));
+    await refused('POST support-grants/requests/:id/decline', 403, () => support.decline(NO_SUCH_ID, { reason: 'Não agora' }));
   });
 });
 
@@ -1630,7 +1631,7 @@ test('GET attention answers a guardian and a student with an empty map', async (
   await asEach(async (who) => {
     assert.deepEqual(
       await new AttentionController().read(),
-      { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {}, classGroups: {} },
+      { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {}, classGroups: {}, places: [], lessons: [] },
       who.label,
     );
   });
@@ -1642,7 +1643,7 @@ test('GET shell gives a guardian and a student the logo and nothing that is not 
       await new ShellController().read(),
       {
         logoFileId: null,
-        attention: { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {}, classGroups: {} },
+        attention: { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {}, classGroups: {}, places: [], lessons: [] },
         meetInboxPending: null,
         subscriptionAlert: null,
         supportStatus: null,

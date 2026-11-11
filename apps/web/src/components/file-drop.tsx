@@ -30,11 +30,18 @@ function carriesFiles(event: DragEvent): boolean {
   return Array.from(event.dataTransfer?.types ?? []).includes('Files');
 }
 
+/** How many page-wide importer drops are mounted: `PageDrop` steps aside while any is (11-11-2026). */
+let pageDrops = 0;
+export function pageDropActive(): boolean {
+  return pageDrops > 0;
+}
+
 export function useFileDrop(onFile: (file: File) => void): { dragging: boolean } {
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     let depth = 0;
+    pageDrops += 1;
 
     const onEnter = (event: DragEvent): void => {
       if (!carriesFiles(event)) return;
@@ -69,6 +76,7 @@ export function useFileDrop(onFile: (file: File) => void): { dragging: boolean }
     window.addEventListener('drop', onDrop);
 
     return () => {
+      pageDrops -= 1;
       window.removeEventListener('dragenter', onEnter);
       window.removeEventListener('dragover', onOver);
       window.removeEventListener('dragleave', onLeave);

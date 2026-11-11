@@ -1,4 +1,5 @@
 import { NotificationBell } from '@/components/notification-bell';
+import { KeepFresh } from '@/components/keep-fresh';
 import { readAttention } from '@/lib/attention';
 import { redirect } from 'next/navigation';
 import { apiFetch, type Me } from '@/lib/api';
@@ -52,14 +53,15 @@ export default async function AppModeLayout({
 
   // POOLSE-212: the bell for a home that is told things; a family's map is empty.
   const told = homes.includes('teaching') || homes.includes('maintenance');
-  const badges = told ? (await readAttention()).menu : {};
+  const attention = told ? await readAttention() : null;
+  const badges = attention?.menu ?? {};
 
   return (
     <AppFrame
       organizationName={membership.organizationName}
       logoFileId={(await readShell()).logoFileId}
       homes={homes}
-      bell={told ? <NotificationBell badges={badges} place="app" /> : null}
+      bell={told ? <NotificationBell badges={badges} place="app" places={attention?.places ?? []} lessons={attention?.lessons ?? []} /> : null}
       banner={
         me.viewing == null ? null : (
           <ViewBanner name={me.viewing.name} hat={me.viewing.hat} expiresAt={me.viewing.expiresAt} />
@@ -67,6 +69,8 @@ export default async function AppModeLayout({
       }
     >
       {children}
+      {/* What other people did reaches a screen left open (Rui, 11-11-2026). */}
+      <KeepFresh />
     </AppFrame>
   );
 }

@@ -1,5 +1,6 @@
 'use server';
 
+import { aiNoteKey } from '@/lib/ai-failure-codes';
 import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiFetch, apiPost, type EnergyInvoiceCheck, type EnergyInvoiceDetail, type EnergyInvoiceList } from '@/lib/api';
@@ -57,7 +58,7 @@ export async function readInvoiceFileAction(
   if ('error' in result) {
     // Switched off for this club: a sentence, not a failure, and the form is there.
     if (result.error === 'off') return { ok: false, disabled: true, fileName: file.name, attempt };
-    return { ok: false, errorKey: `energy.invoice.${result.error}`, fileName: file.name, attempt };
+    return { ok: false, errorKey: aiNoteKey('energy.invoice', result.error), fileName: file.name, attempt };
   }
 
   return { ok: true, draft: result.draft, fileName: file.name, attempt };

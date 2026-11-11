@@ -20,6 +20,7 @@ import {
 import { BUTTON, BUTTON_QUIET, PANEL, PANEL_TITLE } from './styles';
 import { today as todayOfClub } from '@/lib/dates';
 import { PersonCategoriesCard } from '@/components/person-categories-card';
+import { ageInYears } from '@/lib/ages';
 
 const INITIAL: ReceptionState = { ok: false };
 
@@ -36,12 +37,15 @@ interface Chosen {
 export function PersonDesk({
   facilityId,
   products,
+  ageOfMajority,
   inWaterVersion,
   poolId,
   poolName,
 }: {
   facilityId: string;
   products: PassProduct[];
+  /** The club's maioridade: under it, Nova pessoa asks for the encarregado. */
+  ageOfMajority: number;
   /** Changes whenever the board's in-water list does — a check-out or a cancel there. */
   inWaterVersion: string;
   poolId: string;
@@ -61,6 +65,7 @@ export function PersonDesk({
         adding ? (
           <WalkInForm
             facilityId={facilityId}
+            ageOfMajority={ageOfMajority}
             onCreated={(person) => {
               setAdding(false);
               setChosen(person);
@@ -189,16 +194,22 @@ function PersonSearch({ onPick }: { onPick: (person: Chosen) => void }): React.R
 
 function WalkInForm({
   facilityId,
+  ageOfMajority,
   onCreated,
   onCancel,
 }: {
   facilityId: string;
+  ageOfMajority: number;
   onCreated: (person: Chosen) => void;
   onCancel: () => void;
 }): React.ReactElement {
   const t = useTranslations();
   const [first, setFirst] = useState('');
   const [last, setLast] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  // A child at the desk (Rui, 11-11-2026): the encarregado is asked, and the server refuses without one.
+  const age = birthDate === '' ? null : ageInYears(birthDate);
+  const minor = age !== null && age < ageOfMajority;
   const [state, submit, pending] = useSavedAction(
     async (previous: ReceptionState, formData: FormData) => {
       const next = await walkInAction(previous, formData);
@@ -257,7 +268,61 @@ function WalkInForm({
           error={error('taxNumber')}
           className="max-w-none"
         />
+        <TextField
+          name="birthDate"
+          type="date"
+          label={t('reception.birthDate')}
+          initial={birthDate}
+          onValueChange={setBirthDate}
+          error={error('birthDate')}
+          className="max-w-none"
+        />
       </div>
+      {minor && (
+        <fieldset className="flex flex-col gap-3 rounded border border-border p-3">
+          <legend className="px-1 text-sm font-medium">{t('reception.guardianTitle')}</legend>
+          <p className="text-sm text-foreground-muted">{t('reception.guardianHint', { age: ageOfMajority })}</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <TextField
+              name="guardianName"
+              label={t('students.guardianName')}
+              error={error('guardianName')}
+              required
+              className="max-w-none"
+            />
+            <TextField
+              name="guardianRelationship"
+              label={t('students.guardianRelationship')}
+              placeholder={t('students.guardianRelationshipPlaceholder')}
+              error={error('guardianRelationship')}
+              required
+              className="max-w-none"
+            />
+            <TextField
+              name="guardianPhone"
+              type="tel"
+              inputMode="tel"
+              label={t('reception.guardianPhone')}
+              error={error('guardianPhone')}
+              className="max-w-none"
+            />
+            <TextField
+              name="guardianEmail"
+              type="email"
+              label={t('reception.guardianEmail')}
+              error={error('guardianEmail')}
+              className="max-w-none"
+            />
+            <TextField
+              name="guardianTaxNumber"
+              inputMode="numeric"
+              label={t('reception.guardianTaxNumber')}
+              error={error('guardianTaxNumber')}
+              className="max-w-none"
+            />
+          </div>
+        </fieldset>
+      )}
       <div className="flex gap-2">
         <button type="submit" disabled={pending} className={BUTTON}>
           {t('reception.addPerson')}

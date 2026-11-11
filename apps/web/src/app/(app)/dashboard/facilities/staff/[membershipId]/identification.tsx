@@ -1,5 +1,6 @@
 'use client';
 
+import { aiNoteKey } from '@/lib/ai-failure-codes';
 import { startTransition, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Camera, Lock, Trash2 } from 'lucide-react';
@@ -91,7 +92,7 @@ export function Identification({
           {storageReady ? t('staffIdentity.photo.hint') : t('files.notConfigured')}
         </span>
         {state.readNote !== undefined && (
-          <span className="text-sm text-foreground-muted">{t(`documents.idPhoto.note.${state.readNote}`)}</span>
+          <span className="text-sm text-foreground-muted">{t(aiNoteKey('documents.idPhoto.note', state.readNote))}</span>
         )}
       </section>
 

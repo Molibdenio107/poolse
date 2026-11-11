@@ -1,9 +1,10 @@
 'use server';
 
+import { aiNoteKey } from '@/lib/ai-failure-codes';
 import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
 import { revalidatePath } from 'next/cache';
 import { apiPost } from '@/lib/api';
-import { readSheet, type ReadFailure } from '@/lib/read-sheet';
+import { readSheet, readFailureKey } from '@/lib/read-sheet';
 import { reportMediaType, type ReportRow } from '@/lib/analysis-report';
 import { analysisReportParser } from '@/lib/analysis-report-agent';
 import { describeFailure } from '@/lib/form-failure';
@@ -61,18 +62,6 @@ export interface WaterReadState {
   attempt: number;
 }
 
-const READ_ERRORS: Record<ReadFailure, string> = {
-  fileMissing: 'students.import.errorFileMissing',
-  fileTooLarge: 'students.import.errorFileTooLarge',
-  fileType: 'students.import.errorFileType',
-  fileEmpty: 'students.import.errorFileEmpty',
-  fileUnreadable: 'students.import.errorFileUnreadable',
-  // The PDF reader is off — said, so a PDF is not mistaken for a broken file.
-  pdfDisabled: 'import.pdfDisabled',
-  pdfNoKey: 'import.pdfNoKey',
-  pdfCapReached: 'import.pdfCapReached',
-};
-
 /**
  * Step one: the file becomes sheets, or becomes rows.
  *
@@ -109,7 +98,7 @@ export async function readWaterFileAction(
 
   const result = await readSheet(file);
   if ('error' in result) {
-    return { ok: false, errorKey: READ_ERRORS[result.error], attempt };
+    return { ok: false, errorKey: readFailureKey(result.error), attempt };
   }
 
   // The reader returns sheets only; the name is the browser's, and it is worth
@@ -153,7 +142,7 @@ async function readReport(
       // up are sentences of their own (POOLSE-137).
       ...(result.error === 'off'
         ? { reportDisabled: true }
-        : { errorKey: `facilities.waterImport.report.${result.error}` }),
+        : { errorKey: aiNoteKey('facilities.waterImport.report', result.error) }),
       fileName: file.name,
       attempt,
     };

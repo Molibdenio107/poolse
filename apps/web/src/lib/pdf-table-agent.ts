@@ -1,4 +1,5 @@
 import 'server-only';
+import { classifyAiError, stopFailure, type AiFailure } from './ai-failure';
 import Anthropic from '@anthropic-ai/sdk';
 import { anthropicKeyConfigured, metered } from './ai-meter';
 
@@ -85,7 +86,7 @@ export interface PdfTable {
 export type PdfTableResult =
   | { tables: PdfTable[] }
   /** `off`, `noKey` and `capReached` mean the call was never made (POOLSE-137). */
-  | { error: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' };
+  | { error: 'off' | 'noKey' | 'capReached' | 'nothingFound' | AiFailure };
 
 function strings(value: unknown): string[] | null {
   return Array.isArray(value) && value.every((cell) => typeof cell === 'string')
@@ -153,20 +154,18 @@ export async function readPdfTables(bytes: ArrayBuffer): Promise<PdfTableResult>
       .finalMessage();
     used = response;
 
-    if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') {
-      return { error: 'unreadable' };
-    }
+    const stopped = stopFailure(response.stop_reason);
+    if (stopped !== null) return { error: stopped };
     const text = response.content
       .filter((block): block is Anthropic.Beta.BetaTextBlock => block.type === 'text')
       .map((block) => block.text)
       .join('');
     const tables = readTables(JSON.parse(text));
     return tables.length === 0 ? { error: 'nothingFound' } : { tables };
-  } catch {
-    // Rate limited, timed out, a bad key, a PDF the API refuses, a reply that
-    // is not JSON. All one thing to the operator: this file could not be read,
-    // and a spreadsheet still can.
-    return { error: 'unreadable' };
+  } catch (error) {
+    // Said for what it is (Rui, 11-11-2026): a rejected key, a busy service and a
+    // PDF the API refuses are three different next steps, and the log keeps the cause.
+    return { error: classifyAiError('pdf_table', error) };
   }
   };
 

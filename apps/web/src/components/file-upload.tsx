@@ -72,6 +72,7 @@ export function FileUpload({
   const off = unavailable !== undefined && unavailable !== null;
   const busy = isPending || preparing;
 
+
   async function send(file: File): Promise<void> {
     setPreparing(true);
     let ready = file;
@@ -122,6 +123,9 @@ export function FileUpload({
       type="file"
       className="hidden"
       accept={acceptFor(purpose)}
+      // For the page-wide drop (Rui, 11-11-2026): its name in "Onde guardar?", and off while it cannot take one.
+      data-drop-label={ariaLabel ?? label}
+      data-drop-off={off || busy ? 'true' : undefined}
       onChange={(event) => chosen(event.target.files)}
     />
   );
@@ -168,17 +172,7 @@ export function FileUpload({
 
   return (
     <div
-      onDragOver={(event) => {
-        if (off || busy) return;
-        event.preventDefault();
-        setDragging(true);
-      }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={(event) => {
-        event.preventDefault();
-        setDragging(false);
-        if (!off && !busy) chosen(event.dataTransfer.files);
-      }}
+      {...dropProps}
       className={cn(
         'flex flex-col items-center gap-2 rounded border border-dashed border-border bg-surface-muted p-6 text-center',
         dragging && 'border-primary bg-primary/10',

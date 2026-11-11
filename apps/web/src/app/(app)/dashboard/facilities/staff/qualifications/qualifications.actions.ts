@@ -1,5 +1,6 @@
 'use server';
 
+import type { AiFailure } from '@/lib/ai-failure-codes';
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiDelete, apiFetch, apiPatch, apiPost, apiPut, apiUpload, type Me, type QualificationTypes } from '@/lib/api';
 import { describeFailure } from '@/lib/form-failure';
@@ -75,7 +76,7 @@ export async function addQualificationAction(
 export interface CertificateState extends FormState {
   file?: { id: string; name: string; contentType: string };
   draft?: CertificateDraft;
-  readNote?: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' | 'notAllowed' | 'rateLimited';
+  readNote?: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' | 'notAllowed' | AiFailure;
 }
 
 export async function dropCertificateAction(_previous: CertificateState, formData: FormData): Promise<CertificateState> {

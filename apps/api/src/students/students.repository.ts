@@ -237,6 +237,8 @@ export interface Student {
    * point away from her.
    */
   isAdultStudent: boolean;
+  /** Under the club's majority with no encarregado — the register's warning (11-11-2026). */
+  minorWithoutGuardian?: boolean;
   /** POOLSE-177: a linked adult, whose name and email are their own account's. */
   identityFromLogin: boolean;
   isGuardian: boolean;
@@ -821,6 +823,24 @@ const PAYMENT_STATE = `(
  */
 const IS_ADULT_STUDENT = `student_is_adult_path(s.organization_id, s.id)`;
 
+/**
+ * A student under the club's age of majority with no live encarregado (Rui,
+ * 11-11-2026). The save refuses such a minor (`parseStudent`), but the importer
+ * lets one in with a warning and a birth date can arrive later, so the register
+ * and *Por rever* say so. A declared date counts: a child who says they are ten
+ * is not waited on for the office to confirm it. No birth date, no warning —
+ * after an import that is most rows. The one definition, read by both.
+ */
+export const MINOR_WITHOUT_GUARDIAN = (alias: string): string => `(
+  ${alias}.birth_date IS NOT NULL
+  AND ${alias}.birth_date > club_today() - make_interval(years => (
+        SELECT o.age_of_majority FROM organization o WHERE o.id = ${alias}.organization_id))
+  AND NOT EXISTS (
+        SELECT 1 FROM guardian_link g
+         WHERE g.organization_id = ${alias}.organization_id AND g.student_id = ${alias}.id
+           AND g.archived_at IS NULL)
+)`;
+
 const IS_GUARDIAN = `(
   s.membership_id IS NOT NULL AND EXISTS (
     SELECT 1 FROM guardian_access gl2
@@ -1036,6 +1056,7 @@ export async function listStudents(
              ${PHOTO_CONSENT} AS photo_consent,
              ${IS_ADULT_STUDENT} AS is_adult_student,
              ${IS_GUARDIAN} AS is_guardian,
+             ${MINOR_WITHOUT_GUARDIAN('s')} AS minor_without_guardian,
              ${STUDENT_SPORTS('s')}::text[] AS sports,
              ${STUDENT_TURMAS} AS turmas,
              ${INSURANCE_STATE} AS insurance_state,
@@ -1647,7 +1668,9 @@ export async function studentsToReview(
                       AND f.decision IS NULL) AS pending,
                   (s.birth_date_declared_at IS NOT NULL)::int
                   -- POOLSE-207: came of age with a parent's link, not yet looked at.
-                  + (s.id IN (SELECT p.student_id FROM majority_pending($1) p))::int AS declared
+                  + (s.id IN (SELECT p.student_id FROM majority_pending($1) p))::int
+                  -- A minor with no encarregado (Rui, 11-11-2026).
+                  + (${MINOR_WITHOUT_GUARDIAN('s')})::int AS declared
              FROM student s
             WHERE s.archived_at IS NULL
          ) r
@@ -2143,6 +2166,7 @@ function toStudent(row: {
   is_adult_student: boolean;
   identity_from_login: boolean;
   is_guardian: boolean;
+  minor_without_guardian?: boolean;
   sports?: string[];
   left_on?: string | null;
   turmas?: { id: string; name: string }[] | null;
@@ -2197,6 +2221,7 @@ function toStudent(row: {
     isAdultStudent: row.is_adult_student,
     identityFromLogin: row.identity_from_login,
     isGuardian: row.is_guardian,
+    ...(row.minor_without_guardian === undefined ? {} : { minorWithoutGuardian: row.minor_without_guardian }),
     ...(row.sports === undefined ? {} : { sports: row.sports }),
     ...(row.insurance_state === undefined
       ? {}

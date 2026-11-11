@@ -2,6 +2,7 @@ import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { personName } from '../people/names.js';
+import { insertStudent, type StudentInput } from '../students/students.repository.js';
 
 /**
  * Free swim — POOLSE-68, slice 1.
@@ -166,6 +167,8 @@ export interface Reception {
   inWater: InWater[];
   products: PassProduct[];
   month: FreeSwimMonth;
+  /** The club's age of majority — the desk's Nova pessoa asks for an encarregado under it. */
+  ageOfMajority?: number;
 }
 
 /**
@@ -1187,6 +1190,13 @@ export interface WalkInInput {
   email: string | null;
   phone: string | null;
   taxNumber: string | null;
+  birthDate: string | null;
+  /**
+   * A minor at the desk (Rui, 11-11-2026): also a student, with the encarregado
+   * the student form demands, so somebody answers for the child. Already
+   * checked by `parseStudent`; null for an adult or an unknown age.
+   */
+  student: StudentInput | null;
 }
 
 /**
@@ -1198,17 +1208,28 @@ export async function createWalkIn(organizationId: string, input: WalkInInput): 
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO membership
-         (organization_id, status, first_name, last_name, email, phone, tax_number)
-       VALUES ($1, 'active', $2, $3, $4::citext, $5, $6)
+         (organization_id, status, first_name, last_name, email, phone, tax_number, birth_date)
+       VALUES ($1, 'active', $2, $3, $4::citext, $5, $6, $7::date)
        RETURNING id`,
-      [organizationId, input.firstName, input.lastName, input.email, input.phone, input.taxNumber],
+      [organizationId, input.firstName, input.lastName, input.email, input.phone, input.taxNumber, input.birthDate],
     );
     const id = rows[0]!.id;
+    /*
+     * The child is a student too, the person the desk sells to: `membership_id`
+     * is "known to the club in their own right", which a swimmer buying passes
+     * is. One transaction, so a refused encarregado leaves no orphan person.
+     */
+    let studentId: string | null = null;
+    if (input.student !== null) {
+      studentId = await insertStudent(tx, organizationId, input.student);
+      if (studentId === null) throw new Error('walk-in student: no such level');
+      await tx.query(`UPDATE student SET membership_id = $2 WHERE id = $1`, [studentId, id]);
+    }
     await recordAudit(tx, {
       action: 'membership.walk_in_created',
       entityType: 'membership',
       entityId: id,
-      data: {},
+      data: studentId === null ? {} : { studentId },
     });
     return id;
   });

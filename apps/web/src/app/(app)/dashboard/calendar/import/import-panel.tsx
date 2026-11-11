@@ -2,13 +2,15 @@
 
 import type { PoolseSport } from '@poolse/rules';
 import { sportNameKey } from '@/components/sport-icon';
-import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
+import { startTransition, useActionState, useCallback, useEffect, useRef, useState } from 'react';
+import { useBusyWhile } from '@/lib/busy';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, FileSpreadsheet, Upload } from 'lucide-react';
+import { FileSpreadsheet, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import {
   readOtherSheetAction,
+  extendHoursAction,
   readTimetableAction,
   runTimetableImportAction,
   type ImportState,
@@ -16,6 +18,8 @@ import {
   type TimetableRow,
 } from './import.actions';
 import { Dialog } from '@/components/ui/dialog';
+import { useToast } from '@/components/ui/toast';
+import { ConflictGroups } from './conflict-groups';
 import { SelectField } from '@/components/ui/field';
 
 /**
@@ -83,6 +87,7 @@ export function TimetableImport({
   compact?: boolean;
 }): React.ReactElement | null {
   const t = useTranslations();
+  const toast = useToast();
 
   const [open, setOpen] = useState(false);
   /** The dropped file waiting for a yes or a no. */
@@ -125,16 +130,20 @@ export function TimetableImport({
   const onFile = useCallback((file: File) => setPending(file), []);
   const { dragging } = useFileDrop(onFile);
 
-  const [read, readAction] = useActionState(readTimetableAction, { ok: false, attempt: 0 });
+  const [read, readAction, readPending] = useActionState(readTimetableAction, { ok: false, attempt: 0 });
+  // A PDF goes to the model and takes seconds: the corner says so, and so does the button (11-11-2026).
+  // Reading and checking wash the page and this dialog, so the wait is seen and not clicked through.
+  useBusyWhile(readPending, 'load', 'navigate');
   const [other, otherAction] = useActionState(readOtherSheetAction, { ok: false, attempt: 0 });
   const [run, runAction, running] = useActionState(runTimetableImportAction, {
     ok: false,
     attempt: 0,
   });
+  useBusyWhile(running, 'load', 'navigate');
 
   /** Rows the operator has dropped in the dialog — decision 2's only verb. */
   const [dropped, setDropped] = useState<number[]>([]);
-  const [showConflicts, setShowConflicts] = useState(false);
+  const [extending, setExtending] = useState(false);
 
   // A switched sheet counts only for the file it was switched on.
   const otherIsCurrent = other.fromFile === read.attempt;
@@ -151,21 +160,47 @@ export function TimetableImport({
    */
   useEffect(() => {
     setDropped([]);
-    setShowConflicts(false);
   }, [read.attempt, other.attempt]);
 
-  // Reading a file always opens the panel; the drop is how most people will.
+  /*
+   * Reading a file always opens the panel; the drop is how most people will.
+   * A refusal opens it too (Rui, 11-11-2026): a dropped PDF with the reader off
+   * was refused into a closed dialog, and nothing at all appeared.
+   */
   useEffect(() => {
-    if (read.ok) setOpen(true);
-  }, [read.ok, read.attempt]);
+    if (read.attempt > 0) setOpen(true);
+  }, [read.attempt]);
+
+  /** Check again with these rows left out, or import with them left out — one request. */
+  const recheck = (drop: number[], commit: boolean): void => {
+    setDropped(drop);
+    const data = new FormData();
+    data.set('facilityId', facilityId);
+    data.set('poolId', poolId);
+    data.set('rows', JSON.stringify(candidates));
+    data.set('settings', JSON.stringify({ commit, drop }));
+    startTransition(() => runAction(data));
+  };
+
+  /** *Alargar o horário*, then check again: the rows it held back come in. */
+  const extendHours = async (): Promise<void> => {
+    const needed = run.result?.hoursNeeded ?? [];
+    if (needed.length === 0) return;
+    setExtending(true);
+    const answer = await extendHoursAction(facilityId, needed);
+    setExtending(false);
+    if (!answer.ok) {
+      toast.show('danger', t(answer.errorKey ?? 'facilities.hoursSaveFailed'));
+      return;
+    }
+    recheck(dropped, false);
+  };
+  useBusyWhile(extending, 'save');
 
   if (!canManage) return null;
 
-  const rows = result?.rows ?? [];
-  const conflicted = rows.filter((row) => !row.importable);
-  // A row somebody chose not to import has nothing left to warn about.
-  const flaggedRows = rows.filter((row) => row.warnings.length > 0 && !dropped.includes(row.index));
   const blocked = result === undefined ? 0 : result.summary.blocked + result.summary.refused;
+  const held = blocked;
 
   return (
     <>
@@ -262,17 +297,29 @@ export function TimetableImport({
           <div className="max-w-md">{poolPicker}</div>
 
           {/* Step one — the file. */}
-          <form action={readAction} className="flex flex-wrap items-center gap-3">
+          {/*
+            onSubmit, not action (11-11-2026): a form action resets the form, which
+            emptied the file box after every read — it said "no file chosen" beside
+            a result, and Ler again was refused as a missing field.
+          */}
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const data = new FormData(event.currentTarget);
+              startTransition(() => readAction(data));
+            }}
+            className="flex flex-wrap items-center gap-3"
+          >
             <input
               type="file"
               name="file"
-              aria-label={t('timetableImport.title')}
+              aria-label={t('timetableImport.file')}
               accept={ACCEPTED.join(',')}
               required
               className="text-sm file:mr-3 file:rounded file:border file:border-border file:bg-surface-muted file:px-3 file:py-1.5 file:text-sm"
             />
-            <button type="submit" disabled={poolId === ''} className={BUTTON_QUIET}>
-              {t('timetableImport.read')}
+            <button type="submit" disabled={poolId === '' || readPending} aria-busy={readPending} className={BUTTON_QUIET}>
+              {readPending ? t('timetableImport.reading') : t('timetableImport.read')}
             </button>
           </form>
 
@@ -319,11 +366,28 @@ export function TimetableImport({
               ) : (
                 <>
                   <p className="text-sm text-foreground-muted">
+                    {read.fileName !== undefined && read.fileName !== '' && (
+                      <span className="font-medium text-foreground">{read.fileName}: </span>
+                    )}
                     {t('timetableImport.found', {
                       days: reading.days.length,
                       bookings: candidates.length,
                     })}
                   </p>
+
+                  {/*
+                    Why nothing can be checked, in words (11-11-2026): "0 marcações"
+                    beside a greyed button said that something failed, not what.
+                  */}
+                  {candidates.length === 0 && (
+                    <p role="alert" className="text-sm text-danger">
+                      {reading.timeColumn === null
+                        ? t('timetableImport.noTimes', {
+                            days: reading.days.map((day) => day.heading).join(', '),
+                          })
+                        : t('timetableImport.noBookings')}
+                    </p>
+                  )}
 
                   {reading.unplaced.length > 0 && (
                     <details className="text-sm">
@@ -384,50 +448,21 @@ export function TimetableImport({
                   </p>
 
                   {/*
-                    The warnings — criterion 6. They never hold a row back, which
-                    is exactly why they are said here: an instructor the file
-                    names and Poolse does not know is imported without one, and
-                    finding that out a week later on the calendar is too late.
+                    By cause, one action each (Rui, 11-11-2026), instead of a card per row.
+                    The commit shows once nothing is held back; *Importar as N sem
+                    conflito* is the one-click way there.
                   */}
-                  {flaggedRows.length > 0 && (
-                    <ul className="flex flex-col gap-1 rounded border border-warning/40 bg-warning/5 p-3 text-sm">
-                      {flaggedRows.flatMap((row) =>
-                        row.warnings.map((warning) => (
-                          <li key={`${row.index}:${warning.code}`} className="flex items-start gap-2">
-                            <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
-                            <span>
-                              <span className="font-medium">{row.name}</span>{' '}
-                              <span className="text-foreground-muted">
-                                ({t('timetableImport.line', { line: row.line })})
-                              </span>{' '}
-                              — {t(`timetableImport.warning.${warning.code}`, { value: warning.value ?? '' })}
-                            </span>
-                          </li>
-                        )),
-                      )}
-                    </ul>
-                  )}
-
-                  {blocked > 0 ? (
-                    <div className="flex flex-col items-start gap-3 rounded border border-warning/40 bg-warning/5 p-4">
-                      <p className="flex items-start gap-2 text-sm">
-                        <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
-                        {/*
-                          Decision 1, said out loud. The button below is disabled
-                          and this is why — an operator should never be left
-                          hunting for the reason a control will not work.
-                        */}
-                        <span>{t('timetableImport.blocked', { count: blocked })}</span>
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setShowConflicts(true)}
-                        className={BUTTON_QUIET}
-                      >
-                        {t('timetableImport.resolve')}
-                      </button>
-                    </div>
-                  ) : (
+                  <ConflictGroups
+                    rows={result.rows}
+                    dropped={dropped}
+                    hoursNeeded={result.hoursNeeded ?? []}
+                    working={running || extending}
+                    onDrop={(indexes) => recheck([...new Set([...dropped, ...indexes])], false)}
+                    onKeep={(indexes) => recheck(dropped.filter((one) => !indexes.includes(one)), false)}
+                    onExtendHours={() => void extendHours()}
+                    onImportClean={(indexes) => recheck([...new Set([...dropped, ...indexes])], true)}
+                  />
+                  {held > 0 ? null : (
                     <form
                       action={(data) => {
                         data.set('facilityId', facilityId);
@@ -449,159 +484,6 @@ export function TimetableImport({
         </div>
       </Dialog>
 
-      {showConflicts && result !== undefined && (
-        <ConflictDialog
-          rows={conflicted}
-          dropped={dropped}
-          onDrop={(index) => setDropped((was) => [...new Set([...was, index])])}
-          onKeep={(index) => setDropped((was) => was.filter((one) => one !== index))}
-          onClose={() => setShowConflicts(false)}
-          onRecheck={() => {
-            setShowConflicts(false);
-            const data = new FormData();
-            data.set('facilityId', facilityId);
-            data.set('poolId', poolId);
-            data.set('rows', JSON.stringify(candidates));
-            data.set('settings', JSON.stringify({ commit: false, drop: dropped }));
-            runAction(data);
-          }}
-        />
-      )}
     </>
-  );
-}
-
-/**
- * "Listing which conflict happens, and then the user decides" — decision 2.
- *
- * Each row names both sides. `withLine` is what makes a clash decidable: a
- * collision with **another line of this file** is a choice between two things
- * arriving, and a collision with **the grid** is a choice about something the
- * club already has. Those are different decisions and the dialog says which.
- *
- * One verb — *drop this row*. Overwriting is not offered, because the class
- * already on the grid may have a register, a reposição booked against it and a
- * parent who was told about it, and none of that is visible from a spreadsheet.
- */
-function ConflictDialog({
-  rows,
-  dropped,
-  onDrop,
-  onKeep,
-  onClose,
-  onRecheck,
-}: {
-  rows: TimetableRow[];
-  dropped: number[];
-  onDrop: (index: number) => void;
-  onKeep: (index: number) => void;
-  onClose: () => void;
-  onRecheck: () => void;
-}): React.ReactElement {
-  const t = useTranslations();
-
-  const clock = (minutes: number): string =>
-    `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-
-  // The shared Dialog: Escape, the focus trap and returning focus come with it.
-  // Wider than a question, because each row carries both sides of its clash.
-  return (
-    <Dialog
-      open
-      onClose={onClose}
-      title={t('timetableImport.conflictsTitle', { count: rows.length })}
-      description={t('timetableImport.conflictsHint')}
-      closeLabel={t('common.close')}
-      className="max-w-2xl"
-    >
-      <div className="flex flex-col gap-4">
-
-        <ul className="flex flex-col gap-3">
-          {rows.map((row) => {
-            const isDropped = dropped.includes(row.index);
-
-            return (
-              <li
-                key={row.index}
-                className={cn(
-                  'flex flex-col gap-2 rounded border p-3',
-                  isDropped ? 'border-border bg-surface-muted opacity-70' : 'border-warning/40',
-                )}
-              >
-                <div className="flex flex-wrap items-baseline gap-x-3 text-sm">
-                  <span className="font-medium">{row.name}</span>
-                  <span className="text-foreground-muted">
-                    {t(`week.${row.weekday}`)} · {clock(row.startMinutes)} ·{' '}
-                    {row.laneNames.join(', ')}
-                  </span>
-                  <span className="text-foreground-muted">
-                    {t('timetableImport.line', { line: row.line })}
-                  </span>
-                </div>
-
-                {/* Why it collides, and with what — both sides, always. */}
-                <ul className="flex flex-col gap-1 text-sm">
-                  {row.problems.map((problem) => (
-                    <li key={problem.code} className="text-danger">
-                      {t(`timetableImport.problem.${problem.code}`, {
-                        value: problem.value ?? '',
-                      })}
-                    </li>
-                  ))}
-                  {row.clashes.map((clash, at) => (
-                    <li key={`${clash.code}:${at}`} className="text-foreground">
-                      {/*
-                        The rule's own figures — 15-10-2026 sweep. These used to
-                        be zeros, so "4 alunos numa pista para 3" read "0 numa
-                        pista para 0". The zeros below stand only for a
-                        placeholder this code does not use; the names come from
-                        `namesOfOther`, which also knows an earlier line.
-                      */}
-                      {t(`grid.reason.${clash.code}`, {
-                        reason: '',
-                        count: 0,
-                        limit: 0,
-                        headcount: 0,
-                        capacity: 0,
-                        ...(clash.detail ?? {}),
-                        holder: clash.with ?? clash.detail?.['holder'] ?? '—',
-                        lane: clash.lane ?? clash.detail?.['lane'] ?? '—',
-                      })}
-                      {clash.withLine !== null && (
-                        <span className="text-foreground-muted">
-                          {' '}
-                          — {t('timetableImport.sameFile', { line: clash.withLine })}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="flex flex-wrap gap-2">
-                  {isDropped ? (
-                    <button type="button" onClick={() => onKeep(row.index)} className={BUTTON_QUIET}>
-                      {t('timetableImport.keepRow')}
-                    </button>
-                  ) : (
-                    <button type="button" onClick={() => onDrop(row.index)} className={BUTTON_QUIET}>
-                      {t('timetableImport.dropRow')}
-                    </button>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-
-        <div className="flex flex-wrap gap-3 border-t border-border pt-4">
-          <button type="button" onClick={onRecheck} className={BUTTON}>
-            {t('timetableImport.recheck')}
-          </button>
-          <button type="button" onClick={onClose} className={BUTTON_QUIET}>
-            {t('common.cancel')}
-          </button>
-        </div>
-      </div>
-    </Dialog>
   );
 }

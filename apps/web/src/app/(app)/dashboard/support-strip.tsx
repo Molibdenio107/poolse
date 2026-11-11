@@ -74,7 +74,13 @@ export function SupportSessionBanner({
 }
 
 /**
- * The club's own, quieter: support may be in until …, or support has asked.
+ * The club's own: support may be in until …, or support has asked.
+ *
+ * Amber, not the app's grey (Rui, 11-11-2026): in the surface colour it read as
+ * part of the page and was missed. `.support-strip` is the warning wash the
+ * late badge uses, measured AA with the ink, plus a 2px warning rule; the
+ * sentence is bold and the Owner's answer is the filled button. Words still
+ * carry it — the colour only makes it impossible to read past.
  * The Owner gets the way to answer; an Admin is told, so an unfamiliar name
  * in the log reads as Poolse and not as a stranger.
  */
@@ -82,32 +88,39 @@ export function ClubSupportStrip({
   isOwner,
   liveUntil,
   pendingRequests,
+  endedAt = null,
 }: {
   isOwner: boolean;
   liveUntil: string | null;
   pendingRequests: number;
+  /** Support ended its session itself, within the day (11-11-2026): said, then gone after 24 h. */
+  endedAt?: string | null;
 }): React.ReactElement | null {
   const t = useTranslations();
-  if (liveUntil === null && pendingRequests === 0) return null;
+  if (liveUntil === null && pendingRequests === 0 && endedAt === null) return null;
 
+  // Nothing to do once support has left: the same amber, still, and a link to what it did.
+  const left = liveUntil === null && pendingRequests === 0;
   const sentence =
     liveUntil !== null
       ? t('support.clubStripLive', { time: formatTime(liveUntil), date: formatDate(liveUntil) })
-      : t('support.clubStripAsked', { count: pendingRequests });
+      : pendingRequests > 0
+        ? t('support.clubStripAsked', { count: pendingRequests })
+        : t('support.clubStripEnded', { time: formatTime(endedAt), date: formatDate(endedAt) });
 
   return (
     <div
       role="status"
-      className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-surface-muted px-6 py-2.5 text-sm print:hidden"
+      className={`support-strip ${left ? 'support-strip-still' : ''} flex flex-wrap items-center gap-x-3 gap-y-2 px-6 py-3 text-sm print:hidden`}
     >
-      <Headset aria-hidden className="size-4 shrink-0 text-foreground-muted" />
-      <p className="min-w-0 flex-1">{sentence}</p>
+      <Headset aria-hidden className="size-5 shrink-0 text-warning" />
+      <p className="min-w-0 flex-1 font-semibold text-foreground">{sentence}</p>
       {isOwner && (
         <FromLink
           href="/dashboard/profile?tab=support"
-          className={`${BUTTON} border-border bg-surface hover:border-primary/50 hover:text-primary`}
+          className={`${BUTTON} border-primary bg-primary text-primary-foreground hover:bg-primary/90 font-semibold`}
         >
-          {liveUntil !== null ? t('support.manage') : t('support.answer')}
+          {liveUntil !== null ? t('support.manage') : left ? t('support.seeWhatWasDone') : t('support.answer')}
         </FromLink>
       )}
     </div>

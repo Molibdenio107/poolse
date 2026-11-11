@@ -992,7 +992,8 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
 .attention-row {
   /* Subtler again (Rui, 10-11-2026): a 2px bar at partial strength and a barely-there tint. */
   box-shadow: inset 2px 0 0 rgb(var(--primary) / 0.7);
-  background-color: rgb(var(--primary) / 0.035);
+  /* An image, not a colour, so the tint lies over a card's own surface rather than replacing it (11-11-2026). */
+  background-image: linear-gradient(rgb(var(--primary) / 0.035), rgb(var(--primary) / 0.035));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1118,6 +1119,54 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
 .lesson-tint-class-7 { --tint: var(--class-7); }
 .lesson-tint-class-8 { --tint: var(--class-8); }
 .lesson-tint-none { --tint: var(--level-none); }
+/*
+ * Poolse support has asked, or is in (Rui, 11-11-2026): the club's strip in the warning
+ * wash (.15, the same measured-AA wash as below) over the surface, with a 2px warning rule
+ * under it, so it cannot pass for part of the page. Words carry it; this only stops it being missed.
+ */
+.support-strip {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(rgb(var(--warning) / 0.15) 0 0), rgb(var(--surface));
+  border-bottom: 2px solid rgb(var(--warning));
+}
+
+/*
+ * Pulse is Poolse (Rui, 11-11-2026): the whole strip breathes, on the dots' own 2.4 s breath,
+ * by a second amber wash fading in and out behind its content. It never goes darker than .28,
+ * and the sentence is the foreground ink, never the warning ink, so contrast holds at the peak.
+ * Still under reduced motion.
+ */
+@keyframes support-breathe {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.support-strip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgb(var(--warning) / 0.13);
+  pointer-events: none;
+  animation: support-breathe 2.4s ease-in-out infinite;
+}
+/* Support has left: said, not pulsing — there is nothing to do (11-11-2026). */
+.support-strip-still::before {
+  animation: none;
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .support-strip::before {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 /*
  * The handoff's block states (multi-sport Slice 4). Sem professor is the amber
  * wash the late badge uses (.15, measured AA in contrast:check; the handoff's .28

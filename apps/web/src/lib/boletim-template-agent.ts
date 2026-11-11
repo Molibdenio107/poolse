@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { classifyAiError, stopFailure, type AiFailure } from './ai-failure';
 import { fieldsFor, placementsFromGrid, type BoletimField, type BoletimPlacement, type TemplateKind } from '@poolse/rules';
 import { anthropicKeyConfigured, metered } from './ai-meter';
 
@@ -119,7 +120,7 @@ function schema(kind: TemplateKind): Record<string, unknown> {
 /** `off`, `noKey` and `capReached` mean the call was never made (POOLSE-137). */
 export type BoletimLayoutRead =
   | { placements: BoletimPlacement[] }
-  | { error: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' };
+  | { error: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' | AiFailure };
 
 /** Call only after the gate (`readAiReaderGate('boletim_template')`) said null. */
 export async function readBoletimLayout(bytes: Buffer, mediaType: string, kind: TemplateKind): Promise<BoletimLayoutRead> {
@@ -152,7 +153,7 @@ export async function readBoletimLayout(bytes: Buffer, mediaType: string, kind: 
         { timeout: 90_000 },
       );
       used = response;
-      if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') return { error: 'unreadable' };
+      { const stopped = stopFailure(response.stop_reason); if (stopped !== null) return { error: stopped }; }
       const text = response.content
         .filter((part): part is Anthropic.Beta.BetaTextBlock => part.type === 'text')
         .map((part) => part.text)
@@ -162,9 +163,9 @@ export async function readBoletimLayout(bytes: Buffer, mediaType: string, kind: 
       const offered = fieldsFor(kind);
       const placements = placementsFromGrid(JSON.parse(text), MAX_PLACEMENTS).filter((p) => offered.has(p.field));
       return placements.length === 0 ? { error: 'nothingFound' } : { placements };
-    } catch {
+    } catch (error) {
       // Rate limited, timed out, a key that is wrong: the manual editor still works.
-      return { error: 'unreadable' };
+      return { error: classifyAiError('boletim_template', error) };
     }
   };
 

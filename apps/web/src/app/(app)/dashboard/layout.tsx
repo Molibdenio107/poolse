@@ -10,6 +10,7 @@ import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
 import { CommandPalette } from '@/components/command-palette';
 import { NotificationBell } from '@/components/notification-bell';
+import { KeepFresh } from '@/components/keep-fresh';
 import { readAttention } from '@/lib/attention';
 import { readShell } from '@/lib/shell';
 import { SuspendedNotice } from './suspended-notice';
@@ -185,6 +186,10 @@ export default async function DashboardLayout({
   const t = await getTranslations();
 
   const badges = suspended === null ? await menuBadges(shell.meetInboxPending) : {};
+  // What the site circles are, named, for the bell (Rui, 11-11-2026).
+  const named = suspended === null ? await readAttention() : null;
+  const places = named?.places ?? [];
+  const lessons = named?.lessons ?? [];
 
   // The club's own strip — the Owner and the Admins, never support itself.
   const clubManager = support === null && (roles.includes('owner') || roles.includes('admin'));
@@ -254,7 +259,9 @@ export default async function DashboardLayout({
         <div className="flex items-center gap-3">
           {/* POOLSE-118: Ctrl+K, or this button, to go anywhere the menu goes. */}
           {/* POOLSE-212: what needs doing, from the same counts as the menu's dots. */}
-          <NotificationBell badges={badges} />
+          <NotificationBell badges={badges} places={places} lessons={lessons} />
+          {/* What other people did reaches a page left open (Rui, 11-11-2026). */}
+          <KeepFresh />
           <CommandPalette roles={roles} kind={kind} modules={modules} sports={sports} />
           <PreferenceControls languageOnPhone={false} />
           <UserMenu canArchive={roles.includes('owner') || roles.includes('admin')} subscription={subscription} />
@@ -297,6 +304,7 @@ export default async function DashboardLayout({
               isOwner={roles.includes('owner')}
               liveUntil={supportStatus.live?.expiresAt ?? null}
               pendingRequests={supportStatus.pendingRequests}
+              endedAt={supportStatus.endedBySupportAt ?? null}
             />
           )}
 

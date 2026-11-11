@@ -61,6 +61,12 @@ export const ATTENTION_CARD = 'attention-card';
  * more are each the accent bar with a faint tint (`attention-row`), so a list of
  * flagged rows is not a wall of boxes. Every pending card and row uses this.
  */
+/**
+ * The bar and tint whatever the count — Rui, 11-11-2026: the pools list and a
+ * sport's card on Instalações always take the row's look, never the box.
+ */
+export const ATTENTION_ROW = 'attention-row';
+
 export function attentionClass(pendingInList: number): string {
   return pendingInList > 1 ? 'attention-row' : ATTENTION_CARD;
 }

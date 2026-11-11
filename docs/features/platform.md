@@ -492,6 +492,10 @@ reason (`POST /platform/support/tenants/:id/request`).
 - It opens nothing. The Owner sees a strip on every page and answers under *O meu perfil →
   Acesso de suporte*, approving with a duration or declining.
 - An approval is an ordinary window, `source = 'request'`, carrying the request's reason.
+- A decline asks first and asks why, in one dialog: *Recusar acesso* needs a reason, refused
+  blank by the API and by the database (11-11-2026, Rui). The operator reads it on the club's
+  `/admin` *Suporte* tab as *Último pedido recusado a …*, with the request and the Owner's reason
+  (`tenantSupport().lastAnswer`, the latest answered request). An approval shows there too.
 - One request waits at a time. An unanswered one lapses after 7 days, derived and never
   written.
 
@@ -514,7 +518,24 @@ a reason and the club's name typed back (`nameMatches`, as for a suspension).
   also lists *what support did*: the club's own `audit_log` rows whose actor is a support
   membership.
 - **The club's strip.** Every page carries a strip for the Owner and the Admins while support
-  has access or has asked.
+  has access or has asked. Since 11-11-2026 (Rui) it is amber (`.support-strip`: the warning wash
+  over the surface, a 2px warning rule, a bold sentence), and the Owner's *Responder* / *Ver
+  acesso* is the filled button. In the app's grey it read as part of the page. The whole strip
+  breathes on the attention dots' 2.4 s rhythm, and it is still under reduced motion.
+- **The Owner's bell.** A request nobody has answered is a bell line for the Owner only
+  (*O suporte Poolse pediu acesso ao clube*, `attention.menu.support`, the strip's own count),
+  opening *O meu perfil → Acesso de suporte*. It goes when answered or after the 7-day lapse. An
+  Admin is told by the strip but has no line, because only the Owner can answer. The phone app's
+  bell has no line for it, because there is no phone screen to answer on.
+- **The operator's way out (11-11-2026, Rui).** Beside every *Entrar* (on `/admin → Suporte` and on
+  the club's *Suporte* tab) is *Terminar sessão*. It asks first, then ends the window as the banner's
+  *Terminar agora* does (`…/leave`, recorded as ended by support). A window never entered cannot be
+  ended this way, and the toast says so: it runs out on its own, or the Owner ends it.
+- **The club is told support left.** After support ends a window, with none live, the club's strip
+  says *O suporte Poolse terminou a sessão às …*. It does not pulse, and the Owner gets *Ver o que
+  foi feito*. It stays until an Owner presses *Tomei conhecimento* on that window in *Acesso de
+  suporte* (`POST /support-grants/:id/acknowledge`, Owner only, audited), and lapses after 7 days
+  regardless (`supportStatus().endedBySupportAt`).
 - **The operator's way in.** `/admin → Suporte` lists every open window with *Entrar*.
   Entering sets the `poolse_org` cookie, which every API call then sends as the club it asks
   for, and `/me` puts that club first.

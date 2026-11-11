@@ -11,6 +11,7 @@ import type { TenantSupport } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
 import { overrideSupportAction, requestSupportAction } from '@/app/(app)/dashboard/support.actions';
 import { EnterSupportButton } from '../../enter-support-button';
+import { EndSupportButton } from '../../end-support-button';
 
 /**
  * A field error is a catalogue key (the API's and this app's alike) — shown
@@ -63,6 +64,7 @@ export function SupportCard({
             })}
           </p>
           <EnterSupportButton grantId={support.live.grantId} club={tenantName} />
+          <EndSupportButton organizationId={tenantId} club={tenantName} />
         </div>
       ) : support.pendingRequest !== null ? (
         <p className="text-sm">
@@ -70,8 +72,39 @@ export function SupportCard({
         </p>
       ) : (
         <>
+          {/*
+            How the last request was answered (Rui, 11-11-2026): a decline carries
+            the Owner's reason, so the next request starts from it.
+          */}
+          {support.lastAnswer != null && (
+            <div
+              className={
+                support.lastAnswer.answer === 'declined'
+                  ? 'flex flex-col gap-1 rounded border border-danger/40 bg-danger/5 p-3 text-sm'
+                  : 'flex flex-col gap-1 rounded border border-border p-3 text-sm'
+              }
+            >
+              <p className="font-medium">
+                {t(`admin.support.lastAnswer.${support.lastAnswer.answer}`, {
+                  date: formatStamp(support.lastAnswer.answeredAt),
+                })}
+              </p>
+              <p className="text-foreground-muted">
+                {t('admin.support.lastAnswer.asked', { reason: support.lastAnswer.reason })}
+              </p>
+              {support.lastAnswer.answer === 'declined' && (
+                <p>
+                  {support.lastAnswer.declineReason === null
+                    ? t('admin.support.lastAnswer.noReason')
+                    : t('admin.support.lastAnswer.why', { reason: support.lastAnswer.declineReason })}
+                </p>
+              )}
+            </div>
+          )}
+        <>
           <RequestForm tenantId={tenantId} />
           <OverrideButton tenantId={tenantId} tenantName={tenantName} />
+        </>
         </>
       )}
     </section>

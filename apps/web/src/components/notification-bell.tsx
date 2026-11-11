@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Bell, ChevronRight } from 'lucide-react';
 import { FromLink } from '@/components/from-link';
-import { attentionLines } from '@/lib/attention-items';
+import { attentionLines, type AttentionLesson, type AttentionPlace } from '@/lib/attention-items';
+import { formatDate } from '@/lib/date-format';
 import type { Badges } from '@/lib/nav-entries';
 import { cn } from '@/lib/utils';
 
@@ -28,9 +29,15 @@ export const OPEN_NOTIFICATIONS = 'poolse:open-notifications';
 export function NotificationBell({
   badges,
   place = 'backoffice',
+  places = [],
+  lessons = [],
 }: {
   badges: Badges;
   place?: 'backoffice' | 'app';
+  /** What the site circles are, named — one line each instead of "coisas nas instalações". */
+  places?: readonly AttentionPlace[];
+  /** The lessons with answers or requests, named — each line opens its lesson. */
+  lessons?: readonly AttentionLesson[];
 }): React.ReactElement {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
@@ -38,7 +45,7 @@ export function NotificationBell({
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
-  const lines = attentionLines(badges, place);
+  const lines = attentionLines(badges, place, places, lessons);
   const total = lines.reduce((sum, line) => sum + line.count, 0);
 
   // Following a line closes it.
@@ -109,7 +116,7 @@ export function NotificationBell({
           ) : (
             <ul className="flex flex-col">
               {lines.map((line) => (
-                <li key={line.kind}>
+                <li key={line.id}>
                   <FromLink
                     href={line.href}
                     onClick={() => setOpen(false)}
@@ -120,7 +127,7 @@ export function NotificationBell({
                   >
                     <span className="flex items-center gap-2">
                       <span aria-hidden className="attention-dot" />
-                      {t(line.key, { count: line.count })}
+                      {t(line.key, { count: line.count, name: line.name ?? '', date: formatDate(line.date), time: line.time ?? '' })}
                     </span>
                     <ChevronRight aria-hidden className="size-4 shrink-0 text-foreground-muted" />
                   </FromLink>

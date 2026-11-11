@@ -20,6 +20,7 @@ import {
 import { InvitationsController } from '../invitations/invitations.controller.js';
 import { MeController } from '../identity/me.controller.js';
 import { SupportGrantsController } from './support.controller.js';
+import { AttentionController } from '../attention/attention.controller.js';
 import { FilesController } from '../files/files.controller.js';
 import { SensitiveController } from '../sensitive/sensitive.controller.js';
 import { StudentDocumentsController } from '../students/documents.controller.js';
@@ -160,6 +161,15 @@ test('QA 3: revoking ends the session on the next request', async () => {
     const listed = await actingAs(tenant, { roles: ['owner'] }, () => grants.list());
     assert.equal(listed.grants[0]?.state, 'revoked');
     await actingAs(tenant, { roles: ['owner'] }, () => expectStatus(() => grants.revoke(grantId), 404));
+    // The club ended it: nothing to acknowledge, by the API and by the database (11-11-2026).
+    await actingAs(tenant, { roles: ['owner'] }, () => expectStatus(() => grants.acknowledge(grantId), 404));
+    await assert.rejects(
+      owner.query(
+        `UPDATE support_grant SET acknowledged_at = now(), acknowledged_by_membership_id = granted_by_membership_id WHERE id = $1`,
+        [grantId],
+      ),
+      /support_grant_acknowledged_after_support/,
+    );
   });
 });
 
@@ -266,6 +276,22 @@ test('leaving ends the grant and is on both trails', async () => {
     assert.equal(clubOf(await listMemberships(op.clerkUserId), tenant), undefined);
     const listed = await actingAs(tenant, { roles: ['owner'] }, () => grants.list());
     assert.equal(listed.grants[0]?.state, 'ended');
+
+    // The club is told support left, Owner and Admin alike, until an Owner acknowledges it (Rui, 11-11-2026).
+    for (const role of ['owner', 'admin'] as const) {
+      const status = await actingAs(tenant, { roles: [role] }, () => grants.status());
+      assert.equal(status.live, null);
+      assert.ok(status.endedBySupportAt !== null, `${role} sees support left`);
+    }
+    // An Admin may not acknowledge; the Owner does, once.
+    await actingAs(tenant, { roles: ['admin'] }, () => expectStatus(() => grants.acknowledge(grantId), 403));
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      assert.equal((await grants.list()).grants[0]?.acknowledgedAt, null);
+      await grants.acknowledge(grantId);
+      assert.equal((await grants.status()).endedBySupportAt, null, 'the strip goes');
+      assert.ok((await grants.list()).grants[0]?.acknowledgedAt !== null);
+      await expectStatus(() => grants.acknowledge(grantId), 404);
+    });
 
     const { rows } = await owner.query<{ action: string }>(
       `SELECT action FROM platform_audit_log WHERE clerk_user_id = $1 ORDER BY created_at`,
@@ -400,6 +426,14 @@ test('a request waits for the Owner, and approving it opens an ordinary window',
       expectStatus(() => platform.request(tenant.organizationId, { reason }), 409),
     );
 
+    // The Owner is told in the bell; an Admin is not, because only the Owner answers (11-11-2026).
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      assert.equal((await new AttentionController().read()).menu['support'], 1);
+    });
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      assert.equal((await new AttentionController().read()).menu['support'], undefined);
+    });
+
     const { grant } = await actingAs(tenant, { roles: ['owner'] }, async () => {
       const pending = await grants.requests();
       assert.deepEqual(pending.requests.map((one) => one.reason), [reason]);
@@ -415,6 +449,7 @@ test('a request waits for the Owner, and approving it opens an ordinary window',
 
     await actingAs(tenant, { roles: ['owner'] }, async () => {
       assert.deepEqual((await grants.requests()).requests, [], 'answered');
+      assert.equal((await new AttentionController().read()).menu['support'], undefined, 'the line goes when answered');
       assert.equal((await grants.status()).live?.id, grant.id);
       await expectStatus(() => grants.approve(requestId, { hours: 24 }), 404);
     });
@@ -426,7 +461,28 @@ test('a request can be declined, and one left unanswered lapses after 7 days', a
     const first = await asOperator(op.clerkUserId, () =>
       platform.request(tenant.organizationId, { reason: 'Verificar faturas' }),
     );
-    await actingAs(tenant, { roles: ['owner'] }, () => grants.decline(first.requestId));
+    // A decline says why (Rui, 11-11-2026): none, or blank, is refused and nothing is answered.
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await expectStatus(() => grants.decline(first.requestId, {}), 400);
+      await expectStatus(() => grants.decline(first.requestId, { reason: '   ' }), 400);
+      await expectStatus(() => grants.decline(first.requestId, { reason: 'x'.repeat(501) }), 400);
+      assert.equal((await grants.requests()).requests.length, 1, 'still waiting');
+      await grants.decline(first.requestId, { reason: 'Estamos em época de exames, voltem na sexta.' });
+    });
+    // The operator reads it on /admin.
+    const seen = await asOperator(op.clerkUserId, () => platform.tenant(tenant.organizationId));
+    assert.equal(seen.lastAnswer?.answer, 'declined');
+    assert.equal(seen.lastAnswer?.declineReason, 'Estamos em época de exames, voltem na sexta.');
+    assert.equal(seen.lastAnswer?.reason, 'Verificar faturas');
+    // And the database holds the rule on its own: a decline with no reason is refused.
+    await assert.rejects(
+      owner.query(
+        `UPDATE support_request SET answered_at = now(), answer = 'declined', answered_by_membership_id = answered_by_membership_id
+          WHERE id = $1`,
+        [first.requestId],
+      ).then(() => owner.query(`UPDATE support_request SET decline_reason = NULL WHERE id = $1`, [first.requestId])),
+      /support_request_decline_reason/,
+    );
     const [count] = await tenant.sql<{ n: number }>(`SELECT count(*)::int AS n FROM support_grant`);
     assert.equal(count!.n, 0, 'declining opens nothing');
 

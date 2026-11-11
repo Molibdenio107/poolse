@@ -533,6 +533,24 @@ never another tank's at the same site; everything already booked at the site sti
 clashes. A pool that is not the site's is a 404. The site is the chosen pool's, no longer the club's
 first.
 
+**Every read says what happened (11-11-2026, Rui).** Any read result opens the dialog, a refusal included. A dropped PDF refused because the reader is off used to land in a closed dialog and show nothing. *Ler* says *A ler…* while it works, the corner indicator runs, and the chosen file stays chosen (the form submits without a form action, which would reset it). The result names the file. When nothing can be checked it says why: days found but no column of times to their left, or days and times found with no class in the cells between them.
+
+**Conflicts by cause, not row by row (11-11-2026, Rui).** The preview no longer opens a card per row:
+
+- **Lane counts are placed.** "Hidroginástica (3 pistas)" is a count. It takes the first run of 3 side-by-side lanes free that hour (on the grid and in earlier rows of the file), so two activities sharing an hour take different lanes (`readLaneCount`, `previewTimetable`).
+- **A row with no lane goes to *Sem pista*** instead of being refused. A lane name that matches nothing still refuses its row.
+- **The site's hours are checked in the preview.** The database trigger always checked them at commit, so a "clean" preview could fail with nothing written.
+- **Grouped summary.** What holds the import back is shown as one line per cause, each with a count and one action, and the rows folded beneath:
+  - unreadable rows: *Não importar*;
+  - outside the site's hours or on a closed day: **Alargar o horário**, which asks first, then widens those days to what the file needs, through the site's own `PUT …/hours`, and checks again;
+  - the file against itself: *Manter a primeira de cada*;
+  - against bookings already there: *Não importar*, never overwritten.
+- **One click for the rest.** **Importar as N sem conflito** leaves every held row out and imports the rest in one transaction. Choosing it is the decision for every conflict at once, so decision 1 still holds: nothing is written while a conflict is undecided.
+- **Notes that hold nothing back** (lanes placed, *Sem pista*, unknown teacher) are counted, not listed.
+- Left-out rows can be brought back with *Repor*.
+
+The other importers already import their valid rows and skip the rest; only this one places classes in time and on lanes.
+
 **The calendar opens on a pool** (02-11-2026, Rui, reversing "no tank until somebody chooses one" of
 12-10-2026, which opened the page empty): the one this person last looked at, remembered on this device
 (`lib/calendar-pool.ts`), else the club's first. **The import is a dialog** — a bottom sheet on a phone —

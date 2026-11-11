@@ -5,6 +5,7 @@ import {
   canCommit,
   previewTimetable,
   type RawTimetableRow,
+  type TimetableHoursNeeded,
   type TimetableContext,
   type TimetableRow,
   type TimetableSummary,
@@ -1104,6 +1105,8 @@ export interface TimetableImportResult {
   rows: TimetableRow[];
   summary: TimetableSummary;
   committable: boolean;
+  /** Days whose hours keep rows out — *Alargar horário* (11-11-2026). */
+  hoursNeeded: TimetableHoursNeeded[];
   /** Only on a commit. */
   created?: number;
 }
@@ -1178,8 +1181,13 @@ async function timetableContext(
     [facilityId, seasonId],
   );
 
-  const hours = await tx.query<{ weekday: number }>(
-    `SELECT weekday FROM facility_hours WHERE facility_id = $1 AND available`,
+  // Every day's hours, open or not (11-11-2026): the preview checks a row's times
+  // against them, because the database trigger does at commit.
+  const hours = await tx.query<{ weekday: number; available: boolean; opens: string; closes: string }>(
+    `SELECT weekday, available,
+            to_char(opens_at, 'HH24:MI') AS opens,
+            CASE WHEN closes_at = TIME '24:00' THEN '24:00' ELSE to_char(closes_at, 'HH24:MI') END AS closes
+       FROM facility_hours WHERE facility_id = $1`,
     [facilityId],
   );
 
@@ -1226,7 +1234,8 @@ async function timetableContext(
       headcount: row.headcount,
       cancelled: false,
     })),
-    openWeekdays: hours.rows.map((row) => row.weekday),
+    openWeekdays: hours.rows.filter((row) => row.available).map((row) => row.weekday),
+    hours: hours.rows.map((row) => ({ weekday: row.weekday, available: row.available, opens: row.opens, closes: row.closes })),
     // A closure cancels dated sessions, not the weekly pattern an import
     // writes — so the pattern is judged against the club's opening hours and
     // nothing else. POOLSE-31 is where a closed fortnight lives.

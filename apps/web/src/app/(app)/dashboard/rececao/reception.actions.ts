@@ -214,6 +214,13 @@ export async function walkInAction(
         email: field(formData, 'email'),
         phone: field(formData, 'phone'),
         taxNumber: field(formData, 'taxNumber'),
+        // A minor's encarregado — the server applies the student form's rule (11-11-2026).
+        birthDate: field(formData, 'birthDate'),
+        guardianName: field(formData, 'guardianName'),
+        guardianRelationship: field(formData, 'guardianRelationship'),
+        guardianPhone: field(formData, 'guardianPhone'),
+        guardianEmail: field(formData, 'guardianEmail'),
+        guardianTaxNumber: field(formData, 'guardianTaxNumber'),
       },
     );
     return { ok: true, membershipId };

@@ -12,6 +12,8 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { isValidNif } from '@poolse/rules';
+import { isMinor, parseStudent } from '../students/students.controller.js';
+import { ageOfMajority, DuplicateTaxNumberError, type StudentInput } from '../students/students.repository.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
 import {
@@ -200,7 +202,8 @@ export class ReceptionController {
     const { organizationId } = currentTenant();
     const reception = await readReception(organizationId, facilityId);
     if (reception === null) throw new NotFoundException('No such facility');
-    return reception;
+    // The club's maioridade, so Nova pessoa asks for an encarregado when it applies (11-11-2026).
+    return { ...reception, ageOfMajority: await ageOfMajority(organizationId) };
   }
 
   @Patch('stay')
@@ -262,6 +265,8 @@ export class ReceptionController {
     const phone = text(body['phone']);
     const taxNumber = text(body['taxNumber']);
 
+    const birthDate = text(body['birthDate']);
+
     const fields: Record<string, string> = {};
     if (firstName === null) fields['firstName'] = 'passes.firstNameRequired';
     if (lastName === null) fields['lastName'] = 'passes.lastNameRequired';
@@ -269,6 +274,32 @@ export class ReceptionController {
     if (Object.keys(fields).length > 0) {
       throw new BadRequestException({ message: 'Invalid person', fields });
     }
+
+    /*
+     * A child at the desk (Rui, 11-11-2026): the student form's own rule, so a
+     * minor is never registered without an encarregado — name, relationship,
+     * and a NIF or email. `parseStudent` also reads the date, and refuses with
+     * the same field names this form uses.
+     */
+    const majority = await ageOfMajority(organizationId);
+    let student: StudentInput | null = null;
+    const parsed = parseStudent(
+      {
+        firstName,
+        lastName,
+        birthDate,
+        contactEmail: email,
+        contactPhone: phone,
+        taxNumber,
+        guardianName: body['guardianName'],
+        guardianRelationship: body['guardianRelationship'],
+        guardianPhone: body['guardianPhone'],
+        guardianEmail: body['guardianEmail'],
+        guardianTaxNumber: body['guardianTaxNumber'],
+      },
+      majority,
+    );
+    if (parsed.birthDate !== null && isMinor(parsed.birthDate, majority)) student = parsed;
 
     try {
       return {
@@ -278,9 +309,18 @@ export class ReceptionController {
           email,
           phone,
           taxNumber,
+          birthDate: parsed.birthDate,
+          student,
         }),
       };
     } catch (error) {
+      if (error instanceof DuplicateTaxNumberError || (error as { constraint?: string }).constraint === 'student_tax_number_uq') {
+        throw new ConflictException({
+          code: 'person_exists',
+          message: 'Somebody in this club already has that NIF',
+          fields: { taxNumber: 'passes.personExists' },
+        });
+      }
       // The club already knows this email or NIF: the person exists, and the
       // answer is to find them rather than make a second one.
       if (

@@ -142,6 +142,13 @@ type PlatformTx = Parameters<Parameters<typeof withPlatform>[0]>[0];
 export interface TenantSupport {
   live: { grantId: string; source: OpenSupportGrant['source']; expiresAt: string } | null;
   pendingRequest: { id: string; reason: string; requestedAt: string } | null;
+  /** The latest answered request, with the Owner's reason when declined (11-11-2026). */
+  lastAnswer: {
+    answer: 'approved' | 'declined';
+    reason: string;
+    declineReason: string | null;
+    answeredAt: string;
+  } | null;
 }
 
 /** What `/admin/tenants/[id]` shows about support for one club. */
@@ -165,9 +172,30 @@ export async function tenantSupport(organizationId: string): Promise<TenantSuppo
         ORDER BY created_at DESC LIMIT 1`,
       [organizationId, REQUEST_LAPSES_AFTER_DAYS],
     );
+    const { rows: answered } = await tx.query<{
+      answer: 'approved' | 'declined';
+      reason: string;
+      decline_reason: string | null;
+      answered_at: Date;
+    }>(
+      `SELECT answer, reason, decline_reason, answered_at FROM support_request
+        WHERE organization_id = $1 AND answered_at IS NOT NULL
+        ORDER BY answered_at DESC LIMIT 1`,
+      [organizationId],
+    );
     const open = live[0];
     const asked = pending[0];
+    const last = answered[0];
     return {
+      lastAnswer:
+        last === undefined
+          ? null
+          : {
+              answer: last.answer,
+              reason: last.reason,
+              declineReason: last.decline_reason,
+              answeredAt: last.answered_at.toISOString(),
+            },
       live:
         open === undefined
           ? null

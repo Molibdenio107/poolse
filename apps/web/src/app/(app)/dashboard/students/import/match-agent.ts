@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { classifyAiError } from '@/lib/ai-failure';
 import { anthropicKeyConfigured, metered } from '@/lib/ai-meter';
 import type { ColumnMatch, ColumnShape, ImportField } from '@/lib/sheet';
 
@@ -173,9 +174,11 @@ export async function matchWithAgent(input: AgentInput): Promise<ColumnMatch[]> 
     if (call === undefined) return [];
 
     return read(call.input, input);
-  } catch {
+  } catch (error) {
     // Rate limited, timed out, misconfigured key, network. All of them mean the
-    // same thing here: the operator answers the questions themselves.
+    // same thing here: the operator answers the questions themselves. The cause
+    // is still logged, so a rejected key is not invisible (11-11-2026).
+    classifyAiError('column_match', error);
     return [];
   }
   };

@@ -31,6 +31,8 @@ export interface SupportGrant {
   grantedByName: string | null;
   /** An override only: how many Owners the notice was owed to, and whether it left. */
   notice: { recipients: number; delivered: boolean } | null;
+  /** Ended by support, and when an Owner said they had seen it — null until then (11-11-2026). */
+  acknowledgedAt: string | null;
 }
 
 /** The one definition of a grant's state, in SQL, beside `resolve_memberships`'s. */
@@ -52,6 +54,7 @@ interface GrantRow {
   granted_by_name: string | null;
   notice_recipients?: string[] | null;
   notice_delivered_at?: Date | null;
+  acknowledged_at?: Date | null;
 }
 
 function toGrant(row: GrantRow): SupportGrant {
@@ -68,6 +71,7 @@ function toGrant(row: GrantRow): SupportGrant {
       row.notice_recipients === null || row.notice_recipients === undefined
         ? null
         : { recipients: row.notice_recipients.length, delivered: row.notice_delivered_at != null },
+    acknowledgedAt: row.acknowledged_at?.toISOString() ?? null,
   };
 }
 
@@ -80,7 +84,7 @@ export async function listGrants(organizationId: string): Promise<SupportGrant[]
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<GrantRow>(
       `SELECT sg.id, sg.source, sg.reason, sg.starts_at, sg.expires_at, sg.ended_at,
-              ${STATE} AS state, sg.notice_recipients, sg.notice_delivered_at,
+              ${STATE} AS state, sg.notice_recipients, sg.notice_delivered_at, sg.acknowledged_at,
               CASE WHEN sg.granted_by_membership_id IS NULL THEN NULL
                    ELSE ${personShortName('sg.granted_by_membership_id')} END AS granted_by_name
          FROM support_grant sg
@@ -143,6 +147,33 @@ export async function openGrant(
  * request asks `resolve_memberships` again. `false` when there was no live
  * window by that id — already over, or another club's.
  */
+/**
+ * *Tomei conhecimento* — the Owner has seen that support ended its session
+ * (Rui, 11-11-2026), and the club's strip stops saying so. Only a window support
+ * ended, and only once; false otherwise, which the caller turns into a 404.
+ */
+export async function acknowledgeEnded(
+  organizationId: string,
+  membershipId: string,
+  grantId: string,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string }>(
+      `UPDATE support_grant SET acknowledged_at = now(), acknowledged_by_membership_id = $2
+        WHERE id = $1 AND ended_by = 'support' AND acknowledged_at IS NULL
+      RETURNING id`,
+      [grantId, membershipId],
+    );
+    if (rows[0] === undefined) return false;
+    await recordAudit(tx, {
+      action: 'support.ended_acknowledged',
+      entityType: 'support_grant',
+      entityId: grantId,
+    });
+    return true;
+  });
+}
+
 export async function revokeGrant(organizationId: string, grantId: string): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string }>(
@@ -266,15 +297,18 @@ export async function declineRequest(
   organizationId: string,
   membershipId: string,
   requestId: string,
+  /** Why, in the Owner's words — required, and read by the operator on /admin (11-11-2026). */
+  reason: string,
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string }>(
       `UPDATE support_request
-          SET answered_at = now(), answer = 'declined', answered_by_membership_id = $2
+          SET answered_at = now(), answer = 'declined', answered_by_membership_id = $2,
+              decline_reason = $4
         WHERE id = $1 AND answered_at IS NULL
           AND created_at > now() - make_interval(days => $3)
       RETURNING id`,
-      [requestId, membershipId, REQUEST_LAPSES_AFTER_DAYS],
+      [requestId, membershipId, REQUEST_LAPSES_AFTER_DAYS, reason],
     );
     if (rows[0] === undefined) return false;
     await recordAudit(tx, {
@@ -296,6 +330,12 @@ export async function supportStatus(
 ): Promise<{
   live: { id: string; expiresAt: string; source: SupportGrant['source'] } | null;
   pendingRequests: number;
+  /**
+   * When support last ended a window itself and no Owner has acknowledged it,
+   * with none live now (Rui, 11-11-2026): the strip tells the club support has
+   * left until *Tomei conhecimento*, and lapses after 7 days regardless.
+   */
+  endedBySupportAt: string | null;
 }> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string; expires_at: Date; source: SupportGrant['source'] }>(
@@ -308,8 +348,15 @@ export async function supportStatus(
         WHERE answered_at IS NULL AND created_at > now() - make_interval(days => $1)`,
       [REQUEST_LAPSES_AFTER_DAYS],
     );
+    const { rows: ended } = await tx.query<{ ended_at: Date }>(
+      `SELECT ended_at FROM support_grant
+        WHERE ended_by = 'support' AND acknowledged_at IS NULL
+          AND ended_at > now() - interval '7 days'
+        ORDER BY ended_at DESC LIMIT 1`,
+    );
     const live = rows[0];
     return {
+      endedBySupportAt: live === undefined && ended[0] !== undefined ? ended[0].ended_at.toISOString() : null,
       live:
         live === undefined
           ? null

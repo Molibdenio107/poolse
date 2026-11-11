@@ -1,5 +1,6 @@
 'use server';
 
+import type { AiFailure } from '@/lib/ai-failure-codes';
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiFetch, apiPatch, apiPost, apiUpload, type Me } from '@/lib/api';
 import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
@@ -83,7 +84,7 @@ export async function saveFpnSettingsAction(_previous: FormState, formData: Form
 export interface IdPhotoState extends FormState {
   proposal?: { type: 'cc' | 'bi' | 'passport' | 'other' | null; number: string | null; issuedOn: string | null; validUntil: string | null };
   /** Why nothing was proposed, when a read was attempted. */
-  readNote?: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' | 'notAllowed' | 'rateLimited';
+  readNote?: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' | 'notAllowed' | AiFailure;
 }
 
 export async function uploadIdPhotoAction(_previous: IdPhotoState, formData: FormData): Promise<IdPhotoState> {

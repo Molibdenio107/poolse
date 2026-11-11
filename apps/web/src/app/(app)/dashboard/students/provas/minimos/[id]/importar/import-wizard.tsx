@@ -1,5 +1,6 @@
 'use client';
 
+import { useBusyWhile } from '@/lib/busy';
 import { useActionState, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
@@ -70,6 +71,9 @@ export function QualifyingImportWizard({
   const t = useTranslations();
   const [readState, readAction, reading] = useActionState(readSheetAction, READ_INITIAL);
   const [runState, runAction, running] = useActionState(runImportAction, RUN_INITIAL);
+  // Reading, checking or importing washes the page and any dialog over it (Rui, 11-11-2026):
+  // somebody waiting on a file should see the screen wait too, and not click through it.
+  useBusyWhile(reading || running, 'load', 'navigate');
   const [matchState, matchAction, matching] = useActionState(matchSheetAction, MATCH_INITIAL);
   const [course, setCourse] = useState<Course>('lcm');
 

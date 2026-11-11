@@ -2,6 +2,7 @@ import 'server-only';
 import ExcelJS from 'exceljs';
 import { parseCsv, toSheet, type NamedSheet } from './sheet';
 import { readPdfTables } from './pdf-table-agent';
+import type { AiFailure } from './ai-failure';
 
 /**
  * Reading an uploaded spreadsheet, on the server only — slice 1.10, generalised
@@ -67,7 +68,36 @@ export type ReadFailure =
   /** The same, with the reader on but no `ANTHROPIC_API_KEY` on this server (POOLSE-137). */
   | 'pdfNoKey'
   /** The same, with the club's monthly AI reads used up (POOLSE-137). */
-  | 'pdfCapReached';
+  | 'pdfCapReached'
+  /** The reader ran and failed, said for what it was (Rui, 11-11-2026): `lib/ai-failure.ts`. */
+  | `ai.${AiFailure}`;
+
+/**
+ * The message for a failed read — one map for every list importer (11-11-2026).
+ * Seven importers each kept a copy of this; a new failure now reaches them all.
+ */
+export function readFailureKey(failure: ReadFailure): string {
+  if (failure.startsWith('ai.')) return `ai.failure.${failure.slice(3)}`;
+  switch (failure) {
+    case 'fileMissing':
+      return 'students.import.errorFileMissing';
+    case 'fileTooLarge':
+      return 'students.import.errorFileTooLarge';
+    case 'fileType':
+      return 'students.import.errorFileType';
+    case 'fileEmpty':
+      return 'students.import.errorFileEmpty';
+    // The PDF reader is off, or cannot run — said, so a PDF is not mistaken for a broken file.
+    case 'pdfDisabled':
+      return 'import.pdfDisabled';
+    case 'pdfNoKey':
+      return 'import.pdfNoKey';
+    case 'pdfCapReached':
+      return 'import.pdfCapReached';
+    default:
+      return 'students.import.errorFileUnreadable';
+  }
+}
 
 /**
  * One cell, as text.
@@ -184,7 +214,7 @@ export async function readSheet(
                 ? 'pdfCapReached'
                 : read.error === 'nothingFound'
               ? 'fileEmpty'
-              : 'fileUnreadable',
+              : (`ai.${read.error}` as const),
       };
     }
     const sheets = read.tables

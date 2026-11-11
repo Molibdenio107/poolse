@@ -8,6 +8,8 @@ import { TASK_STATE } from '../maintenance/maintenance.repository.js';
 import { readLeadsWidget, waitingLeadsBySport } from '../leads/leads.repository.js';
 import { studentsToReview } from '../students/students.repository.js';
 import { countExpiringCategories } from '../billing/person-categories.repository.js';
+import { JOINS as LESSON_JOINS, TZ as LESSON_TZ } from '../dashboard/instructor.repository.js';
+import { supportStatus } from '../support/support.repository.js';
 
 /**
  * Where something needs doing — POOLSE-120 (Rui, 28-10-2026).
@@ -38,6 +40,44 @@ export interface Attention {
   students: Record<string, number>;
   /** Turmas with no teacher of their own — POOLSE-211. */
   classGroups: Record<string, number>;
+  /**
+   * What the site circles stand for, named (Rui, 11-11-2026): a bell line that
+   * said only "1 coisa por tratar nas instalações" sent people to the site's
+   * settings, where nothing was wrong. One entry per kind and place, so the bell
+   * can say *Piscina principal: água fora dos limites* and open that tab.
+   */
+  places: AttentionPlace[];
+  /**
+   * The lessons behind the calendar's count, named and dated, soonest first —
+   * so the bell opens the lesson rather than this week's calendar (Rui, 11-11-2026).
+   */
+  lessons: AttentionLesson[];
+}
+
+export interface AttentionLesson {
+  sessionId: string;
+  /** The turma's name, or the partnership's. */
+  name: string;
+  /** A partnership's hour has no phone screen of its own. */
+  partner: boolean;
+  /** On the site's clock: `YYYY-MM-DD`, `HH:MM`, and that week's Monday for the calendar link. */
+  localDate: string;
+  localTime: string;
+  weekStart: string;
+  count: number;
+}
+
+/** `water` an analysis out of its bands, `lab` a non-conforming lab report, `task` a recurring job due, `fault` an open serious fault. */
+export type AttentionPlaceKind = 'water' | 'lab' | 'task' | 'fault';
+
+export interface AttentionPlace {
+  kind: AttentionPlaceKind;
+  facilityId: string;
+  poolId: string | null;
+  spaceId: string | null;
+  /** The pool's or space's name, or the site's when the thing sits on the site itself. */
+  name: string;
+  count: number;
 }
 
 export interface AttentionScope {
@@ -58,6 +98,8 @@ export interface AttentionScope {
    * same test as Reenviar and Revogar. Empty or absent counts nothing.
    */
   invitations?: readonly string[];
+  /** Poolse support asked to come in and nobody answered — the Owner's to decide (11-11-2026). */
+  supportRequests?: boolean;
   membershipId: string;
 }
 
@@ -69,7 +111,20 @@ export const NOTHING: Attention = {
   sessions: {},
   students: {},
   classGroups: {},
+  places: [],
+  lessons: [],
 };
+
+function addPlace(
+  places: AttentionPlace[],
+  entry: Omit<AttentionPlace, 'count'>,
+): void {
+  const found = places.find(
+    (one) => one.kind === entry.kind && one.facilityId === entry.facilityId && one.poolId === entry.poolId && one.spaceId === entry.spaceId,
+  );
+  if (found !== undefined) found.count += 1;
+  else places.push({ ...entry, count: 1 });
+}
 
 
 function add(map: Record<string, number>, key: string | null, by = 1): void {
@@ -86,7 +141,15 @@ export async function readAttention(organizationId: string, scope: AttentionScop
     sessions: {},
     students: {},
     classGroups: {},
+    places: [],
+    lessons: [],
   };
+
+  if (scope.supportRequests === true) {
+    // The strip's own count, so the bell and the strip cannot disagree.
+    const { pendingRequests } = await supportStatus(organizationId);
+    if (pendingRequests > 0) out.menu['support'] = pendingRequests;
+  }
 
   if (scope.invitations !== undefined && scope.invitations.length > 0) {
     // Pending staff invitations, as Pessoas › Convites lists them (a family's
@@ -162,8 +225,12 @@ export async function readAttention(organizationId: string, scope: AttentionScop
     if (scope.water && facilityIds.length > 0) {
       const pools = await readPoolWater(organizationId, facilityIds);
       const flagged = new Set<string>();
+      const outOfBand = new Set<string>();
       for (const pool of pools) {
-        if (excursions(pool.values, resolveBands(pool.overrides, pool.pool)).length > 0) flagged.add(pool.poolId);
+        if (excursions(pool.values, resolveBands(pool.overrides, pool.pool)).length > 0) {
+          flagged.add(pool.poolId);
+          outOfBand.add(pool.poolId);
+        }
       }
       // The latest lab report of every tank, graded on the national reference.
       const labs = await withOrg(organizationId, async (tx) =>
@@ -191,6 +258,14 @@ export async function readAttention(organizationId: string, scope: AttentionScop
         if (!flagged.has(pool.poolId)) continue;
         add(out.pools, pool.poolId);
         add(out.facilities, pool.facilityId);
+        // One circle per pool, so one named line: the readings first, as the Água tab's dot does.
+        addPlace(out.places, {
+          kind: outOfBand.has(pool.poolId) ? 'water' : 'lab',
+          facilityId: pool.facilityId,
+          poolId: pool.poolId,
+          spaceId: null,
+          name: pool.poolName,
+        });
       }
     }
 
@@ -198,8 +273,17 @@ export async function readAttention(organizationId: string, scope: AttentionScop
       // Recurring tasks due, and open high-severity faults — where each sits.
       const rows = await withOrg(organizationId, async (tx) =>
         (
-          await tx.query<{ facility_id: string; pool_id: string | null; space_id: string | null }>(
-            `SELECT t.facility_id, t.pool_id, t.space_id
+          await tx.query<{
+            kind: 'task' | 'fault';
+            facility_id: string;
+            pool_id: string | null;
+            space_id: string | null;
+            name: string;
+          }>(
+            `SELECT x.kind, x.facility_id, x.pool_id, x.space_id,
+                    coalesce(p.name, sp.name, f.name) AS name
+               FROM (
+             SELECT 'task' AS kind, t.facility_id, t.pool_id, t.space_id
                FROM maintenance_task t
                LEFT JOIN LATERAL (
                  SELECT tc.performed_at AS last_done_at
@@ -210,10 +294,14 @@ export async function readAttention(organizationId: string, scope: AttentionScop
                ) c ON true
               WHERE t.archived_at IS NULL AND (${TASK_STATE}) = 'due'
              UNION ALL
-             SELECT mr.facility_id, mr.pool_id, mr.space_id
+             SELECT 'fault' AS kind, mr.facility_id, mr.pool_id, mr.space_id
                FROM maintenance_request mr
               WHERE mr.archived_at IS NULL AND mr.status = 'open' AND mr.severity = 'high'
-                AND mr.type = 'fault'`,
+                AND mr.type = 'fault'
+                    ) x
+               JOIN facility f ON f.id = x.facility_id
+               LEFT JOIN pool p ON p.id = x.pool_id
+               LEFT JOIN space sp ON sp.id = x.space_id`,
           )
         ).rows,
       );
@@ -221,6 +309,13 @@ export async function readAttention(organizationId: string, scope: AttentionScop
         add(out.facilities, row.facility_id);
         add(out.pools, row.pool_id);
         add(out.spaces, row.space_id);
+        addPlace(out.places, {
+          kind: row.kind,
+          facilityId: row.facility_id,
+          poolId: row.pool_id,
+          spaceId: row.space_id,
+          name: row.name,
+        });
       }
     }
 
@@ -271,7 +366,35 @@ export async function readAttention(organizationId: string, scope: AttentionScop
         total += row.n;
       }
     }
-    if (total > 0) out.menu['calendar'] = total;
+    if (total > 0) {
+      out.menu['calendar'] = total;
+      const ids = Object.keys(out.sessions);
+      const named = await withOrg(organizationId, async (tx) =>
+        (
+          await tx.query<{ id: string; name: string; partner: boolean; local_date: string; local_time: string; week_start: string }>(
+            `SELECT cs.id,
+                    coalesce(cg.name, pg.name, sch.title, '?') AS name,
+                    (cs.class_group_id IS NULL) AS partner,
+                    to_char(cs.starts_at AT TIME ZONE ${LESSON_TZ}, 'YYYY-MM-DD') AS local_date,
+                    to_char(cs.starts_at AT TIME ZONE ${LESSON_TZ}, 'HH24:MI') AS local_time,
+                    to_char(date_trunc('week', cs.starts_at AT TIME ZONE ${LESSON_TZ}), 'YYYY-MM-DD') AS week_start
+               ${LESSON_JOINS}
+              WHERE cs.id = ANY($1::uuid[])
+              ORDER BY cs.starts_at`,
+            [ids],
+          )
+        ).rows,
+      );
+      out.lessons = named.map((row) => ({
+        sessionId: row.id,
+        name: row.name,
+        partner: row.partner,
+        localDate: row.local_date,
+        localTime: row.local_time,
+        weekStart: row.week_start,
+        count: out.sessions[row.id] ?? 0,
+      }));
+    }
   }
 
   return out;

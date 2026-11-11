@@ -1,5 +1,6 @@
 'use server';
 
+import type { AiFailure } from '@/lib/ai-failure-codes';
 import { revalidatePath } from 'next/cache';
 import { isTemplateKind, type BoletimPlacement, type TemplateKind } from '@poolse/rules';
 import { apiDelete, apiFetch, apiFileResponse, apiPut } from '@/lib/api';
@@ -51,7 +52,7 @@ export interface ProposalState {
   ok: boolean;
   proposal?: BoletimPlacement[];
   /** A gate that closed or a read that failed — said where the button is (POOLSE-137). */
-  note?: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' | 'notAllowed' | 'rateLimited';
+  note?: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' | 'notAllowed' | AiFailure;
 }
 
 /**

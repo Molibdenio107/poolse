@@ -62,6 +62,14 @@ swim sold this month: sale lines on documents issued this month and not since cr
 month's entries. It is never added to the mensalidades card, which goes on counting only
 mensalidades.
 
+**A child at the desk (11-11-2026, Rui).** *Nova pessoa* also asks for a date of birth. Under
+the club's age of majority, an *Encarregado de educação* section appears. It asks for the name,
+the relationship, and a NIF or an email (a phone is optional), and the server refuses the save
+without them. This is the student form's own rule (`parseStudent`), and the refusal is said
+under the field. The child is then created as a student with that encarregado, linked to the
+person the desk sells to (`student.membership_id`), in one transaction. An adult, or somebody
+with no date, stays a plain person, and the date is kept on the person.
+
 ## Who can do it
 
 | | Owner | Admin | Instructor | Others |

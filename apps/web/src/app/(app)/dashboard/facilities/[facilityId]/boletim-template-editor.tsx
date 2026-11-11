@@ -1,5 +1,6 @@
 'use client';
 
+import { aiNoteKey } from '@/lib/ai-failure-codes';
 import { Minus, Plus, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from 'react';
@@ -89,7 +90,8 @@ export function BoletimTemplateEditor({
   // The model's proposal (slice B): not a save, so no toast and no refresh — a
   // refresh would put the server's placements back over it.
   const [proposal, propose, proposing] = useActionState(proposeBoletimFieldsAction, { ok: false } as ProposalState);
-  useBusyWhile(proposing, 'load');
+  // The model reads the form: washes the page while it does (11-11-2026).
+  useBusyWhile(proposing, 'load', 'navigate');
   const [proposedCount, setProposedCount] = useState<number | null>(null);
   const takenProposal = useRef<ProposalState | null>(null);
   useEffect(() => {
@@ -255,6 +257,9 @@ export function BoletimTemplateEditor({
           type="file"
           className="hidden"
           accept="application/pdf,image/jpeg,image/png,image/webp"
+          // Named for the page-wide drop (11-11-2026), and off while it cannot take one.
+          data-drop-label={t(`boletimTemplate.kind.${kind}`)}
+          data-drop-off={!storageReady || busy ? 'true' : undefined}
           onChange={(event) => chosen(event.target.files?.[0])}
         />
         <button
@@ -295,7 +300,7 @@ export function BoletimTemplateEditor({
       {failure !== undefined && <p className="text-sm text-danger">{t(failure)}</p>}
       {onlyFirst && <p className="text-sm text-foreground-muted">{t('boletimTemplate.firstPageOnly')}</p>}
       {!proposing && proposal.note !== undefined && takenProposal.current !== proposal && (
-        <p className="text-sm text-foreground-muted">{t(`boletimTemplate.ai.note.${proposal.note}`)}</p>
+        <p className="text-sm text-foreground-muted">{t(aiNoteKey('boletimTemplate.ai.note', proposal.note))}</p>
       )}
       {!proposing && proposedCount !== null && (
         <p className="text-sm text-foreground-muted">{t('boletimTemplate.ai.proposed', { count: proposedCount })}</p>

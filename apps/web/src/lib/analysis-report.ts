@@ -1,5 +1,6 @@
 import { ORGANISMS, type Organism } from '@poolse/rules';
 import { POOL_METRICS, type PoolMetric } from './pool-metrics.ts';
+import type { AiFailure } from './ai-failure';
 
 /**
  * A laboratory's analysis report — what one is, and what reading one produces.
@@ -112,7 +113,8 @@ export interface ReportFile {
  * now" (POOLSE-137), the call was never made, and the screen says which in a
  * sentence instead of showing a failure.
  */
-export type ReportFailure = 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound';
+/** `AiFailure` says what went wrong when the model ran and failed (11-11-2026). */
+export type ReportFailure = 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' | AiFailure;
 
 export type ReportResult = { rows: ReportRow[] } | { error: ReportFailure };
 

@@ -1,14 +1,18 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import { useTranslations } from 'next-intl';
 import { Headset } from 'lucide-react';
-import { SelectField } from '@/components/ui/field';
+import { SelectField, TextAreaField } from '@/components/ui/field';
+import { Dialog } from '@/components/ui/dialog';
 import { ConfirmButton } from '@/components/confirm-action';
 import { useSavedAction } from '@/lib/saved';
 import { formatDate, formatStamp, formatTime } from '@/lib/date-format';
 import type { SupportActivity, SupportGrant, SupportRequest } from '@/lib/api';
 import type { FormState } from '../actions';
 import {
+  acknowledgeSupportEndAction,
   answerSupportRequestAction,
   openSupportWindowAction,
   revokeSupportWindowAction,
@@ -18,6 +22,9 @@ const INITIAL: FormState = { ok: false };
 
 const PRIMARY =
   'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+/** The decline dialog's answer — the same quiet danger as `ConfirmButton`'s. */
+const DANGER =
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm border border-danger/50 px-4 text-control font-semibold text-danger hover:bg-danger/10 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 const SECONDARY =
   'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-surface px-4 text-control font-medium hover:border-primary/50 hover:text-primary disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary shadow-card';
 
@@ -107,6 +114,10 @@ export function SupportAccess({
                     ` · ${t('support.grantedBy', { name: grant.grantedByName })}`}
                 </p>
                 {grant.reason !== null && <p>{t('support.reason', { reason: grant.reason })}</p>}
+                {/* Support ended it: the strip says so until the Owner has seen it (Rui, 11-11-2026). */}
+                {grant.state === 'ended' && (grant.acknowledgedAt ?? null) === null && (
+                  <AcknowledgeEnd grantId={grant.id} />
+                )}
                 {grant.notice !== null && (
                   <p className="text-foreground-muted">
                     {grant.notice.delivered ? t('support.noticeSent') : t('support.noticeRecorded')}
@@ -135,6 +146,20 @@ function OpenWindow({ durations }: { durations: { value: string; label: string }
       />
       <button type="submit" disabled={pending} className={PRIMARY}>
         {pending ? t('common.working') : t('support.open')}
+      </button>
+    </form>
+  );
+}
+
+/** *Tomei conhecimento* — nothing to undo, so it does not ask first; the strip goes. */
+function AcknowledgeEnd({ grantId }: { grantId: string }) {
+  const t = useTranslations();
+  const [, dispatch, pending] = useSavedAction(acknowledgeSupportEndAction.bind(null, grantId), INITIAL);
+  return (
+    <form action={dispatch} className="mt-1 flex flex-wrap items-center gap-3">
+      <p className="min-w-0 flex-1 text-foreground-muted">{t('support.acknowledgeHint')}</p>
+      <button type="submit" disabled={pending} className={PRIMARY}>
+        {pending ? t('common.working') : t('support.acknowledge')}
       </button>
     </form>
   );
@@ -178,7 +203,13 @@ function RequestAnswer({
     answerSupportRequestAction.bind(null, request.id),
     INITIAL,
   );
+  // Declining asks first and asks why, in one dialog (Rui, 11-11-2026): the reason goes to Poolse.
+  const [declining, setDeclining] = useState(false);
+  useEffect(() => {
+    if (state.ok) setDeclining(false);
+  }, [state]);
   return (
+    <>
     <form
       action={dispatch}
       className="flex flex-col gap-3 rounded border border-primary/40 p-4"
@@ -207,19 +238,40 @@ function RequestAnswer({
         >
           {t('support.approve')}
         </ConfirmButton>
-        <ConfirmButton
-          title={t('confirm.equipa.supportDeclineTitle')}
-          message={t('confirm.equipa.supportDeclineMessage')}
-          confirmLabel={t('support.decline')}
-          tone="danger"
-          name="answer"
-          value="decline"
-          disabled={pending}
-          className={SECONDARY}
-        >
+        <button type="button" onClick={() => setDeclining(true)} disabled={pending} className={SECONDARY}>
           {t('support.decline')}
-        </ConfirmButton>
+        </button>
       </div>
     </form>
+    <Dialog
+      open={declining}
+      onClose={() => setDeclining(false)}
+      title={t('confirm.equipa.supportDeclineTitle')}
+      description={t('support.declineAsk')}
+      closeLabel={t('common.close')}
+      className="max-w-md"
+    >
+      <form action={dispatch} className="flex flex-col gap-4">
+        <input type="hidden" name="answer" value="decline" />
+        <TextAreaField
+          name="reason"
+          label={t('support.declineReason')}
+          hint={t('support.declineReasonHint')}
+          required
+          maxLength={500}
+          rows={3}
+          error={state.fields?.['reason']}
+        />
+        <div className="flex flex-wrap gap-3">
+          <button type="submit" disabled={pending} className={DANGER}>
+            {pending ? t('common.working') : t('support.declineConfirm')}
+          </button>
+          <button type="button" onClick={() => setDeclining(false)} className={SECONDARY}>
+            {t('common.cancel')}
+          </button>
+        </div>
+      </form>
+    </Dialog>
+    </>
   );
 }

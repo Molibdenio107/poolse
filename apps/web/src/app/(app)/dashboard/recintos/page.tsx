@@ -1,7 +1,7 @@
-import { attentionClass } from '@/components/attention-dot';
+import { ATTENTION_ROW } from '@/components/attention-dot';
 import { cn } from '@/lib/utils';
 import { getTranslations } from 'next-intl/server';
-import { Building2, Plus } from 'lucide-react';
+import { AlertTriangle, Building2, Plus, Wrench } from 'lucide-react';
 import { BASE_SPORT, type PoolseSport } from '@poolse/rules';
 import { ApiError, apiFetch, type Facilities, type FacilityDetail, type Me } from '@/lib/api';
 import { EntityIcon } from '@/components/entity-icon';
@@ -102,10 +102,8 @@ export default async function RecintosPage({
                       className={cn(
                         'py-3 first:pt-0 last:pb-0',
                         (attention.pools[pool.id] ?? 0) > 0 &&
-                          cn(
-                            attentionClass(site.pools.filter((one) => (attention.pools[one.id] ?? 0) > 0).length),
-                            'my-1 rounded px-3 first:pt-3 last:pb-3',
-                          ),
+                          // The bar and tint, never the box, even for one tank (Rui, 11-11-2026).
+                          cn(ATTENTION_ROW, 'my-1 rounded px-3 first:pt-3 last:pb-3'),
                       )}
                     >
                       <FromLink
@@ -120,6 +118,33 @@ export default async function RecintosPage({
                         />
                         <span className="text-sm text-foreground-muted">{t(`facilities.kind.${pool.kind}`)}</span>
                       </FromLink>
+                      {/*
+                        What the circle is, in words (Rui, 11-11-2026): the same
+                        chips Espaços uses, so the row says what to see to
+                        without opening the pool, and colour never carries it alone.
+                      */}
+                      {(attention.places ?? []).some((place) => place.poolId === pool.id) && (
+                        <span className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+                          {(attention.places ?? [])
+                            .filter((place) => place.poolId === pool.id)
+                            .map((place) => (
+                              <span
+                                key={place.kind}
+                                className={cn(
+                                  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium',
+                                  place.kind === 'task' ? 'bg-warning/10 text-warning' : 'bg-danger/10 text-danger',
+                                )}
+                              >
+                                {place.kind === 'task' || place.kind === 'fault' ? (
+                                  <Wrench className="size-3" aria-hidden="true" />
+                                ) : (
+                                  <AlertTriangle className="attention size-3" aria-hidden="true" />
+                                )}
+                                {t(`recintos.page.reason.${place.kind}`, { count: place.count })}
+                              </span>
+                            ))}
+                        </span>
+                      )}
                       <PoolClosureNote closure={pool.closure} className="mt-1" />
                     </li>
                   ))}

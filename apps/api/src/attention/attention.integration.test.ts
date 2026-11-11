@@ -50,6 +50,10 @@ test('QA 1–2: a pool out of range lights the pool, its site and the menu — f
         assert.equal(seen.pools[pool!.id], 1);
         assert.equal(seen.facilities[tenant.facilityId], 1);
         assert.equal(seen.menu['facilities'], 1);
+        // The bell names it: which pool, and that it is the water (Rui, 11-11-2026).
+        assert.deepEqual(seen.places, [
+          { kind: 'water', facilityId: tenant.facilityId, poolId: pool!.id, spaceId: null, name: 'Piscina 2', count: 1 },
+        ]);
       });
     }
     await actingAs(tenant, { membershipId: coach, roles: ['instructor'] }, async () => {
@@ -65,6 +69,7 @@ test('QA 1–2: a pool out of range lights the pool, its site and the menu — f
       assert.deepEqual(seen.pools, {});
       assert.deepEqual(seen.facilities, {});
       assert.equal(seen.menu['facilities'], undefined);
+      assert.deepEqual(seen.places, []);
     });
 
     // Water quality switched off: no water circle anywhere.
@@ -72,6 +77,49 @@ test('QA 1–2: a pool out of range lights the pool, its site and the menu — f
     await owner.query(`UPDATE organization SET disabled_modules = '{water_quality}' WHERE id = $1`, [tenant.organizationId]);
     await actingAs(tenant, { roles: ['owner'] }, async () => {
       assert.deepEqual((await attention.read()).pools, {});
+    });
+  });
+});
+
+test('the bell names a due task by its pool and a serious fault by its site, and both clear when done (Rui, 11-11-2026)', async () => {
+  await withScratchTenant(async (tenant) => {
+    const [pool] = await tenant.sql<{ id: string }>(
+      `INSERT INTO pool (organization_id, facility_id, name, kind) VALUES ($1, $2, 'Tanque grande', 'indoor') RETURNING id`,
+      [tenant.organizationId, tenant.facilityId],
+    );
+    const [task] = await tenant.sql<{ id: string }>(
+      `INSERT INTO maintenance_task (organization_id, facility_id, pool_id, title, interval_days)
+       VALUES ($1, $2, $3, 'Limpar pré-filtro', 7) RETURNING id`,
+      [tenant.organizationId, tenant.facilityId, pool!.id],
+    );
+    const fixer = await addMember(tenant, 'Pedro', 'Nogueira', ['maintenance']);
+    const [fault] = await tenant.sql<{ id: string }>(
+      `INSERT INTO maintenance_request (organization_id, facility_id, type, severity, description, reported_by)
+       VALUES ($1, $2, 'fault', 'high', 'Bomba parada', $3) RETURNING id`,
+      [tenant.organizationId, tenant.facilityId, fixer],
+    );
+    const [site] = await tenant.sql<{ name: string }>(`SELECT name FROM facility WHERE id = $1`, [tenant.facilityId]);
+    const attention = new AttentionController();
+
+    await actingAs(tenant, { membershipId: fixer, roles: ['maintenance'] }, async () => {
+      const seen = await attention.read();
+      assert.equal(seen.menu['facilities'], 2);
+      const byKind = Object.fromEntries(seen.places.map((place) => [place.kind, place]));
+      assert.deepEqual(byKind['task'], { kind: 'task', facilityId: tenant.facilityId, poolId: pool!.id, spaceId: null, name: 'Tanque grande', count: 1 });
+      assert.deepEqual(byKind['fault'], { kind: 'fault', facilityId: tenant.facilityId, poolId: null, spaceId: null, name: site!.name, count: 1 });
+    });
+
+    await tenant.sql(`INSERT INTO maintenance_task_completion (organization_id, task_id, performed_by) VALUES ($1, $2, $3)`, [
+      tenant.organizationId,
+      task!.id,
+      fixer,
+    ]);
+    await tenant.sql(`UPDATE maintenance_request SET status = 'resolved', resolved_by = $2, resolved_at = now() WHERE id = $1`, [
+      fault!.id,
+      fixer,
+    ]);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      assert.deepEqual((await attention.read()).places, []);
     });
   });
 });
@@ -139,6 +187,14 @@ test("QA 4: a family's Não vou lights the calendar for that lesson's teacher, n
       const seen = await attention.read();
       assert.equal(seen.menu['calendar'], 1);
       assert.equal(seen.sessions[session!.id], 1);
+      // The bell names the lesson and opens it (Rui, 11-11-2026).
+      assert.equal(seen.lessons.length, 1);
+      assert.equal(seen.lessons[0]!.sessionId, session!.id);
+      assert.equal(seen.lessons[0]!.name, 'Golfinhos');
+      assert.equal(seen.lessons[0]!.partner, false);
+      assert.equal(seen.lessons[0]!.count, 1);
+      assert.match(seen.lessons[0]!.localTime, /^\d{2}:\d{2}$/);
+      assert.equal(new Date(`${seen.lessons[0]!.weekStart}T12:00:00Z`).getUTCDay(), 1, 'the week starts on a Monday');
     });
     await actingAs(tenant, { membershipId: nuno, roles: ['instructor'] }, async () => {
       assert.equal((await attention.read()).menu['calendar'], undefined);
@@ -147,7 +203,7 @@ test("QA 4: a family's Não vou lights the calendar for that lesson's teacher, n
       assert.equal((await attention.read()).menu['calendar'], 1);
     });
     await actingAs(tenant, { membershipId: parent, roles: ['guardian'] }, async () => {
-      assert.deepEqual(await attention.read(), { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {}, classGroups: {} });
+      assert.deepEqual(await attention.read(), { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {}, students: {}, classGroups: {}, places: [], lessons: [] });
     });
   });
 });

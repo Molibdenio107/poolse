@@ -3,6 +3,7 @@ import { formatDate, formatTime } from '@/lib/date-format';
 import { PageEmpty, PageError } from '@/components/page-shell';
 import { listOpenSupportGrants } from '../dashboard/support.actions';
 import { EnterSupportButton } from './enter-support-button';
+import { EndSupportButton } from './end-support-button';
 
 /**
  * Where support has been let in — POOLSE-79.
@@ -46,7 +47,10 @@ export async function SupportPanel(): Promise<React.ReactElement> {
                 })}
               </p>
             </div>
-            <EnterSupportButton grantId={grant.grantId} club={grant.organizationName} />
+            <div className="flex flex-wrap gap-2">
+              <EnterSupportButton grantId={grant.grantId} club={grant.organizationName} />
+              <EndSupportButton organizationId={grant.organizationId} club={grant.organizationName} />
+            </div>
           </li>
         ))}
       </ul>

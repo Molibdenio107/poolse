@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { classifyAiError, stopFailure, type AiFailure } from './ai-failure';
 import type { Me } from './api';
 import { aiReaderGate, anthropicKeyConfigured, metered } from './ai-meter';
 
@@ -29,7 +30,7 @@ export interface IdDocumentDraft {
 /** `off`, `noKey` and `capReached` mean the call was never made (POOLSE-137). */
 export type IdDocumentRead =
   | { draft: IdDocumentDraft }
-  | { error: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' };
+  | { error: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' | AiFailure };
 
 const SYSTEM = [
   'You read one photograph or scan of a personal identification document and transcribe four facts.',
@@ -99,7 +100,7 @@ export async function readIdDocument(bytes: Buffer, mediaType: string): Promise<
       { timeout: 60_000 },
     );
     used = response;
-    if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') return { error: 'unreadable' };
+    { const stopped = stopFailure(response.stop_reason); if (stopped !== null) return { error: stopped }; }
     const text = response.content
       .filter((part): part is Anthropic.Beta.BetaTextBlock => part.type === 'text')
       .map((part) => part.text)
@@ -120,10 +121,10 @@ export async function readIdDocument(bytes: Buffer, mediaType: string): Promise<
     };
     if (draft.number === null && draft.validUntil === null) return { error: 'nothingFound' };
     return { draft };
-  } catch {
+  } catch (error) {
     // Rate limited, timed out, a key that is wrong: the photo is filed and the
     // form beside it still works.
-    return { error: 'unreadable' };
+    return { error: classifyAiError('id_document', error) };
   }
   };
 

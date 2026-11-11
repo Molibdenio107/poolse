@@ -1,5 +1,6 @@
 'use client';
 
+import { useBusyWhile } from '@/lib/busy';
 import { useActionState, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, Check, Info, Upload } from 'lucide-react';
@@ -25,6 +26,7 @@ import {
   type WaterReadState,
 } from './water-import.actions';
 import { formatDate } from '@/lib/date-format';
+import { chooseColumnForField } from '@/lib/column-mapping';
 import { Dialog } from '@/components/ui/dialog';
 import { formatReading } from '@/lib/pool-metrics';
 
@@ -104,6 +106,8 @@ export function WaterImport({
     ok: false,
     attempt: 0,
   } as WaterImportState);
+  // Reading or importing washes the page and any dialog over it (Rui, 11-11-2026).
+  useBusyWhile(reading || importing, 'load', 'navigate');
 
   const sheets = read.sheets ?? [];
   const sheet: NamedSheet | undefined = sheets[sheetAt];
@@ -457,10 +461,10 @@ function Mapping({
               className={CONTROL_LINE}
               value={mapping[field] ?? ''}
               onChange={(event) =>
-                onMapping({
-                  ...mapping,
-                  [field]: event.target.value === '' ? null : Number(event.target.value),
-                } as WaterMapping)
+                // One column feeds one field (11-11-2026): taking a column frees the field that had it.
+                onMapping(
+                  chooseColumnForField(mapping, WATER_FIELDS, field, event.target.value === '' ? null : Number(event.target.value)),
+                )
               }
             >
               <option value="">{t('facilities.waterImport.unmapped')}</option>

@@ -71,7 +71,11 @@ export type TimetableProblemCode =
   | 'laneNotFound'
   | 'unknownSubject';
 
-export type TimetableWarningCode = 'instructorNotFound' | 'headcountMissing';
+/**
+ * `noLanes`: imported into *Sem pista* (Rui, 11-11-2026), no longer refused.
+ * `lanesPlaced`: "3 pistas" placed on named lanes. `lanesShort`: fewer free lanes than asked.
+ */
+export type TimetableWarningCode = 'instructorNotFound' | 'headcountMissing' | 'noLanes' | 'lanesPlaced' | 'lanesShort';
 
 export interface TimetableProblem {
   code: TimetableProblemCode;
@@ -159,6 +163,8 @@ export interface TimetablePreview {
    * clean" cannot be partially implemented by a caller that forgot a case.
    */
   committable: boolean;
+  /** Days whose hours keep rows out, and what would let them in (11-11-2026: *Alargar horário*). */
+  hoursNeeded: TimetableHoursNeeded[];
 }
 
 /** What the site holds, for names to resolve against. */
@@ -178,9 +184,52 @@ export interface TimetableContext {
   closures: { weekday: number; reason: string }[];
   laneLevelCapacity: Record<string, number>;
   maxConcurrentGroupsPerInstructor: number | null;
+  /**
+   * Each day's hours at the site (11-11-2026), for the preview to check a row's
+   * times as the database will at commit. HH:MM; `24:00` is the end of the day.
+   */
+  hours?: { weekday: number; available: boolean; opens: string; closes: string }[];
+}
+
+/** What the file needs of the site's hours, where it asks for more than the site keeps (11-11-2026). */
+export interface TimetableHoursNeeded {
+  weekday: number;
+  /** The day as the site keeps it now; null when it has no row. */
+  current: { available: boolean; opens: string; closes: string } | null;
+  /** The day as the file needs it: open, from the earlier start to the later end. */
+  needed: { opens: string; closes: string };
+  /** How many rows that day it would let in. */
+  rows: number;
 }
 
 const MAX_NAME = 120;
+
+/** "Hidroginástica (3 pistas)" — a lane count, not lane names (11-11-2026). */
+const LANE_COUNT = /\(?\s*(\d{1,2})\s*pistas?\s*\)?/i;
+/** "Pista 2", "pista 1-3": a lane named, which is not a count. */
+const LANE_NAMED = /pista\s*\d/i;
+
+/** A name with its lane count taken out, and the count; null when it states none. */
+export function readLaneCount(
+  name: string,
+  laneNames: readonly string[],
+): { name: string; count: number | null; laneNames: string[] } {
+  const isCount = (text: string): boolean => LANE_COUNT.test(text) && !LANE_NAMED.test(text);
+  const named = laneNames.filter((lane) => !isCount(lane));
+  const fromLanes = laneNames.find(isCount);
+  const inName = isCount(name) ? LANE_COUNT.exec(name) : null;
+  const raw = inName?.[1] ?? (fromLanes === undefined ? undefined : LANE_COUNT.exec(fromLanes)?.[1]);
+  const count = raw === undefined ? null : Number(raw);
+  return {
+    name: inName === null ? name : name.replace(inName[0], '').replace(/\s{2,}/g, ' ').trim(),
+    count: count !== null && count > 0 ? count : null,
+    laneNames: named,
+  };
+}
+
+function clockOf(minutes: number): string {
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
 
 /**
  * The largest timetable one import may carry.
@@ -330,11 +379,39 @@ export function previewTimetable(
     line: null,
   }));
 
+  /*
+   * Lanes held, for placing "3 pistas" (Rui, 11-11-2026): what is on the grid
+   * and what earlier rows of this file took, so two activities sharing an hour
+   * take side-by-side lanes rather than the same ones.
+   */
+  const lanesByPosition = [...context.lanes].sort((a, b) => a.position - b.position);
+  const held: { weekday: number; from: number; to: number; laneIds: string[] }[] = context.existing.map((booking) => ({
+    weekday: booking.weekday,
+    from: booking.startMinutes,
+    to: booking.startMinutes + booking.durationMinutes,
+    laneIds: [...booking.laneIds],
+  }));
+  const freeLanes = (weekday: number, from: number, to: number): typeof lanesByPosition =>
+    lanesByPosition.filter(
+      (lane) => !held.some((h) => h.weekday === weekday && h.from < to && from < h.to && h.laneIds.includes(lane.id)),
+    );
+  /** The first run of `count` side-by-side free lanes, else the first free ones. */
+  const place = (count: number, weekday: number, from: number, to: number): typeof lanesByPosition => {
+    const free = freeLanes(weekday, from, to);
+    for (let at = 0; at + count <= free.length; at += 1) {
+      const run = free.slice(at, at + count);
+      if (run.every((lane, i) => i === 0 || lane.position === run[i - 1]!.position + 1)) return run;
+    }
+    return free.slice(0, count);
+  };
+  const hoursOf = new Map((context.hours ?? []).map((day) => [day.weekday, day]));
+
   const rows = raw.map((row, index) => {
     const problems: TimetableProblem[] = [];
     const warnings: TimetableWarning[] = [];
 
-    const name = row.name.trim();
+    const counted = readLaneCount(row.name.trim(), row.laneNames);
+    const name = counted.name;
     if (name === '') problems.push({ code: 'nameRequired' });
     else if (name.length > MAX_NAME) problems.push({ code: 'nameRequired', value: name });
 
@@ -353,12 +430,29 @@ export function previewTimetable(
      * legal in this schema and invisible on the grid, so importing one because
      * "Pista 7" matched nothing would put a class somewhere nobody can see it.
      */
-    const lanes = expandLanes(row.laneNames, context.lanes);
+    /*
+     * A lane count is placed on free lanes of that hour, and a row with no lane
+     * at all goes to *Sem pista* (Rui, 11-11-2026): the calendar draws that
+     * column, so the class is seen and dragged onto lanes later. A lane name
+     * that matches nothing still refuses the row, because it names a lane that
+     * is not there.
+     */
+    let written = counted.laneNames;
+    if (written.length === 0 && counted.count !== null && startMinutes !== null) {
+      const placed = place(counted.count, row.weekday, startMinutes, startMinutes + durationMinutes);
+      written = placed.map((lane) => lane.name);
+      if (placed.length === counted.count) {
+        warnings.push({ code: 'lanesPlaced', value: written.join(', ') });
+      } else {
+        warnings.push({ code: 'lanesShort', value: `${counted.count}` });
+      }
+    }
+    const lanes = expandLanes(written, context.lanes);
     for (const wrote of lanes.missing) {
       problems.push({ code: 'laneNotFound', value: wrote });
     }
     if (lanes.ids.length === 0 && lanes.missing.length === 0) {
-      problems.push({ code: 'noLanes' });
+      warnings.push({ code: 'noLanes' });
     }
 
     /*
@@ -418,7 +512,30 @@ export function previewTimetable(
         });
       }
 
+      /*
+       * The site's hours, checked here because the grid rules do not and the
+       * database trigger will (11-11-2026): a preview that said "clean" then
+       * failed at the commit, with nothing imported. A closed day is the rules'
+       * `weekdayDisabled`, already escalated above.
+       */
+      const day = hoursOf.get(row.weekday);
+      if (day !== undefined && day.available) {
+        const opens = readClock(day.opens) ?? 0;
+        const closes = readClock(day.closes) ?? 24 * 60;
+        if (startMinutes < opens || startMinutes + durationMinutes > closes) {
+          clashes.push({
+            code: 'outsideHours',
+            verdict: 'block',
+            detail: { opens: day.opens, closes: day.closes },
+            with: null,
+            withLine: null,
+            lane: null,
+          });
+        }
+      }
+
       judged.push({ ...subject, line: row.line });
+      held.push({ weekday: row.weekday, from: startMinutes, to: startMinutes + durationMinutes, laneIds: lanes.ids });
     }
 
     const blocked = clashes.some(blocksImport);
@@ -451,9 +568,41 @@ export function previewTimetable(
     flagged: rows.filter((row) => row.warnings.length > 0).length,
   };
 
+  /*
+   * What the site's hours would need to be for the rows they keep out (Rui,
+   * 11-11-2026: one click, *Alargar horário*). Per day, from the earlier of its
+   * opening and the file's first start to the later of its closing and the file's
+   * last end. Only days with such a row.
+   */
+  const needed = new Map<number, { from: number; to: number; rows: number }>();
+  for (const row of rows) {
+    if (!row.clashes.some((clash) => clash.code === 'outsideHours' || clash.code === 'weekdayDisabled')) continue;
+    const end = row.startMinutes + row.durationMinutes;
+    const was = needed.get(row.weekday);
+    needed.set(row.weekday, {
+      from: Math.min(was?.from ?? row.startMinutes, row.startMinutes),
+      to: Math.max(was?.to ?? end, end),
+      rows: (was?.rows ?? 0) + 1,
+    });
+  }
+  const hoursNeeded: TimetableHoursNeeded[] = [...needed.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([weekday, span]) => {
+      const current = hoursOf.get(weekday) ?? null;
+      const opensNow = current !== null && current.available ? (readClock(current.opens) ?? span.from) : span.from;
+      const closesNow = current !== null && current.available ? (readClock(current.closes) ?? span.to) : span.to;
+      return {
+        weekday,
+        current: current === null ? null : { available: current.available, opens: current.opens, closes: current.closes },
+        needed: { opens: clockOf(Math.min(opensNow, span.from)), closes: clockOf(Math.max(closesNow, span.to)) },
+        rows: span.rows,
+      };
+    });
+
   return {
     rows,
     summary,
+    hoursNeeded,
     /*
      * Decision 1, in one boolean. The commit reads this and nothing else, so
      * "refuse the whole file until clean" cannot be half-implemented by a caller

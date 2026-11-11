@@ -1807,6 +1807,8 @@ export interface Student {
    * point away from her.
    */
   isAdultStudent: boolean;
+  /** Under the club's majority with no encarregado — the register's warning (11-11-2026). */
+  minorWithoutGuardian?: boolean;
   /** POOLSE-177: a linked adult, whose name and email are their own account's. */
   identityFromLogin: boolean;
   isGuardian: boolean;
@@ -4322,6 +4324,8 @@ export interface Reception {
   inWater: InWater[];
   products: PassProduct[];
   month: FreeSwimMonth;
+  /** The club's age of majority — Nova pessoa asks for an encarregado under it. */
+  ageOfMajority?: number;
 }
 
 /** A sold pass, with everything about it derived on the server. */
@@ -5692,6 +5696,8 @@ export interface SupportGrant {
   grantedByName: string | null;
   /** An override's notice to the Owners: how many it was owed to, and whether it left. */
   notice: { recipients: number; delivered: boolean } | null;
+  /** Ended by support: when an Owner pressed *Tomei conhecimento*, null until then (11-11-2026). */
+  acknowledgedAt?: string | null;
 }
 
 export interface SupportRequest {
@@ -5732,6 +5738,8 @@ export interface SupportActivity {
 export interface SupportStatus {
   live: { id: string; expiresAt: string; source: SupportSource } | null;
   pendingRequests: number;
+  /** Support ended a window itself in the last 24 h, none live now (11-11-2026). */
+  endedBySupportAt?: string | null;
 }
 
 export interface OpenSupportGrant {
@@ -5745,6 +5753,13 @@ export interface OpenSupportGrant {
 export interface TenantSupport {
   live: { grantId: string; source: SupportSource; expiresAt: string } | null;
   pendingRequest: { id: string; reason: string; requestedAt: string } | null;
+  /** The latest answered request; a decline carries the Owner's reason (11-11-2026). */
+  lastAnswer?: {
+    answer: 'approved' | 'declined';
+    reason: string;
+    declineReason: string | null;
+    answeredAt: string;
+  } | null;
 }
 
 /**

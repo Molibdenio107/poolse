@@ -1,5 +1,6 @@
 'use server';
 
+import type { AiFailure } from '@/lib/ai-failure-codes';
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiDelete, apiFetch, apiPatch, apiUpload, type Me } from '@/lib/api';
 import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
@@ -41,7 +42,7 @@ export async function saveIdentityAction(_previous: FormState, formData: FormDat
 export interface StaffIdPhotoState extends FormState {
   proposal?: { type: 'cc' | 'passport' | 'residence_permit' | 'other' | null; number: string | null };
   /** Why nothing was proposed, when a read was attempted. */
-  readNote?: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' | 'notAllowed' | 'rateLimited';
+  readNote?: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' | 'notAllowed' | AiFailure;
 }
 
 export async function uploadStaffIdPhotoAction(_previous: StaffIdPhotoState, formData: FormData): Promise<StaffIdPhotoState> {

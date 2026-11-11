@@ -329,3 +329,75 @@ test('a cancelled booking on the grid frees its lane', () => {
 
   assert.equal(preview.committable, true);
 });
+
+// ---------------------------------------------------------------------------
+// Lane counts, Sem pista and the site's hours — Rui, 11-11-2026
+// ---------------------------------------------------------------------------
+
+test('"(3 pistas)" is a count: placed on side-by-side free lanes, and two activities in one hour do not share lanes', () => {
+  const preview = previewTimetable(
+    [
+      row({ name: 'Hidroginástica (3 pistas)', laneNames: [], startTime: '07:00', durationMinutes: 60, line: 1 }),
+      row({ name: 'Natação Livre (3 pistas)', laneNames: [], startTime: '07:00', durationMinutes: 60, line: 2 }),
+    ],
+    context(),
+  );
+  const [hidro, livre] = preview.rows;
+  assert.equal(hidro!.name, 'Hidroginástica', 'the count is not part of the name');
+  assert.deepEqual(hidro!.laneNames, ['Pista 1', 'Pista 2', 'Pista 3']);
+  assert.deepEqual(livre!.laneNames, ['Pista 4', 'Pista 5', 'Pista 6']);
+  assert.equal(preview.summary.blocked, 0, 'they do not clash with each other');
+  assert.equal(preview.committable, true);
+});
+
+test('a count larger than the free lanes takes what is free and says so', () => {
+  const preview = previewTimetable(
+    [
+      row({ name: 'Natação Livre (4 pistas)', laneNames: [], startTime: '10:00', durationMinutes: 60, line: 1 }),
+      row({ name: 'Hidroginástica (3 pistas)', laneNames: [], startTime: '10:00', durationMinutes: 60, line: 2 }),
+    ],
+    context(),
+  );
+  assert.deepEqual(preview.rows[1]!.laneNames, ['Pista 5', 'Pista 6']);
+  assert.ok(preview.rows[1]!.warnings.some((warning) => warning.code === 'lanesShort'));
+});
+
+test('a row with no lane at all is imported into Sem pista, not refused', () => {
+  const preview = previewTimetable([row({ laneNames: [], name: 'Hidro Sénior' })], context());
+  const [only] = preview.rows;
+  assert.equal(only!.importable, true);
+  assert.deepEqual(only!.laneIds, []);
+  assert.ok(only!.warnings.some((warning) => warning.code === 'noLanes'));
+  assert.equal(preview.committable, true);
+});
+
+test('a lane name that matches nothing still refuses the row', () => {
+  const preview = previewTimetable([row({ laneNames: ['Pista 9'] })], context());
+  assert.equal(preview.rows[0]!.importable, false);
+  assert.equal(preview.rows[0]!.problems[0]?.code, 'laneNotFound');
+});
+
+test('the site hours are checked in the preview, and the file says what they would need to be', () => {
+  const hours = [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
+    weekday,
+    available: weekday <= 5,
+    opens: '08:00',
+    closes: '20:00',
+  }));
+  const preview = previewTimetable(
+    [
+      row({ weekday: 1, startTime: '07:00', durationMinutes: 60, line: 1 }),
+      row({ weekday: 1, startTime: '21:00', durationMinutes: 60, line: 2, laneNames: ['Pista 2'] }),
+      row({ weekday: 2, startTime: '10:00', durationMinutes: 60, line: 3 }),
+      row({ weekday: 7, startTime: '10:00', durationMinutes: 60, line: 4 }),
+    ],
+    context({ hours, openWeekdays: [1, 2, 3, 4, 5] }),
+  );
+  assert.ok(preview.rows[0]!.clashes.some((clash) => clash.code === 'outsideHours'));
+  assert.equal(preview.rows[0]!.importable, false, 'the database would refuse it at commit');
+  assert.equal(preview.rows[2]!.importable, true);
+  assert.deepEqual(preview.hoursNeeded, [
+    { weekday: 1, current: { available: true, opens: '08:00', closes: '20:00' }, needed: { opens: '07:00', closes: '22:00' }, rows: 2 },
+    { weekday: 7, current: { available: false, opens: '08:00', closes: '20:00' }, needed: { opens: '10:00', closes: '11:00' }, rows: 1 },
+  ]);
+});

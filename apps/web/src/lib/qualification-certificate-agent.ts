@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { classifyAiError, stopFailure, type AiFailure } from './ai-failure';
 import { anthropicKeyConfigured, metered } from './ai-meter';
 
 /**
@@ -33,7 +34,7 @@ export interface CertificateDraft {
 
 export type CertificateRead =
   | { draft: CertificateDraft }
-  | { error: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' };
+  | { error: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' | AiFailure };
 
 function system(types: readonly string[]): string {
   return [
@@ -97,7 +98,7 @@ export async function readCertificate(
         { timeout: 60_000 },
       );
       used = response;
-      if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') return { error: 'unreadable' };
+      { const stopped = stopFailure(response.stop_reason); if (stopped !== null) return { error: stopped }; }
       const text = response.content
         .filter((part): part is Anthropic.Beta.BetaTextBlock => part.type === 'text')
         .map((part) => part.text)
@@ -120,10 +121,10 @@ export async function readCertificate(
         return { error: 'nothingFound' };
       }
       return { draft };
-    } catch {
+    } catch (error) {
       // Rate limited, timed out, a key that is wrong: the file is filed and the
       // form around it still works.
-      return { error: 'unreadable' };
+      return { error: classifyAiError('qualification_certificate', error) };
     }
   };
 

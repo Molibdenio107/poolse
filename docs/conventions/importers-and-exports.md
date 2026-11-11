@@ -66,3 +66,7 @@ a cell (symbol, thousands separator, either decimal mark; the *last* separator i
 one) and hands it to `parseCents`**, which is what the typed form uses — widening `parseCents`
 itself would make every price field accept "35 €", a refusal pinned by a test. The write goes
 through `applyNewRate`, the same function the form calls.
+
+**One mapping rule, one file** (Rui, 11-11-2026). A column feeds at most one field and a field takes at most one column. `lib/column-mapping.ts` is that rule: `chooseFieldForColumn` for a column view (the questions, the salary list), `chooseColumnForField` for a field view (the full grid, the water importer), and `fieldAtColumn` to read it. The trap it closes: four wizards each had their own `assign`, and their column views said *Não importar* by passing no field **and no column**, which changed nothing, so the dropdown snapped back to the matcher's guess. A new importer calls these and keeps no copy. `e2e/import-mapping.spec.ts` drives the student import in a browser and needs the seeded E2E club.
+
+**A failed read says why, the same in every importer** (11-11-2026). `readFailureKey(failure)` in `lib/read-sheet.ts` is the one map from a read failure to its message, and a PDF the model could not read arrives as `ai.<code>` with its own sentence (`ai.failure.*`). A new importer calls it and keeps no `READ_ERRORS` of its own.

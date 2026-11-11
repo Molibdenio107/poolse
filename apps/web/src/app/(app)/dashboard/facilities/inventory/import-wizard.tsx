@@ -1,5 +1,7 @@
 'use client';
 
+import { useBusyWhile } from '@/lib/busy';
+import { chooseColumnForField, chooseFieldForColumn, fieldAtColumn } from '@/lib/column-mapping';
 import { useActionState, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, Check, Copy, RefreshCw, Upload } from 'lucide-react';
@@ -110,6 +112,9 @@ export function InventoryImportWizard({
   const [readState, readAction, reading] = useActionState(readSheetAction, READ_INITIAL);
   const [runState, runAction, running] = useActionState(runImportAction, RUN_INITIAL);
   const [matchState, matchAction, matching] = useActionState(matchSheetAction, MATCH_INITIAL);
+  // Reading, checking or importing washes the page and any dialog over it (Rui, 11-11-2026):
+  // somebody waiting on a file should see the screen wait too, and not click through it.
+  useBusyWhile(reading || running || matching, 'load', 'navigate');
 
   /*
    * The four steps, from the shared machine — round 5.
@@ -315,31 +320,9 @@ function RequestFields({
   );
 }
 
-/**
- * Which field a column feeds, applied to the mapping.
- *
- * A column may feed one field and a field may take one column, so choosing
- * either end has to clear the other.
- */
-function assign(
-  mapping: InventoryMapping,
-  field: InventoryField | null,
-  column: number | null,
-): InventoryMapping {
-  const next: InventoryMapping = { ...mapping };
-
-  if (column !== null) {
-    for (const other of INVENTORY_FIELDS) {
-      if (next[other] === column) next[other] = null;
-    }
-  }
-  if (field !== null) next[field] = column;
-  return next;
-}
-
-/** The field a column currently feeds, or null. */
+/** The field a column currently feeds, or null — `lib/column-mapping.ts`, shared by every importer. */
 function fieldOf(mapping: InventoryMapping, column: number): InventoryField | null {
-  return INVENTORY_FIELDS.find((field) => mapping[field] === column) ?? null;
+  return fieldAtColumn(mapping, INVENTORY_FIELDS, column);
 }
 
 function MappingStep({
@@ -489,7 +472,7 @@ function MappingStep({
                 chosen={fieldOf(mapping, column)}
                 guessed={doubtful.find((entry) => entry.column === column) ?? null}
                 onChoose={(field) =>
-                  onMapping(assign(mapping, field, field === null ? null : column))
+                  onMapping(chooseFieldForColumn(mapping, INVENTORY_FIELDS, column, field))
                 }
               />
             ))}
@@ -520,7 +503,7 @@ function MappingStep({
                 value={mapping[field] === null ? '' : String(mapping[field])}
                 onChange={(event) => {
                   const at = event.target.value === '' ? null : Number(event.target.value);
-                  onMapping(assign(mapping, field, at));
+                  onMapping(chooseColumnForField(mapping, INVENTORY_FIELDS, field, at));
                 }}
                 className={CONTROL_LINE}
               >

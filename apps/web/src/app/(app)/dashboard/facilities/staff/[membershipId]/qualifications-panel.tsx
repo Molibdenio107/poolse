@@ -1,5 +1,6 @@
 'use client';
 
+import { aiNoteKey } from '@/lib/ai-failure-codes';
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -252,7 +253,7 @@ export function QualificationsPanel({
                     </button>
                   </div>
                   {dropped.readNote !== undefined && (
-                    <span className="text-foreground-muted">{t(`qualifications.certificate.note.${dropped.readNote}`)}</span>
+                    <span className="text-foreground-muted">{t(aiNoteKey('qualifications.certificate.note', dropped.readNote))}</span>
                   )}
                 </div>
               ) : (

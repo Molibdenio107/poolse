@@ -2,6 +2,17 @@
 
 What a club records about a person, and how that differs when the person is an adult.
 
+## A minor with no encarregado (11-11-2026, Rui)
+
+Saving a student under the club's age of majority without an encarregado is refused, on the
+student form, on a converted Pedido and at Receção's *Nova pessoa*. An import can still let one
+in with a warning, and so can a record saved with no date that gets one later. Such a student
+shows *Menor sem encarregado* beside their name on the register and counts in *Alunos › Por
+rever* (the circle and the bell line), until an encarregado is linked. The one definition is
+`MINOR_WITHOUT_GUARDIAN` in `students.repository.ts`: a birth date (a declared one counts), under
+the club's majority, and no live `guardian_link`. *Filiação* (the "filho de" names printed on
+forms) is a different, optional field and is never required.
+
 ## Which path somebody is on
 
 An **adult** is a student at or above the club's own `age_of_majority` with **no live acompanhante's
@@ -361,7 +372,7 @@ through the student sheet (`socios=1`), no second pipeline.
 
 ### The club's own boletim — POOLSE-142
 
-On a site's **Documentos** tab (owner and admin) a club keeps its own paper forms, one section at a time. *Boletim de sócio* holds the club's membership form. *Declaração FPN* holds the club's copy of the FPN's Anexo 2, in two versions (*Maiores* / *Menores*), because the federation prints two forms (Rui, 01-11-2026). Each form is uploaded as a PDF or an image. A PDF's
+On a site's **Documentos** tab (owner and admin) a club keeps its own paper forms, one section at a time. *Boletim de sócio* holds the club's membership form. *Declaração FPN* holds the club's copy of the FPN's Anexo 2, in two versions (*Adultos* / *Menores*, renamed from *Maiores* 11-11-2026, Rui), because the federation prints two forms (Rui, 01-11-2026). Each form is uploaded as a PDF or an image. A PDF's
 first page is drawn to a JPEG in the browser (`lib/page-image.ts`, pdf.js), so the stored file (purpose
 `boletim_template`, office only) is always an image.
 

@@ -1,4 +1,5 @@
 import { reportMediaType, type DocumentMediaType, type ReportFile } from './analysis-report.ts';
+import type { AiFailure } from './ai-failure';
 
 /**
  * An electricity bill — what one is, and how a draft of one becomes a request.
@@ -445,7 +446,7 @@ function blankToNull(text: string): string | null {
 export type InvoiceParseResult =
   | { draft: InvoiceDraft }
   /** `off`, `noKey` and `capReached` mean the call was never made (POOLSE-137). */
-  | { error: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' };
+  | { error: 'off' | 'noKey' | 'capReached' | 'unreadable' | 'nothingFound' | AiFailure };
 
 export interface EnergyInvoiceParser {
   available(): boolean;

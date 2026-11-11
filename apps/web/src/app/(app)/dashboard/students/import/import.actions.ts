@@ -16,7 +16,7 @@ import {
   type NamedSheet,
   type Sheet,
 } from '@/lib/sheet';
-import { readSheet, type ReadFailure } from '@/lib/read-sheet';
+import { readSheet, readFailureKey } from '@/lib/read-sheet';
 import { agentAvailable, matchWithAgent } from './match-agent';
 
 /**
@@ -60,18 +60,6 @@ export interface ImportState {
   detail?: string;
   attempt: number;
 }
-
-const READ_ERRORS: Record<ReadFailure, string> = {
-  fileMissing: 'students.import.errorFileMissing',
-  fileTooLarge: 'students.import.errorFileTooLarge',
-  fileType: 'students.import.errorFileType',
-  fileEmpty: 'students.import.errorFileEmpty',
-  fileUnreadable: 'students.import.errorFileUnreadable',
-  // The PDF reader is off — said, so a PDF is not mistaken for a broken file.
-  pdfDisabled: 'import.pdfDisabled',
-  pdfNoKey: 'import.pdfNoKey',
-  pdfCapReached: 'import.pdfCapReached',
-};
 
 /**
  * Which column is which — heuristic first, agent for whatever is left.
@@ -198,7 +186,7 @@ export async function readSheetAction(
 
   const outcome = await readSheet(file, { pdf: true });
   if ('error' in outcome) {
-    return { ok: false, errorKey: READ_ERRORS[outcome.error], attempt };
+    return { ok: false, errorKey: readFailureKey(outcome.error), attempt };
   }
 
   const [first] = outcome.sheets;

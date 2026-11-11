@@ -39,9 +39,11 @@ export async function attentionForReader(): Promise<Attention> {
     families: office ? ('all' as const) : hasRole('instructor') ? ('mine' as const) : null,
     // Staff invitations this reader could have sent (none for a support session).
     invitations: grantableRoles().filter((role) => role !== 'guardian' && role !== 'student'),
+    // Only the Owner answers support, and never a support session itself.
+    supportRequests: hasRole('owner') && support !== true,
     membershipId,
   };
-  if (scope.invitations.length === 0 && !scope.leads && !scope.classes && !scope.categories && !scope.water && !scope.maintenance && scope.families === null) {
+  if (scope.invitations.length === 0 && !scope.supportRequests && !scope.leads && !scope.classes && !scope.categories && !scope.water && !scope.maintenance && scope.families === null) {
     return NOTHING;
   }
   // A support session sees the club as an admin would, but is nobody's teacher.

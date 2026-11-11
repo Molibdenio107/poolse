@@ -4021,9 +4021,12 @@ Migration `1790244000000_support-grant.sql`.
 
 **Slice 2** (`1790287200000_support-request.sql`):
 
+- **`support_grant.acknowledged_at` / `acknowledged_by_membership_id`** (11-11-2026): an Owner saw that support ended this window. Both or neither, only on a window `ended_by = 'support'` (CHECK). The club writes those two columns and nothing else of the grant.
 - **`support_request`**: `requested_by_platform_admin_id`, `reason` (required, at most 500),
   `answered_at` / `answer` (`approved | declined`) / `answered_by_membership_id` set together,
-  and `grant_id`, set exactly when approved.
+  and `grant_id`, set exactly when approved. `decline_reason` (11-11-2026) is the Owner's why:
+  required on a decline and absent otherwise, at most 500 (`support_request_decline_reason`,
+  `NOT VALID`, so declines from before it keep no reason).
   - **The club** reads requests and answers them through column-level UPDATE; it never inserts
     or deletes one.
   - **The platform** inserts an unanswered request and reads them.

@@ -171,9 +171,11 @@ Read [`docs/conventions/platform-and-licence.md`](docs/conventions/platform-and-
 - A subscription covers one facility; the schema allows many.
 - Management seats are capped per tenant by a soft quota
 - A model call from a server action is guarded first: `guardAiCall(AI_ROLES.<importer>)` from `lib/ai-guard.ts`.
+- A model read that fails says why: `classifyAiError` / `stopFailure` in `lib/ai-failure.ts`, shown as `ai.failure.<code>` (`aiNoteKey`), never a catch-all "could not read".
 - A platform-wide feature switch is a `platform_switch` row, flipped on `/admin` → Plataforma
 - Speed is judged on a production build and the club seed, never on `pnpm dev`
 - The layout reads `/me` and `GET /shell`, and nothing else
+- A page left open re-reads itself: `KeepFresh` (`components/keep-fresh.tsx`) refreshes every 2 min while visible and on return after 30 s away, never mid-typing or with a dialog open; no live connection.
 - A hydration mismatch costs `<html>` its attributes
 
 ### Money
@@ -243,8 +245,9 @@ Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before tou
 - A circle means something needs doing, and it clears when it is done
 - A number on a tab, pill or menu entry means "things to do", never "things here": `AttentionMark` (dot for 1, breathing number from 2); plain counts are gone (POOLSE-215).
 - A circle follows the problem down — menu, tab (`badge: { kind: 'dot' }`), pill (`attention`) — and the card holding it is `attentionClass(n)` until solved: one alone boxed, two or more in a list an accent bar (POOLSE-214, -216).
-- The bell lists the circles' own counts (`attentionLines` in `lib/attention-items.ts`); a new badge key needs a line there or typecheck fails.
+- The bell lists the circles' own counts (`attentionLines` in `lib/attention-items.ts`); a new badge key needs a line there or typecheck fails. Every line opens where its problem is listed, and site work and lessons are named one line each.
 - The menu's entries live in `lib/nav-entries.ts`
+- A file is dropped anywhere on the page: `PageDrop` (`components/page-drop.tsx`) hands it to the page's one upload that accepts it, or asks *Onde guardar?* when there are several; an upload names itself with `data-drop-label` and opts out with `data-drop-off`.
 - A document on paper is a route with print styles; the one PDF library is `lib/form-pdf.ts`, for a club's forms on the phone
 - A decision asks first
 - An *Arquivar* is quiet (`ARCHIVE_TRIGGER` in `lib/archive-trigger.ts`) and always asks before it archives (Rui, 07-11-2026).
@@ -309,6 +312,7 @@ Read [`docs/conventions/students-and-families.md`](docs/conventions/students-and
 - At 18 a `majority_notice` tells parent and student once, and a parent's consent stays in force until the young adult answers it (`consent_awaits_self()`, POOLSE-208).
 - A warning about a person never gates what a club does with them.
 - A student holds one level per sport
+- A minor is never saved without an encarregado (`parseStudent`, Receção included); one who slipped in is `MINOR_WITHOUT_GUARDIAN`, flagged and in *Por rever*.
 - An archive is undone through the bin, and an archive that takes children lists them.
 - An edit records what it changed, and a revert goes through the edit's own path.
 - A time states its pool, and a best is per stroke, distance and course.
@@ -335,7 +339,7 @@ Read [`docs/conventions/students-and-families.md`](docs/conventions/students-and
 
 Read [`docs/conventions/importers-and-exports.md`](docs/conventions/importers-and-exports.md) before touching an importer, an export or a file a club uploads.
 
-- A column-mapping importer uses `useImportWizard`.
+- A column-mapping importer uses `useImportWizard`, and maps through `lib/column-mapping.ts` (never its own `assign`).
 - A document importer is an `AnalysisReportParser`.
 - A list importer takes a PDF by `readSheet(file, { pdf: true })`, and the PDF becomes a spreadsheet.
 - An importer is a `MatchSpec`, never a new pipeline.

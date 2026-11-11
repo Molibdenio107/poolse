@@ -24,9 +24,10 @@ import { withOrg } from '@poolse/db';
  */
 
 /** Where a session's site lives, and so which clock "today" is read on. */
-const TZ = `coalesce(f.timezone, 'Europe/Lisbon')`;
+export const TZ = `coalesce(f.timezone, 'Europe/Lisbon')`;
 
-const JOINS = `
+/** A session with its turma or partnership, level, pool and site — the bell's lessons read it too. */
+export const JOINS = `
   FROM class_session cs
   LEFT JOIN class_group cg
          ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id

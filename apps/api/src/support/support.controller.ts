@@ -21,6 +21,7 @@ import {
   openGrant,
   pendingRequests,
   revokeGrant,
+  acknowledgeEnded,
   supportActivity,
   supportStatus,
   type GrantHours,
@@ -125,13 +126,35 @@ export class SupportGrantsController {
   }
 
   @Post('requests/:id/decline')
-  async decline(@Param('id', new ParseUUIDPipe()) id: string): Promise<{ declined: true }> {
+  async decline(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: { reason?: unknown },
+  ): Promise<{ declined: true }> {
     requireRole('owner');
+    // A decline says why (Rui, 11-11-2026): the operator reads it on /admin.
+    const reason = typeof body?.reason === 'string' ? body.reason.trim() : '';
+    if (reason === '') {
+      throw new BadRequestException({ message: 'A reason is required', fields: { reason: 'support.declineReasonRequired' } });
+    }
+    if (reason.length > 500) {
+      throw new BadRequestException({ message: 'Reason too long', fields: { reason: 'support.declineReasonTooLong' } });
+    }
     const { organizationId, membershipId } = currentTenant();
-    if (!(await declineRequest(organizationId, membershipId, id))) {
+    if (!(await declineRequest(organizationId, membershipId, id, reason))) {
       throw new NotFoundException({ message: 'support.noPendingRequest' });
     }
     return { declined: true };
+  }
+
+  /** *Tomei conhecimento* on a window support ended — Owner only, like the rest of this screen (11-11-2026). */
+  @Post(':id/acknowledge')
+  async acknowledge(@Param('id', new ParseUUIDPipe()) id: string): Promise<{ acknowledged: true }> {
+    requireRole('owner');
+    const { organizationId, membershipId } = currentTenant();
+    if (!(await acknowledgeEnded(organizationId, membershipId, id))) {
+      throw new NotFoundException({ message: 'support.nothingToAcknowledge' });
+    }
+    return { acknowledged: true };
   }
 
   @Post(':id/revoke')

@@ -12,7 +12,16 @@
       "students": "{count, plural, one {# student with something to review} other {# students with something to review}}",
       "categories": "{count, plural, one {# category expiring} other {# categories expiring}}",
       "meetInbox": "{count, plural, one {# meet result to import} other {# meet results to import}}",
-      "staff": "{count, plural, one {# invitation not yet accepted} other {# invitations not yet accepted}}"
+      "staff": "{count, plural, one {# invitation not yet accepted} other {# invitations not yet accepted}}",
+      "support": "{count, plural, one {Poolse support asked for access to the club} other {Poolse support asked for access to the club (# requests)}}"
+    },
+    "lesson": "{name}, {date} at {time}: {count, plural, one {# answer or request} other {# answers and requests}}",
+    "lessonsMore": "{count, plural, one {# more answer or request in other lessons} other {# more answers and requests in other lessons}}",
+    "place": {
+      "water": "{name}: water out of range",
+      "lab": "{name}: lab report not compliant",
+      "task": "{name}: {count, plural, one {# maintenance task overdue} other {# maintenance tasks overdue}}",
+      "fault": "{name}: {count, plural, one {# serious fault open} other {# serious faults open}}"
     }
   },
   "kinship": {
@@ -3102,6 +3111,7 @@
     "emergencyNameRequired": "Give a name, or choose someone in the club.",
     "badgeAdult": "Adult",
     "badgeGuardian": "Guardian",
+    "badgeMinorNoGuardian": "Minor with no guardian",
     "nifInvalid": "That NIF is not possible — check the nine digits.",
     "nifSharedWithStudent": "A guardian cannot have the same NIF as the student.",
     "nifSharedBetweenGuardians": "Two guardians cannot share a NIF.",
@@ -4877,6 +4887,7 @@
     "sportPending": "There are no occupancy figures for {sport} yet: occupancy measures the pools' lane hours."
   },
   "timetableImport": {
+    "groups": {"counted": "{count, plural, one {# line} other {# lines}}: {what}", "problem": {"nameRequired": "no name", "badTime": "an unreadable time", "badDuration": "a duration that makes no sense", "laneNotFound": "a lane this pool does not have", "unknownSubject": "not clear what it is", "noLanes": "no lane"}, "rule": "{reason}", "reason": {"laneTaken": "the lane is taken", "instructorElsewhere": "the teacher is in another class", "lanesNotContiguous": "lanes not side by side", "dayClosed": "a closed day", "overCapacity": "over capacity", "overConcurrency": "too many classes at once", "other": "refused by a rule"}, "hours": "{count, plural, one {# line outside the site's hours} other {# lines outside the site's hours}}", "file": "{count, plural, one {# line clashing with another line of the file (same lane, same time)} other {# lines clashing with other lines of the file (same lane, same time)}}", "grid": "{count, plural, one {# line clashing with bookings already there} other {# lines clashing with bookings already there}}", "extendHours": "Extend the hours", "keepFirst": "Keep the first of each", "dropThese": "{count, plural, one {Do not import this one} other {Do not import these #}}", "show": "Show lines", "hide": "Hide", "hoursLine": "{day}: {now} → {needed} ({count, plural, one {# line} other {# lines}})", "closed": "closed", "with": "with {name}", "dropped": "{count, plural, one {# line is left out.} other {# lines are left out.}}", "undrop": "Bring back", "importClean": "{count, plural, one {Import the # without conflicts} other {Import the # without conflicts}}", "importCleanHint": "{count, plural, one {The other line is not imported.} other {The other # are not imported.}}", "extendAsk": "Extend the site's opening hours?", "extendConfirm": "Extend the hours", "note": {"noLanes": "{count, plural, one {# line goes to No lane; place it on lanes in the calendar.} other {# lines go to No lane; place them on lanes in the calendar.}}", "lanesPlaced": "{count, plural, one {# line had its lanes placed from the number given.} other {# lines had their lanes placed from the number given.}}", "lanesShort": "{count, plural, one {# line asked for more lanes than were free; it got the free ones.} other {# lines asked for more lanes than were free; they got the free ones.}}", "instructorNotFound": "{count, plural, one {# line names a teacher the club does not have; imported without one.} other {# lines name a teacher the club does not have; imported without one.}}", "headcountMissing": "{count, plural, one {# line with no number of students.} other {# lines with no number of students.}}", "other": "{count, plural, one {# line with a warning.} other {# lines with a warning.}}"}},
     "warning": {
       "headcountMissing": "The number of swimmers is not given.",
       "instructorNotFound": "There is no instructor called \"{value}\" at this club; the class is imported without one."
@@ -4892,7 +4903,11 @@
     "readSheet": "Read this sheet",
     "sheet": "Sheet",
     "noGrid": "No timetable was found on this sheet. It needs a row of weekday names and a column of times.",
-    "found": "{days} days and {bookings} bookings found.",
+    "found": "{days, plural, one {# day} other {# days}} and {bookings, plural, one {# booking found} other {# bookings found}}.",
+    "file": "Timetable file",
+    "reading": "Reading…",
+    "noTimes": "We found the days ({days}) but no column of times to their left. The timetable needs the times in one column, one per row (for example 18:00).",
+    "noBookings": "We found the days and the times, but no class in the cells between them. Check you picked the right sheet.",
     "unplaced": "{count, plural, one {# line that could not be placed} other {# lines that could not be placed}}",
     "check": "Check for conflicts",
     "summary": "{importable} of {total} bookings ready to import.",
@@ -5315,6 +5330,12 @@
     "email": "Email",
     "phone": "Phone",
     "taxNumber": "NIF",
+    "birthDate": "Date of birth",
+    "guardianTitle": "Guardian",
+    "guardianHint": "Under {age}: say who answers for this person. The guardian's NIF or email is required.",
+    "guardianPhone": "Guardian's phone",
+    "guardianEmail": "Guardian's email",
+    "guardianTaxNumber": "Guardian's NIF",
     "addPerson": "Add",
     "back": "Back",
     "otherPerson": "Someone else",
@@ -5709,6 +5730,10 @@
       "platform": "Platform"
     },
     "support": {
+      "end": "End session",
+      "endNamed": "End the support session in {club}",
+      "endMessage": "The support window closes now. The club sees that support ended the session, and support only comes back in with a new consent from the Owner.",
+      "notEntered": "You have not entered this club, so there is no session to end. The window closes on its own when it runs out, or the Owner ends it.",
       "tab": "Support",
       "title": "Support access",
       "explain": "Ask the owner to let support in. Only as a last resort, open emergency access.",
@@ -5718,6 +5743,13 @@
       "enter": "Enter",
       "enterNamed": "Enter {club}",
       "waiting": "Request sent on {date}, waiting for the owner.",
+      "lastAnswer": {
+        "approved": "Last request approved on {date}.",
+        "declined": "Last request declined on {date}.",
+        "asked": "Request: {reason}",
+        "why": "Owner's reason: {reason}",
+        "noReason": "Declined with no reason (before 11-11-2026)."
+      },
       "reason": "Reason",
       "reasonHint": "One sentence the owner will read, up to 500 characters.",
       "reasonRequired": "Write the reason.",
@@ -6367,6 +6399,9 @@
     "theirOwn": "This person chooses their own photograph under My profile."
   },
   "files": {
+    "dropOnPage": "Drop the file to upload it",
+    "dropWhereTitle": "Where should this file go?",
+    "dropNowhere": "There is nowhere on this page to save this file.",
     "photoNumber": "Photo {number}",
     "chooseFile": "Choose a file.",
     "tooLarge": "The file is larger than 10 MB.",
@@ -6533,6 +6568,12 @@
     "restoredKeptToast": "Restored: {name}. {kept, plural, one {# linked record did not come back} other {# linked records did not come back}} because they changed since. A fee line for days already gone stays ended; add one from today."
   },
   "support": {
+    "acknowledge": "Acknowledge",
+    "acknowledgeHint": "Support ended this session. What it did is in the list below; the notice at the top goes once you confirm.",
+    "acknowledgeFailed": "Could not record that. Try again.",
+    "nothingToAcknowledge": "This session was already acknowledged, or was not ended by support.",
+    "clubStripEnded": "Poolse support ended its session at {time} on {date}.",
+    "seeWhatWasDone": "See what was done",
     "tab": "Support access",
     "title": "Support access",
     "explain": "Let Poolse support into this club for a while, to fix a problem. They come in as an administrator, everything they do is recorded under their name, and the access ends on its own.",
@@ -6547,6 +6588,12 @@
     "reason": "Reason: {reason}",
     "approve": "Approve",
     "decline": "Decline",
+    "declineAsk": "Poolse support will not come into the club. Say why: the answer is sent to support.",
+    "declineReason": "Reason",
+    "declineReasonHint": "Required. Up to 500 characters.",
+    "declineConfirm": "Decline access",
+    "declineReasonRequired": "Give the reason for declining.",
+    "declineReasonTooLong": "At most 500 characters.",
     "activityTitle": "What support did",
     "activityEmpty": "Support has not done anything in this club yet.",
     "historyTitle": "Earlier access",
@@ -7702,6 +7749,12 @@
       "noSitesHint": "Create a site in Facilities first; playing areas sit inside it.",
       "poolSubtitle": "The club's tanks, by site. Each opens its own page: water, lanes, equipment and tasks.",
       "addPool": "Add pool",
+      "reason": {
+        "water": "Water out of range",
+        "lab": "Lab report not compliant",
+        "task": "{count, plural, one {# task overdue} other {# tasks overdue}}",
+        "fault": "{count, plural, one {# serious fault} other {# serious faults}}"
+      },
       "courtSubtitle": "{sport} playing areas, by site.",
       "notYours": "This site is visible only to the owner, the administrators and maintenance.",
       "siteLinks": "This site's playing areas are in each sport's section:"
@@ -8061,6 +8114,7 @@
     "savedNoCertificate": "Exam saved, but the certificate was not attached. Attach it on the exam's row."
   },
   "ai": {
+    "failure": {"keyRejected": "AI reading is on, but Anthropic rejected this server's API key (invalid or revoked). It is not the file: tell Poolse support. Meanwhile, export the document to Excel or CSV and import that file.", "rateLimited": "Too many AI reads in a row. Try again in a minute.", "unavailable": "The AI reading service is not available right now. Try again in a few minutes.", "timeout": "The read took too long and was stopped. Try again in a moment, or with a shorter document.", "fileRejected": "The AI refused this file: it may be password-protected, have too many pages or be too large. Try another version of the document, or export it to Excel or CSV.", "refused": "The AI declined to read the content of this document. Export it to Excel or CSV and import that file.", "tooLong": "The document has too much content for one read. Split it into smaller parts, or export it to Excel or CSV.", "unreadable": "The AI read the document but could not transcribe a usable table. Export it to Excel or CSV and import that file."},
     "error": {
       "reader": "Unknown reader.",
       "tokens": "Invalid token count."

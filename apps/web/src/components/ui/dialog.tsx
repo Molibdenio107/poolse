@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useBlocking } from '@/lib/busy';
 
 /**
  * The app's dialog — round 6, ticket 4.1.
@@ -115,6 +116,9 @@ export function Dialog({
   // `createPortal` needs a document, and the server has none. One state flip
   // after mount is cheaper than a dynamic import for something this small.
   const [mounted, setMounted] = useState(false);
+  // Work running (a save, a read, a check) washes the dialog too (Rui, 11-11-2026): the page's
+  // wash sits under dialogs, so a dialog stayed bright and clickable while it waited.
+  const blocking = useBlocking();
   useEffect(() => setMounted(true), []);
 
   const close = useCallback(() => onClose(), [onClose]);
@@ -246,6 +250,7 @@ export function Dialog({
         aria-labelledby={titleId}
         {...(description === undefined ? {} : { 'aria-describedby': descriptionId })}
         tabIndex={-1}
+        aria-busy={blocking}
         onMouseDown={(event) => event.stopPropagation()}
         style={dragY > 0 ? { transform: `translateY(${dragY}px)` } : undefined}
         className={cn(
@@ -298,6 +303,12 @@ export function Dialog({
 
         {children}
       </div>
+      {/*
+        Over the panel, inside the backdrop's own layer: the same watermark the page
+        gets, taking the clicks and not the focus, for as long as the work runs.
+      */}
+      {/* After 400 ms, like the page's, so a quick save does not flash. */}
+      {blocking && <div aria-hidden data-busy-wash className="busy-wash fixed inset-0 [animation-delay:400ms]" />}
     </div>,
     document.body,
   );

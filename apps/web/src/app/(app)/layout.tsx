@@ -8,6 +8,7 @@ import { formats } from '../../i18n';
 import { ToastProvider } from '../../components/ui/toast';
 import { FormResetGuard } from '../../components/form-reset-guard';
 import { FormValidation } from '../../components/form-validation';
+import { PageDrop } from '../../components/page-drop';
 import { ValidationMessagesProvider } from '../../components/ui/field';
 import { DetailsAnimator } from '../../components/details-animator';
 import { ScrollRows } from '../../components/scroll-rows';
@@ -163,6 +164,8 @@ export default async function AppLayout({
               <ValidationMessagesProvider messages={validation}>{children}</ValidationMessagesProvider>
               {/* Every form names what is missing, under the field and in a toast (01-11-2026). */}
               <FormValidation />
+              {/* A file dropped anywhere on the page goes to the page's upload (11-11-2026). */}
+              <PageDrop />
             </ToastProvider>
             {/* A refused save must not untick a box or move a select. */}
             <FormResetGuard />

@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { classifyAiError, stopFailure } from './ai-failure';
 import { anthropicKeyConfigured, metered } from './ai-meter';
 import {
   REPORT_FIELDS,
@@ -150,20 +151,19 @@ export class ClaudeAnalysisReportParser implements AnalysisReportParser {
       );
       used = response;
 
-      if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') {
-        return { error: 'unreadable' };
-      }
+      const stopped = stopFailure(response.stop_reason);
+      if (stopped !== null) return { error: stopped };
       const text = response.content
         .filter((block): block is Anthropic.Beta.BetaTextBlock => block.type === 'text')
         .map((block) => block.text)
         .join('');
       const rows = readRows(JSON.parse(text));
       return rows.length === 0 ? { error: 'nothingFound' } : { rows };
-    } catch {
+    } catch (error) {
       // Rate limited, timed out, misconfigured key, network, a PDF the API
       // refuses. All of them mean the same thing to the operator: this document
       // could not be read, and the form beside it still works.
-      return { error: 'unreadable' };
+      return { error: classifyAiError('water_report', error) };
     }
     };
 

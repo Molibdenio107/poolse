@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { classifyAiError, stopFailure } from './ai-failure';
 import { anthropicKeyConfigured, metered } from './ai-meter';
 import {
   INVOICE_HEADER_FIELDS,
@@ -190,9 +191,8 @@ export class ClaudeEnergyInvoiceParser implements EnergyInvoiceParser {
       );
       used = response;
 
-      if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') {
-        return { error: 'unreadable' };
-      }
+      const stopped = stopFailure(response.stop_reason);
+      if (stopped !== null) return { error: stopped };
       const text = response.content
         .filter((block): block is Anthropic.Beta.BetaTextBlock => block.type === 'text')
         .map((block) => block.text)
@@ -201,11 +201,11 @@ export class ClaudeEnergyInvoiceParser implements EnergyInvoiceParser {
 
       const draft = readInvoiceDraft(JSON.parse(text));
       return draft === null ? { error: 'nothingFound' } : { draft };
-    } catch {
+    } catch (error) {
       // Rate limited, timed out, misconfigured key, network, a PDF the API
       // refuses. All the same to the operator: this document could not be
       // read, and the form beside it still works.
-      return { error: 'unreadable' };
+      return { error: classifyAiError('energy_invoice', error) };
     }
     };
 

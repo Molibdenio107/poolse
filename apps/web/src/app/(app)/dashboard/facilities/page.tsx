@@ -1,4 +1,4 @@
-import { attentionClass } from '@/components/attention-dot';
+import { ATTENTION_ROW, attentionClass } from '@/components/attention-dot';
 import { cn } from '@/lib/utils';
 import { getTranslations } from 'next-intl/server';
 import { ChevronRight, Settings, Building2 } from 'lucide-react';
@@ -308,7 +308,11 @@ async function SportCards({
             <li key={sport} data-sport={sport}>
               <FromLink
                 href={`/dashboard/recintos?sport=${sport}`}
-                className="group flex h-full items-center gap-4 rounded bg-surface p-5 shadow-card hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className={cn(
+                  'group flex h-full items-center gap-4 rounded bg-surface p-5 shadow-card hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                  // A tank to see to marks the sport's card with the bar and tint (Rui, 11-11-2026).
+                  sport === BASE_SPORT && poolAttention > 0 && ATTENTION_ROW,
+                )}
               >
                 <span
                   aria-hidden

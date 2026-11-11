@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import {
   ACTIVE_ORG_COOKIE,
+  ApiError,
   apiFetch,
   apiPost,
   type OpenSupportGrant,
@@ -63,6 +64,21 @@ export async function openSupportWindowAction(
   return { ok: true, toastKey: 'support.openedToast' };
 }
 
+/** *Tomei conhecimento*: the Owner has seen that support left, and the strip goes (11-11-2026). */
+export async function acknowledgeSupportEndAction(
+  grantId: string,
+  _previous: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  try {
+    await apiPost(`/support-grants/${encodeURIComponent(grantId)}/acknowledge`, {});
+  } catch (error) {
+    return describeFailure(error, 'support.acknowledgeFailed');
+  }
+  refreshProfile();
+  return { ok: true, quiet: true };
+}
+
 export async function revokeSupportWindowAction(
   grantId: string,
   _previous: FormState,
@@ -89,7 +105,10 @@ export async function answerSupportRequestAction(
         hours: Number(formData.get('hours') ?? 0),
       });
     } else {
-      await apiPost(`/support-grants/requests/${encodeURIComponent(requestId)}/decline`, {});
+      // The Owner's reason, read by the operator on /admin (11-11-2026); the API refuses none.
+      await apiPost(`/support-grants/requests/${encodeURIComponent(requestId)}/decline`, {
+        reason: String(formData.get('reason') ?? ''),
+      });
     }
   } catch (error) {
     return describeFailure(error, 'support.answerFailed');
@@ -161,6 +180,10 @@ export async function endSupportAction(
       await apiPost(`/platform/support/${encodeURIComponent(grant.grantId)}/leave`, {});
     }
   } catch (error) {
+    // From /admin, a window never entered (11-11-2026): said, not a generic failure.
+    if (error instanceof ApiError && error.code === 'not_entered') {
+      return { ok: false, errorKey: 'admin.support.notEntered' };
+    }
     return describeFailure(error, 'support.endFailed');
   }
   await setActiveClub(null);

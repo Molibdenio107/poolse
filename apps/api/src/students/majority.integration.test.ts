@@ -119,6 +119,17 @@ test('POOLSE-213: a student of age has their own Fez 18 anos, pending then answe
        VALUES ($1, 'Rita', 'Lopes', (club_today() - interval '12 years')::date) RETURNING id`,
       [tenant.organizationId],
     );
+    // With her encarregado: a minor with none is on Por rever for that (11-11-2026), which is not this test.
+    const [mother] = await tenant.sql<{ id: string }>(
+      `INSERT INTO membership (organization_id, status, first_name, last_name, email)
+       VALUES ($1, 'active', 'Ana', 'Lopes', 'ana.lopes.213@example.test') RETURNING id`,
+      [tenant.organizationId],
+    );
+    await tenant.sql(
+      `INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id, relationship, is_primary)
+       VALUES ($1, $2, $3, 'Mãe', true)`,
+      [tenant.organizationId, minor!.id, mother!.id],
+    );
     const controller = new MajorityController();
 
     const pending = await asOwner(tenant, () => controller.one(student));
