@@ -1250,6 +1250,8 @@ export interface EnergyInvoiceSummary {
   days: number;
   /** Billed energy, summed from the lines by the API. */
   kwh: number;
+  /** m³ a gas or water bill charges, or null (12-11-2026). */
+  volumeM3: number | null;
   subtotalCents: number;
   totalCents: number;
   documentTotalCents: number;
@@ -1275,6 +1277,8 @@ export interface EnergyInvoiceDetail extends EnergyInvoiceSummary {
   sourceFileName: string | null;
   /** The bill as received, opened at `/files/<id>` — 12-11-2026. */
   originalFileId: string | null;
+  /** kWh per m³, as a gas bill prints it (12-11-2026). */
+  conversionFactor: number | null;
   recordedByName: string | null;
   registers: EnergyInvoiceRegister[];
   lines: EnergyInvoiceLine[];

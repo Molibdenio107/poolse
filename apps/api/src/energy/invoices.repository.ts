@@ -19,7 +19,7 @@ import { recordAudit } from '../audit/audit.js';
 export type RegisterName = 'vazio' | 'ponta' | 'cheias' | 'super_vazio' | 'total';
 export type TariffPeriod =
   | 'simples' | 'ponta' | 'cheias' | 'vazio_normal' | 'super_vazio' | 'fora_vazio' | 'vazio';
-export type LineKind = 'energy' | 'power' | 'discount' | 'tax' | 'other';
+export type LineKind = 'energy' | 'power' | 'discount' | 'tax' | 'other' | 'fixed' | 'water' | 'sanitation' | 'waste';
 export type ReadingQuality = 'real' | 'estimated';
 
 export interface RegisterInput {
@@ -72,6 +72,10 @@ export interface InvoiceInput {
   sourceFileName: string | null;
   /** The uploaded original, a `stored_file` of purpose `energy_invoice` (12-11-2026). */
   originalFileId: string | null;
+  /** m³ a gas or water bill charges (12-11-2026). */
+  volumeM3: number | null;
+  /** kWh per m³, as a gas bill prints it. */
+  conversionFactor: number | null;
   registers: RegisterInput[];
   lines: LineInput[];
 }
@@ -87,6 +91,8 @@ export interface InvoiceSummary {
   days: number;
   /** Sum of the energy lines' quantities — what was billed, not what the dial said. */
   kwh: number;
+  /** m³ a gas or water bill charges, or null (12-11-2026). */
+  volumeM3: number | null;
   subtotalCents: number;
   totalCents: number;
   documentTotalCents: number;
@@ -112,6 +118,8 @@ export interface InvoiceDetail extends InvoiceSummary {
   sourceFileName: string | null;
   /** The bill as received, when one was kept — opened at `/files/<id>`. */
   originalFileId: string | null;
+  /** kWh per m³, as a gas bill prints it. */
+  conversionFactor: number | null;
   recordedByName: string | null;
   registers: RegisterInput[];
   lines: LineInput[];
@@ -162,6 +170,7 @@ const SUMMARY_COLUMNS = `
   i.id, i.supplier, i.invoice_number, i.issued_on, i.period_start, i.period_end,
   (i.period_end - i.period_start + 1) AS days,
   ${BILLED_KWH} AS kwh,
+  i.volume_m3::float8 AS volume_m3,
   i.subtotal_cents, i.total_cents, i.document_total_cents, i.source::text AS source`;
 
 interface SummaryRow {
@@ -173,6 +182,7 @@ interface SummaryRow {
   period_end: Date;
   days: number;
   kwh: number;
+  volume_m3: number | null;
   subtotal_cents: number;
   total_cents: number;
   document_total_cents: number;
@@ -189,6 +199,7 @@ function summaryOf(row: SummaryRow): InvoiceSummary {
     periodEnd: isoDate(row.period_end) ?? '',
     days: row.days,
     kwh: row.kwh,
+    volumeM3: row.volume_m3,
     subtotalCents: row.subtotal_cents,
     totalCents: row.total_cents,
     documentTotalCents: row.document_total_cents,
@@ -231,6 +242,7 @@ export async function getInvoice(organizationId: string, invoiceId: string): Pro
         notes: string | null;
         source_file_name: string | null;
         original_file_id: string | null;
+        conversion_factor: number | null;
         recorded_by_name: string | null;
       }
     >(
@@ -241,6 +253,7 @@ export async function getInvoice(organizationId: string, invoiceId: string): Pro
               i.tariff, i.cycle, i.reading_quality::text AS reading_quality,
               i.vat_cents, i.other_charges_cents, i.network_access_cents,
               i.regulated_difference_cents, i.notes, i.source_file_name, i.original_file_id,
+              i.conversion_factor::float8 AS conversion_factor,
               ${ACTOR_NAME('bm', 'bu')} AS recorded_by_name
          FROM energy_invoice i
          JOIN energy_meter m ON m.id = i.meter_id AND m.organization_id = i.organization_id
@@ -308,6 +321,7 @@ export async function getInvoice(organizationId: string, invoiceId: string): Pro
       notes: row.notes,
       sourceFileName: row.source_file_name,
       originalFileId: row.original_file_id,
+      conversionFactor: row.conversion_factor,
       recordedByName: row.recorded_by_name,
       registers: registers.map((r) => ({
         register: r.register,
@@ -411,6 +425,13 @@ export async function checkInvoice(
   if (cpe !== null && meter.cpe !== null && cpe !== meter.cpe) {
     warnings.push({ key: 'energy.invoice.cpeMismatch', values: { bill: cpe, meter: meter.cpe } });
   }
+  // A gas bill's m³ × its factor should be the kWh it charges; bills round, so 1 % or 1 kWh (12-11-2026).
+  if (input.volumeM3 !== null && input.conversionFactor !== null && billedKwh > 0) {
+    const expected = Math.round(input.volumeM3 * input.conversionFactor);
+    if (Math.abs(expected - billedKwh) > Math.max(1, billedKwh * 0.01)) {
+      warnings.push({ key: 'energy.invoice.gasDisagree', values: { expected, billed: billedKwh } });
+    }
+  }
   const willSetSerial = input.meterSerial !== null && meter.serial === null;
   if (input.meterSerial !== null && meter.serial !== null && input.meterSerial !== meter.serial) {
     warnings.push({
@@ -483,10 +504,10 @@ export async function addInvoice(
           contracted_power_kva, tariff, cycle, reading_quality,
           subtotal_cents, vat_cents, total_cents, other_charges_cents, document_total_cents,
           network_access_cents, regulated_difference_cents,
-          source, source_file_name, recorded_by, notes, original_file_id)
+          source, source_file_name, recorded_by, notes, original_file_id, volume_m3, conversion_factor)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
                $14::energy_reading_quality, $15, $16, $17, $18, $19, $20, $21,
-               $22::energy_reading_source, $23, $24, $25, $26)
+               $22::energy_reading_source, $23, $24, $25, $26, $27, $28)
        RETURNING id`,
       [
         organizationId, meterId, input.supplier, input.invoiceNumber, input.atcud, input.documentReference,
@@ -495,10 +516,27 @@ export async function addInvoice(
         input.subtotalCents, input.vatCents, input.totalCents, input.otherChargesCents, input.documentTotalCents,
         input.networkAccessCents, input.regulatedDifferenceCents,
         input.source, input.sourceFileName, membershipId, input.notes, input.originalFileId,
+        input.volumeM3, input.conversionFactor,
       ],
     );
     const id = rows[0]?.id;
     if (!id) throw new Error('Could not file the invoice');
+
+    /*
+     * A gas bill's factor becomes the meter's from the period's first day, so
+     * its readings in m³ turn into kWh with no second typing (12-11-2026). Only
+     * on a gas meter that counts m³, and never over a factor already set that day.
+     */
+    if (input.conversionFactor !== null) {
+      await tx.query(
+        `INSERT INTO energy_gas_factor (organization_id, meter_id, kwh_per_unit, effective_from, note, created_by_membership_id)
+         SELECT $1, m.id, $3, $4::date, $5, $6
+           FROM energy_meter m
+          WHERE m.id = $2 AND m.organization_id = $1 AND m.carrier = 'gas' AND m.unit = 'm³'
+         ON CONFLICT (organization_id, meter_id, effective_from) WHERE archived_at IS NULL DO NOTHING`,
+        [organizationId, meterId, input.conversionFactor, input.periodStart, input.invoiceNumber, membershipId],
+      );
+    }
 
     for (const r of input.registers) {
       await tx.query(

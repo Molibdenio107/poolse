@@ -1530,3 +1530,5 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-12** — **Altos e baixos compares a reading's daily use with the median of the six intervals before it, ±30 %** (from the research; Rui asked for highs and lows). It is a yardstick that catches a leak, a stuck pump or a typo quickly. The seasonal year-on-year comparison stays in Comparação.
 
 - **2026-11-12** — **A meter's unit follows its carrier, a gas meter in m³ converts to kWh by dated factors, and water gets make-up and backwash meters with a backwash count per reading** (Rui). The gas factor is entered by hand from the bill for now. Reading gas and water bills is the next slice.
+
+- **2026-11-12** — **Gas and water bills are read and filed like electricity bills** (Rui). The reader takes one fatura per document (electricity, then gas, then water). A gas bill's factor becomes its meter's from the period's first day. Water lines are água, saneamento, resíduos and termo fixo. The summary already files a bill under its meter's carrier.

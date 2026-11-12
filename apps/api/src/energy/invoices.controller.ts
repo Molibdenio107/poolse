@@ -56,7 +56,7 @@ const REGISTERS: readonly RegisterName[] = ['vazio', 'ponta', 'cheias', 'super_v
 const PERIODS: readonly TariffPeriod[] = [
   'simples', 'ponta', 'cheias', 'vazio_normal', 'super_vazio', 'fora_vazio', 'vazio',
 ];
-const KINDS: readonly LineKind[] = ['energy', 'power', 'discount', 'tax', 'other'];
+const KINDS: readonly LineKind[] = ['energy', 'power', 'discount', 'tax', 'other', 'fixed', 'water', 'sanitation', 'waste'];
 
 const MAX_TEXT = 200;
 const MAX_NOTES = 2000;
@@ -254,6 +254,8 @@ function readInvoice(body: Record<string, unknown>): InvoiceInput {
     source,
     sourceFileName: text(body['sourceFileName'], 'sourceFileName'),
     originalFileId: fileIdOf(body['originalFileId']),
+    volumeM3: volumeOf(body['volumeM3']),
+    conversionFactor: factorOf(body['conversionFactor']),
     registers,
     lines: rawLines.map((raw, i) => readLine(raw, i)),
   };
@@ -367,4 +369,20 @@ function fileIdOf(value: unknown): string | null {
     throw new BadRequestException({ message: 'Not a file id', field: 'originalFileId' });
   }
   return value;
+}
+
+/** m³ a gas or water bill charges: zero or more, three decimals, or nothing. */
+function volumeOf(value: unknown): number | null {
+  const n = decimal(value, 'volumeM3');
+  if (n === null) return null;
+  if (n < 0) throw refuse('volumeM3', 'm³ are zero or more');
+  return Math.round(n * 1000) / 1000;
+}
+
+/** kWh per m³, as a gas bill prints it: above 0 and below 100, or nothing. */
+function factorOf(value: unknown): number | null {
+  const n = decimal(value, 'conversionFactor');
+  if (n === null) return null;
+  if (n <= 0 || n >= 100) throw refuse('conversionFactor', 'kWh per m³, above 0');
+  return Math.round(n * 1_000_000) / 1_000_000;
 }

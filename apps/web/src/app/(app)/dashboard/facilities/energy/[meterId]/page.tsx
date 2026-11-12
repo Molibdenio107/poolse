@@ -61,6 +61,10 @@ export default async function MeterPage({
   if (loaded.state !== 'ok') notFound();
   const { meter, readings, usage, gasFactors, monthly, pools, tariffs, canPlan, canRecord, canPrice } = loaded.data;
   const gasInM3 = needsGasFactor(meter.carrier, meter.unit);
+  // A water bill is read in m³ and priced per m³; electricity and gas bills in kWh (12-11-2026).
+  const billUnit = meter.carrier === 'water' ? 'm³' : 'kWh';
+  const billQuantity = (bill: { kwh: number; volumeM3: number | null }): number =>
+    meter.carrier === 'water' ? (bill.volumeM3 ?? 0) : bill.kwh;
   const perDay = (value: number): string => format.number(value, { maximumFractionDigits: value < 10 ? 2 : 0 });
 
   const back = backTarget(from, '/dashboard/energy');
@@ -456,14 +460,14 @@ export default async function MeterPage({
                         <tr className="text-left text-xs uppercase tracking-wider text-foreground-muted">
                           <th className="py-1 pr-2 font-medium">{t('energy.invoice.period')}</th>
                           <th className="py-1 pr-2 font-medium">{t('energy.invoice.number')}</th>
-                          <th className="py-1 pr-2 text-right font-medium">kWh</th>
+                          <th className="py-1 pr-2 text-right font-medium">{billUnit}</th>
                           <th className="py-1 pr-2 text-right font-medium">
                             {t('energy.invoice.subtotalShort')}
                           </th>
                           <th className="py-1 pr-2 text-right font-medium">
                             {t('energy.invoice.totalShort')}
                           </th>
-                          <th className="py-1 text-right font-medium">{t('energy.invoice.perKwh')}</th>
+                          <th className="py-1 text-right font-medium">{t('energy.invoice.perUnit', { unit: billUnit })}</th>
                           {canPlan && (
                             <th className="py-1 text-right font-medium">
                               <span className="sr-only">{t('energy.historyList.col.actions')}</span>
@@ -488,7 +492,7 @@ export default async function MeterPage({
                             </td>
                             <td className="py-1.5 pr-2 text-foreground-muted">{bill.invoiceNumber}</td>
                             <td className="py-1.5 pr-2 text-right tabular-nums">
-                              {format.number(bill.kwh, { maximumFractionDigits: 0 })}
+                              {format.number(billQuantity(bill), { maximumFractionDigits: 0 })}
                             </td>
                             <td className="py-1.5 pr-2 text-right tabular-nums">
                               {centsToText(bill.subtotalCents)} €
@@ -502,8 +506,8 @@ export default async function MeterPage({
                               sent, rather than a rule.
                             */}
                             <td className="py-1.5 text-right tabular-nums">
-                              {bill.kwh > 0
-                                ? `${format.number(bill.totalCents / 100 / bill.kwh, { maximumFractionDigits: 3 })} €`
+                              {billQuantity(bill) > 0
+                                ? `${format.number(bill.totalCents / 100 / billQuantity(bill), { maximumFractionDigits: 3 })} €`
                                 : '—'}
                             </td>
                             {canPlan && (

@@ -4615,3 +4615,12 @@ energy_gas_factor
 energy_meter_kind  + make_up_water, backwash
 energy_reading.backwashes smallint (0..999), water meters only
 ```
+
+#### Gas and water bills — 12-11-2026
+
+```
+energy_invoice
+  volume_m3 numeric(14,3) (>= 0)              -- m³ a gas or water bill charges
+  conversion_factor numeric(10,6) (0 < x < 100) -- kWh/m³ printed on a gas bill
+energy_line_kind  + fixed, water, sanitation, waste
+```

@@ -396,4 +396,22 @@ line beneath, and the form empties after every saved reading, its date back to n
   (backwash). The make-up-lesson module already owns *reposição*, so it is not used here. A water
   reading may record the filter backwashes in its interval, shown beside it. Altos e baixos
   works in m³/day too.
-- **Not yet:** reading gas and water bills (m³, factor, saneamento) is the next slice.
+- **Gas and water bills** are filed like electricity ones (see below).
+
+## Gas and water bills (Rui, 12-11-2026)
+
+- **The reader reads one fatura per document**: electricity if there is one, otherwise gas,
+  otherwise water. Anything else bundled in the document goes to *Outros encargos*.
+- **A gas fatura** gives `volume_m3`, its `conversion_factor` (kWh/m³), its CUI (`PT16…GN`) as the
+  supply point, and energy lines in kWh. Filing it also records the factor as the meter's from the
+  period's first day (gas meters in m³ only, never over a factor already set that day). The preview
+  warns when m³ × factor differs from the billed kWh by more than 1 %.
+- **A water fatura** gives `volume_m3` and lines of kinds `fixed` (disponibilidade / termo fixo),
+  `water`, `sanitation` and `waste`. It has no supply-point code and no registers. A water meter's
+  *Faturas* list shows m³ and €/m³.
+- **The summary needs nothing new**: a bill belongs to a meter, and the meter's carrier files it
+  under gas or water. Notes the reader writes are empty unless something needs attention,
+  and then in pt-PT.
+- **Checked** against two fictitious bills (a gas bill bundled with a TV licence, and a water bill with
+  água, saneamento, resíduos and the water-resources tax): every figure and line kind was read
+  correctly.

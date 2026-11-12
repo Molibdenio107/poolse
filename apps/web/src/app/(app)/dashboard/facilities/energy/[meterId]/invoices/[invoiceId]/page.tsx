@@ -65,6 +65,15 @@ export default async function InvoicePage({
           <Item label={t('energy.invoice.vat')} value={euros(invoice.vatCents)} />
           <Item label={t('energy.invoice.total')} value={euros(invoice.totalCents)} strong />
           <Item label={t('energy.invoice.documentTotal')} value={`${euros(invoice.documentTotalCents)} (${t('energy.invoice.otherChargesShort', { amount: euros(invoice.otherChargesCents) })})`} />
+          {invoice.volumeM3 !== null && (
+            <Item label={t('energy.invoice.volumeM3')} value={`${format.number(invoice.volumeM3, { maximumFractionDigits: 3 })} m³`} />
+          )}
+          {invoice.conversionFactor !== null && (
+            <Item
+              label={t('energy.invoice.conversionFactor')}
+              value={`${format.number(invoice.conversionFactor, { maximumFractionDigits: 4 })} kWh/m³`}
+            />
+          )}
           <Item label={t('energy.invoice.contractedPower')} value={invoice.contractedPowerKva === null ? '—' : `${invoice.contractedPowerKva} kVA`} />
           <Item label={t('energy.invoice.tariff')} value={[invoice.tariff, invoice.cycle].filter(Boolean).join(' · ') || '—'} />
           <Item label={t('energy.invoice.readingQuality')} value={invoice.readingQuality === null ? '—' : t(`energy.invoice.${invoice.readingQuality}`)} />

@@ -31,7 +31,7 @@ export const TARIFF_PERIODS = [
 ] as const;
 export type TariffPeriod = (typeof TARIFF_PERIODS)[number];
 
-export const LINE_KINDS = ['energy', 'power', 'discount', 'tax', 'other'] as const;
+export const LINE_KINDS = ['energy', 'power', 'fixed', 'water', 'sanitation', 'waste', 'discount', 'tax', 'other'] as const;
 export type LineKind = (typeof LINE_KINDS)[number];
 
 export interface RegisterDraft {
@@ -79,6 +79,10 @@ export interface InvoiceDraft {
   documentTotal: string;
   networkAccess: string;
   regulatedDifference: string;
+  /** m³ a gas or water bill charges (12-11-2026). */
+  volumeM3: string;
+  /** kWh per m³, as a gas bill prints it. */
+  conversionFactor: string;
   notes: string;
   registers: RegisterDraft[];
   lines: LineDraft[];
@@ -90,7 +94,7 @@ export const INVOICE_HEADER_FIELDS = [
   'issuedOn', 'periodStart', 'periodEnd', 'dueOn',
   'contractedPowerKva', 'tariff', 'cycle', 'readingQuality', 'cpe', 'meterSerial',
   'subtotal', 'vat', 'total', 'otherCharges', 'documentTotal',
-  'networkAccess', 'regulatedDifference', 'notes',
+  'networkAccess', 'regulatedDifference', 'volumeM3', 'conversionFactor', 'notes',
 ] as const;
 
 export const REGISTER_FIELDS = ['register', 'previousIndex', 'currentIndex', 'kwh'] as const;
@@ -118,7 +122,7 @@ export function emptyInvoiceDraft(): InvoiceDraft {
     issuedOn: '', periodStart: '', periodEnd: '', dueOn: '',
     contractedPowerKva: '', tariff: '', cycle: '', readingQuality: '', cpe: '', meterSerial: '',
     subtotal: '', vat: '', total: '', otherCharges: '', documentTotal: '',
-    networkAccess: '', regulatedDifference: '', notes: '',
+    networkAccess: '', regulatedDifference: '', volumeM3: '', conversionFactor: '', notes: '',
     registers: [emptyRegister('vazio'), emptyRegister('ponta'), emptyRegister('cheias')],
     lines: [emptyLine('energy'), emptyLine('power')],
   };
@@ -251,7 +255,8 @@ export function readInvoiceDraft(raw: unknown): InvoiceDraft | null {
       kwh: asText(r['kwh']),
     });
   }
-  if (seen.length > 0) draft.registers = seen;
+  // A gas or water bill charges m³ and has no electricity dials: no blank rows either (12-11-2026).
+  if (seen.length > 0 || draft.volumeM3 !== '') draft.registers = seen;
 
   const lines = Array.isArray(source['lines']) ? source['lines'] : [];
   const kept: LineDraft[] = [];
@@ -414,6 +419,8 @@ export function draftToBody(
     periodEnd: dateOf('periodEnd', true),
     dueOn: dateOf('dueOn', false),
     contractedPowerKva: number(draft.contractedPowerKva, 'contractedPowerKva'),
+    volumeM3: number(draft.volumeM3, 'volumeM3'),
+    conversionFactor: number(draft.conversionFactor, 'conversionFactor'),
     tariff: blankToNull(draft.tariff),
     cycle: blankToNull(draft.cycle),
     readingQuality: draft.readingQuality === '' ? null : draft.readingQuality,

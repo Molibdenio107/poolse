@@ -438,6 +438,13 @@ export function InvoiceForm({
           <Field label={t('energy.invoice.contractedPower')} error={err('contractedPowerKva')}>
             {(id, cls) => <input id={id} className={cls} inputMode="decimal" value={draft.contractedPowerKva} onChange={(e) => patch({ contractedPowerKva: e.target.value })} />}
           </Field>
+          {/* Gas and water bills charge m³; gas prints the factor that makes them kWh (12-11-2026). */}
+          <Field label={t('energy.invoice.volumeM3')} error={err('volumeM3')}>
+            {(id, cls) => <input id={id} className={cls} inputMode="decimal" value={draft.volumeM3} onChange={(e) => patch({ volumeM3: e.target.value })} />}
+          </Field>
+          <Field label={t('energy.invoice.conversionFactor')} error={err('conversionFactor')}>
+            {(id, cls) => <input id={id} className={cls} inputMode="decimal" value={draft.conversionFactor} onChange={(e) => patch({ conversionFactor: e.target.value })} />}
+          </Field>
           <Field label={t('energy.invoice.tariff')} error={err('tariff')}>
             {(id, cls) => <input id={id} className={cls} value={draft.tariff} onChange={(e) => patch({ tariff: e.target.value })} />}
           </Field>

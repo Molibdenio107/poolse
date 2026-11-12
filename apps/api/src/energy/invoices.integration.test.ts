@@ -225,3 +225,86 @@ test('5.3 — the dashboard sees what energy cost, by the month a period ended i
     });
   });
 });
+
+/** A gas bill: 200 m³ at 11,25 kWh/m³ is 2250 kWh (12-11-2026). */
+function gasBill(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    supplier: 'Galp Gás Natural',
+    invoiceNumber: 'GN 2026/10-4831',
+    issuedOn: '2026-11-05',
+    periodStart: '2026-10-01',
+    periodEnd: '2026-10-31',
+    cpe: 'PT1601000000483112GN',
+    subtotalCents: 20000,
+    vatCents: 4600,
+    totalCents: 24600,
+    otherChargesCents: 0,
+    documentTotalCents: 24600,
+    volumeM3: 200,
+    conversionFactor: 11.25,
+    source: 'manual',
+    registers: [],
+    lines: [
+      { kind: 'energy', description: 'Gás natural', quantity: 2250, unit: 'kWh', unitPrice: 0.08, amountCents: 18000, totalCents: 18000, vatRate: 23 },
+      { kind: 'fixed', description: 'Termo fixo', quantity: 31, unit: 'dias', unitPrice: 0.0645, amountCents: 2000, totalCents: 2000, vatRate: 23 },
+    ],
+    ...overrides,
+  };
+}
+
+test('12-11-2026: a gas bill files its m³ and factor, and its factor becomes the meter’s', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const meters = new EnergyController();
+      const bills = new EnergyInvoicesController();
+      const { id: meterId } = await meters.create(tenant.facilityId, { name: 'Caldeira', kind: 'heating', carrier: 'gas' });
+
+      const preview = (await bills.file(meterId, gasBill())) as { warnings: { key: string }[] };
+      assert.deepEqual(preview.warnings.map((w) => w.key), []);
+      const off = (await bills.file(meterId, gasBill({ conversionFactor: 12 }))) as { warnings: { key: string }[] };
+      assert.ok(off.warnings.some((w) => w.key === 'energy.invoice.gasDisagree'), 'm³ × factor no longer matches the kWh');
+
+      const { id } = (await bills.file(meterId, gasBill({ commit: true }))) as { id: string };
+      const filed = (await bills.one(id)).invoice;
+      assert.equal(filed.volumeM3, 200);
+      assert.equal(filed.conversionFactor, 11.25);
+
+      const { gasFactors } = await meters.one(meterId);
+      assert.deepEqual(gasFactors.map((f) => [f.kwhPerUnit, f.effectiveFrom]), [[11.25, '2026-10-01']]);
+    });
+  });
+});
+
+test('12-11-2026: a water bill files its m³ and its água, saneamento and resíduos lines', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const { id: meterId } = await new EnergyController().create(tenant.facilityId, { name: 'Rede', kind: 'total', carrier: 'water' });
+      const bills = new EnergyInvoicesController();
+      const { id } = (await bills.file(meterId, {
+        supplier: 'Águas do Município',
+        invoiceNumber: 'FA 2026/1180',
+        issuedOn: '2026-11-03',
+        periodStart: '2026-10-01',
+        periodEnd: '2026-10-31',
+        subtotalCents: 30000,
+        vatCents: 1800,
+        totalCents: 31800,
+        otherChargesCents: 0,
+        documentTotalCents: 31800,
+        volumeM3: 150,
+        source: 'manual',
+        registers: [],
+        lines: [
+          { kind: 'water', description: 'Água', quantity: 150, unit: 'm³', unitPrice: 1.2, amountCents: 18000, totalCents: 18000, vatRate: 6 },
+          { kind: 'sanitation', description: 'Saneamento', quantity: 150, unit: 'm³', unitPrice: 0.6, amountCents: 9000, totalCents: 9000, vatRate: 6 },
+          { kind: 'waste', description: 'Resíduos', quantity: 1, unit: 'mês', unitPrice: 30, amountCents: 3000, totalCents: 3000, vatRate: 6 },
+        ],
+        commit: true,
+      })) as { id: string };
+      const filed = (await bills.one(id)).invoice;
+      assert.equal(filed.volumeM3, 150);
+      assert.deepEqual(filed.lines.map((l) => l.kind), ['water', 'sanitation', 'waste']);
+      assert.equal((await bills.list(meterId)).invoices[0]?.volumeM3, 150);
+    });
+  });
+});
