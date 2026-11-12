@@ -17,7 +17,7 @@ a chat, a commit or a file in the repo.
 
 ## 0. Before starting
 
-- [ ] Rui's walk of [`backlog/TEST-PLAN.md`](./backlog/TEST-PLAN.md) on dev is clean, and its fixes are on `main`.
+- [ ] The **Before the pilot** boxes of [`backlog/TEST-PLAN.md`](./backlog/TEST-PLAN.md) are clean on dev, and their fixes are on `main`. The rest is found by the pilot, which runs as an alpha (Rui, 12-11-2026).
 - [ ] `main` is green: `pnpm typecheck`, `pnpm web:test`, `pnpm db:test`, `pnpm api:test`, the checks
       (`i18n`, `forms`, `pt`, `contrast`, `audit:check`), and the Playwright run against a production build.
 - [ ] The API's production image builds **and starts**: `docker build -f apps/api/Dockerfile .`, then run it
