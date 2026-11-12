@@ -74,11 +74,14 @@ export interface RawTimetableRow {
   laneCount?: number | null;
 }
 
-export type TimetableKind = 'evento' | 'free_swim';
+/** `turma`: rows by name and start time become turmas (POOLSE-224, reversing POOLSE-57). */
+export type TimetableKind = 'evento' | 'free_swim' | 'turma';
 
 export type TimetableProblemCode =
   /** A free-swim block holds lanes, as one made by hand must (POOLSE-68). */
   | 'freeSwimNeedsLane'
+  /** A turma of that name exists in another season or pool: never merged, never renamed silently (POOLSE-224). */
+  | 'turmaNameTaken'
   | 'nameRequired'
   | 'badTime'
   | 'badDuration'
@@ -141,6 +144,8 @@ export interface TimetableRow {
   /** The pool the row resolves in; null when neither the row nor the request named one. */
   poolId: string | null;
   kind: TimetableKind;
+  /** The planned turma it is a slot of (POOLSE-224); null for any other kind. */
+  turmaKey: string | null;
   name: string;
   weekday: number;
   startMinutes: number;
@@ -190,6 +195,8 @@ export interface TimetablePreview {
   committable: boolean;
   /** Days whose hours keep rows out, and what would let them in (11-11-2026: *Alargar horário*). */
   hoursNeeded: TimetableHoursNeeded[];
+  /** The turmas the `turma` rows become, new or existing (POOLSE-224). */
+  turmas: PlannedTurma[];
 }
 
 /** What the site holds, for names to resolve against. */
@@ -214,6 +221,10 @@ export interface TimetableContext {
    * times as the database will at commit. HH:MM; `24:00` is the end of the day.
    */
   hours?: { weekday: number; available: boolean; opens: string; closes: string }[];
+  /** The club's live turmas, for an import not to duplicate one (POOLSE-224). */
+  turmas?: ExistingTurma[];
+  /** The site's pools by name, for telling apart one name in two pools. */
+  pools?: { id: string; name: string }[];
 }
 
 /** What the file needs of the site's hours, where it asks for more than the site keeps (11-11-2026). */
@@ -422,7 +433,7 @@ export function previewTimetable(
   const rows = raw.map((row, index) => {
     const problems: TimetableProblem[] = [];
     const warnings: TimetableWarning[] = [];
-    const kind: TimetableKind = row.kind === 'free_swim' ? 'free_swim' : 'evento';
+    const kind: TimetableKind = row.kind === 'free_swim' || row.kind === 'turma' ? row.kind : 'evento';
 
     /*
      * The row's own pool, never the site's (the POOLSE-57 trap of 02-11-2026):
@@ -497,7 +508,8 @@ export function previewTimetable(
     }
 
     const headcount = kind === 'free_swim' ? null : (row.headcount ?? null);
-    if (headcount === null && kind !== 'free_swim') warnings.push({ code: 'headcountMissing' });
+    // A turma counts its enrolments; only an evento states a headcount.
+    if (headcount === null && kind === 'evento') warnings.push({ code: 'headcountMissing' });
 
     const readable = problems.length === 0;
 
@@ -573,6 +585,7 @@ export function previewTimetable(
       line: row.line,
       poolId,
       kind,
+      turmaKey: null as string | null,
       name,
       weekday: row.weekday,
       startMinutes: startMinutes ?? 0,
@@ -589,6 +602,23 @@ export function previewTimetable(
       importable: readable && !blocked,
     } satisfies TimetableRow;
   });
+
+  /*
+   * Turmas by name and start time (POOLSE-224, decided 2), after every row is
+   * judged: a name another season or pool already uses refuses its rows here.
+   */
+  const turmas = groupIntoTurmas(rows, context.turmas ?? [], context.pools ?? []);
+  for (const turma of turmas) {
+    for (const index of turma.slots) {
+      const row = rows[index]!;
+      row.turmaKey = turma.key;
+      if (turma.taken) {
+        row.problems.push({ code: 'turmaNameTaken', value: turma.name });
+        row.readable = false;
+        row.importable = false;
+      }
+    }
+  }
 
   const summary: TimetableSummary = {
     total: rows.length,
@@ -633,6 +663,7 @@ export function previewTimetable(
     rows,
     summary,
     hoursNeeded,
+    turmas,
     /*
      * Decision 1, in one boolean. The commit reads this and nothing else, so
      * "refuse the whole file until clean" cannot be half-implemented by a caller
@@ -641,6 +672,99 @@ export function previewTimetable(
      */
     committable: rows.length > 0 && summary.refused === 0 && summary.blocked === 0,
   };
+}
+
+/** A live turma of the club, as the import sees it (POOLSE-224). */
+export interface ExistingTurma {
+  id: string;
+  name: string;
+  poolId: string | null;
+  /** In the published season — the only season an import writes into. */
+  published: boolean;
+}
+
+/** What a set of `turma` rows becomes: one turma per pool, name and start time. */
+export interface PlannedTurma {
+  /** Stable within one preview: pool, folded name and start. */
+  key: string;
+  name: string;
+  poolId: string | null;
+  /** Set when the slots go into a turma that already exists (rule 7). */
+  existingId: string | null;
+  /** True when the name belongs to a turma the import may not add to. */
+  taken: boolean;
+  /** The rows (preview indexes) that are its weekly slots. */
+  slots: number[];
+  /** The one teacher every slot names, else null. */
+  instructorId: string | null;
+}
+
+/**
+ * Turma rows grouped by name and start time — POOLSE-224, decided 2.
+ *
+ * - Same pool, same name, same start, any days: one turma, a slot per day.
+ * - A name at more than one start in a pool is named *Nome · HH:MM*.
+ * - The same final name in two pools gets the pool's name too, so two pools are
+ *   never merged into one turma (the ticket's trap) and the club-wide unique
+ *   name never collides inside one import.
+ * - A live turma of that name, in the published season and the same pool (or
+ *   none), takes the slots (rule 7). Any other turma of that name refuses the
+ *   rows: merging it or renaming around it silently would both be guesses.
+ *
+ * Pure, and the same function for the preview and the commit, so a confirmed
+ * import is grouped exactly as it was shown.
+ */
+export function groupIntoTurmas(
+  rows: readonly Pick<TimetableRow, 'index' | 'kind' | 'name' | 'poolId' | 'startMinutes' | 'instructorId'>[],
+  existing: readonly ExistingTurma[],
+  pools: readonly { id: string; name: string }[],
+): PlannedTurma[] {
+  const turmaRows = rows.filter((row) => row.kind === 'turma' && row.name.trim() !== '');
+
+  const startsOf = new Map<string, Set<number>>();
+  for (const row of turmaRows) {
+    const key = `${row.poolId ?? '-'}|${normaliseName(row.name)}`;
+    startsOf.set(key, (startsOf.get(key) ?? new Set()).add(row.startMinutes));
+  }
+
+  const groups = new Map<string, PlannedTurma>();
+  for (const row of turmaRows) {
+    const key = `${row.poolId ?? '-'}|${normaliseName(row.name)}|${row.startMinutes}`;
+    const group = groups.get(key);
+    if (group !== undefined) {
+      group.slots.push(row.index);
+      if (group.instructorId !== row.instructorId) group.instructorId = null;
+      continue;
+    }
+    const manyStarts = (startsOf.get(`${row.poolId ?? '-'}|${normaliseName(row.name)}`)?.size ?? 0) > 1;
+    groups.set(key, {
+      key,
+      name: manyStarts ? `${row.name.trim()} · ${clockOf(row.startMinutes)}` : row.name.trim(),
+      poolId: row.poolId,
+      existingId: null,
+      taken: false,
+      slots: [row.index],
+      instructorId: row.instructorId,
+    });
+  }
+
+  const planned = [...groups.values()];
+  const poolsOfName = new Map<string, Set<string>>();
+  for (const turma of planned) {
+    const name = normaliseName(turma.name);
+    poolsOfName.set(name, (poolsOfName.get(name) ?? new Set()).add(turma.poolId ?? '-'));
+  }
+  for (const turma of planned) {
+    if ((poolsOfName.get(normaliseName(turma.name))?.size ?? 0) > 1) {
+      const pool = pools.find((one) => one.id === turma.poolId)?.name;
+      if (pool !== undefined) turma.name = `${turma.name} · ${pool}`;
+    }
+    const same = existing.find((one) => normaliseName(one.name) === normaliseName(turma.name));
+    if (same === undefined) continue;
+    if (same.published && (same.poolId === null || same.poolId === turma.poolId)) turma.existingId = same.id;
+    else turma.taken = true;
+  }
+  return planned;
 }
 
 /**

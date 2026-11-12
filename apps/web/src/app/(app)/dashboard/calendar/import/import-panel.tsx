@@ -20,6 +20,7 @@ import {
 import { Dialog } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { ConflictGroups } from './conflict-groups';
+import { previewFrom, setImportPreview, useImportPreview } from '@/lib/import-preview';
 import { SelectField } from '@/components/ui/field';
 import {
   mapRows,
@@ -180,7 +181,24 @@ export function TimetableImport({
     () => (meaning === undefined ? [] : mapRows(meaning, poolMap, kindMap, poolId === '' ? null : poolId)),
     [meaning, poolMap, kindMap, poolId],
   );
-  const rowsJson = JSON.stringify(mapped ?? []);
+  /*
+   * A confirm refused on the calendar reopens this step on the rows it sent
+   * (POOLSE-224, rule 2): the file's reading may be gone by then (Turmas and
+   * back), and the stored rows are what the person approved.
+   */
+  const waiting = useImportPreview();
+  // Matched on the club's pools, not this dialog's choice: the page may have
+  // remounted (Turmas and back) with no pool chosen yet.
+  const reopened =
+    waiting?.reopen !== undefined && pools.some((pool) => pool.facilityId === waiting.facilityId) ? waiting : null;
+  useEffect(() => {
+    if (reopened !== null) {
+      setPoolId(reopened.poolId);
+      setOpen(true);
+      setDropped(reopened.drop);
+    }
+  }, [reopened]);
+  const rowsJson = reopened?.rowsJson ?? JSON.stringify(mapped ?? []);
   const unchosen = shape === null ? [] : shape.sourcePools.filter((source) => (poolMap[source] ?? '') === '');
 
   /*
@@ -189,7 +207,7 @@ export function TimetableImport({
    * nobody saw judged.
    */
   const [checked, setChecked] = useState('');
-  const result = run.result !== undefined && checked === rowsJson ? run.result : undefined;
+  const result = (run.result !== undefined && checked === rowsJson ? run.result : undefined) ?? reopened?.reopen;
 
   /*
    * A fresh file starts a fresh set of decisions.
@@ -325,7 +343,14 @@ export function TimetableImport({
       */}
       <Dialog
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          // Closed without settling a reopened conflict: back to waiting under the bar.
+          if (reopened !== null) {
+            const { reopen: _settled, ...back } = reopened;
+            setImportPreview(back);
+          }
+        }}
         title={t('timetableImport.title')}
         description={t('timetableImport.subtitle')}
         closeLabel={t('common.close')}
@@ -455,8 +480,9 @@ export function TimetableImport({
                               key={`${read.attempt}:${other.attempt}:${activity.name}`}
                               name={`kind:${activity.name}`}
                               label={t('timetableImport.mapping.activity', { name: activity.name, count: activity.rows })}
-                              initial={kindMap[activity.name] ?? 'evento'}
+                              initial={kindMap[activity.name] ?? 'turma'}
                               options={[
+                                { value: 'turma', label: t('timetableImport.mapping.kind.turma') },
                                 { value: 'evento', label: t('timetableImport.mapping.kind.evento') },
                                 { value: 'free_swim', label: t('timetableImport.mapping.kind.free_swim') },
                                 { value: SKIP, label: t('timetableImport.mapping.skip') },
@@ -571,22 +597,36 @@ export function TimetableImport({
                     onDrop={(indexes) => recheck([...new Set([...dropped, ...indexes])], false)}
                     onKeep={(indexes) => recheck(dropped.filter((one) => !indexes.includes(one)), false)}
                     onExtendHours={() => void extendHours()}
-                    onImportClean={(indexes) => recheck([...new Set([...dropped, ...indexes])], true)}
+                    // Nothing is written before Confirmar (POOLSE-224): this leaves them out and checks again.
+                    onImportClean={(indexes) => recheck([...new Set([...dropped, ...indexes])], false)}
                   />
+                  {/*
+                    *Ver no calendário* (POOLSE-224, rule 1): the import becomes a
+                    preview on the calendar, written only on Confirmar there.
+                  */}
                   {held > 0 ? null : (
-                    <form
-                      action={(data) => {
-                        data.set('facilityId', facilityId);
-                        data.set('poolId', poolId);
-                        data.set('rows', rowsJson);
-                        data.set('settings', JSON.stringify({ commit: true, drop: dropped }));
-                        runAction(data);
+                    <button
+                      type="button"
+                      disabled={running || poolId === '' || result.summary.importable === 0}
+                      className={BUTTON}
+                      onClick={() => {
+                        setImportPreview(
+                          previewFrom(
+                            {
+                              facilityId,
+                              poolId,
+                              rowsJson,
+                              drop: dropped,
+                              fileName: read.fileName ?? reopened?.fileName ?? '',
+                            },
+                            result,
+                          ),
+                        );
+                        setOpen(false);
                       }}
                     >
-                      <button type="submit" disabled={running || poolId === ''} className={BUTTON}>
-                        {t('timetableImport.commit', { count: result.summary.importable })}
-                      </button>
-                    </form>
+                      {t('timetableImport.showOnCalendar', { count: result.summary.importable })}
+                    </button>
                   )}
                 </>
               )}

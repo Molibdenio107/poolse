@@ -583,6 +583,38 @@ through the same insert as one made by hand (`insertFreeSwim`) and must hold a l
 line with the lanes by a trigger on `booking_lane`; the calendar draws a lane-less class in its
 own pool's *Sem pista* column (in every pool's when no pool is known).
 
+## An import is previewed on the calendar and creates turmas (POOLSE-224, 12-11-2026)
+
+Each activity in the mapping step is **Turma** (the default), *Evento*, *Natação livre* (preselected
+for its own names) or *Não importar*. After the conflict step, **Ver no calendário** replaces the
+import:
+
+- The dialog closes and the calendar draws the rows as preview blocks: hatched, dashed, *por
+  confirmar* on the block and on its card, never draggable. A club with no classes yet shows the
+  grid (not *Ainda não há turmas*) while an import waits.
+- A bar across the shell reads *Importação por confirmar · N aulas, M turmas novas* with
+  **Confirmar** and **Descartar** (which asks first).
+- **Nothing is in the database until Confirmar.** The preview lives in the tab's memory
+  (`lib/import-preview.ts`), not in `sessionStorage`, so a reload or a closed tab leaves nothing.
+- Calendário and Turmas keep it. A link anywhere else asks *Sair sem confirmar?* and discards on
+  yes. Closing or reloading the tab gets the browser's own warning.
+- Turmas lists the turmas it would create, *nova (por confirmar)*, with days and times, not
+  openable.
+- **Confirmar** sends the same rows with `commit: true`. The API re-runs the same preview and
+  grouping, and writes in one transaction. If something changed since (a lane booked meanwhile),
+  nothing is written, a warning says so, and the conflict step reopens on the stored rows.
+  Closing that dialog puts the import back under the bar.
+- After it, the bar says *Importado: N aulas, M turmas novas* until the person moves on.
+
+**Turmas by name and start time** (`groupIntoTurmas`, pure, in `timetable-import.ts`). Same pool,
+name and start, any days, is one turma with a slot per day. A name at several starts is *Nome ·
+HH:MM*. A name in two pools also gets the pool's name, so pools never merge. A live turma of that
+name, in the published season and the same pool, takes the slots instead of a new one (rule 7).
+A turma of that name elsewhere (another season or pool) refuses the rows (*turmaNameTaken*), never
+renamed around. New turmas go through `insertClassGroupIn` (the form's own insert, which audits),
+in the published season and the row's pool. They have no level, capacity or price, and a teacher
+only when every slot names the same one. Lessons follow the pattern after the commit.
+
 The reader is gated by a corpus of six fictional timetables in `apps/web/test-fixtures/timetables/`
 (`pnpm timetable:fixtures` rebuilds them; `pnpm timetable:eval` reads them with the real model and
 costs money, so it is run by hand, never in CI).

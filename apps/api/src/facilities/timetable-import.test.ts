@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   expandLanes,
+  groupIntoTurmas,
   previewTimetable,
   readClock,
   type RawTimetableRow,
@@ -468,4 +469,74 @@ test('a free-swim row names no instructor and asks for no headcount', () => {
   );
   assert.equal(preview.rows[0]!.instructorId, null);
   assert.equal(preview.rows[0]!.warnings.length, 0);
+});
+
+/* ---- POOLSE-224: turma rows grouped by name and start time ---- */
+
+const t = (index: number, name: string, start: string, over: Record<string, unknown> = {}) => ({
+  index,
+  kind: 'turma' as 'turma' | 'evento' | 'free_swim',
+  name,
+  poolId: 'pool-1' as string | null,
+  startMinutes: readClock(start)!,
+  instructorId: null as string | null,
+  ...over,
+});
+
+test('one name at one hour on several days is one turma; at another hour it is another (QA 5)', () => {
+  const planned = groupIntoTurmas(
+    [t(0, 'Hidroginástica', '18:00'), t(1, 'Hidroginástica', '18:00'), t(2, 'Hidroginástica', '10:00'), t(3, 'Bebés', '09:00')],
+    [],
+    [],
+  );
+  assert.deepEqual(
+    planned.map((one) => [one.name, one.slots]),
+    [
+      ['Hidroginástica · 18:00', [0, 1]],
+      ['Hidroginástica · 10:00', [2]],
+      ['Bebés', [3]],
+    ],
+  );
+});
+
+test('the same name in two pools is never merged, and says which pool', () => {
+  const planned = groupIntoTurmas(
+    [t(0, 'Escola de Natação', '10:00'), t(1, 'Escola de Natação', '10:00', { poolId: 'pool-2' })],
+    [],
+    [{ id: 'pool-1', name: 'Piscina principal' }, { id: 'pool-2', name: 'Aprendizagem' }],
+  );
+  assert.deepEqual(planned.map((one) => one.name), ['Escola de Natação · Piscina principal', 'Escola de Natação · Aprendizagem']);
+});
+
+test('an existing turma of that name takes the slots; one elsewhere refuses them (QA 7)', () => {
+  const planned = groupIntoTurmas(
+    [t(0, 'hidroginastica', '18:00'), t(1, 'Hidroginástica', '10:00'), t(2, 'Masters', '07:00')],
+    [
+      { id: 'existing', name: 'Hidroginástica · 18:00', poolId: 'pool-1', published: true },
+      { id: 'draft', name: 'Masters', poolId: 'pool-1', published: false },
+    ],
+    [],
+  );
+  assert.equal(planned[0]!.existingId, 'existing', 'accents and case are one name, as the unique index says');
+  assert.equal(planned[1]!.existingId, null);
+  assert.equal(planned[2]!.taken, true, 'a draft season’s turma is not added to, nor renamed around');
+});
+
+test('a turma takes the teacher only when every slot names the same one', () => {
+  const planned = groupIntoTurmas(
+    [
+      t(0, 'Masters', '07:00', { instructorId: 'sandra' }),
+      t(1, 'Masters', '07:00', { instructorId: 'sandra' }),
+      t(2, 'Juvenis', '18:00', { instructorId: 'sandra' }),
+      t(3, 'Juvenis', '18:00', { instructorId: 'nuno' }),
+    ],
+    [],
+    [],
+  );
+  assert.deepEqual(planned.map((one) => one.instructorId), ['sandra', null]);
+});
+
+test('evento and free-swim rows never become turmas', () => {
+  const planned = groupIntoTurmas([t(0, 'Natação Livre', '10:00', { kind: 'free_swim' }), t(1, 'Festa', '10:00', { kind: 'evento' })], [], []);
+  assert.deepEqual(planned, []);
 });

@@ -27,6 +27,7 @@ import type { SessionControls } from '../classes/schedule-board';
 import { CalendarWeek } from './calendar-week';
 import { NoPoolDrop } from './no-pool-drop';
 import { NothingYet } from '@/components/nothing-yet';
+import { ImportGate } from './import-gate';
 import { LessonRequests } from './lesson-requests';
 import { CalendarAgenda } from './calendar-agenda';
 import { bookingKey, slotKey } from '@/lib/slot-key';
@@ -521,8 +522,10 @@ export default async function CalendarPage({
         that succeeded; a load that failed says so above, never "nothing yet".
         Turmas, sessions or bookings, any one brings the grid back.
       */}
-      {calendar !== null && nothingYet !== null &&
-        (calendar.canManage ? (
+      {calendar !== null && nothingYet !== null && (
+        // A first import waiting for Confirmar shows the grid instead (POOLSE-224).
+        <ImportGate show={nothingYet === 'classes' ? 'notWaiting' : 'always'} facilityId={classes?.facilities[0]?.id ?? null}>
+        {calendar.canManage ? (
           <NothingYet
             title={t(nothingYet === 'pools' ? 'calendar.nothingYet.noPoolsTitle' : 'calendar.nothingYet.noClassesTitle')}
             body={t(nothingYet === 'pools' ? 'calendar.nothingYet.noPoolsBody' : 'calendar.nothingYet.noClassesBody')}
@@ -533,10 +536,12 @@ export default async function CalendarPage({
           </NothingYet>
         ) : (
           <NothingYet body={t('calendar.nothingYet.readerBody')} />
-        ))}
+        )}
+        </ImportGate>
+      )}
 
-      {calendar !== null && nothingYet === null && (
-        <>
+      {calendar !== null && (nothingYet === null || nothingYet === 'classes') && (
+        <ImportGate show={nothingYet === null ? 'always' : 'waiting'} facilityId={classes?.facilities[0]?.id ?? null}>
           <section className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
             {/*
               The arrows sit at the two ends of the block — round 5.
@@ -721,7 +726,7 @@ export default async function CalendarPage({
               </FromLink>
             </section>
           )}
-        </>
+        </ImportGate>
       )}
     </PageShell>
   );

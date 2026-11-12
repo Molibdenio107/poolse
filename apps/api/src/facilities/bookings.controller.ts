@@ -312,8 +312,8 @@ function readTimetableRows(raw: unknown): RawTimetableRow[] {
       throw new BadRequestException(`row ${index + 1}: poolId must be a pool id`);
     }
     const kind = row['kind'] ?? 'evento';
-    if (kind !== 'evento' && kind !== 'free_swim') {
-      throw new BadRequestException(`row ${index + 1}: kind must be evento or free_swim`);
+    if (kind !== 'evento' && kind !== 'free_swim' && kind !== 'turma') {
+      throw new BadRequestException(`row ${index + 1}: kind must be evento, free_swim or turma`);
     }
     const laneCount = row['laneCount'];
     if (

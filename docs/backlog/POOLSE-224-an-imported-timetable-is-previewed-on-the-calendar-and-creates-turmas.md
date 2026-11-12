@@ -147,15 +147,15 @@ in `docs/decisions.md`.
 
 ### Acceptance criteria
 
-- [ ] The import ends in a calendar preview with *Confirmar* / *Descartar*. Nothing is written
+- [x] The import ends in a calendar preview with *Confirmar* / *Descartar*. Nothing is written
       before *Confirmar*.
-- [ ] Leaving the calendar and Turmas asks first and discards. Closing the tab warns, and nothing
+- [x] Leaving the calendar and Turmas asks first and discards. Closing the tab warns, and nothing
       remains.
-- [ ] Turmas are created per name and start time, in the published season, with no level or
+- [x] Turmas are created per name and start time, in the published season, with no level or
       capacity, and existing same-name turmas are offered instead of duplicates.
-- [ ] *Natação Livre* becomes free-swim lane holds, *Encerrado* is not imported, and the mapping step
+- [x] *Natação Livre* becomes free-swim lane holds, *Encerrado* is not imported, and the mapping step
       can switch any activity.
-- [ ] The confirm re-checks server-side with the same grouping, in one transaction.
-- [ ] `groupIntoTurmas` is unit-tested, and integration tests cover rules 2, 5, 7 and 8.
-- [ ] pt-PT and en, both themes, keyboard reachable. Docs and the decision reversal are updated in
+- [x] The confirm re-checks server-side with the same grouping, in one transaction.
+- [x] `groupIntoTurmas` is unit-tested, and integration tests cover rules 2, 5, 7 and 8.
+- [x] pt-PT and en, both themes, keyboard reachable. Docs and the decision reversal are updated in
       the same commit.

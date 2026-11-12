@@ -22,6 +22,7 @@ import { classColourVar } from '@/lib/calendar-scale';
 import { cn } from '@/lib/utils';
 import { backProp, originBack } from '@/lib/back';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
+import { PendingTurmas } from './pending-turmas';
 import { addonSportAsked } from '@/lib/modules';
 import { SportPending } from '../sport-pending';
 import { FilterSelect } from '@/components/filter-select';
@@ -461,6 +462,9 @@ export default async function ClassesPage({
               </FromLink>
             </p>
           )}
+
+          {/* An import waiting for Confirmar: the turmas it would create (POOLSE-224). */}
+          <PendingTurmas />
 
           <SectionPills
             label={t('classes.section.nav')}

@@ -466,6 +466,77 @@ export interface ClassGroupInput {
   feeCategoryId: string | null;
 }
 
+/**
+ * The one insert of a turma, inside a caller's transaction — the form's create
+ * and a timetable import (POOLSE-224) both go through it, so both audit it the
+ * same way. The caller has checked there is a published season.
+ */
+export async function insertClassGroupIn(
+  tx: Tx,
+  organizationId: string,
+  input: ClassGroupInput,
+  laneId: string | null,
+): Promise<string> {
+  const { rows } = await tx.query<{ id: string }>(
+    // A new turma joins the season that is running. There is no way to
+    // create one in a retired season, which is the point of retiring it.
+    `INSERT INTO class_group (
+       organization_id, name, level_id, pool_id, instructor_membership_id, capacity, lane_id,
+       colour, fee_category_id, facility_id, season_id
+     ) VALUES (
+       $1, $2, $3, $4, $5, $6, $7, $8, $9,
+       /*
+        * The site — POOLSE-42, which needs one to find the price list.
+        *
+        * A turma with a pool has already said where it is, and the trigger
+        * fills this in from it; this covers the turma created before a lane
+        * is picked. Oldest facility, which for almost every club is their
+        * only one — and a club with two sites moves the turma by giving it
+        * a pool, which is the same gesture they already make.
+        */
+       coalesce(
+         (SELECT p.facility_id FROM pool p WHERE p.id = $4),
+         (SELECT f.id FROM facility f
+           WHERE f.archived_at IS NULL ORDER BY f.created_at, f.id LIMIT 1)
+       ),
+       /*
+        * A club with no active season yields NULL here, and season_id is
+        * NOT NULL — so creating a turma answered 23502 as a 500 instead of
+        * saying what was missing. The one-active-season index guarantees at
+        * most one row, so only the zero-row case could arise.
+        *
+        * Checked before the insert now, so the operator is told to open a
+        * season rather than shown a database error.
+        */
+       (SELECT id FROM season WHERE status = 'published')
+     )
+     RETURNING id`,
+    [
+      organizationId,
+      input.name,
+      input.levelId,
+      input.poolId,
+      input.instructorMembershipId,
+      input.capacity,
+      laneId,
+      input.colour,
+      input.feeCategoryId,
+    ],
+  );
+
+  const id = rows[0]?.id;
+  if (!id) throw new Error('Could not create the class group');
+
+  await recordAudit(tx, {
+    action: 'class_group.created',
+    entityType: 'class_group',
+    entityId: id,
+    data: { name: input.name },
+  });
+
+  return id;
+}
+
 export async function createClassGroup(
   organizationId: string,
   input: ClassGroupInput,
@@ -494,63 +565,7 @@ export async function createClassGroup(
       // The number the form sends, resolved to the lane it names — POOLSE-43.
       const laneId = await laneIdFor(tx, input.poolId, input.lane);
 
-      const { rows } = await tx.query<{ id: string }>(
-        // A new turma joins the season that is running. There is no way to
-        // create one in a retired season, which is the point of retiring it.
-        `INSERT INTO class_group (
-           organization_id, name, level_id, pool_id, instructor_membership_id, capacity, lane_id,
-           colour, fee_category_id, facility_id, season_id
-         ) VALUES (
-           $1, $2, $3, $4, $5, $6, $7, $8, $9,
-           /*
-            * The site — POOLSE-42, which needs one to find the price list.
-            *
-            * A turma with a pool has already said where it is, and the trigger
-            * fills this in from it; this covers the turma created before a lane
-            * is picked. Oldest facility, which for almost every club is their
-            * only one — and a club with two sites moves the turma by giving it
-            * a pool, which is the same gesture they already make.
-            */
-           coalesce(
-             (SELECT p.facility_id FROM pool p WHERE p.id = $4),
-             (SELECT f.id FROM facility f
-               WHERE f.archived_at IS NULL ORDER BY f.created_at, f.id LIMIT 1)
-           ),
-           /*
-            * A club with no active season yields NULL here, and season_id is
-            * NOT NULL — so creating a turma answered 23502 as a 500 instead of
-            * saying what was missing. The one-active-season index guarantees at
-            * most one row, so only the zero-row case could arise.
-            *
-            * Checked before the insert now, so the operator is told to open a
-            * season rather than shown a database error.
-            */
-           (SELECT id FROM season WHERE status = 'published')
-         )
-         RETURNING id`,
-        [
-          organizationId,
-          input.name,
-          input.levelId,
-          input.poolId,
-          input.instructorMembershipId,
-          input.capacity,
-          laneId,
-          input.colour,
-          input.feeCategoryId,
-        ],
-      );
-
-      const id = rows[0]?.id;
-      if (!id) throw new Error('Could not create the class group');
-
-      await recordAudit(tx, {
-        action: 'class_group.created',
-        entityType: 'class_group',
-        entityId: id,
-        data: { name: input.name },
-      });
-
+      const id = await insertClassGroupIn(tx, organizationId, input, laneId);
       return { id };
     });
   } catch (error) {

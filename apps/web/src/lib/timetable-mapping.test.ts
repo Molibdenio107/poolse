@@ -57,12 +57,12 @@ test('two unknown pools are never both put in one tank: they must be chosen', ()
   assert.deepEqual(suggestPools(['Tanque A', 'Tanque B'], SITE), { 'Tanque A': '', 'Tanque B': '' });
 });
 
-test('free swim is suggested only for its own names (decided 1)', () => {
+test('free swim is suggested only for its own names; the rest are turmas', () => {
   assert.equal(suggestKind('Natação Livre'), 'free_swim');
   assert.equal(suggestKind('Nado livre'), 'free_swim');
   assert.equal(suggestKind('LIVRE'), 'free_swim');
-  assert.equal(suggestKind('Hidroginástica livre'), 'evento');
-  assert.equal(suggestKind('Escola de Natação'), 'evento');
+  assert.equal(suggestKind('Hidroginástica livre'), 'turma');
+  assert.equal(suggestKind('Escola de Natação'), 'turma', 'every other class is a turma (POOLSE-224)');
 });
 
 test('mapped rows carry pool, kind and count; closed and Não importar stay out', () => {

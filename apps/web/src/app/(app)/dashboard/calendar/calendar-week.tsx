@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { previewBookings, useImportPreview } from '@/lib/import-preview';
 // A drop, a placement or a new block is a save: the corner and the wash follow the
 // request, after the drop and never during the drag (POOLSE-159).
 import { trackBusy } from '@/lib/busy';
@@ -108,6 +109,18 @@ export function CalendarWeek({
   partnerGroups?: { id: string; name: string; partnerName: string }[];
 }): React.ReactElement {
   const t = useTranslations();
+
+  /*
+   * An import waiting for Confirmar, drawn over the week (POOLSE-224): the
+   * server's part of the page is the club's real grid, and this is the browser's.
+   */
+  const preview = useImportPreview();
+  const drawn = useMemo(
+    () => (preview !== null && preview.done === undefined && preview.facilityId === facilityId
+        ? [...bookings, ...previewBookings(preview)]
+        : bookings),
+    [preview, facilityId, bookings],
+  );
   const { show } = useToast();
   const router = useRouter();
 
@@ -280,6 +293,10 @@ export function CalendarWeek({
       ];
       if (booking.subtitle !== null) {
         facts.unshift({ label: t('classes.level'), value: booking.subtitle });
+      }
+      // An imported row waiting for Confirmar says so first, in words (POOLSE-224).
+      if (booking.preview === true) {
+        facts.unshift({ label: t('calendar.previewLabel'), value: t('grid.previewState') });
       }
       if (booking.instructorName !== null) {
         facts.push({
@@ -622,7 +639,7 @@ export function CalendarWeek({
         slots={slots}
         lanes={lanes}
         pools={pools}
-        bookings={bookings}
+        bookings={drawn}
         levels={levels}
         canManage={canManage}
         renderDetail={renderDetail}

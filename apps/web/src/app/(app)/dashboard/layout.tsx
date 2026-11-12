@@ -11,6 +11,7 @@ import { UserMenu } from '../user-menu';
 import { CommandPalette } from '@/components/command-palette';
 import { NotificationBell } from '@/components/notification-bell';
 import { KeepFresh } from '@/components/keep-fresh';
+import { ImportPreviewBar } from '@/components/import-preview-bar';
 import { readAttention } from '@/lib/attention';
 import { readShell } from '@/lib/shell';
 import { SuspendedNotice } from './suspended-notice';
@@ -307,6 +308,9 @@ export default async function DashboardLayout({
               endedAt={supportStatus.endedBySupportAt ?? null}
             />
           )}
+
+          {/* An imported timetable waiting for Confirmar (POOLSE-224): stays across the calendar and Turmas. */}
+          <ImportPreviewBar />
 
           {/* Nothing under the home bar — POOLSE-88. */}
           <SportShell roles={roles} kind={kind} modules={modules} sports={sports} className="min-w-0 flex-1 pb-safe-bottom">

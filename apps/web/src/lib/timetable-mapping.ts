@@ -10,8 +10,8 @@ import { clockMinutes, type TimetableReading } from './timetable-reading.ts';
  * gets once it is answered. The dialog only draws it.
  */
 
-/** What an activity becomes. `skip` is *Não importar*. */
-export type ActivityKind = 'evento' | 'free_swim' | 'skip';
+/** What an activity becomes. `skip` is *Não importar*; `turma` is the default (POOLSE-224). */
+export type ActivityKind = 'turma' | 'evento' | 'free_swim' | 'skip';
 
 /** A pool's choice: a Poolse pool id, `skip` (*Não importar*), or '' (not chosen yet). */
 export type PoolChoice = string;
@@ -91,9 +91,9 @@ export function suggestPools(sourcePools: readonly string[], pools: readonly Map
   return chosen;
 }
 
-/** *Natação livre* / *Nado livre* / *Livre* are free swim (decided 1); everything else an evento. */
+/** *Natação livre* / *Nado livre* / *Livre* are free swim (decided 1); every other class a turma (POOLSE-224, decided 3). */
 export function suggestKind(activity: string): ActivityKind {
-  return /^((natacao|nado) )?livre$/.test(foldName(activity)) ? 'free_swim' : 'evento';
+  return /^((natacao|nado) )?livre$/.test(foldName(activity)) ? 'free_swim' : 'turma';
 }
 
 export function suggestKinds(activities: readonly { name: string }[]): Record<string, ActivityKind> {
@@ -109,7 +109,7 @@ export interface MappedRow {
   laneNames: string[];
   laneCount: number | null;
   poolId: string | null;
-  kind: 'evento' | 'free_swim';
+  kind: 'turma' | 'evento' | 'free_swim';
   line: number;
 }
 

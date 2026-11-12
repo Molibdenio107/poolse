@@ -1876,7 +1876,8 @@ function Block({
    * impossible; the interface no longer guesses on its behalf.
    */
   const faded = dimmed(booking.weekday);
-  const movable = canManage;
+  // An import waiting for Confirmar is not in the database yet: nothing to move (POOLSE-224).
+  const movable = canManage && booking.preview !== true;
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: booking.id,
@@ -2003,6 +2004,7 @@ function Block({
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary',
         tint,
         staffing === 'uncovered' && 'lesson-chip-uncovered',
+        booking.preview === true && 'lesson-chip-preview',
         // Nothing on a block is clickable now, so a read-only one says so
         // rather than offering a pointer that does nothing.
         movable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default',
@@ -2085,7 +2087,9 @@ function Block({
           )}
         >
           {(moving === null ? booking.startTime : startTimeOf(moving.startMinutes)).slice(0, 5)}
-          {moving === null && staffing === 'uncovered'
+          {moving === null && booking.preview === true
+            ? ` · ${t('grid.previewState')}`
+            : moving === null && staffing === 'uncovered'
             ? ` · ${t('grid.noInstructor')}`
             : moving === null && staffing === 'to_define'
               ? ` · ${t('grid.staffing.pending')}`

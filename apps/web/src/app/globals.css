@@ -1174,6 +1174,12 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
  * full turma's fill line is full ink at 700. Words carry each state; colour only
  * repeats them.
  */
+/* An imported row waiting for Confirmar (POOLSE-224): hatched and dashed, and it says so in words. */
+.lesson-chip.lesson-chip-preview {
+  background: repeating-linear-gradient(135deg, rgb(var(--primary) / 0.14) 0 5px, rgb(var(--surface)) 5px 10px);
+  outline: 1.5px dashed rgb(var(--primary));
+  outline-offset: -1.5px;
+}
 .lesson-chip.lesson-chip-uncovered {
   background: linear-gradient(rgb(var(--warning) / 0.15) 0 0), rgb(var(--surface));
 }

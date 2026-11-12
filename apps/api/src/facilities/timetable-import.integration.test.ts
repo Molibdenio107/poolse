@@ -446,7 +446,7 @@ test('a malformed kind, pool or lane count is refused before anything is read', 
     await actingAs(tenant, { roles: ['owner'] }, async () => {
       await sixLanes(tenant);
       const bookings = new BookingsController();
-      for (const bad of [{ kind: 'turma' }, { poolId: 'x' }, { laneCount: 0 }, { laneCount: 2.5 }]) {
+      for (const bad of [{ kind: 'parceria' }, { poolId: 'x' }, { laneCount: 0 }, { laneCount: 2.5 }]) {
         await expectStatus(() => bookings.importTimetable(tenant.facilityId, { rows: [row(bad)] }), 400);
       }
     });
@@ -505,5 +505,98 @@ test('a booking cannot name a pool of another site', async () => {
       ),
       /class_schedule_pool_fk/,
     );
+  });
+});
+
+/* ---- POOLSE-224: turmas from a timetable ---- */
+
+async function turmaRows(
+  tenant: ScratchTenant,
+): Promise<{ name: string; level_id: string | null; capacity: number | null; slots: number }[]> {
+  return tenant.sql(
+    `SELECT cg.name, cg.level_id, cg.capacity, count(cs.id)::int AS slots
+       FROM class_group cg LEFT JOIN class_schedule cs ON cs.class_group_id = cg.id AND cs.archived_at IS NULL
+      WHERE cg.archived_at IS NULL GROUP BY cg.id ORDER BY cg.name`,
+  );
+}
+
+test('turma rows become turmas by name and start, with no level or capacity, and audit (QA 5, 9)', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const rows = [
+        row({ name: 'Hidroginástica', weekday: 1, startTime: '18:00', laneNames: ['Pista 1'], kind: 'turma', line: 1 }),
+        row({ name: 'Hidroginástica', weekday: 3, startTime: '18:00', laneNames: ['Pista 1'], kind: 'turma', line: 2 }),
+        row({ name: 'Hidroginástica', weekday: 5, startTime: '10:00', laneNames: [], kind: 'turma', line: 3 }),
+      ];
+      const preview = await new BookingsController().importTimetable(tenant.facilityId, { rows });
+      assert.deepEqual(
+        preview.turmas.map((one) => [one.name, one.slots]),
+        [
+          ['Hidroginástica · 18:00', [0, 1]],
+          ['Hidroginástica · 10:00', [2]],
+        ],
+      );
+      assert.deepEqual(await turmaRows(tenant), [], 'a preview writes no turma');
+
+      const done = await new BookingsController().importTimetable(tenant.facilityId, { rows, commit: true });
+      assert.equal(done.created, 3);
+      assert.equal(done.turmasCreated, 2);
+      assert.deepEqual(await turmaRows(tenant), [
+        { name: 'Hidroginástica · 10:00', level_id: null, capacity: null, slots: 1 },
+        { name: 'Hidroginástica · 18:00', level_id: null, capacity: null, slots: 2 },
+      ]);
+
+      const audit = await tenant.sql<{ action: string }>(
+        `SELECT action FROM audit_log WHERE action IN ('class_group.created', 'timetable.imported') ORDER BY action`,
+      );
+      assert.deepEqual(
+        audit.map((one) => one.action),
+        ['class_group.created', 'class_group.created', 'timetable.imported'],
+      );
+
+      const lessons = await tenant.sql<{ n: number }>(
+        `SELECT count(*)::int AS n FROM class_session s JOIN class_group cg ON cg.id = s.class_group_id`,
+      );
+      assert.ok(lessons[0]!.n > 0, 'lessons follow the pattern after the commit');
+    });
+  });
+});
+
+test('an existing turma of that name gets the slots, never a duplicate (QA 7)', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    const [pool] = await tenant.sql<{ id: string }>(`SELECT id FROM pool WHERE name = 'Tanque Grande'`);
+    await tenant.sql(
+      `INSERT INTO class_group (organization_id, name, pool_id, facility_id, season_id) VALUES ($1, 'Bebés', $2, $3, $4)`,
+      [tenant.organizationId, pool!.id, tenant.facilityId, tenant.seasonId],
+    );
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const done = await new BookingsController().importTimetable(tenant.facilityId, {
+        rows: [row({ name: 'bebes', laneNames: [], kind: 'turma', poolId: pool!.id })],
+        commit: true,
+      });
+      assert.equal(done.turmasCreated, 0);
+      assert.deepEqual(await turmaRows(tenant), [{ name: 'Bebés', level_id: null, capacity: null, slots: 1 }]);
+    });
+  });
+});
+
+test('a lane taken between preview and confirm stops the commit and writes no turma (QA 8)', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const rows = [row({ name: 'Masters', laneNames: ['Pista 2'], kind: 'turma' })];
+      const preview = await new BookingsController().importTimetable(tenant.facilityId, { rows });
+      assert.equal(preview.committable, true);
+
+      // Someone else books lane 2 at that hour in the meantime.
+      await new BookingsController().importTimetable(tenant.facilityId, { rows: [row({ name: 'Outro' })], commit: true });
+
+      const refused = await new BookingsController().importTimetable(tenant.facilityId, { rows, commit: true });
+      assert.equal(refused.created, 0);
+      assert.equal(refused.committable, false);
+      assert.deepEqual(await turmaRows(tenant), []);
+    });
   });
 });

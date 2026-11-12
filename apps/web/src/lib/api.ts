@@ -3939,6 +3939,8 @@ export interface GridBooking {
   laneIds: string[];
   /** Its pool (POOLSE-223): its lanes', or for a class in no pista the pool it was put in. Null: unknown. */
   poolId: string | null;
+  /** An imported row waiting for *Confirmar* (POOLSE-224): drawn *por confirmar*, never moved. */
+  preview?: boolean;
   /**
    * The turma's active students, filed by surname — POOLSE-147. Null for
    * anything that is not a turma, which has no student section at all.

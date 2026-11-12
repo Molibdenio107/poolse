@@ -1,10 +1,12 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { isContiguous, type RuleLane } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
+import { insertClassGroupIn } from '../classes/classes.repository.js';
 import {
   canCommit,
   previewTimetable,
   type RawTimetableRow,
+  type PlannedTurma,
   type TimetableHoursNeeded,
   type TimetableContext,
   type TimetableRow,
@@ -1141,8 +1143,12 @@ export interface TimetableImportResult {
   committable: boolean;
   /** Days whose hours keep rows out — *Alargar horário* (11-11-2026). */
   hoursNeeded: TimetableHoursNeeded[];
+  /** The turmas the import makes or adds to (POOLSE-224). */
+  turmas: PlannedTurma[];
   /** Only on a commit. */
   created?: number;
+  /** Only on a commit: turmas created (not those added to). */
+  turmasCreated?: number;
 }
 
 /** The grid this facility already keeps, as `packages/rules` wants to see it. */
@@ -1239,6 +1245,18 @@ async function timetableContext(
     [facilityId],
   );
 
+  // The club's live turmas, any season: a turma name is unique club-wide (POOLSE-224).
+  const turmas = await tx.query<{ id: string; name: string; pool_id: string | null; published: boolean }>(
+    `SELECT cg.id, cg.name, cg.pool_id, (s.status = 'published') AS published
+       FROM class_group cg
+       JOIN season s ON s.id = cg.season_id AND s.organization_id = cg.organization_id
+      WHERE cg.archived_at IS NULL`,
+  );
+  const pools = await tx.query<{ id: string; name: string }>(
+    `SELECT id, name FROM pool WHERE facility_id = $1 AND archived_at IS NULL`,
+    [facilityId],
+  );
+
   const minutes = (clock: string): number => {
     const [h, m] = clock.split(':');
     return Number(h) * 60 + Number(m);
@@ -1279,6 +1297,8 @@ async function timetableContext(
     ),
     maxConcurrentGroupsPerInstructor:
       limit.rows[0]?.max_concurrent_groups_per_instructor ?? null,
+    turmas: turmas.rows.map((row) => ({ id: row.id, name: row.name, poolId: row.pool_id, published: row.published })),
+    pools: pools.rows,
   };
 }
 
@@ -1364,6 +1384,7 @@ export async function runTimetableImport(
     const preview = {
       ...judged,
       rows: judged.rows.map((row) => ({ ...row, index: origin[row.index] ?? row.index })),
+      turmas: judged.turmas.map((turma) => ({ ...turma, slots: turma.slots.map((at) => origin[at] ?? at) })),
     };
 
     if (!request.commit) return { ...preview };
@@ -1375,8 +1396,79 @@ export async function runTimetableImport(
     let created = 0;
     let freeSwim = 0;
 
+    /*
+     * The turmas first (POOLSE-224): one per planned group with a slot to write,
+     * through the form's own insert (it audits), or the existing turma (rule 7).
+     * No level, capacity or price; a teacher only when every slot names the same
+     * one Poolse knows. Lessons follow their pattern after the commit.
+     */
+    const turmaIds = new Map<string, string>();
+    let turmasCreated = 0;
+    for (const turma of preview.turmas) {
+      if (!turma.slots.some((index) => preview.rows.find((one) => one.index === index)?.importable)) continue;
+      if (turma.existingId !== null) {
+        turmaIds.set(turma.key, turma.existingId);
+        continue;
+      }
+      const id = await insertClassGroupIn(
+        tx,
+        organizationId,
+        {
+          name: turma.name,
+          levelId: null,
+          poolId: turma.poolId,
+          instructorMembershipId: turma.instructorId,
+          capacity: null,
+          lane: null,
+          colour: null,
+          feeCategoryId: null,
+        },
+        null,
+      );
+      turmaIds.set(turma.key, id);
+      turmasCreated += 1;
+    }
+
     for (const row of preview.rows) {
       if (!row.importable) continue;
+
+      // A turma's weekly slot (POOLSE-224): the booking carries the turma, not a title.
+      if (row.kind === 'turma') {
+        const groupId = row.turmaKey === null ? undefined : turmaIds.get(row.turmaKey);
+        if (groupId === undefined) throw new Error(`no turma planned for row ${row.index}`);
+        const slot = await tx.query<{ id: string }>(
+          `INSERT INTO class_schedule
+             (organization_id, class_group_id, facility_id, weekday, start_time, duration_minutes,
+              instructor_membership_id, pool_id, slot_id)
+           VALUES ($1, $2, $3, $4::smallint, $5::time, $6, $7, $8,
+                   (SELECT s.id FROM facility_time_slot s
+                     WHERE s.facility_id = $3 AND s.season_id = $9 AND s.archived_at IS NULL
+                       AND s.day_group = $10::day_group AND s.start_time = $5::time
+                     LIMIT 1))
+           RETURNING id`,
+          [
+            organizationId,
+            groupId,
+            request.facilityId,
+            row.weekday,
+            toClockText(row.startMinutes),
+            row.durationMinutes,
+            // The turma carries a teacher every slot shares; a slot's own differs.
+            preview.turmas.find((one) => one.key === row.turmaKey)?.instructorId === row.instructorId ? null : row.instructorId,
+            row.poolId,
+            seasonId,
+            row.weekday === 6 ? 'saturday' : row.weekday === 7 ? 'sunday' : 'weekday',
+          ],
+        );
+        for (const laneId of row.laneIds) {
+          await tx.query(
+            `INSERT INTO booking_lane (organization_id, schedule_id, lane_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+            [organizationId, slot.rows[0]!.id, laneId],
+          );
+        }
+        created += 1;
+        continue;
+      }
 
       /*
        * A free-swim block (POOLSE-223, decided 1): the same insert as one made by
@@ -1480,10 +1572,10 @@ export async function runTimetableImport(
       action: 'timetable.imported',
       entityType: 'facility',
       entityId: request.facilityId,
-      data: { created, freeSwim, dropped: request.drop.length },
+      data: { created, freeSwim, turmasCreated, dropped: request.drop.length },
     });
 
-    return { ...preview, created };
+    return { ...preview, created, turmasCreated };
   });
 }
 

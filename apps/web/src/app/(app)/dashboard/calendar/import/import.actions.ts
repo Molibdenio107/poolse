@@ -177,6 +177,10 @@ export interface TimetableClash {
 export interface TimetableRow {
   index: number;
   line: number;
+  /** POOLSE-223/224: the row's pool, what it becomes, and its planned turma. */
+  poolId: string | null;
+  kind: 'turma' | 'evento' | 'free_swim';
+  turmaKey: string | null;
   name: string;
   weekday: number;
   startMinutes: number;
@@ -205,7 +209,10 @@ export interface TimetableResult {
   committable: boolean;
   /** Days whose hours keep rows out — *Alargar o horário* (11-11-2026). */
   hoursNeeded?: TimetableHoursNeeded[];
+  /** The turmas the turma rows become, new or existing (POOLSE-224). */
+  turmas?: { key: string; name: string; poolId: string | null; existingId: string | null; slots: number[] }[];
   created?: number;
+  turmasCreated?: number;
 }
 
 export interface TimetableHoursNeeded {

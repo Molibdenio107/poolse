@@ -106,3 +106,12 @@ An optional short text beside a turma's lesson plan, 200 characters, written by 
 ## Turmas with no teacher — POOLSE-211 (10-11-2026)
 
 A *Professor* filter (*Todos* / *Sem professor*, `?instructor=none`) on *Lista* and *Semana*, offered while some turma has no teacher. Each such turma carries the breathing dot on its card, and *Turmas* carries one in the menu (`attention.classGroups`, `menu.classes` and `classes:<sport>`), for the office only. Both clear the moment a teacher is assigned; there is no "seen". Ctrl+K: *Turmas sem professor*.
+
+## Turmas created by a timetable import (POOLSE-224, 12-11-2026)
+
+A timetable import makes turmas: one per pool, name and start time (*Nome · HH:MM* when a name runs
+at several hours). It does so only on *Confirmar* on the calendar, never before. They are ordinary
+turmas: no level, capacity, price or students, editable and archivable, audited as
+`class_group.created`. An existing live turma of the same name in the published season and pool
+gets the new slots instead. While an import waits, Turmas lists what it would create, marked
+*nova (por confirmar)*. See `docs/features/calendar.md`.
