@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { checkedSchema } from './ai-schema';
 import { classifyAiError, stopFailure, type AiFailure } from './ai-failure';
 import type { Me } from './api';
 import { aiReaderGate, anthropicKeyConfigured, metered } from './ai-meter';
@@ -47,7 +48,9 @@ function schema(): Record<string, unknown> {
     additionalProperties: false,
     required: ['type', 'number', 'issuedOn', 'validUntil'],
     properties: {
-      type: { type: ['string', 'null'], enum: ['cc', 'bi', 'passport', 'other', null] },
+      // A nullable enum is `anyOf`: the API refuses `type: [string, null]` with a
+      // `null` in the enum (HTTP 400 "Enum value 'cc' does not match", 12-11-2026).
+      type: { anyOf: [{ type: 'string', enum: ['cc', 'bi', 'passport', 'other'] }, { type: 'null' }] },
       number: text,
       issuedOn: text,
       validUntil: text,
@@ -95,7 +98,7 @@ export async function readIdDocument(bytes: Buffer, mediaType: string): Promise<
         max_tokens: 2048,
         system: SYSTEM,
         messages: [{ role: 'user', content: [block, { type: 'text', text: 'Read this identification document.' }] }],
-        output_config: { format: { type: 'json_schema', schema: schema() } },
+        output_config: { format: { type: 'json_schema', schema: checkedSchema('id_document', schema()) } },
       },
       { timeout: 60_000 },
     );

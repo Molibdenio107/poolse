@@ -8,6 +8,7 @@ export type AiFailure =
   | 'unavailable'
   | 'timeout'
   | 'fileRejected'
+  | 'readerFault'
   | 'refused'
   | 'tooLong'
   | 'unreadable';
@@ -18,6 +19,7 @@ export const AI_FAILURES: readonly AiFailure[] = [
   'unavailable',
   'timeout',
   'fileRejected',
+  'readerFault',
   'refused',
   'tooLong',
   'unreadable',

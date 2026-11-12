@@ -238,7 +238,15 @@ overshoot. Exactly one Owner per tenant, enforced; transfer is the only way to c
 - `unavailable`: 5xx, 529 or the network.
 - `timeout`.
 - `fileRejected`: 400 or 413, a password-protected, too long or too large file. A 400 whose message names the API key or a workspace is `keyRejected`: a key not scoped to a workspace answers 400, and it is not the file.
+- `readerFault`: Poolse's own bug. Either the reader's reply schema failed `checkedSchema` before sending, or the API answered 400 naming `schema` or `output_config`. Added 12-11-2026, when a clean water-analysis PDF was reported as a refused file.
 - `refused` and `tooLong`: from the stop reason.
 - `unreadable`: anything else.
 
 It logs `[ai:<reader>] <code> — HTTP <status> <message>` on the server, never the document. Screens show `ai.failure.<code>` through `aiNoteKey(namespace, code)` (`lib/ai-failure-codes.ts`, client-safe); `unreadable` keeps the screen's own sentence. The list importers share one map, `readFailureKey` in `lib/read-sheet.ts`, instead of seven copies. Column matching still falls back silently to the operator, but logs the cause.
+
+**Every reader's reply format passes `checkedSchema`** (`lib/ai-schema.ts`, 12-11-2026). On 12-11 the water reader (22 optional fields: "Schema is too complex") and the energy-bill reader (35 optional fields) could not read any document. The ID and certificate readers were also broken, by a nullable enum written as `type: [string, null]` with `null` in the enum. Every such failure was shown to the club as a refused file. The rules for a new reader:
+
+- Every property is required. A value not on the document is `""`, or null through `anyOf`; an enum that may be absent lists `""`. The parser reads `""` as absent. Optional properties multiply the API's grammar: 12 compile, 22 do not. The check allows at most 8.
+- A nullable enum is `anyOf: [{ type: 'string', enum }, { type: 'null' }]`.
+- A document reader streams (`.stream(…).finalMessage()`) with `max_tokens: 64000` and a 300 s timeout (inside Vercel's default function limit). A month's daily water log is about 90 analyses and 20k tokens, about 2 minutes on Opus. A small cap or timeout looks like a broken file.
+- A date missing its year takes it from the document's own heading, never from today. The import refuses a date with no year.

@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { checkedSchema } from './ai-schema';
 import { classifyAiError, stopFailure, type AiFailure } from './ai-failure';
 import { anthropicKeyConfigured, metered } from './ai-meter';
 
@@ -55,7 +56,8 @@ function schema(types: readonly string[]): Record<string, unknown> {
     additionalProperties: false,
     required: ['type', 'issuingBody', 'issuedOn', 'expiresOn'],
     properties: {
-      type: { type: ['string', 'null'], enum: [...types, null] },
+      // A nullable enum is `anyOf` (see id-document-agent.ts, 12-11-2026).
+      type: { anyOf: [{ type: 'string', enum: [...types] }, { type: 'null' }] },
       issuingBody: text,
       issuedOn: text,
       expiresOn: text,
@@ -93,7 +95,7 @@ export async function readCertificate(
           max_tokens: 2048,
           system: system(names),
           messages: [{ role: 'user', content: [block, { type: 'text', text: 'Read this certificate.' }] }],
-          output_config: { format: { type: 'json_schema', schema: schema(names) } },
+          output_config: { format: { type: 'json_schema', schema: checkedSchema('qualification_certificate', schema(names)) } },
         },
         { timeout: 60_000 },
       );

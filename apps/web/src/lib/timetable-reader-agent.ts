@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { checkedSchema } from './ai-schema';
 import { classifyAiError, stopFailure, type AiFailure } from './ai-failure';
 import { anthropicKeyConfigured, metered } from './ai-meter';
 import { narrowReading, type TimetableReading } from './timetable-reading';
@@ -75,7 +76,7 @@ export async function readTimetableDocument(
               },
             ],
             // Merged cells and two-activity cells are reasoning, not copying.
-            output_config: { effort: 'high', format: { type: 'json_schema', schema: SCHEMA } },
+            output_config: { effort: 'high', format: { type: 'json_schema', schema: checkedSchema('timetable', SCHEMA) } },
           },
           { timeout: 300_000 },
         )

@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { checkedSchema } from './ai-schema';
 import { classifyAiError, stopFailure, type AiFailure } from './ai-failure';
 import { fieldsFor, placementsFromGrid, type BoletimField, type BoletimPlacement, type TemplateKind } from '@poolse/rules';
 import { anthropicKeyConfigured, metered } from './ai-meter';
@@ -148,7 +149,7 @@ export async function readBoletimLayout(bytes: Buffer, mediaType: string, kind: 
               ],
             },
           ],
-          output_config: { format: { type: 'json_schema', schema: schema(kind) } },
+          output_config: { format: { type: 'json_schema', schema: checkedSchema('boletim_template', schema(kind)) } },
         },
         { timeout: 90_000 },
       );

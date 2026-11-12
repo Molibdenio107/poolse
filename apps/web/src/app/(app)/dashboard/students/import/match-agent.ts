@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { checkedSchema } from '@/lib/ai-schema';
 import { classifyAiError } from '@/lib/ai-failure';
 import { anthropicKeyConfigured, metered } from '@/lib/ai-meter';
 import type { ColumnMatch, ColumnShape, ImportField } from '@/lib/sheet';
@@ -135,7 +136,7 @@ export async function matchWithAgent(input: AgentInput): Promise<ColumnMatch[]> 
             name: TOOL_NAME,
             description: 'Record which spreadsheet column feeds which register field.',
             strict: true,
-            input_schema: {
+            input_schema: checkedSchema('column_match', {
               type: 'object',
               properties: {
                 assignments: {
@@ -155,7 +156,7 @@ export async function matchWithAgent(input: AgentInput): Promise<ColumnMatch[]> 
               },
               required: ['assignments'],
               additionalProperties: false,
-            },
+            }),
           },
         ],
         tool_choice: { type: 'tool', name: TOOL_NAME },

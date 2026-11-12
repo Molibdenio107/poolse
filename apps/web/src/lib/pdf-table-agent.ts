@@ -1,6 +1,7 @@
 import 'server-only';
 import { classifyAiError, stopFailure, type AiFailure } from './ai-failure';
 import Anthropic from '@anthropic-ai/sdk';
+import { checkedSchema } from './ai-schema';
 import { anthropicKeyConfigured, metered } from './ai-meter';
 
 /**
@@ -147,7 +148,7 @@ export async function readPdfTables(bytes: ArrayBuffer): Promise<PdfTableResult>
               ],
             },
           ],
-          output_config: { format: { type: 'json_schema', schema: SCHEMA } },
+          output_config: { format: { type: 'json_schema', schema: checkedSchema('pdf_table', SCHEMA) } },
         },
         { timeout: 180_000 },
       )

@@ -1,6 +1,7 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 import { classifyAiError, stopFailure } from './ai-failure';
+import { checkedSchema } from './ai-schema';
 import { anthropicKeyConfigured, metered } from './ai-meter';
 import {
   REPORT_FIELDS,
@@ -47,18 +48,21 @@ const MAX_BYTES = 8 * 1024 * 1024;
 /**
  * The reply's shape — structured output rather than a forced tool call
  * (POOLSE-101), because the current Opus refuses a forced `tool_choice`; the
- * same move `pdf-table-agent.ts` made. Every field optional, every value text.
+ * same move `pdf-table-agent.ts` made. Every field required (empty when absent), every value text.
  */
 const SCHEMA = {
   type: 'object',
   properties: {
     analyses: {
       type: 'array',
-      description: 'One entry per analysis. Omit any field not on the document.',
+      description: 'One entry per analysis. A field not on the document is an empty string.',
       items: {
         type: 'object',
         properties: Object.fromEntries(REPORT_FIELDS.map((field) => [field, { type: 'string' }])),
-        required: [],
+        // Every field required, "" when absent: 22 optional properties made the
+        // API answer 400 "Schema is too complex" (12-11-2026). parseReport drops
+        // empty values, so "" and an omitted field read the same.
+        required: [...REPORT_FIELDS],
         additionalProperties: false,
       },
     },
@@ -78,8 +82,8 @@ const SYSTEM = [
   'covering several tanks or several dates contains one per tank per date.',
   '',
   'Copy values exactly as written, including a decimal comma — do not convert a',
-  'comma to a point and do not round. If a value is illegible or absent, omit',
-  'that field rather than guessing: an omitted reading is a question, and a',
+  'comma to a point and do not round. If a value is illegible or absent, leave',
+  'that field an empty string rather than guessing: a missing reading is a question, and a',
   'guessed one becomes a safety record that is wrong.',
   '',
   'Free chlorine and combined chlorine are different measurements and must never',
@@ -87,6 +91,9 @@ const SYSTEM = [
   '',
   'Dates as they appear on the document: the date the sample was collected,',
   'not the date the report was issued. Times as HH:MM in 24 hours.',
+  'A date always carries its year, as DD/MM/YYYY. When a row prints only the day',
+  'and month (a daily log headed "novembro 2026"), take the year from the',
+  'heading or period of the document itself, never from the current date.',
   'Put a tank name in "pool" only when the document names one.',
   '',
   'Field names: ph, temperature, free_chlorine, combined_chlorine,',
@@ -121,14 +128,17 @@ export class ClaudeAnalysisReportParser implements AnalysisReportParser {
     try {
       const client = new Anthropic();
 
-      const response = await client.beta.messages.create(
+      // Streamed: a month's daily log is ~90 analyses and ~20k tokens of answer
+      // (12-11-2026), past what a non-streamed call should wait for.
+      const response = await client.beta.messages
+        .stream(
         {
           model: MODEL,
           // A declined read is retried on the model the API picks, inside the
           // same call — as the PDF table reader does.
           betas: ['server-side-fallback-2026-07-01'],
           fallbacks: 'default',
-          max_tokens: 4096,
+          max_tokens: 64000,
           system: SYSTEM,
           messages: [
             {
@@ -139,16 +149,15 @@ export class ClaudeAnalysisReportParser implements AnalysisReportParser {
               ],
             },
           ],
-          output_config: { format: { type: 'json_schema', schema: SCHEMA } },
+          output_config: { format: { type: 'json_schema', schema: checkedSchema('water_report', SCHEMA) } },
         },
         /*
-         * Longer than the column matcher's twenty seconds, because reading a
-         * page is a bigger job than naming a column — and still well inside the
-         * server action's patience, so a slow answer is a message rather than a
-         * screen that never comes back.
+         * A month's log read in 133 s on Opus (12-11-2026), so five minutes, as
+         * the timetable reader (and inside Vercel's default 300 s function limit).
          */
-        { timeout: 60_000 },
-      );
+        { timeout: 300_000 },
+      )
+        .finalMessage();
       used = response;
 
       const stopped = stopFailure(response.stop_reason);

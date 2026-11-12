@@ -1,5 +1,6 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { checkedSchema } from './ai-schema';
 import { classifyAiError, stopFailure } from './ai-failure';
 import { anthropicKeyConfigured, metered } from './ai-meter';
 import {
@@ -58,7 +59,7 @@ function invoiceSchema(): Record<string, unknown> {
       ...HEADER_PROPERTIES,
       registers: {
         type: 'array',
-        description: 'One entry per register on the dial. Omit fields not printed.',
+        description: 'One entry per register on the dial. A field not printed is an empty string.',
         items: {
           type: 'object',
           properties: Object.fromEntries(
@@ -68,7 +69,7 @@ function invoiceSchema(): Record<string, unknown> {
                 : [field, { type: 'string' }],
             ),
           ),
-          required: ['register'],
+          required: [...REGISTER_FIELDS],
           additionalProperties: false,
         },
       },
@@ -82,16 +83,19 @@ function invoiceSchema(): Record<string, unknown> {
               field === 'kind'
                 ? [field, { type: 'string', enum: [...LINE_KINDS] }]
                 : field === 'period'
-                  ? [field, { type: 'string', enum: [...TARIFF_PERIODS] }]
+                  ? [field, { type: 'string', enum: [...TARIFF_PERIODS, ''] }]
                   : [field, { type: 'string' }],
             ),
           ),
-          required: ['kind', 'description'],
+          required: [...LINE_FIELDS],
           additionalProperties: false,
         },
       },
     },
-    required: ['registers', 'lines'],
+    // Every field required, "" when not printed ("" is in each enum too): 35
+    // optional fields made the API answer 400 "Schema is too complex" — the
+    // water reader hit it on 12-11-2026. readInvoiceDraft reads "" as absent.
+    required: [...INVOICE_HEADER_FIELDS, 'registers', 'lines'],
     additionalProperties: false,
   };
 }
@@ -136,15 +140,15 @@ const SYSTEM = [
   'readings. readingQuality is "real" or "estimated" as the bill says.',
   'networkAccess is the "acesso às redes" total before VAT when stated;',
   'regulatedDifference is the signed difference against the regulated tariff',
-  'when stated. If a value is illegible or absent, omit that field rather than',
-  'guessing: an omitted figure is a question on the form, a guessed one is a',
+  'when stated. If a value is illegible or absent, leave it an empty string rather than',
+  'guessing: a missing figure is a question on the form, a guessed one is a',
   'wrong bill.',
 ].join('\n');
 
 const HEADER_PROPERTIES = Object.fromEntries(
   INVOICE_HEADER_FIELDS.map((field) =>
     field === 'readingQuality'
-      ? [field, { type: 'string', enum: ['real', 'estimated'] }]
+      ? [field, { type: 'string', enum: ['real', 'estimated', ''] }]
       : [field, { type: 'string' }],
   ),
 );
@@ -165,14 +169,17 @@ export class ClaudeEnergyInvoiceParser implements EnergyInvoiceParser {
     try {
       const client = new Anthropic();
 
-      const response = await client.beta.messages.create(
+      // Streamed, like every document reader: a long bill with thinking is a
+      // long answer, and a short cap or timeout reads as a broken file.
+      const response = await client.beta.messages
+        .stream(
         {
           model: MODEL,
           // A declined read is retried on the model the API picks, inside the
           // same call — as the PDF table reader does.
           betas: ['server-side-fallback-2026-07-01'],
           fallbacks: 'default',
-          max_tokens: 8192,
+          max_tokens: 64000,
           thinking: { type: 'adaptive' },
           system: SYSTEM,
           messages: [
@@ -184,11 +191,12 @@ export class ClaudeEnergyInvoiceParser implements EnergyInvoiceParser {
               ],
             },
           ],
-          output_config: { format: { type: 'json_schema', schema: invoiceSchema() } },
+          output_config: { format: { type: 'json_schema', schema: checkedSchema('energy_invoice', invoiceSchema()) } },
         },
-        // A five-page bill with thinking is a bigger read than a lab sheet.
-        { timeout: 120_000 },
-      );
+        // Five minutes, as the timetable and water readers.
+        { timeout: 300_000 },
+      )
+        .finalMessage();
       used = response;
 
       const stopped = stopFailure(response.stop_reason);
