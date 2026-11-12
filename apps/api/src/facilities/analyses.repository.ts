@@ -251,14 +251,123 @@ export async function archiveAnalysis(
     );
     if (!rows[0]) return false;
 
+    // Its alert goes with it (12-11-2026): an alert about a reading that is gone
+    // would be a warning nobody can act on. Listed, so the bin brings back both.
+    const { rows: alerts } = await tx.query<{ id: string }>(
+      `UPDATE pool_analysis_alert SET archived_at = now()
+        WHERE analysis_id = $1 AND archived_at IS NULL
+      RETURNING id`,
+      [analysisId],
+    );
+
     await recordAudit(tx, {
       action: 'pool.analysisArchived',
       entityType: 'pool_analysis',
       entityId: analysisId,
-      data: {},
+      data: { cascade: alerts.map((alert) => ({ entityType: 'pool_analysis_alert', id: alert.id })) },
     });
 
     return true;
+  });
+}
+
+/**
+ * Archive a tank's whole water history — Owner and Admin, Rui 12-11-2026.
+ *
+ * One bin entry for the lot, on the tank (`water_history`), listing every
+ * analysis and alert it took, so a wrong click is undone in one restore and
+ * the bin is not eighty-six lines long. Null when the tank is not this club's.
+ */
+export async function archiveAllAnalyses(
+  organizationId: string,
+  poolId: string,
+): Promise<{ archived: number } | null> {
+  return withOrg(organizationId, async (tx) => {
+    const pool = await tx.query<{ name: string }>(
+      `SELECT name FROM pool WHERE id = $1 AND archived_at IS NULL`,
+      [poolId],
+    );
+    if (!pool.rows[0]) return null;
+
+    const { rows: analyses } = await tx.query<{ id: string }>(
+      `UPDATE pool_analysis SET archived_at = now()
+        WHERE pool_id = $1 AND archived_at IS NULL
+      RETURNING id`,
+      [poolId],
+    );
+    if (analyses.length === 0) return { archived: 0 };
+    const { rows: alerts } = await tx.query<{ id: string }>(
+      `UPDATE pool_analysis_alert SET archived_at = now()
+        WHERE pool_id = $1 AND archived_at IS NULL
+      RETURNING id`,
+      [poolId],
+    );
+
+    await recordAudit(tx, {
+      action: 'pool.historyArchived',
+      entityType: 'water_history',
+      entityId: poolId,
+      data: {
+        name: pool.rows[0].name,
+        cascade: [
+          ...analyses.map((row) => ({ entityType: 'pool_analysis', id: row.id })),
+          ...alerts.map((row) => ({ entityType: 'pool_analysis_alert', id: row.id })),
+        ],
+      },
+    });
+    return { archived: analyses.length };
+  });
+}
+
+/** Archive one water alert from Alertas — Owner and Admin, Rui 12-11-2026. */
+export async function archiveWaterAlert(organizationId: string, alertId: string): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string }>(
+      `UPDATE pool_analysis_alert SET archived_at = now()
+        WHERE id = $1 AND archived_at IS NULL
+      RETURNING id`,
+      [alertId],
+    );
+    if (!rows[0]) return false;
+    await recordAudit(tx, {
+      action: 'pool.alertArchived',
+      entityType: 'pool_analysis_alert',
+      entityId: alertId,
+      data: {},
+    });
+    return true;
+  });
+}
+
+/** Archive every alert of a tank, one bin entry (`water_alerts`) — Rui 12-11-2026. */
+export async function archiveAllWaterAlerts(
+  organizationId: string,
+  poolId: string,
+): Promise<{ archived: number } | null> {
+  return withOrg(organizationId, async (tx) => {
+    const pool = await tx.query<{ name: string }>(
+      `SELECT name FROM pool WHERE id = $1 AND archived_at IS NULL`,
+      [poolId],
+    );
+    if (!pool.rows[0]) return null;
+
+    const { rows } = await tx.query<{ id: string }>(
+      `UPDATE pool_analysis_alert SET archived_at = now()
+        WHERE pool_id = $1 AND archived_at IS NULL
+      RETURNING id`,
+      [poolId],
+    );
+    if (rows.length === 0) return { archived: 0 };
+    await recordAudit(tx, {
+      action: 'pool.alertsArchived',
+      entityType: 'water_alerts',
+      entityId: poolId,
+      data: {
+        name: pool.rows[0].name,
+        cascade: rows.map((row) => ({ entityType: 'pool_analysis_alert', id: row.id })),
+      },
+    });
+    return { archived: rows.length };
   });
 }
 
@@ -288,6 +397,8 @@ export interface AnalysisImportRequest {
    * laboratory document read into rows (`report`). Recorded on each reading.
    */
   source: 'log' | 'report';
+  /** The operator said yes to "import into this tank?" — Rui, 12-11-2026. */
+  intoThisPool: boolean;
 }
 
 export interface AnalysisImportResult {
@@ -364,6 +475,7 @@ export async function runAnalysisImport(
     const checked = checkAnalysisRows(request.rows, {
       poolName,
       existing: await recordedMoments(tx, request.poolId),
+      intoThisPool: request.intoThisPool,
     });
 
     if (!request.commit) return checked;
@@ -737,6 +849,8 @@ export async function listPoolAlerts(
         JOIN pool_analysis a
           ON a.id = al.analysis_id AND a.organization_id = al.organization_id
        WHERE al.pool_id = $1
+         AND al.archived_at IS NULL
+         AND a.archived_at IS NULL
        ORDER BY al.raised_at DESC
        LIMIT $2
       `,

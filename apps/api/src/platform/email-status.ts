@@ -28,7 +28,7 @@ export interface EmailStatus {
 const UNSENT: string[] = [
   `SELECT a.delivery_attempts AS tries FROM pool_analysis_alert a
      JOIN pool_analysis pa ON pa.id = a.analysis_id AND pa.organization_id = a.organization_id
-    WHERE a.delivered_at IS NULL AND pa.archived_at IS NULL AND a.raised_at > now() - interval '${RETRY_WINDOW}'`,
+    WHERE a.delivered_at IS NULL AND a.archived_at IS NULL AND pa.archived_at IS NULL AND a.raised_at > now() - interval '${RETRY_WINDOW}'`,
   `SELECT a.delivery_attempts AS tries FROM lab_result_alert a
      JOIN lab_result lr ON lr.id = a.lab_result_id AND lr.organization_id = a.organization_id
     WHERE a.delivered_at IS NULL AND lr.archived_at IS NULL AND a.raised_at > now() - interval '${RETRY_WINDOW}'`,

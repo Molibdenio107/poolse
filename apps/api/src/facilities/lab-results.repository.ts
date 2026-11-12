@@ -317,7 +317,14 @@ export interface LabImportResult {
 export async function runLabImport(
   organizationId: string,
   membershipId: string | null,
-  request: { poolId: string; rows: Record<string, string>[]; commit: boolean; include: number[] | null },
+  request: {
+    poolId: string;
+    rows: Record<string, string>[];
+    commit: boolean;
+    include: number[] | null;
+    /** The operator said yes to "import into this tank?" — Rui, 12-11-2026. */
+    intoThisPool: boolean;
+  },
 ): Promise<LabImportResult | null> {
   return withOrg(organizationId, async (tx) => {
     const pool = await tx.query<{ name: string }>(
@@ -342,7 +349,12 @@ export async function runLabImport(
     // Both keys, as the readings import holds them: a row with no time is
     // compared by day, one with a time by the minute.
     const existing = new Set(onFile.flatMap((row) => [row.moment, row.day]));
-    const checked = checkLabRows(request.rows, { poolName, existing, now: clock[0]!.now });
+    const checked = checkLabRows(request.rows, {
+      poolName,
+      existing,
+      now: clock[0]!.now,
+      intoThisPool: request.intoThisPool,
+    });
     if (!request.commit) return checked;
 
     const wanted = request.include === null ? null : new Set(request.include);

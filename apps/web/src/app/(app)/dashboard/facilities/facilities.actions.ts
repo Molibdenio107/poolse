@@ -337,6 +337,30 @@ function bound(raw: FormDataEntryValue | null): number | null | undefined {
   return parsed;
 }
 
+/**
+ * Apagar todas as análises / todos os alertas / um alerta — Rui, 12-11-2026.
+ * The API refuses anyone but Owner and Admin; every one lands in the bin as one
+ * restorable entry.
+ */
+export async function archiveWaterHistoryAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const poolId = String(formData.get('poolId') ?? '');
+  const what = String(formData.get('what') ?? '');
+  const alertId = String(formData.get('alertId') ?? '');
+  const path =
+    what === 'analyses'
+      ? `/facilities/pools/${poolId}/analyses/archive-all`
+      : what === 'alerts'
+        ? `/facilities/pools/${poolId}/alerts/archive-all`
+        : `/facilities/water-alerts/${alertId}/archive`;
+  try {
+    await apiPost(path, {});
+  } catch (error) {
+    return failure(error, 'facilities.analysisFailed');
+  }
+  revalidatePath(`/dashboard/facilities/pools/${poolId}`);
+  return { ok: true };
+}
+
 export async function archiveAnalysisAction(
   _previous: FormState,
   formData: FormData,

@@ -10,13 +10,17 @@ import {
   Logger,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Put,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import {
+  archiveAllAnalyses,
+  archiveAllWaterAlerts,
   archiveAnalysis,
+  archiveWaterAlert,
   createAnalysis,
   listAnalyses,
   listPoolAlerts,
@@ -413,6 +417,7 @@ export class FacilitiesController {
       include: readAnalysisInclude(body['include']),
       // A laboratory document read into rows, or the club's water log — POOLSE-153.
       source: body['source'] === 'report' ? 'report' : 'log',
+      intoThisPool: body['intoThisPool'] === true,
     });
 
     if (result === null) throw new NotFoundException('No such pool');
@@ -425,6 +430,41 @@ export class FacilitiesController {
     }
 
     return result;
+  }
+
+  /**
+   * Apagar todas as análises — a tank's whole water history to the bin, one
+   * entry, restorable (Rui, 12-11-2026). Owner and Admin only.
+   */
+  @PoolseModule('water_quality')
+  @Post('pools/:poolId/analyses/archive-all')
+  async archiveAllAnalyses(@Param('poolId', new ParseUUIDPipe()) poolId: string): Promise<{ archived: number }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    const result = await archiveAllAnalyses(organizationId, poolId);
+    if (result === null) throw new NotFoundException('No such pool');
+    return result;
+  }
+
+  /** Apagar todos os alertas of a tank — one bin entry (Rui, 12-11-2026). Owner and Admin. */
+  @PoolseModule('water_quality')
+  @Post('pools/:poolId/alerts/archive-all')
+  async archiveAllAlerts(@Param('poolId', new ParseUUIDPipe()) poolId: string): Promise<{ archived: number }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    const result = await archiveAllWaterAlerts(organizationId, poolId);
+    if (result === null) throw new NotFoundException('No such pool');
+    return result;
+  }
+
+  /** One alert from Alertas to the bin (Rui, 12-11-2026). Owner and Admin. */
+  @PoolseModule('water_quality')
+  @Post('water-alerts/:id/archive')
+  async archiveAlert(@Param('id', new ParseUUIDPipe()) id: string): Promise<{ archived: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    if (!(await archiveWaterAlert(organizationId, id))) throw new NotFoundException('No such alert');
+    return { archived: true };
   }
 
   @PoolseModule('water_quality')

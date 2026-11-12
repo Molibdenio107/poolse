@@ -146,6 +146,21 @@ test('a tank column naming another tank refuses the row', () => {
   assert.equal(checked[3]?.importable, true, 'no tank column is this tank');
 });
 
+test('the other tank names are listed once, and a yes imports them into this tank (Rui, 12-11-2026)', () => {
+  const file = rows(
+    { takenOn: '2026-09-01', ph: '7,4', pool: 'Piscina de 25 m' },
+    { takenOn: '2026-09-02', ph: '7,1', pool: 'piscina de 25 M' },
+    { takenOn: '2026-09-03', ph: '7,3', pool: 'Tanque Grande' },
+  );
+  const asked = checkAnalysisRows(file, NOTHING);
+  assert.deepEqual(asked.summary.otherPools, ['Piscina de 25 m'], 'one name, first spelling');
+  assert.equal(asked.summary.refused, 2);
+
+  const yes = checkAnalysisRows(file, { ...NOTHING, intoThisPool: true });
+  assert.equal(yes.summary.importable, 3);
+  assert.deepEqual(yes.summary.otherPools, [], 'nothing left to ask');
+});
+
 test('a repeated moment is a warning, never a refusal', () => {
   const { rows: checked, summary } = checkAnalysisRows(
     rows(

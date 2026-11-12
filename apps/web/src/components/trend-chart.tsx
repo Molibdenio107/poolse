@@ -38,6 +38,7 @@ export function TrendChart({
   className,
   locale = 'pt-PT',
   legend,
+  size = 'small',
 }: {
   /** Oldest first. A single point is drawn as a dot rather than hidden. */
   points: TrendPoint[];
@@ -50,6 +51,8 @@ export function TrendChart({
   locale?: string;
   /** The two markers' words, shown once a series holds a laboratory point. */
   legend?: { typed: string; lab: string } | undefined;
+  /** `large` in Tendências' zoom, where a month's readings need the height (12-11-2026). */
+  size?: 'small' | 'large';
 }): React.ReactElement | null {
   // One reading draws a dot, not nothing — round 4 follow-up.
   //
@@ -92,7 +95,7 @@ export function TrendChart({
         viewBox={`0 0 ${width} ${height}`}
         role="img"
         aria-label={`${label} (${unit})`}
-        className="h-28 w-full"
+        className={size === 'large' ? 'h-48 w-full sm:h-72' : 'h-28 w-full'}
         preserveAspectRatio="none"
       >
         <title>{`${label} (${unit})`}</title>

@@ -82,9 +82,12 @@ type Step = 'closed' | 'reading' | 'mapping' | 'preview' | 'done';
 
 export function WaterImport({
   poolId,
+  poolName,
   canManage,
 }: {
   poolId: string;
+  /** The tank whose page the file was dropped on — what the other-tank question names. */
+  poolName: string;
   canManage: boolean;
 }): React.ReactElement | null {
   const t = useTranslations();
@@ -96,6 +99,13 @@ export function WaterImport({
   const fileInput = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const reportAt = useRef(0);
+  /*
+   * A file naming another tank, dropped on this tank's page, asks once whether
+   * to import it here (Rui, 12-11-2026) — never a row of "belongs to another
+   * tank" refusals. The yes travels with every later preview and the commit,
+   * and the server applies it; a new file starts at no.
+   */
+  const [intoThisPool, setIntoThisPool] = useState(false);
 
   const [read, readAction, reading] = useActionState(readWaterFileAction, {
     ok: false,
@@ -130,6 +140,7 @@ export function WaterImport({
    */
   const start = (file: File): void => {
     if (!canManage || !isAccepted(file)) return;
+    setIntoThisPool(false);
 
     const transfer = new DataTransfer();
     transfer.items.add(file);
@@ -173,6 +184,7 @@ export function WaterImport({
     data.set('rows', JSON.stringify(read.report));
     // A laboratory document, recorded as such on every reading (POOLSE-153).
     data.set('source', 'report');
+    data.set('intoThisPool', 'false');
     data.set('commit', 'false');
     startTransition(() => importAction(data));
   }, [read, poolId, importAction]);
@@ -321,6 +333,31 @@ export function WaterImport({
               />
             )}
 
+            {step === 'preview' && !intoThisPool && (result.summary?.otherPools?.length ?? 0) > 0 && (
+              <form
+                action={importAction}
+                onSubmit={() => setIntoThisPool(true)}
+                className="mb-4 flex flex-col gap-3 rounded border border-border bg-surface-muted p-4"
+              >
+                <p className="text-sm">
+                  {t('facilities.waterImport.otherPools.question', {
+                    count: result.summary?.otherPools?.length ?? 0,
+                    names: (result.summary?.otherPools ?? []).map((name) => `«${name}»`).join(', '),
+                    pool: `«${poolName}»`,
+                  })}
+                </p>
+                <p className="text-sm text-foreground-muted">{t('facilities.waterImport.otherPools.ifNot')}</p>
+                <input type="hidden" name="poolId" value={poolId} />
+                <input type="hidden" name="rows" value={JSON.stringify(rows)} />
+                <input type="hidden" name="source" value={report !== undefined ? 'report' : 'log'} />
+                <input type="hidden" name="intoThisPool" value="true" />
+                <input type="hidden" name="commit" value="false" />
+                <button type="submit" className={`${BUTTON} self-start`} disabled={importing}>
+                  {t('facilities.waterImport.otherPools.confirm', { pool: poolName })}
+                </button>
+              </form>
+            )}
+
             {(step === 'preview' || step === 'done') && result.rows !== undefined && (
               <Preview
                 rows={result.rows}
@@ -345,6 +382,7 @@ export function WaterImport({
                   <input type="hidden" name="poolId" value={poolId} />
                   <input type="hidden" name="rows" value={JSON.stringify(rows)} />
                   <input type="hidden" name="source" value={report !== undefined ? 'report' : 'log'} />
+                  <input type="hidden" name="intoThisPool" value={String(intoThisPool)} />
                   <input type="hidden" name="commit" value="false" />
                   <button
                     type="submit"
@@ -377,6 +415,7 @@ export function WaterImport({
                     <input type="hidden" name="rows" value={JSON.stringify(rows)} />
                     <input type="hidden" name="source" value={report !== undefined ? 'report' : 'log'} />
                     <input type="hidden" name="include" value={JSON.stringify(ticked)} />
+                    <input type="hidden" name="intoThisPool" value={String(intoThisPool)} />
                     <input type="hidden" name="commit" value="true" />
                     <button
                       type="submit"

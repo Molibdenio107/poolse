@@ -170,6 +170,7 @@ export class LabResultsController {
       rows: readLabRows(body['rows']),
       commit: body['commit'] === true,
       include: readLabInclude(body['include']),
+      intoThisPool: body['intoThisPool'] === true,
     });
     if (result === null) throw new NotFoundException('No such pool');
 

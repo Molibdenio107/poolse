@@ -237,7 +237,10 @@ export function Dialog({
             ? 'items-stretch justify-start p-0'
             : // Full-screen on a phone (POOLSE-88): a box floating 16px in from
               // every edge leaves a keyboard and a form fighting for half a screen.
-              'items-start justify-center p-4 max-sm:p-0 sm:items-center sm:p-8',
+              // Top-aligned with the panel's own `my-auto` (12-11-2026): centred
+              // when short, and a panel taller than the window scrolls from its
+              // title instead of losing its top above the screen.
+              'items-start justify-center p-4 max-sm:p-0 sm:p-8',
         // POOLSE-88: nothing under the notch or the home bar.
         'pt-[max(var(--safe-top),theme(spacing.4))] pb-[max(var(--safe-bottom),theme(spacing.4))]',
         placement === 'centre' || placement === 'sheet' ? '' : 'pt-safe-top pb-0',
@@ -261,7 +264,7 @@ export function Dialog({
               ? 'max-h-[90dvh] overflow-y-auto rounded-t-[var(--radius-sheet)] border-0 px-4 pt-2.5 pb-[calc(30px+var(--safe-bottom))] shadow-card md:max-w-lg md:rounded md:border md:p-5'
               : placement === 'start'
               ? 'max-w-xs self-stretch overflow-y-auto pb-[calc(theme(spacing.5)+var(--safe-bottom))] pl-[calc(theme(spacing.5)+var(--safe-left))]'
-              : 'max-w-lg rounded-lg max-sm:min-h-dvh max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:pt-[calc(theme(spacing.5)+var(--safe-top))] max-sm:pb-[calc(theme(spacing.5)+var(--safe-bottom))]',
+              : 'max-w-lg rounded-lg sm:my-auto max-sm:min-h-dvh max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:pt-[calc(theme(spacing.5)+var(--safe-top))] max-sm:pb-[calc(theme(spacing.5)+var(--safe-bottom))]',
           className,
         )}
       >

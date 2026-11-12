@@ -167,6 +167,33 @@ reading by the same numbers. **A pool may set its own** — see below.
 analysis is older — or that has none — is "due", which the dashboard's water card says beside
 the tanks that are out of range. POOLSE-26's missing-reading alert can read the same column.
 
+### Tendências: one period, a summary, and every record (Rui, 12-11-2026)
+
+- **One period at a time**, chosen by *Ano* and *Mês* (`?year=&month=`, `month=all` for the
+  whole year). It opens on the month of the latest analysis or lab report. Only years and months
+  with something in them are offered. Months are on the facility's clock (`lib/water-period.ts`).
+- **A summary first:** the number of analyses, days with a reading out of the days elapsed, and
+  readings outside this tank's limits. Per metric: records, minimum, average, maximum and how many
+  are outside, then the laboratory reports sampled in the period with their grade. "Outside" is
+  `excursions` with the tank's resolved bands, the same judgement as Última análise.
+- **The summary is folded** (`FoldCard`), its line saying analyses, days and readings outside.
+- **Each chart says *Ver mais*** and opens a wide dialog (`trend-zoom.tsx`). It shows the period's
+  figures and a large chart with no list. Hovering or tapping shows the nearest reading: value, date and
+  time, its limit judgement and who recorded it. The keyboard reaches the chart once and moves with
+  the arrows, each reading read aloud. A table only a screen reader sees keeps every value; the
+  visible list of readings is Histórico.
+
+### Histórico and Alertas (Rui, 12-11-2026)
+
+- **Exportar em Excel** beside the CSV and PDF: an `.xlsx` from `pools/[poolId]/export`. It has *Data*,
+  *Hora*, one numeric column per metric and *Notas*, the importer's own words, so it re-imports
+  with no mapping (tested).
+- **Apagar todas as análises** (Owner, Admin) archives every analysis of the tank and its
+  alerts, after asking. It is one entry in the Arquivo bin, restorable.
+- **Alertas**: *Apagar* per alert and *Apagar todos os alertas* (Owner, Admin), both asking,
+  both restorable. Archiving one analysis also archives its alert. Archived alerts are never
+  retried by email.
+
 ### This pool's ranges
 
 Under *Qualidade da água*, behind **Intervalos desta piscina**, owner and admin only. Three
@@ -274,8 +301,11 @@ The parser sits behind `AnalysisReportParser` so the Excel mapping can share it 
   because `1.234` means two different numbers in the two locales.
 - **An out-of-range reading imports.** It is the reason the log exists. Only a value that
   is not a number, a date that is not a date, or a row with no readings is refused.
-- **A row naming another tank is refused**, so a club's all-tanks export cannot be imported
-  into whichever tank happened to be open.
+- **A file naming another tank asks before it imports** (Rui, 12-11-2026). The preview lists the
+  other names once (`summary.otherPools`) and asks *Importar estas linhas para «tanque»?*. A yes
+  sends `intoThisPool` with the preview and the commit, so the server takes the rows into the
+  tank whose page it is; without it, those rows stay out. The same for the readings and the lab import.
+  A bill naming another meter's CPE on Energia was already a warning, never a refusal.
 - **A repeated moment is a warning, not a refusal** — a re-uploaded month that overlaps the
   last one is ordinary, and being told is enough.
 - Nothing is written until the operator commits; a preview writes nothing at all.

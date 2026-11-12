@@ -184,6 +184,8 @@ export async function runWaterImportAction(
   const commit = formData.get('commit') === 'true';
   // A laboratory document or the club's water log — POOLSE-153.
   const source = formData.get('source') === 'report' ? 'report' : 'log';
+  // The operator said yes to "import into this tank?" (Rui, 12-11-2026).
+  const intoThisPool = formData.get('intoThisPool') === 'true';
 
   let rows: Record<string, string>[];
   let include: number[] | null;
@@ -205,6 +207,7 @@ export async function runWaterImportAction(
           rows: part.rows,
           commit,
           source,
+          intoThisPool,
           ...(part.include === null ? {} : { include: part.include }),
         });
 

@@ -65,7 +65,7 @@ const TENANT_KINDS: TenantKind[] = [
     // Not for a reading archived since (sweep 19-10b): it no longer happened.
     pending: `SELECT a.id FROM pool_analysis_alert a
                JOIN pool_analysis pa ON pa.id = a.analysis_id AND pa.organization_id = a.organization_id
-              WHERE a.delivered_at IS NULL AND pa.archived_at IS NULL AND ${due('a.raised_at', 'a.delivery_attempts', 'a.last_attempt_at')}`,
+              WHERE a.delivered_at IS NULL AND a.archived_at IS NULL AND pa.archived_at IS NULL AND ${due('a.raised_at', 'a.delivery_attempts', 'a.last_attempt_at')}`,
     bump: `UPDATE pool_analysis_alert SET delivery_attempts = delivery_attempts + 1, last_attempt_at = now() WHERE id = $1`,
     deliver: deliverWaterAlert,
   },

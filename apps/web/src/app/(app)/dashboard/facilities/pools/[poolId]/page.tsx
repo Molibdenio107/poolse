@@ -43,12 +43,15 @@ export default async function PoolPage({
     tab?: string | string[];
     section?: string | string[];
     page?: string;
+    /** Tendências' period — Rui, 12-11-2026. */
+    year?: string;
+    month?: string;
   }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const format = await getFormatter();
   const { poolId } = await params;
-  const { from, tab, section, page } = await searchParams;
+  const { from, tab, section, page, year, month } = await searchParams;
 
   /*
    * A pool is reached from the site list and from the site itself, and those are
@@ -260,6 +263,8 @@ export default async function PoolPage({
                 section={section}
                 from={from}
                 page={page}
+                year={year}
+                month={month}
                 closure={loaded.closure ?? null}
               />
             </section>

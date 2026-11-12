@@ -36,6 +36,11 @@ export interface WaterImportSummary {
   importable: number;
   refused: number;
   duplicates: number;
+  /**
+   * Tank names in the file that are not this tank's — the preview asks whether
+   * to import them here anyway (Rui, 12-11-2026). Absent from an older API.
+   */
+  otherPools?: string[];
 }
 
 /** A row as `/analyses/import` answers it. */
@@ -153,6 +158,7 @@ export function mergeAnswers(
       importable: (a?.importable ?? 0) + (b?.importable ?? 0),
       refused: (a?.refused ?? 0) + (b?.refused ?? 0),
       duplicates: (a?.duplicates ?? 0) + (b?.duplicates ?? 0),
+      otherPools: [...new Set([...(a?.otherPools ?? []), ...(b?.otherPools ?? [])])],
     },
     ...(created === undefined ? {} : { created }),
     ...(skipped === undefined ? {} : { skipped }),

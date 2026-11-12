@@ -69,6 +69,12 @@ export interface AnalysisImportSummary {
   refused: number;
   /** Importable rows that repeat a moment already recorded, or an earlier row. */
   duplicates: number;
+  /**
+   * The tank names the file gives that are not this tank's, first spelling of
+   * each — what the preview asks about ("import into this tank?"). Empty once
+   * the operator said yes (`intoThisPool`), because the names no longer decide.
+   */
+  otherPools: string[];
 }
 
 /**
@@ -116,6 +122,11 @@ export interface AnalysisImportContext {
   poolName: string;
   /** Moments already recorded for this tank, as `YYYY-MM-DD HH:MM`. */
   existing: Set<string>;
+  /**
+   * The operator confirmed the file is for the tank whose page it was dropped
+   * on (Rui, 12-11-2026), so a tank column naming another is not a refusal.
+   */
+  intoThisPool?: boolean;
 }
 
 /** The key a moment is deduplicated on — date plus time, or date alone. */
@@ -152,7 +163,7 @@ export function checkAnalysisRows(
      * "tanque grande" are the same tank.
      */
     const named = (raw['pool'] ?? '').trim();
-    if (named !== '' && !sameName(named, context.poolName)) {
+    if (named !== '' && !sameName(named, context.poolName) && context.intoThisPool !== true) {
       problems.push('otherPool');
     }
 
@@ -226,8 +237,27 @@ export function checkAnalysisRows(
           row.importable &&
           (row.warnings.includes('duplicateInFile') || row.warnings.includes('alreadyRecorded')),
       ).length,
+      otherPools: context.intoThisPool === true ? [] : otherPoolNames(rows, context.poolName),
     },
   };
+}
+
+/**
+ * The tank names a file gives that are not this tank's, each once.
+ *
+ * A wrong tank used to refuse its rows outright; the preview now asks whether
+ * the file is for the tank whose page it was dropped on (Rui, 12-11-2026). A
+ * sheet naming several tanks still asks, and lists them all, so a yes is given
+ * knowing what it covers.
+ */
+export function otherPoolNames(rows: Record<string, string>[], poolName: string): string[] {
+  const names: string[] = [];
+  for (const raw of rows) {
+    const named = (raw['pool'] ?? '').trim();
+    if (named === '' || sameName(named, poolName)) continue;
+    if (!names.some((name) => sameName(name, named))) names.push(named);
+  }
+  return names;
 }
 
 /** Case- and accent-insensitive, the same fold the search and the sort use. */

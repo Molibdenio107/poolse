@@ -61,6 +61,15 @@ test('a lab report row reads organisms, chemistry and the lab\'s own labels', ()
   );
 });
 
+test('a report naming another tank asks, and a yes imports it here (Rui, 12-11-2026)', () => {
+  const file = [{ takenOn: '14/10/2026', pool: 'Piscina de 25 m', e_coli: '0' }];
+  const asked = checkLabRows(file, CONTEXT);
+  assert.deepEqual(asked.summary.otherPools, ['Piscina de 25 m']);
+  assert.deepEqual(asked.rows[0]?.problems, ['otherPool']);
+  const yes = checkLabRows(file, { ...CONTEXT, intoThisPool: true });
+  assert.equal(yes.rows[0]?.importable, true);
+});
+
 test('a refused row names what is wrong in the readings preview\'s own words', () => {
   const { rows } = checkLabRows(
     [

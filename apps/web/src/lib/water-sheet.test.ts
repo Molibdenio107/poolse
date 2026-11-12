@@ -199,3 +199,19 @@ test('what the export writes, the importer reads back', () => {
   assert.ok(WATER_EXPORT_FIELDS.includes('takenOn'));
   assert.ok(WATER_EXPORT_FIELDS.includes('ph'));
 });
+
+test('the Excel export’s own headers map back with no question (12-11-2026)', () => {
+  // Exactly what `pools/[poolId]/export/route.ts` writes on row one.
+  const sheet = parseCsv(
+    [
+      'Data;Hora;pH (pH);Temperatura (°C);Cloro livre (ppm);Cloro combinado (ppm);Alcalinidade total (ppm);Notas',
+      '30-10-2026;09:00;7,28;28,5;1,25;0,29;111;',
+    ].join('\r\n'),
+  );
+  const { mapping } = matchWaterColumns(sheet);
+  assert.deepEqual(
+    [mapping.takenOn, mapping.takenTime, mapping.ph, mapping.temperature, mapping.free_chlorine,
+      mapping.combined_chlorine, mapping.total_alkalinity, mapping.notes],
+    [0, 1, 2, 3, 4, 5, 6, 7],
+  );
+});

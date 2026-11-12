@@ -13,12 +13,15 @@ import type {
   PoolMetric,
 } from '@/lib/api';
 import { POOL_METRICS } from '@/lib/pool-metrics';
-import { TrendChart } from '@/components/trend-chart';
+import { TrendZoom, type ZoomPoint } from './trend-zoom';
+import { TrendsPeriod } from './trends-period';
+import { clubDay, inPeriod, periodsOffered, resolvePeriod, summarisePeriod } from '@/lib/water-period';
 import { excursions } from '@/lib/water';
 import { ExportAnalyses, UnsafeWaterNotice, WaterBackInRangeNote } from './water-actions';
 import { WaterImport } from './pools/[poolId]/water-import';
 import { WaterDropCatcher } from './pools/[poolId]/water-drop';
-import { AnalysisForm, ArchiveAnalysisButton, SafeRangesForm } from './analysis-forms';
+import { AnalysisForm, ArchiveAnalysisButton, ArchiveWaterButton, SafeRangesForm } from './analysis-forms';
+import { FoldCard } from '@/components/fold-card';
 import { LabResultsSection } from './lab-results';
 import { PageError } from '@/components/page-shell';
 import { formatStamp } from '@/lib/date-format';
@@ -80,6 +83,8 @@ export async function ReadingsBlock({
   section,
   from,
   page,
+  year,
+  month,
   closure,
 }: {
   organizationId: string;
@@ -122,6 +127,9 @@ export async function ReadingsBlock({
   from?: string | undefined;
   /** `?page=` for Histórico and Laboratório, ten a page like every list (POOLSE-29). */
   page?: string | undefined;
+  /** `?year=&month=` for Tendências (`month=all`: the whole year) — Rui, 12-11-2026. */
+  year?: string | undefined;
+  month?: string | undefined;
   /** What shuts the tank now, so the warning and its aftermath can say so. */
   closure: PoolClosure | null;
 }): Promise<React.ReactElement> {
@@ -174,6 +182,31 @@ export async function ReadingsBlock({
     .filter(([, on]) => on)
     .map(([key]): WaterSection => key);
   const current = pickSection(offered, section, 'latest');
+  /*
+   * Tendências shows one period, Ano + Mês, opening on the latest analysis's
+   * month (Rui, 12-11-2026). Narrowed here, once; the summary, the charts and
+   * each zoom read the same slice, judged by this tank's bands.
+   */
+  // A month with only a laboratory report is a month too: both kinds of moment offer it.
+  const moments = [...analyses, ...(labResults ?? []).map((result) => ({ takenAt: result.sampledAt, values: [] }))];
+  const period = resolvePeriod(moments, year, month);
+  const periodAnalyses = period === null ? [] : analyses.filter((one) => inPeriod(one.takenAt, period));
+  const summary =
+    period === null ? null : summarisePeriod(periodAnalyses, bands, period, clubDay(new Date().toISOString()));
+  // In the order the page always lists metrics, not the order they were first seen.
+  const periodMetrics = POOL_METRICS.flatMap((metric) => summary?.metrics.find((one) => one.metric === metric) ?? []);
+  const periodLab = (labResults ?? [])
+    .filter((result) => period !== null && inPeriod(result.sampledAt, period))
+    .sort((a, b) => a.sampledAt.localeCompare(b.sampledAt));
+  const monthNames = Array.from({ length: 12 }, (_, index) =>
+    new Intl.DateTimeFormat(locale, { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, index, 15))),
+  );
+  const periodLabel =
+    period === null
+      ? ''
+      : period.month === null
+        ? String(period.year)
+        : t('facilities.trends.periodLabel', { month: monthNames[period.month - 1]!, year: period.year });
   const unsafe = latest === undefined ? [] : excursions(latest.values, bands);
   /*
    * POOLSE-214: the dot follows the problem to its pill. The newest graded lab
@@ -315,44 +348,141 @@ export async function ReadingsBlock({
           </>
         ))}
 
-      {current === 'trends' && (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          {measured.map((metric) => {
-            const points = analyses
-              .filter((analysis) =>
-                analysis.values.some((value) => value.metric === metric),
-              )
-              .map((analysis) => ({
-                at: analysis.takenAt,
-                value:
-                  analysis.values.find((value) => value.metric === metric)?.value ?? 0,
-                // A reading from a laboratory report is a hollow ring (POOLSE-153).
-                fromLab: analysis.fromLab || analysis.origin === 'report',
-              }));
+      {current === 'trends' && period !== null && summary !== null && (
+        <div className="flex flex-col gap-5">
+          <TrendsPeriod
+            offered={periodsOffered(moments)}
+            year={period.year}
+            month={period.month}
+            monthNames={monthNames}
+          />
 
-            return (
-              <TrendChart
-                key={metric}
-                locale={locale}
-                points={points}
-                label={labelFor(metric)}
-                unit={
-                  latest?.values.find((value) => value.metric === metric)?.unit ??
-                  analyses
-                    .flatMap((analysis) => analysis.values)
-                    .find((value) => value.metric === metric)?.unit ??
-                  ''
-                }
-                /*
-                  This pool's band, not the published one. A tank judged
-                  only from below draws one edge, and a metric switched off
-                  draws none — the honest picture either way.
-                */
-                band={bandFor(metric)}
-                legend={{ typed: t('facilities.trendLegend.reading'), lab: t('facilities.trendLegend.lab') }}
-              />
-            );
-          })}
+          {/* The period in words, folded until asked for (Rui, 12-11-2026); its line says the headline. */}
+          <FoldCard
+            title={t('facilities.trends.summaryTitle', { period: periodLabel })}
+            summary={t('facilities.trends.summaryLine', {
+              analyses: summary.analyses,
+              days: summary.daysWithReadings,
+              of: summary.daysInPeriod,
+              outside: summary.outside,
+            })}
+          >
+            <div className="flex flex-col gap-4">
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="flex flex-col gap-0.5">
+                <dt className="text-sm text-foreground-muted">{t('facilities.trends.analyses')}</dt>
+                <dd className="text-lg font-semibold tabular-nums">{summary.analyses}</dd>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <dt className="text-sm text-foreground-muted">{t('facilities.trends.coverage')}</dt>
+                <dd className="text-lg font-semibold tabular-nums">
+                  {t('facilities.trends.daysOf', { days: summary.daysWithReadings, of: summary.daysInPeriod })}
+                </dd>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <dt className="text-sm text-foreground-muted">{t('facilities.trends.outsideTotal')}</dt>
+                <dd className={cn('text-lg font-semibold tabular-nums', summary.outside > 0 && 'text-danger')}>
+                  {summary.outside}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <caption className="sr-only">{t('facilities.trends.metricsCaption', { period: periodLabel })}</caption>
+                <thead>
+                  <tr className="border-b border-border text-left text-foreground-muted">
+                    <th scope="col" className="py-2 pr-3 font-medium">{t('facilities.trends.col.metric')}</th>
+                    <th scope="col" className="py-2 pr-3 text-right font-medium">{t('facilities.trends.stat.records')}</th>
+                    <th scope="col" className="py-2 pr-3 text-right font-medium">{t('facilities.trends.stat.min')}</th>
+                    <th scope="col" className="py-2 pr-3 text-right font-medium">{t('facilities.trends.stat.average')}</th>
+                    <th scope="col" className="py-2 pr-3 text-right font-medium">{t('facilities.trends.stat.max')}</th>
+                    <th scope="col" className="py-2 text-right font-medium">{t('facilities.trends.stat.outside')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {periodMetrics.map((line) => (
+                    <tr key={line.metric} className="border-b border-border last:border-0">
+                      <th scope="row" className="py-2 pr-3 text-left font-medium">
+                        {labelFor(line.metric)} <span className="font-normal text-foreground-muted">({line.unit})</span>
+                      </th>
+                      <td className="py-2 pr-3 text-right tabular-nums">{line.count}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums">{formatReading(line.min, locale)}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums">
+                        {formatReading(Math.round(line.average * 100) / 100, locale)}
+                      </td>
+                      <td className="py-2 pr-3 text-right tabular-nums">{formatReading(line.max, locale)}</td>
+                      <td className={cn('py-2 text-right tabular-nums', line.outside > 0 && 'font-semibold text-danger')}>
+                        {line.outside}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <h3 className="text-sm font-semibold">{t('facilities.trends.labTitle')}</h3>
+              {periodLab.length === 0 ? (
+                <p className="text-sm text-foreground-muted">{t('facilities.trends.labNone')}</p>
+              ) : (
+                <ul className="flex flex-col gap-1 text-sm">
+                  {periodLab.map((result) => (
+                    <li key={result.id} className="flex flex-wrap gap-x-2">
+                      <span className="tabular-nums">{formatStamp(new Date(result.sampledAt))}</span>
+                      {result.reportReference !== null && (
+                        <span className="text-foreground-muted">{result.reportReference}</span>
+                      )}
+                      <span className={cn('font-medium', result.grading.grade === 'nao_conforme' && 'text-danger')}>
+                        {result.grading.grade === null
+                          ? t('labResults.grade.none')
+                          : t(`labResults.grade.${result.grading.grade}`)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            </div>
+          </FoldCard>
+
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {periodMetrics.map((line) => {
+              const metric = line.metric;
+              const points: ZoomPoint[] = periodAnalyses
+                .filter((analysis) => analysis.values.some((value) => value.metric === metric))
+                .map((analysis) => {
+                  const off = excursions(analysis.values, bands).find((one) => one.metric === metric);
+                  return {
+                    at: analysis.takenAt,
+                    value: analysis.values.find((value) => value.metric === metric)?.value ?? 0,
+                    // A reading from a laboratory report is a hollow ring (POOLSE-153).
+                    fromLab: analysis.fromLab || analysis.origin === 'report',
+                    outside: off === undefined ? null : off.direction,
+                    recordedBy: analysis.recordedByName,
+                  };
+                });
+
+              return (
+                <TrendZoom
+                  key={metric}
+                  locale={locale}
+                  points={points}
+                  label={labelFor(metric)}
+                  unit={line.unit}
+                  /*
+                    This pool's band, not the published one. A tank judged
+                    only from below draws one edge, and a metric switched off
+                    draws none — the honest picture either way.
+                  */
+                  band={bandFor(metric)}
+                  legend={{ typed: t('facilities.trendLegend.reading'), lab: t('facilities.trendLegend.lab') }}
+                  summary={line}
+                  period={periodLabel}
+                />
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -392,6 +522,19 @@ export async function ReadingsBlock({
                 export: t('facilities.exportAnalyses'),
               }}
             />
+            {/* The workbook beside the CSV (Rui, 12-11-2026): a plain link to a route, so it is a file. */}
+            <a
+              href={`/dashboard/facilities/pools/${poolId}/export`}
+              download
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
+            >
+              {t('facilities.waterExport.button')}
+            </a>
+            {canManage && (
+              <span className="ml-auto">
+                <ArchiveWaterButton poolId={poolId} poolName={poolName} what="analyses" count={analyses.length} />
+              </span>
+            )}
           </div>
 
           {/* The record itself. Newest first here — a list is read from the top. */}
@@ -474,6 +617,12 @@ export async function ReadingsBlock({
             <p className="text-sm text-foreground-muted">{t('facilities.alertNoEmail')}</p>
           )}
 
+          {canManage && (
+            <div className="flex justify-end">
+              <ArchiveWaterButton poolId={poolId} poolName={poolName} what="alerts" count={alerts.length} />
+            </div>
+          )}
+
           <ul className="flex flex-col divide-y divide-border rounded border border-border">
             {alerts.map((alert) => (
               <li
@@ -490,10 +639,13 @@ export async function ReadingsBlock({
                   </span>
                 </span>
 
-                <span className="text-foreground-muted">
+                <span className="flex items-center gap-2 text-foreground-muted">
                   {alert.deliveredAt === null
                     ? t('facilities.alertNotSent')
                     : t('facilities.alertDelivered', { count: alert.recipients })}
+                  {canManage && (
+                    <ArchiveWaterButton poolId={poolId} poolName={poolName} what="alert" count={1} alertId={alert.id} />
+                  )}
                 </span>
               </li>
             ))}
@@ -543,7 +695,7 @@ export async function ReadingsBlock({
             On top since 29-10-2026 (Rui), as Histórico's buttons are: the way in
             comes before the list it adds to.
           */
-          importer={canManage ? <WaterImport poolId={poolId} canManage={canManage} /> : null}
+          importer={canManage ? <WaterImport poolId={poolId} poolName={poolName} canManage={canManage} /> : null}
           pagination={<Pagination page={lab} basePath={basePath} query={pageQuery('lab')} />}
         />
       )}

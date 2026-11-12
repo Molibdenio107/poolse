@@ -5,6 +5,7 @@ import {
   momentKey,
   parseReading,
   parseReadingTime,
+  otherPoolNames,
   sameName,
   type AnalysisProblem,
   type AnalysisWarning,
@@ -70,6 +71,8 @@ export interface LabImportContext {
   existing: Set<string>;
   /** Now on the facility's clock, `YYYY-MM-DD HH:MM` — a sample cannot be taken after it. */
   now: string;
+  /** The operator confirmed the report is for this tank — see `AnalysisImportContext`. */
+  intoThisPool?: boolean;
 }
 
 /**
@@ -122,7 +125,9 @@ export function checkLabRows(
     const badParameters: LabParameter[] = [];
 
     const named = (raw['pool'] ?? '').trim();
-    if (named !== '' && !sameName(named, context.poolName)) problems.push('otherPool');
+    if (named !== '' && !sameName(named, context.poolName) && context.intoThisPool !== true) {
+      problems.push('otherPool');
+    }
 
     const rawDate = (raw['takenOn'] ?? '').trim();
     let takenOn = '';
@@ -188,6 +193,7 @@ export function checkLabRows(
       importable: checked.filter((row) => row.importable).length,
       refused: checked.filter((row) => !row.importable).length,
       duplicates: checked.filter((row) => row.importable && row.warnings.length > 0).length,
+      otherPools: context.intoThisPool === true ? [] : otherPoolNames(rows, context.poolName),
     },
   };
 }

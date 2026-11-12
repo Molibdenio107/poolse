@@ -15,6 +15,7 @@ import {
 import type { FormState } from '../actions';
 import {
   archiveAnalysisAction,
+  archiveWaterHistoryAction,
   recordAnalysisAction,
   savePoolRangesAction,
 } from './facilities.actions';
@@ -153,6 +154,49 @@ export function ArchiveAnalysisButton({
         className={`${ARCHIVE_TRIGGER} w-control`}
       >
         <Archive aria-hidden className={ARCHIVE_ICON} />
+      </ConfirmButton>
+    </form>
+  );
+}
+
+/**
+ * Apagar todas as análises, Apagar todos os alertas, and one alert's Apagar —
+ * Owner and Admin (Rui, 12-11-2026). Each asks first, naming the count and the
+ * tank, and says the rows go to the Arquivo bin, from where they come back.
+ */
+export function ArchiveWaterButton({
+  poolId,
+  poolName,
+  what,
+  count,
+  alertId,
+}: {
+  poolId: string;
+  poolName: string;
+  what: 'analyses' | 'alerts' | 'alert';
+  count: number;
+  alertId?: string;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [, action, pending] = useSavedAction(archiveWaterHistoryAction, INITIAL);
+  const one = what === 'alert';
+
+  return (
+    <form action={action} className="inline">
+      <input type="hidden" name="poolId" value={poolId} />
+      <input type="hidden" name="what" value={what} />
+      {alertId !== undefined && <input type="hidden" name="alertId" value={alertId} />}
+      <ConfirmButton
+        title={t(`facilities.waterArchive.${what}.title`)}
+        message={t(`facilities.waterArchive.${what}.message`, { count, pool: poolName })}
+        confirmLabel={t('common.remove')}
+        tone="danger"
+        disabled={pending}
+        {...(one ? { ariaLabel: t('facilities.waterArchive.alert.aria') } : {})}
+        className={one ? `${ARCHIVE_TRIGGER} w-control` : ARCHIVE_TRIGGER}
+      >
+        <Archive aria-hidden className={ARCHIVE_ICON} />
+        {!one && t(`facilities.waterArchive.${what}.button`)}
       </ConfirmButton>
     </form>
   );
