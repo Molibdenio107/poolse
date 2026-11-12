@@ -1,0 +1,155 @@
+{
+  "validity": "válido a partir de 5 de outubro de 2026",
+  "rows": [
+    {
+      "sourcePool": "Tanque A",
+      "weekday": 1,
+      "start": "07:30",
+      "end": "08:30",
+      "activity": "Natação Livre",
+      "lanes": 4,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Tanque A",
+      "weekday": 1,
+      "start": "18:00",
+      "end": "18:45",
+      "activity": "Hidroginástica",
+      "lanes": 2,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Tanque A",
+      "weekday": 1,
+      "start": "18:00",
+      "end": "18:45",
+      "activity": "Natação Livre",
+      "lanes": 2,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Tanque B",
+      "weekday": 1,
+      "start": "17:30",
+      "end": "18:15",
+      "activity": "Bebés",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Tanque B",
+      "weekday": 1,
+      "start": "18:15",
+      "end": "19:00",
+      "activity": "Adaptação ao Meio Aquático",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Tanque A",
+      "weekday": 2,
+      "start": "07:30",
+      "end": "08:30",
+      "activity": "Natação Livre",
+      "lanes": 4,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Tanque A",
+      "weekday": 2,
+      "start": "19:00",
+      "end": "20:30",
+      "activity": "Treino Masters",
+      "lanes": 4,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Tanque B",
+      "weekday": 2,
+      "start": "17:30",
+      "end": "18:15",
+      "activity": "Natação Grávidas",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Tanque B",
+      "weekday": 3,
+      "start": "09:00",
+      "end": "13:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Tanque A",
+      "weekday": 3,
+      "start": "18:00",
+      "end": "18:45",
+      "activity": "Hidroginástica",
+      "lanes": 2,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Tanque A",
+      "weekday": 3,
+      "start": "18:00",
+      "end": "18:45",
+      "activity": "Natação Livre",
+      "lanes": 2,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Tanque B",
+      "weekday": 3,
+      "start": "17:30",
+      "end": "18:15",
+      "activity": "Bebés",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Tanque A",
+      "weekday": 4,
+      "start": "19:00",
+      "end": "20:30",
+      "activity": "Treino Masters",
+      "lanes": 4,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Tanque A",
+      "weekday": 6,
+      "start": "09:00",
+      "end": "12:00",
+      "activity": "Natação Livre",
+      "lanes": 4,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Tanque B",
+      "weekday": 6,
+      "start": "10:00",
+      "end": "11:00",
+      "activity": "Natação para Seniores",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    }
+  ]
+}

@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { ApiError, apiFetch, apiPost, apiPut, type FacilityDetail } from '@/lib/api';
 import { readSheet, readFailureKey } from '@/lib/read-sheet';
 import { readTimetableGrid, type GridCandidate } from '@/lib/timetable-grid';
+import { readTimetableDocument, type TimetableMedia } from '@/lib/timetable-reader-agent';
+import { fromGridReading, type TimetableReading } from '@/lib/timetable-reading';
 import type { NamedSheet } from '@/lib/sheet';
 
 /**
@@ -34,6 +36,12 @@ export interface ReadState {
     timeColumn: number | null;
     unplaced: { line: number; text: string }[];
   };
+  /**
+   * The reading as rows of meaning (POOLSE-223): pools, spans, two activities per
+   * cell, closed blocks. The mapping step works on this; `reading` keeps only
+   * the days and leftovers the dialog lists.
+   */
+  meaning?: TimetableReading;
   fileName?: string;
   errorKey?: string;
   attempt: number;
@@ -57,19 +65,67 @@ export async function readTimetableAction(
   const upload = formData.get('file');
   const file = upload instanceof File ? upload : null;
 
+  /*
+   * A PDF or a photo is read for its meaning by the timetable reader (POOLSE-223);
+   * a spreadsheet keeps the grid reader and no model call, converted to the same rows.
+   */
+  const media = file === null ? null : timetableMedia(file.name);
+  if (file !== null && media !== null) {
+    if (file.size === 0) return { ok: false, errorKey: readFailureKey('fileMissing'), attempt };
+    const read = await readTimetableDocument(await file.arrayBuffer(), media);
+    if ('error' in read) {
+      const failure =
+        read.error === 'off'
+          ? 'pdfDisabled'
+          : read.error === 'noKey'
+            ? 'pdfNoKey'
+            : read.error === 'capReached'
+              ? 'pdfCapReached'
+              : read.error === 'nothingFound'
+                ? 'fileEmpty'
+                : (`ai.${read.error}` as const);
+      return { ok: false, errorKey: readFailureKey(failure), attempt };
+    }
+    return { ok: true, meaning: read.reading, reading: bridge(read.reading), fileName: file.name, attempt };
+  }
+
   const outcome = await readSheet(file, { pdf: true });
   if ('error' in outcome) {
     return { ok: false, errorKey: readFailureKey(outcome.error), attempt };
   }
 
   const [first] = outcome.sheets;
+  const grid = first === undefined ? undefined : readTimetableGrid(first);
 
   return {
     ok: true,
     sheets: outcome.sheets,
-    ...(first === undefined ? {} : { reading: readTimetableGrid(first) }),
+    ...(grid === undefined ? {} : { reading: grid, meaning: fromGridReading(grid) }),
     fileName: file?.name ?? '',
     attempt,
+  };
+}
+
+/** Which files the timetable reader takes, by name; a spreadsheet is null. */
+function timetableMedia(name: string): TimetableMedia | null {
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.png')) return 'image/png';
+  return null;
+}
+
+/** The days a reading covers, in the shape today's dialog shows. */
+const DAY_HEADINGS = ['', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+
+/** The days a reading of meaning covers, for the dialog's "N dias" line. */
+function bridge(meaning: TimetableReading): NonNullable<ReadState['reading']> {
+  const weekdays = [...new Set(meaning.rows.map((row) => row.weekday))].sort((a, b) => a - b);
+  return {
+    candidates: [],
+    days: weekdays.map((weekday) => ({ column: weekday, weekday, heading: DAY_HEADINGS[weekday] ?? '' })),
+    timeColumn: 0,
+    unplaced: [],
   };
 }
 
@@ -98,15 +154,11 @@ export async function readOtherSheetAction(
       return refused;
     }
 
-    return {
-      ok: true,
-      reading: readTimetableGrid({
-        headers: record.headers as string[],
-        rows: record.rows as string[][],
-      }),
-      attempt,
-      fromFile,
-    };
+    const reading = readTimetableGrid({
+      headers: record.headers as string[],
+      rows: record.rows as string[][],
+    });
+    return { ok: true, reading, meaning: fromGridReading(reading), attempt, fromFile };
   } catch {
     return refused;
   }

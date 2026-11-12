@@ -1,6 +1,8 @@
 import {
   evaluate,
   overlaps,
+  placeLaneCount,
+  type HeldLanes,
   verdictOf,
   type Reason,
   type RuleBooking,
@@ -61,9 +63,22 @@ export interface RawTimetableRow {
   headcount?: number | null;
   /** Which line of the sheet this came from, for the preview to point at. */
   line: number;
+  /**
+   * The Poolse pool this row was mapped to (POOLSE-223). Absent: the request's
+   * pool. Lane names and counts resolve inside this pool only.
+   */
+  poolId?: string | null;
+  /** What the row becomes (POOLSE-223): an evento (default) or a free-swim lane hold. */
+  kind?: TimetableKind;
+  /** The lane count the reader found ("3 pistas"); placed on the pool's free lanes. */
+  laneCount?: number | null;
 }
 
+export type TimetableKind = 'evento' | 'free_swim';
+
 export type TimetableProblemCode =
+  /** A free-swim block holds lanes, as one made by hand must (POOLSE-68). */
+  | 'freeSwimNeedsLane'
   | 'nameRequired'
   | 'badTime'
   | 'badDuration'
@@ -75,7 +90,14 @@ export type TimetableProblemCode =
  * `noLanes`: imported into *Sem pista* (Rui, 11-11-2026), no longer refused.
  * `lanesPlaced`: "3 pistas" placed on named lanes. `lanesShort`: fewer free lanes than asked.
  */
-export type TimetableWarningCode = 'instructorNotFound' | 'headcountMissing' | 'noLanes' | 'lanesPlaced' | 'lanesShort';
+export type TimetableWarningCode =
+  | 'instructorNotFound'
+  | 'headcountMissing'
+  | 'noLanes'
+  | 'lanesPlaced'
+  | 'lanesShort'
+  /** "6 pistas, a piscina tem 4": took every lane (POOLSE-223 rule 5). Value `asked/has`. */
+  | 'lanesOverPool';
 
 export interface TimetableProblem {
   code: TimetableProblemCode;
@@ -116,6 +138,9 @@ export interface TimetableRow {
   index: number;
   line: number;
 
+  /** The pool the row resolves in; null when neither the row nor the request named one. */
+  poolId: string | null;
+  kind: TimetableKind;
   name: string;
   weekday: number;
   startMinutes: number;
@@ -359,6 +384,8 @@ export function expandLanes(
 export function previewTimetable(
   raw: readonly RawTimetableRow[],
   context: TimetableContext,
+  /** The pool for rows that name none (the dialog's step zero); null reads the site's lanes. */
+  defaultPoolId: string | null = null,
 ): TimetablePreview {
   const instructors = new Map(
     context.instructors.map((person) => [normaliseName(person.name), person]),
@@ -380,37 +407,32 @@ export function previewTimetable(
   }));
 
   /*
-   * Lanes held, for placing "3 pistas" (Rui, 11-11-2026): what is on the grid
-   * and what earlier rows of this file took, so two activities sharing an hour
-   * take side-by-side lanes rather than the same ones.
+   * Lanes held, for placing "3 pistas" (`placeLaneCount` in @poolse/rules): what
+   * is on the grid and what earlier rows of this file took, so two activities
+   * sharing an hour take side-by-side lanes rather than the same ones.
    */
-  const lanesByPosition = [...context.lanes].sort((a, b) => a.position - b.position);
-  const held: { weekday: number; from: number; to: number; laneIds: string[] }[] = context.existing.map((booking) => ({
+  const held: HeldLanes[] = context.existing.map((booking) => ({
     weekday: booking.weekday,
     from: booking.startMinutes,
     to: booking.startMinutes + booking.durationMinutes,
     laneIds: [...booking.laneIds],
   }));
-  const freeLanes = (weekday: number, from: number, to: number): typeof lanesByPosition =>
-    lanesByPosition.filter(
-      (lane) => !held.some((h) => h.weekday === weekday && h.from < to && from < h.to && h.laneIds.includes(lane.id)),
-    );
-  /** The first run of `count` side-by-side free lanes, else the first free ones. */
-  const place = (count: number, weekday: number, from: number, to: number): typeof lanesByPosition => {
-    const free = freeLanes(weekday, from, to);
-    for (let at = 0; at + count <= free.length; at += 1) {
-      const run = free.slice(at, at + count);
-      if (run.every((lane, i) => i === 0 || lane.position === run[i - 1]!.position + 1)) return run;
-    }
-    return free.slice(0, count);
-  };
   const hoursOf = new Map((context.hours ?? []).map((day) => [day.weekday, day]));
 
   const rows = raw.map((row, index) => {
     const problems: TimetableProblem[] = [];
     const warnings: TimetableWarning[] = [];
+    const kind: TimetableKind = row.kind === 'free_swim' ? 'free_swim' : 'evento';
+
+    /*
+     * The row's own pool, never the site's (the POOLSE-57 trap of 02-11-2026):
+     * lane names and counts resolve inside it. No pool anywhere reads the site.
+     */
+    const poolId = row.poolId ?? defaultPoolId;
+    const poolLanes = poolId === null ? context.lanes : context.lanes.filter((lane) => lane.poolId === poolId);
 
     const counted = readLaneCount(row.name.trim(), row.laneNames);
+    const laneCount = row.laneCount ?? counted.count;
     const name = counted.name;
     if (name === '') problems.push({ code: 'nameRequired' });
     else if (name.length > MAX_NAME) problems.push({ code: 'nameRequired', value: name });
@@ -438,21 +460,26 @@ export function previewTimetable(
      * is not there.
      */
     let written = counted.laneNames;
-    if (written.length === 0 && counted.count !== null && startMinutes !== null) {
-      const placed = place(counted.count, row.weekday, startMinutes, startMinutes + durationMinutes);
-      written = placed.map((lane) => lane.name);
-      if (placed.length === counted.count) {
-        warnings.push({ code: 'lanesPlaced', value: written.join(', ') });
-      } else {
-        warnings.push({ code: 'lanesShort', value: `${counted.count}` });
-      }
+    if (written.length === 0 && laneCount !== null && startMinutes !== null) {
+      const placed = placeLaneCount(
+        laneCount,
+        { weekday: row.weekday, from: startMinutes, to: startMinutes + durationMinutes },
+        poolLanes,
+        held,
+      );
+      written = placed.lanes.map((lane) => lane.name);
+      if (placed.outcome === 'placed') warnings.push({ code: 'lanesPlaced', value: written.join(', ') });
+      else if (placed.outcome === 'short') warnings.push({ code: 'lanesShort', value: `${laneCount}` });
+      else warnings.push({ code: 'lanesOverPool', value: `${laneCount}/${poolLanes.length}` });
     }
-    const lanes = expandLanes(written, context.lanes);
+    const lanes = expandLanes(written, poolLanes);
     for (const wrote of lanes.missing) {
       problems.push({ code: 'laneNotFound', value: wrote });
     }
     if (lanes.ids.length === 0 && lanes.missing.length === 0) {
-      warnings.push({ code: 'noLanes' });
+      // A free-swim block holds lanes or it is nothing (POOLSE-68); a class goes to *Sem pista*.
+      if (kind === 'free_swim') problems.push({ code: 'freeSwimNeedsLane' });
+      else warnings.push({ code: 'noLanes' });
     }
 
     /*
@@ -462,14 +489,15 @@ export function previewTimetable(
      * still true without it. Losing "Sandra" costs a name that can be set from
      * the grid in one click; losing the class costs the class.
      */
-    const wrote = (row.instructorName ?? '').trim();
+    // Nobody teaches a free-swim block, and it counts nobody (POOLSE-68).
+    const wrote = kind === 'free_swim' ? '' : (row.instructorName ?? '').trim();
     const found = wrote === '' ? undefined : instructors.get(normaliseName(wrote));
     if (wrote !== '' && found === undefined) {
       warnings.push({ code: 'instructorNotFound', value: wrote });
     }
 
-    const headcount = row.headcount ?? null;
-    if (headcount === null) warnings.push({ code: 'headcountMissing' });
+    const headcount = kind === 'free_swim' ? null : (row.headcount ?? null);
+    if (headcount === null && kind !== 'free_swim') warnings.push({ code: 'headcountMissing' });
 
     const readable = problems.length === 0;
 
@@ -487,7 +515,7 @@ export function previewTimetable(
         startMinutes,
         durationMinutes,
         laneIds: lanes.ids,
-        poolId: context.lanes.find((lane) => lane.id === lanes.ids[0])?.poolId ?? null,
+        poolId: context.lanes.find((lane) => lane.id === lanes.ids[0])?.poolId ?? poolId,
         instructorId: found?.id ?? null,
         levelId: null,
         headcount,
@@ -543,6 +571,8 @@ export function previewTimetable(
     return {
       index,
       line: row.line,
+      poolId,
+      kind,
       name,
       weekday: row.weekday,
       startMinutes: startMinutes ?? 0,

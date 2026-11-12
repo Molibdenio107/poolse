@@ -118,6 +118,11 @@ export interface GridBooking {
   /** Every lane it occupies, in position order. One block spans all of them. */
   laneIds: string[];
   /**
+   * The pool it is in (POOLSE-223): its lanes' pool, or for a class in no pista
+   * the pool it was put in, so *Sem pista* is per tank. Null: no pool known.
+   */
+  poolId: string | null;
+  /**
    * The turma's active students, filed by surname — POOLSE-147.
    *
    * Null for anything that is not a turma: a partner group carries a headcount
@@ -321,7 +326,8 @@ export async function readGrid(
                   cs.start_time::text,
                   cs.duration_minutes,
                   cs.slot_id,
-                  coalesce(bl.lane_ids, '{}')                        AS lane_ids
+                  coalesce(bl.lane_ids, '{}')                        AS lane_ids,
+                  coalesce(cs.pool_id, cg.pool_id)                   AS home_pool_id
              FROM class_schedule cs
              LEFT JOIN class_group cg
                ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
@@ -553,6 +559,7 @@ export async function readGrid(
         durationMinutes: row.duration_minutes,
         slotId: row.slot_id,
         laneIds: row.lane_ids ?? [],
+        poolId: row.home_pool_id,
         ...rosterFields(row, rosterOf),
       })),
       categories: categories.rows,
@@ -620,4 +627,5 @@ interface GridBookingRow {
   duration_minutes: number;
   slot_id: string | null;
   lane_ids: string[] | null;
+  home_pool_id: string | null;
 }

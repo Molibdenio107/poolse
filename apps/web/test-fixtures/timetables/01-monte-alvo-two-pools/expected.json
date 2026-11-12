@@ -1,0 +1,495 @@
+{
+  "validity": "Em vigor de 14 de setembro de 2026 a 30 de junho de 2027",
+  "rows": [
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 1,
+      "start": "07:00",
+      "end": "08:00",
+      "activity": "Hidroginástica",
+      "lanes": 3,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 1,
+      "start": "07:00",
+      "end": "08:00",
+      "activity": "Natação Livre",
+      "lanes": 3,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 1,
+      "start": "08:00",
+      "end": "09:00",
+      "activity": "Escola de Natação",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 1,
+      "start": "09:00",
+      "end": "10:00",
+      "activity": "Escolas (curricular)",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 1,
+      "start": "10:00",
+      "end": "13:00",
+      "activity": "Natação Livre",
+      "lanes": 6,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 1,
+      "start": "13:00",
+      "end": "14:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 2,
+      "start": "07:00",
+      "end": "09:00",
+      "activity": "Clube – Treino",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 2,
+      "start": "09:00",
+      "end": "10:00",
+      "activity": "Hidroginástica",
+      "lanes": 3,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 2,
+      "start": "09:00",
+      "end": "10:00",
+      "activity": "Natação Livre",
+      "lanes": 3,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 2,
+      "start": "10:00",
+      "end": "12:00",
+      "activity": "Escola de Natação",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 2,
+      "start": "12:00",
+      "end": "14:00",
+      "activity": "Natação Livre",
+      "lanes": 6,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 3,
+      "start": "07:00",
+      "end": "08:00",
+      "activity": "Hidroginástica",
+      "lanes": 3,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 3,
+      "start": "07:00",
+      "end": "08:00",
+      "activity": "Natação Livre",
+      "lanes": 3,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 3,
+      "start": "08:00",
+      "end": "09:00",
+      "activity": "Escola de Natação",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 3,
+      "start": "09:00",
+      "end": "10:00",
+      "activity": "Escolas (curricular)",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 3,
+      "start": "10:00",
+      "end": "13:00",
+      "activity": "Natação Livre",
+      "lanes": 6,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 3,
+      "start": "13:00",
+      "end": "14:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 4,
+      "start": "07:00",
+      "end": "09:00",
+      "activity": "Clube – Treino",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 4,
+      "start": "09:00",
+      "end": "10:00",
+      "activity": "Hidroginástica",
+      "lanes": 3,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 4,
+      "start": "09:00",
+      "end": "10:00",
+      "activity": "Natação Livre",
+      "lanes": 3,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 4,
+      "start": "10:00",
+      "end": "12:00",
+      "activity": "Escola de Natação",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 4,
+      "start": "12:00",
+      "end": "14:00",
+      "activity": "Natação Livre",
+      "lanes": 6,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 5,
+      "start": "07:00",
+      "end": "08:00",
+      "activity": "Hidroginástica",
+      "lanes": 3,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 5,
+      "start": "07:00",
+      "end": "08:00",
+      "activity": "Natação Livre",
+      "lanes": 3,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 5,
+      "start": "08:00",
+      "end": "13:00",
+      "activity": "Natação Livre",
+      "lanes": 6,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 5,
+      "start": "13:00",
+      "end": "14:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 6,
+      "start": "07:00",
+      "end": "09:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 6,
+      "start": "09:00",
+      "end": "11:00",
+      "activity": "Escola de Natação",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de 25 m",
+      "weekday": 6,
+      "start": "11:00",
+      "end": "14:00",
+      "activity": "Natação Livre",
+      "lanes": 6,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 1,
+      "start": "07:00",
+      "end": "09:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 1,
+      "start": "09:00",
+      "end": "10:00",
+      "activity": "Bebés",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 1,
+      "start": "10:00",
+      "end": "12:00",
+      "activity": "Escola de Natação",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 1,
+      "start": "12:00",
+      "end": "13:00",
+      "activity": "Hidroterapia",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 1,
+      "start": "13:00",
+      "end": "14:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 2,
+      "start": "07:00",
+      "end": "10:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 2,
+      "start": "10:00",
+      "end": "12:00",
+      "activity": "Escolas (curricular)",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 2,
+      "start": "12:00",
+      "end": "14:00",
+      "activity": "Natação Adaptada",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 3,
+      "start": "07:00",
+      "end": "09:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 3,
+      "start": "09:00",
+      "end": "10:00",
+      "activity": "Bebés",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 3,
+      "start": "10:00",
+      "end": "12:00",
+      "activity": "Escola de Natação",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 3,
+      "start": "12:00",
+      "end": "13:00",
+      "activity": "Hidroterapia",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 3,
+      "start": "13:00",
+      "end": "14:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 4,
+      "start": "07:00",
+      "end": "10:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 4,
+      "start": "10:00",
+      "end": "12:00",
+      "activity": "Escolas (curricular)",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 4,
+      "start": "12:00",
+      "end": "14:00",
+      "activity": "Natação Adaptada",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 5,
+      "start": "07:00",
+      "end": "14:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 6,
+      "start": "07:00",
+      "end": "09:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 6,
+      "start": "09:00",
+      "end": "11:00",
+      "activity": "Bebés",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina de Aprendizagem",
+      "weekday": 6,
+      "start": "11:00",
+      "end": "14:00",
+      "activity": "Escola de Natação",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    }
+  ]
+}

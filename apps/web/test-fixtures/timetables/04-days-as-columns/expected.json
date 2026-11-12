@@ -1,0 +1,145 @@
+{
+  "validity": null,
+  "rows": [
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 1,
+      "start": "07:00",
+      "end": "09:00",
+      "activity": "Natação Livre",
+      "lanes": 5,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 1,
+      "start": "12:30",
+      "end": "14:00",
+      "activity": "Natação Livre",
+      "lanes": 3,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 1,
+      "start": "18:30",
+      "end": "19:15",
+      "activity": "Hidroginástica",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 2,
+      "start": "07:00",
+      "end": "09:00",
+      "activity": "Natação Livre",
+      "lanes": 5,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 2,
+      "start": "17:45",
+      "end": "18:30",
+      "activity": "Escola de Natação — Nível 1",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 2,
+      "start": "18:30",
+      "end": "19:15",
+      "activity": "Escola de Natação — Nível 2",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 3,
+      "start": "07:00",
+      "end": "09:00",
+      "activity": "Natação Livre",
+      "lanes": 5,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 3,
+      "start": "18:30",
+      "end": "19:15",
+      "activity": "Hidroginástica",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 3,
+      "start": "12:30",
+      "end": "14:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 4,
+      "start": "17:45",
+      "end": "18:30",
+      "activity": "Escola de Natação — Nível 1",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 4,
+      "start": "18:30",
+      "end": "19:15",
+      "activity": "Escola de Natação — Nível 2",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 5,
+      "start": "07:00",
+      "end": "09:00",
+      "activity": "Natação Livre",
+      "lanes": 5,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 5,
+      "start": "20:00",
+      "end": "21:00",
+      "activity": "Aquafitness",
+      "lanes": 2,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Coberta",
+      "weekday": 6,
+      "start": "09:00",
+      "end": "13:00",
+      "activity": "Natação Livre",
+      "lanes": 5,
+      "laneNames": [],
+      "closed": false
+    }
+  ]
+}

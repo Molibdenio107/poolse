@@ -799,29 +799,19 @@ export async function createFreeSwimBooking(
 
     let id: string;
     try {
-      const inserted = await tx.query<{ id: string }>(
-        `INSERT INTO class_schedule
-           (organization_id, facility_id, subject_type, season_id, slot_id, weekday,
-            start_time, duration_minutes, title)
-         VALUES ($1, $2, 'free_swim', $3, $4, $5, $6::time, $7, $8)
-         RETURNING id`,
-        [
-          organizationId,
-          facilityId,
-          seasonId,
-          target.slotId,
-          target.weekday,
-          startTime,
-          duration,
-          title,
-        ],
-      );
-      id = inserted.rows[0]!.id;
+      id = await insertFreeSwim(tx, organizationId, {
+        facilityId,
+        seasonId,
+        slotId: target.slotId,
+        weekday: target.weekday,
+        startTime,
+        durationMinutes: duration,
+        title,
+        laneIds: target.laneIds,
+      });
     } catch (error) {
       classify(error);
     }
-
-    await setLanes(tx, organizationId, id, target.laneIds);
 
     await recordAudit(tx, {
       action: 'booking.free_swim_created',
@@ -832,6 +822,50 @@ export async function createFreeSwimBooking(
 
     return { id };
   });
+}
+
+/**
+ * The one insert of a free-swim block (POOLSE-68), by hand or from a timetable
+ * (POOLSE-223): the row and its lanes. The callers have already checked the
+ * published season, the site's lanes and the lane clash, each its own way.
+ */
+export async function insertFreeSwim(
+  tx: Tx,
+  organizationId: string,
+  block: {
+    facilityId: string;
+    seasonId: string;
+    slotId: string | null;
+    weekday: number;
+    startTime: string;
+    durationMinutes: number;
+    title: string;
+    laneIds: string[];
+    /** The pool it is in when it has no lanes (POOLSE-223); lanes set it themselves. */
+    poolId?: string | null;
+  },
+): Promise<string> {
+  const inserted = await tx.query<{ id: string }>(
+    `INSERT INTO class_schedule
+       (organization_id, facility_id, subject_type, season_id, slot_id, weekday,
+        start_time, duration_minutes, title, pool_id)
+     VALUES ($1, $2, 'free_swim', $3, $4, $5, $6::time, $7, $8, $9)
+     RETURNING id`,
+    [
+      organizationId,
+      block.facilityId,
+      block.seasonId,
+      block.slotId,
+      block.weekday,
+      block.startTime,
+      block.durationMinutes,
+      block.title,
+      block.poolId ?? null,
+    ],
+  );
+  const id = inserted.rows[0]!.id;
+  await setLanes(tx, organizationId, id, block.laneIds);
+  return id;
 }
 
 /**
@@ -1271,13 +1305,20 @@ export async function runTimetableImport(
       [request.facilityId],
     );
     if (site.rowCount === 0) return null;
-    if (request.poolId !== null) {
-      // The pool must be this site's — a pool of another site, or of no club of ours, is not found.
-      const pool = await tx.query(
-        `SELECT 1 FROM pool WHERE id = $1 AND facility_id = $2 AND archived_at IS NULL`,
-        [request.poolId, request.facilityId],
+    /*
+     * Every pool named — the request's and each row's (POOLSE-223) — must be this
+     * site's. A pool of another site, or of another club (RLS hides it), is not
+     * found, and nothing is judged or written.
+     */
+    const pools = [
+      ...new Set([request.poolId, ...request.rows.map((row) => row.poolId ?? null)].filter((id): id is string => id !== null)),
+    ];
+    if (pools.length > 0) {
+      const found = await tx.query(
+        `SELECT 1 FROM pool WHERE id = ANY($1::uuid[]) AND facility_id = $2 AND archived_at IS NULL`,
+        [pools, request.facilityId],
       );
-      if (pool.rowCount === 0) return null;
+      if (found.rowCount !== pools.length) return null;
     }
 
     const season = await tx.query<{ id: string }>(
@@ -1316,12 +1357,10 @@ export async function runTimetableImport(
       origin.push(index);
     });
 
-    const whole = await timetableContext(tx, request.facilityId, seasonId);
-    // Lane names resolve inside the chosen pool only; everything already booked
-    // at the site still counts for clashes, because lanes are distinct rows.
-    const context =
-      request.poolId === null ? whole : { ...whole, lanes: whole.lanes.filter((lane) => lane.poolId === request.poolId) };
-    const judged = previewTimetable(kept, context);
+    // Lane names resolve inside each row's pool (the request's by default);
+    // everything already booked at the site still counts for clashes.
+    const context = await timetableContext(tx, request.facilityId, seasonId);
+    const judged = previewTimetable(kept, context, request.poolId);
     const preview = {
       ...judged,
       rows: judged.rows.map((row) => ({ ...row, index: origin[row.index] ?? row.index })),
@@ -1334,9 +1373,44 @@ export async function runTimetableImport(
     if (!canCommit(preview)) return { ...preview, created: 0 };
 
     let created = 0;
+    let freeSwim = 0;
 
     for (const row of preview.rows) {
       if (!row.importable) continue;
+
+      /*
+       * A free-swim block (POOLSE-223, decided 1): the same insert as one made by
+       * hand. Its rules — published season, the site's lanes, at least one lane,
+       * side by side, no clash — were judged by the preview this commit re-ran.
+       */
+      if (row.kind === 'free_swim') {
+        const slot = await tx.query<{ id: string }>(
+          `SELECT s.id FROM facility_time_slot s
+            WHERE s.facility_id = $1 AND s.season_id = $2 AND s.archived_at IS NULL
+              AND s.day_group = $3::day_group AND s.start_time = $4::time
+            LIMIT 1`,
+          [
+            request.facilityId,
+            seasonId,
+            row.weekday === 6 ? 'saturday' : row.weekday === 7 ? 'sunday' : 'weekday',
+            toClockText(row.startMinutes),
+          ],
+        );
+        await insertFreeSwim(tx, organizationId, {
+          facilityId: request.facilityId,
+          seasonId,
+          slotId: slot.rows[0]?.id ?? null,
+          weekday: row.weekday,
+          startTime: toClockText(row.startMinutes),
+          durationMinutes: row.durationMinutes,
+          title: row.name,
+          laneIds: row.laneIds,
+          poolId: row.poolId,
+        });
+        created += 1;
+        freeSwim += 1;
+        continue;
+      }
 
       /*
        * An `evento`, not a turma.
@@ -1364,8 +1438,8 @@ export async function runTimetableImport(
         `INSERT INTO class_schedule
            (organization_id, facility_id, subject_type, season_id, weekday,
             start_time, duration_minutes, title, instructor_membership_id,
-            headcount_override, slot_id)
-         VALUES ($1, $2, 'evento', $3, $4::smallint, $5::time, $6, $7, $8, $9,
+            headcount_override, pool_id, slot_id)
+         VALUES ($1, $2, 'evento', $3, $4::smallint, $5::time, $6, $7, $8, $9, $11,
                  (SELECT s.id FROM facility_time_slot s
                    WHERE s.facility_id = $2 AND s.season_id = $3
                      AND s.archived_at IS NULL
@@ -1384,6 +1458,8 @@ export async function runTimetableImport(
           row.instructorId,
           row.headcount,
           dayGroup,
+          // The row's pool (POOLSE-223): a block with no lanes keeps it.
+          row.poolId,
         ],
       );
 
@@ -1404,7 +1480,7 @@ export async function runTimetableImport(
       action: 'timetable.imported',
       entityType: 'facility',
       entityId: request.facilityId,
-      data: { created, dropped: request.drop.length },
+      data: { created, freeSwim, dropped: request.drop.length },
     });
 
     return { ...preview, created };

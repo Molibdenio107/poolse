@@ -551,6 +551,42 @@ first.
 
 The other importers already import their valid rows and skip the rest; only this one places classes in time and on lanes.
 
+## A timetable PDF or photo is read for what it says (POOLSE-223, 12-11-2026)
+
+A PDF, JPEG or PNG goes to the timetable reader (`lib/timetable-reader-agent.ts`), not the
+grid-copying list reader. It returns **rows of meaning**: source pool, weekday, start, end,
+activity (without its lane count), lane count, lane names, closed. A block spanning printed hours
+is one row; a cell with two activities is two rows; *Encerrado* is a closed row; legends, footers,
+prices and opening-hours tables produce nothing. The validity printed on the sheet is shown above
+the mapping, never applied: rows go into the published season. Same switches and cost as the PDF
+list reader (`pdf_table`, the platform switch and the club's tick, one metered call per file). A
+spreadsheet keeps the grid reader and no model call, converted to the same rows
+(`fromGridReading`).
+
+**Mapping step** (`lib/timetable-mapping.ts`), between the reading and *Verificar conflitos*:
+
+- Each pool the file names gets a select of this site's pools plus *Não importar*. A name that
+  matches one pool is preselected; when one source pool and one site pool are left, they are
+  paired. Anything else must be chosen, and *Verificar* stays off until it is.
+- Each activity, with its number of blocks, is *Evento* (default), *Natação livre* (preselected
+  for *Natação livre* / *Nado livre* / *Livre*) or *Não importar*.
+- *N blocos encerrados não são importados.*
+- A rule changed after *Verificar* hides the verdict until it is checked again.
+
+**On the API**, each row carries `poolId`, `kind` (`evento` | `free_swim`) and `laneCount`. Lane
+names and counts resolve inside the row's pool; every pool named must be the site's (404
+otherwise, nothing written). Counts are placed by `placeLaneCount` in `@poolse/rules`; a count
+larger than the pool takes every free lane and says so (*lanesOverPool*). A free-swim row goes
+through the same insert as one made by hand (`insertFreeSwim`) and must hold a lane.
+
+**A class in no pista keeps its pool.** `class_schedule.pool_id` is set by the import and kept in
+line with the lanes by a trigger on `booking_lane`; the calendar draws a lane-less class in its
+own pool's *Sem pista* column (in every pool's when no pool is known).
+
+The reader is gated by a corpus of six fictional timetables in `apps/web/test-fixtures/timetables/`
+(`pnpm timetable:fixtures` rebuilds them; `pnpm timetable:eval` reads them with the real model and
+costs money, so it is run by hand, never in CI).
+
 **The calendar opens on a pool** (02-11-2026, Rui, reversing "no tank until somebody chooses one" of
 12-10-2026, which opened the page empty): the one this person last looked at, remembered on this device
 (`lib/calendar-pool.ts`), else the club's first. **The import is a dialog** — a bottom sheet on a phone —

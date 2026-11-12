@@ -123,7 +123,7 @@ lane (`NO_LANE_ID`) prepended to *every* day, present only when the week has one
 on the day. Out of it onto a pista assigns that pista; into it clears them — landing on the
 column means no pista whatever the block's width, rather than slicing the span and filtering,
 which would silently narrow a wide block. The id is never written to a booking; the column
-takes no click (`creatable`, separate from `disabled`) and offers no sideways resize.
+takes no click (`creatable`, separate from `disabled`) and offers no sideways resize. **A class in no pista keeps its pool** (POOLSE-223, 12-11-2026): `class_schedule.pool_id`, set by the import and by the `booking_lane_sets_pool` trigger whenever lanes are written, so the column of one tank shows that tank's classes, and a class with no pool known shows in every tank's.
 
 **Both axes of a drag are travel, never pointer position.** The calendar's scale lives whole
 in `lib/calendar-scale.ts`: `PX_PER_MINUTE` down, `COL_WIDTH`/`GUTTER`/`DAY_RULE` and

@@ -295,6 +295,7 @@ const NOTES = {
   noLanes: true,
   lanesPlaced: true,
   lanesShort: true,
+  lanesOverPool: true,
   instructorNotFound: true,
   headcountMissing: true,
 } as const;

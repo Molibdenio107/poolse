@@ -9,6 +9,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "i18n:check": "node scripts/check-messages.mjs && node scripts/check-formats.mjs",
     "test": "node --test \"src/**/*.test.ts\"",
+    "timetable:eval": "node --env-file-if-exists=../../.env scripts/eval-timetables.mjs",
+    "timetable:fixtures": "node scripts/build-timetable-fixtures.mjs",
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium webkit",
     "layout:check": "node scripts/check-layout.mjs",

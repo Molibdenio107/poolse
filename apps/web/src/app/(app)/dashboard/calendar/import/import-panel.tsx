@@ -2,7 +2,7 @@
 
 import type { PoolseSport } from '@poolse/rules';
 import { sportNameKey } from '@/components/sport-icon';
-import { startTransition, useActionState, useCallback, useEffect, useRef, useState } from 'react';
+import { startTransition, useActionState, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBusyWhile } from '@/lib/busy';
 import { useTranslations } from 'next-intl';
 import { FileSpreadsheet, Upload } from 'lucide-react';
@@ -21,6 +21,15 @@ import { Dialog } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { ConflictGroups } from './conflict-groups';
 import { SelectField } from '@/components/ui/field';
+import {
+  mapRows,
+  outline,
+  SKIP,
+  suggestKinds,
+  suggestPools,
+  type ActivityKind,
+  type PoolChoice,
+} from '@/lib/timetable-mapping';
 
 /**
  * Importing the wall timetable — POOLSE-57, the interface.
@@ -44,7 +53,7 @@ import { SelectField } from '@/components/ui/field';
  * one nobody meant to give it is a screen people stop dragging onto.
  */
 
-const ACCEPTED = ['.xlsx', '.csv', '.pdf'];
+const ACCEPTED = ['.xlsx', '.csv', '.pdf', '.jpg', '.jpeg', '.png'];
 
 const BUTTON =
    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold';
@@ -148,8 +157,39 @@ export function TimetableImport({
   // A switched sheet counts only for the file it was switched on.
   const otherIsCurrent = other.fromFile === read.attempt;
   const reading = (other.ok && otherIsCurrent ? other.reading : undefined) ?? read.reading;
-  const candidates = reading?.candidates ?? [];
-  const result = run.result;
+  const meaning = (other.ok && otherIsCurrent ? other.meaning : undefined) ?? read.meaning;
+
+  /*
+   * The mapping step (POOLSE-223, rule 4): which of this site's pools each pool
+   * the file names is, and what each activity becomes. Suggested once per file
+   * and per site, then the person's.
+   */
+  const sitePools = useMemo(
+    () => pools.filter((pool) => pool.facilityId === facilityId && pool.bookable),
+    [pools, facilityId],
+  );
+  const shape = useMemo(() => (meaning === undefined ? null : outline(meaning)), [meaning]);
+  const [poolMap, setPoolMap] = useState<Record<string, PoolChoice>>({});
+  const [kindMap, setKindMap] = useState<Record<string, ActivityKind>>({});
+  useEffect(() => {
+    if (shape === null) return;
+    setPoolMap(suggestPools(shape.sourcePools, sitePools));
+    setKindMap(suggestKinds(shape.activities));
+  }, [shape, sitePools]);
+  const mapped = useMemo(
+    () => (meaning === undefined ? [] : mapRows(meaning, poolMap, kindMap, poolId === '' ? null : poolId)),
+    [meaning, poolMap, kindMap, poolId],
+  );
+  const rowsJson = JSON.stringify(mapped ?? []);
+  const unchosen = shape === null ? [] : shape.sourcePools.filter((source) => (poolMap[source] ?? '') === '');
+
+  /*
+   * The verdict counts only for the rows it judged: a mapping changed after
+   * *Verificar* hides it until checked again, so a commit never writes rows
+   * nobody saw judged.
+   */
+  const [checked, setChecked] = useState('');
+  const result = run.result !== undefined && checked === rowsJson ? run.result : undefined;
 
   /*
    * A fresh file starts a fresh set of decisions.
@@ -174,10 +214,11 @@ export function TimetableImport({
   /** Check again with these rows left out, or import with them left out — one request. */
   const recheck = (drop: number[], commit: boolean): void => {
     setDropped(drop);
+    setChecked(rowsJson);
     const data = new FormData();
     data.set('facilityId', facilityId);
     data.set('poolId', poolId);
-    data.set('rows', JSON.stringify(candidates));
+    data.set('rows', rowsJson);
     data.set('settings', JSON.stringify({ commit, drop }));
     startTransition(() => runAction(data));
   };
@@ -371,15 +412,75 @@ export function TimetableImport({
                     )}
                     {t('timetableImport.found', {
                       days: reading.days.length,
-                      bookings: candidates.length,
+                      bookings: shape?.activities.reduce((sum, activity) => sum + activity.rows, 0) ?? 0,
                     })}
                   </p>
+
+                  {meaning?.validity != null && (
+                    <p className="text-sm text-foreground-muted">
+                      {t('timetableImport.mapping.validity', { text: meaning.validity })}
+                    </p>
+                  )}
+
+                  {/* The mapping step — POOLSE-223, rule 4. */}
+                  {shape !== null && shape.activities.length > 0 && (
+                    <fieldset className="flex flex-col gap-3">
+                      <legend className="mb-1 text-sm font-semibold">{t('timetableImport.mapping.title')}</legend>
+                      {shape.sourcePools.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                          <p className="text-sm text-foreground-muted">{t('timetableImport.mapping.poolsIntro')}</p>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {shape.sourcePools.map((source) => (
+                              <SelectField
+                                key={`${read.attempt}:${other.attempt}:${source}`}
+                                name={`pool:${source}`}
+                                label={t('timetableImport.mapping.sourcePool', { name: source })}
+                                initial={poolMap[source] ?? ''}
+                                options={[
+                                  { value: '', label: t('timetableImport.choosePool'), disabled: true },
+                                  ...sitePools.map((pool) => ({ value: pool.id, label: pool.name })),
+                                  { value: SKIP, label: t('timetableImport.mapping.skip') },
+                                ]}
+                                onValueChange={(value) => setPoolMap((was) => ({ ...was, [source]: value }))}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-2">
+                        <p className="text-sm text-foreground-muted">{t('timetableImport.mapping.activitiesIntro')}</p>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {shape.activities.map((activity) => (
+                            <SelectField
+                              key={`${read.attempt}:${other.attempt}:${activity.name}`}
+                              name={`kind:${activity.name}`}
+                              label={t('timetableImport.mapping.activity', { name: activity.name, count: activity.rows })}
+                              initial={kindMap[activity.name] ?? 'evento'}
+                              options={[
+                                { value: 'evento', label: t('timetableImport.mapping.kind.evento') },
+                                { value: 'free_swim', label: t('timetableImport.mapping.kind.free_swim') },
+                                { value: SKIP, label: t('timetableImport.mapping.skip') },
+                              ]}
+                              onValueChange={(value) =>
+                                setKindMap((was) => ({ ...was, [activity.name]: value as ActivityKind }))
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      {shape.closed > 0 && (
+                        <p className="text-sm text-foreground-muted">
+                          {t('timetableImport.mapping.closed', { count: shape.closed })}
+                        </p>
+                      )}
+                    </fieldset>
+                  )}
 
                   {/*
                     Why nothing can be checked, in words (11-11-2026): "0 marcações"
                     beside a greyed button said that something failed, not what.
                   */}
-                  {candidates.length === 0 && (
+                  {(shape === null || shape.activities.length === 0) && (
                     <p role="alert" className="text-sm text-danger">
                       {reading.timeColumn === null
                         ? t('timetableImport.noTimes', {
@@ -406,16 +507,26 @@ export function TimetableImport({
 
                   <form
                     action={(data) => {
+                      setChecked(rowsJson);
                       data.set('facilityId', facilityId);
                       data.set('poolId', poolId);
-                      data.set('rows', JSON.stringify(candidates));
+                      data.set('rows', rowsJson);
                       data.set('settings', JSON.stringify({ commit: false, drop: dropped }));
                       runAction(data);
                     }}
                   >
-                    <button type="submit" disabled={running || candidates.length === 0 || poolId === ''} className={BUTTON}>
+                    <button
+                      type="submit"
+                      disabled={running || mapped === null || mapped.length === 0 || poolId === ''}
+                      className={BUTTON}
+                    >
                       {t('timetableImport.check')}
                     </button>
+                    {unchosen.length > 0 && (
+                      <p className="mt-2 text-sm text-foreground-muted">
+                        {t('timetableImport.mapping.poolsMissing', { names: unchosen.join(', ') })}
+                      </p>
+                    )}
                     {poolId === '' && (
                       <p className="mt-2 text-sm text-foreground-muted">{t('timetableImport.poolRequired')}</p>
                     )}
@@ -467,7 +578,7 @@ export function TimetableImport({
                       action={(data) => {
                         data.set('facilityId', facilityId);
                         data.set('poolId', poolId);
-                        data.set('rows', JSON.stringify(candidates));
+                        data.set('rows', rowsJson);
                         data.set('settings', JSON.stringify({ commit: true, drop: dropped }));
                         runAction(data);
                       }}

@@ -192,18 +192,18 @@ and never keeps its own.
 
 ### Acceptance criteria
 
-- [ ] A PDF or image timetable is read into rows of meaning (rule 1) by one metered call, through
+- [x] A PDF or image timetable is read into rows of meaning (rule 1) by one metered call, through
       `classifyAiError` on failure.
-- [ ] Spanning blocks are one row, two-activity cells are two rows, *Encerrado* is never a booking,
+- [x] Spanning blocks are one row, two-activity cells are two rows, *Encerrado* is never a booking,
       and legends, footers and price pages produce nothing.
-- [ ] The dialog maps each source pool to a Poolse pool or *Não importar*, and each activity to
+- [x] The dialog maps each source pool to a Poolse pool or *Não importar*, and each activity to
       *Evento*, *Natação livre* or *Não importar*, before the preview.
-- [ ] Lane counts are placed on the mapped pool's lanes by a tested `@poolse/rules` function, and
+- [x] Lane counts are placed on the mapped pool's lanes by a tested `@poolse/rules` function, and
       the preview shows them.
-- [ ] The import writes per-row pools and kinds in one transaction, with POOLSE-57's conflict rules
+- [x] The import writes per-row pools and kinds in one transaction, with POOLSE-57's conflict rules
       intact.
-- [ ] Spreadsheets take the same mapping path with no model call.
-- [ ] The test corpus (at least six cases, Vale Serrado first) and `pnpm timetable:eval` exist, and a
+- [x] Spreadsheets take the same mapping path with no model call.
+- [x] The test corpus (at least six cases, Vale Serrado first) and `pnpm timetable:eval` exist, and a
       recorded run passes before the ticket closes.
-- [ ] pt-PT and en strings, both themes, keyboard reachable. Docs updated in the same commit.
-- [ ] Decisions 1–3 applied as written.
+- [x] pt-PT and en strings, both themes, keyboard reachable. Docs updated in the same commit.
+- [x] Decisions 1–3 applied as written.

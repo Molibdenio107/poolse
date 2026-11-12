@@ -294,7 +294,7 @@ Read [`docs/conventions/calendar-and-classes.md`](docs/conventions/calendar-and-
 - A week's occurrence is found by its booking's id, never by turma-weekday-hour.
 - A turma's lessons follow its pattern on their own.
 - A taught class is a record, not a plan.
-- A class with no pista is drawn in a Sem pista column, which is a drop target both ways.
+- A class with no pista is drawn in a Sem pista column, which is a drop target both ways; it keeps its pool in `class_schedule.pool_id` (POOLSE-223).
 - Both axes of a drag are travel, never pointer position.
 - A drag costs a transform, never a reflow, and one droppable per column.
 
@@ -342,6 +342,7 @@ Read [`docs/conventions/importers-and-exports.md`](docs/conventions/importers-an
 - A column-mapping importer uses `useImportWizard`, and maps through `lib/column-mapping.ts` (never its own `assign`).
 - A document importer is an `AnalysisReportParser`.
 - A list importer takes a PDF by `readSheet(file, { pdf: true })`, and the PDF becomes a spreadsheet.
+- A timetable PDF or photo is read for its meaning (`timetable-reader-agent.ts`) and mapped in `lib/timetable-mapping.ts`; a reader change ships with a recorded `pnpm timetable:eval` (POOLSE-223).
 - An importer is a `MatchSpec`, never a new pipeline.
 - What an export writes, its importer reads back — and a test proves it against the real catalogue.
 - A round trip changes nothing.

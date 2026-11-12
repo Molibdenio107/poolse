@@ -1,0 +1,105 @@
+{
+  "validity": null,
+  "rows": [
+    {
+      "sourcePool": "Piscina Olímpica",
+      "weekday": 1,
+      "start": "18:00",
+      "end": "19:00",
+      "activity": "Hidroginástica",
+      "lanes": 3,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Olímpica",
+      "weekday": 1,
+      "start": "18:00",
+      "end": "19:00",
+      "activity": "Natação Livre",
+      "lanes": 5,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Olímpica",
+      "weekday": 1,
+      "start": "19:00",
+      "end": "21:00",
+      "activity": "Treino de Competição",
+      "lanes": 8,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Olímpica",
+      "weekday": 2,
+      "start": "18:00",
+      "end": "21:00",
+      "activity": "Natação Livre",
+      "lanes": 8,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Olímpica",
+      "weekday": 3,
+      "start": "18:00",
+      "end": "19:00",
+      "activity": "Hidroginástica",
+      "lanes": 3,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Olímpica",
+      "weekday": 3,
+      "start": "18:00",
+      "end": "19:00",
+      "activity": "Natação Livre",
+      "lanes": 5,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Olímpica",
+      "weekday": 3,
+      "start": "19:00",
+      "end": "21:00",
+      "activity": "Treino de Competição",
+      "lanes": 8,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Olímpica",
+      "weekday": 4,
+      "start": "18:00",
+      "end": "20:00",
+      "activity": "Polo Aquático",
+      "lanes": 8,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "Piscina Olímpica",
+      "weekday": 4,
+      "start": "20:00",
+      "end": "21:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "Piscina Olímpica",
+      "weekday": 5,
+      "start": "18:00",
+      "end": "21:00",
+      "activity": "Natação Livre",
+      "lanes": 8,
+      "laneNames": [],
+      "closed": false
+    }
+  ]
+}

@@ -597,7 +597,10 @@ class_schedule                  -- a booking: the recurring weekly pattern
   partner_group_id (nullable, FK arrives with POOLSE-47), slot_id (nullable),
   instructor_membership_id, instructor_status ('assigned'|'to_define'|
                                                'external'|'uncovered'),
-  headcount_override, category_id, title, notes
+  headcount_override, category_id, title, notes,
+  pool_id (nullable; FK (organization_id, facility_id, pool_id) → pool)  -- POOLSE-223
+    -- the pool of a booking with no lanes; with lanes it is their pool, kept in line by the
+    -- booking_lane_sets_pool trigger. The calendar's Sem pista column is per pool through it.
   unique (organization_id, id)
   check (subject_type names exactly the one subject column it should)
   unique (organization_id, coalesce(class_group_id, partner_group_id),

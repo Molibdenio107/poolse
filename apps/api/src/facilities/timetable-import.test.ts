@@ -401,3 +401,71 @@ test('the site hours are checked in the preview, and the file says what they wou
     { weekday: 7, current: { available: false, opens: '08:00', closes: '20:00' }, needed: { opens: '10:00', closes: '11:00' }, rows: 1 },
   ]);
 });
+
+/* ---- POOLSE-223: rows that carry their own pool, kind and lane count ---- */
+
+const LEARNER = [1, 2, 3, 4].map((position) => ({
+  id: `learner-${position}`,
+  name: `Pista ${position}`,
+  poolId: 'pool-2',
+  position,
+  defaultCapacity: 8,
+}));
+
+test('a row resolves its lanes in its own pool, never the site', () => {
+  const preview = previewTimetable(
+    [
+      row({ name: 'Bebés', laneNames: ['Pista 2'], poolId: 'pool-2', line: 1 }),
+      row({ name: 'Absolutos', laneNames: ['Pista 2'], line: 2 }),
+    ],
+    context({ lanes: [...LANES, ...LEARNER] }),
+    'pool-1',
+  );
+  assert.deepEqual(preview.rows[0]!.laneIds, ['learner-2']);
+  assert.equal(preview.rows[0]!.poolId, 'pool-2');
+  assert.deepEqual(preview.rows[1]!.laneIds, ['lane-2'], 'a row with no pool takes the request pool');
+  assert.equal(preview.summary.blocked, 0, 'Pista 2 of two pools are two lanes');
+});
+
+test('the reader\'s lane counts split a cell between two activities with no clash (QA 3)', () => {
+  const preview = previewTimetable(
+    [
+      row({ name: 'Hidroginástica', laneNames: [], laneCount: 3, startTime: '07:00', durationMinutes: 60, line: 1 }),
+      row({ name: 'Natação Livre', laneNames: [], laneCount: 3, startTime: '07:00', durationMinutes: 60, line: 1, kind: 'free_swim' }),
+    ],
+    context(),
+    'pool-1',
+  );
+  assert.deepEqual(preview.rows[0]!.laneNames, ['Pista 1', 'Pista 2', 'Pista 3']);
+  assert.deepEqual(preview.rows[1]!.laneNames, ['Pista 4', 'Pista 5', 'Pista 6']);
+  assert.equal(preview.rows[1]!.kind, 'free_swim');
+  assert.equal(preview.summary.blocked, 0);
+  assert.equal(preview.committable, true);
+});
+
+test('a count larger than the pool warns and takes every lane (QA 7)', () => {
+  const preview = previewTimetable(
+    [row({ name: 'Natação Livre', laneNames: [], laneCount: 6, poolId: 'pool-2', startTime: '10:00', durationMinutes: 60 })],
+    context({ lanes: [...LANES, ...LEARNER] }),
+  );
+  const [only] = preview.rows;
+  assert.deepEqual(only!.laneIds, ['learner-1', 'learner-2', 'learner-3', 'learner-4']);
+  assert.deepEqual(only!.warnings.find((warning) => warning.code === 'lanesOverPool'), { code: 'lanesOverPool', value: '6/4' });
+  assert.equal(only!.importable, true);
+});
+
+test('a free-swim row with no lane is refused, as one made by hand would be', () => {
+  const preview = previewTimetable([row({ name: 'Natação Livre', laneNames: [], kind: 'free_swim' })], context(), 'pool-1');
+  assert.equal(preview.rows[0]!.problems[0]?.code, 'freeSwimNeedsLane');
+  assert.equal(preview.committable, false);
+});
+
+test('a free-swim row names no instructor and asks for no headcount', () => {
+  const preview = previewTimetable(
+    [row({ name: 'Natação Livre', kind: 'free_swim', instructorName: 'Sandra Moreira' })],
+    context(),
+    'pool-1',
+  );
+  assert.equal(preview.rows[0]!.instructorId, null);
+  assert.equal(preview.rows[0]!.warnings.length, 0);
+});

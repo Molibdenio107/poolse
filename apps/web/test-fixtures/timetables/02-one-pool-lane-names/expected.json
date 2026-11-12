@@ -1,0 +1,239 @@
+{
+  "validity": null,
+  "rows": [
+    {
+      "sourcePool": "",
+      "weekday": 1,
+      "start": "17:00",
+      "end": "18:00",
+      "activity": "Cadetes",
+      "lanes": null,
+      "laneNames": [
+        "1-3"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 1,
+      "start": "17:00",
+      "end": "18:00",
+      "activity": "Infantis",
+      "lanes": null,
+      "laneNames": [
+        "4-6"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 1,
+      "start": "18:00",
+      "end": "19:00",
+      "activity": "Juvenis",
+      "lanes": null,
+      "laneNames": [
+        "1-6"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 1,
+      "start": "19:00",
+      "end": "20:30",
+      "activity": "Masters",
+      "lanes": null,
+      "laneNames": [
+        "1-2"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 1,
+      "start": "19:00",
+      "end": "20:30",
+      "activity": "Hidroginástica",
+      "lanes": null,
+      "laneNames": [
+        "3-6"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 1,
+      "start": "20:30",
+      "end": "21:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "",
+      "weekday": 2,
+      "start": "17:00",
+      "end": "18:00",
+      "activity": "Pré-competição",
+      "lanes": null,
+      "laneNames": [
+        "1-2"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 2,
+      "start": "18:00",
+      "end": "20:00",
+      "activity": "Absolutos",
+      "lanes": null,
+      "laneNames": [
+        "1-6"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 2,
+      "start": "20:00",
+      "end": "21:00",
+      "activity": "Masters",
+      "lanes": null,
+      "laneNames": [
+        "1-3"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 3,
+      "start": "17:00",
+      "end": "18:00",
+      "activity": "Cadetes",
+      "lanes": null,
+      "laneNames": [
+        "1-3"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 3,
+      "start": "17:00",
+      "end": "18:00",
+      "activity": "Infantis",
+      "lanes": null,
+      "laneNames": [
+        "4-6"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 3,
+      "start": "18:00",
+      "end": "19:00",
+      "activity": "Juvenis",
+      "lanes": null,
+      "laneNames": [
+        "1-6"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 3,
+      "start": "19:00",
+      "end": "20:30",
+      "activity": "Masters",
+      "lanes": null,
+      "laneNames": [
+        "1-2"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 3,
+      "start": "19:00",
+      "end": "20:30",
+      "activity": "Hidroginástica",
+      "lanes": null,
+      "laneNames": [
+        "3-6"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 3,
+      "start": "20:30",
+      "end": "21:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "",
+      "weekday": 4,
+      "start": "17:00",
+      "end": "18:00",
+      "activity": "Pré-competição",
+      "lanes": null,
+      "laneNames": [
+        "1-2"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 4,
+      "start": "18:00",
+      "end": "20:00",
+      "activity": "Absolutos",
+      "lanes": null,
+      "laneNames": [
+        "1-6"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 4,
+      "start": "20:00",
+      "end": "21:00",
+      "activity": "Masters",
+      "lanes": null,
+      "laneNames": [
+        "1-3"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 5,
+      "start": "17:00",
+      "end": "19:00",
+      "activity": "Natação Livre",
+      "lanes": null,
+      "laneNames": [
+        "1-6"
+      ],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 5,
+      "start": "19:00",
+      "end": "21:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    }
+  ]
+}

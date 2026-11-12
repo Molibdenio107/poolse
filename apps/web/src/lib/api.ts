@@ -3937,6 +3937,8 @@ export interface GridBooking {
   slotId: string | null;
   /** Every lane it occupies, in position order. One block spans all of them. */
   laneIds: string[];
+  /** Its pool (POOLSE-223): its lanes', or for a class in no pista the pool it was put in. Null: unknown. */
+  poolId: string | null;
   /**
    * The turma's active students, filed by surname — POOLSE-147. Null for
    * anything that is not a turma, which has no student section at all.

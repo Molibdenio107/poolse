@@ -8,6 +8,16 @@ type. A new importer supplies its own preview rendering and nothing else. The ca
 (a grid layout, no columns) and the water log's (matches in the browser, no model call) are
 deliberately not callers.
 
+**A timetable is read for its meaning, not copied as cells (POOLSE-223).** A real timetable
+merges blocks across hours, splits a cell between two activities by lane count, marks hours
+*Encerrado* and puts two pools in one file, and a grid copy gets every one of those wrong. So the
+reader (`lib/timetable-reader-agent.ts`, prompt and schema in `lib/timetable-reader-prompt.ts`)
+asks for rows of meaning, and a mapping step (`lib/timetable-mapping.ts`) lets a person say which
+pool and what kind before the ordinary preview. The model transcribes and never decides: no
+matching, no lane picking, no dropping rows. **A change to the prompt or schema ships with a
+recorded `pnpm timetable:eval` run** over `apps/web/test-fixtures/timetables/`; add a case there
+whenever a club's timetable breaks it, recreated as fiction (never the club's file).
+
 **A document importer is an `AnalysisReportParser`.** A file with no columns — a
 laboratory's PDF, a photograph of a log — cannot have a mapping step, so it is read by a
 parser that answers in the *same field names* the mapping step produces and joins the

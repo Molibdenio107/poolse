@@ -306,7 +306,28 @@ function readTimetableRows(raw: unknown): RawTimetableRow[] {
 
     const headcount = row['headcount'];
 
+    // POOLSE-223: the mapped pool, the kind and a lane count, each optional.
+    const poolId = row['poolId'];
+    if (poolId !== undefined && poolId !== null && (typeof poolId !== 'string' || !/^[0-9a-f-]{36}$/i.test(poolId))) {
+      throw new BadRequestException(`row ${index + 1}: poolId must be a pool id`);
+    }
+    const kind = row['kind'] ?? 'evento';
+    if (kind !== 'evento' && kind !== 'free_swim') {
+      throw new BadRequestException(`row ${index + 1}: kind must be evento or free_swim`);
+    }
+    const laneCount = row['laneCount'];
+    if (
+      laneCount !== undefined &&
+      laneCount !== null &&
+      (typeof laneCount !== 'number' || !Number.isInteger(laneCount) || laneCount < 1 || laneCount > 50)
+    ) {
+      throw new BadRequestException(`row ${index + 1}: laneCount must be 1..50`);
+    }
+
     return {
+      poolId: typeof poolId === 'string' ? poolId : null,
+      kind,
+      laneCount: typeof laneCount === 'number' ? laneCount : null,
       weekday,
       startTime: String(row['startTime'] ?? ''),
       durationMinutes: Number(row['durationMinutes'] ?? 0),

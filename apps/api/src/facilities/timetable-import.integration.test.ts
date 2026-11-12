@@ -363,3 +363,147 @@ test('a file is one pool’s: its lanes resolve in the pool chosen, never anothe
     });
   });
 });
+
+/* ---- POOLSE-223: rows mapped to pools and kinds by the dialog ---- */
+
+/** A second tank at the site with four lanes, as a learner pool. */
+async function learnerPool(tenant: ScratchTenant): Promise<string> {
+  const [pool] = await tenant.sql<{ id: string }>(
+    `INSERT INTO pool (organization_id, facility_id, name, kind)
+     VALUES ($1, $2, 'Piscina de Aprendizagem', 'indoor') RETURNING id`,
+    [tenant.organizationId, tenant.facilityId],
+  );
+  await tenant.sql(`UPDATE lane SET name = 'Pista 1' WHERE pool_id = $1 AND position = 1`, [pool!.id]);
+  await tenant.sql(
+    `INSERT INTO lane (organization_id, pool_id, name, position)
+     SELECT $1, $2, 'Pista ' || n, n FROM generate_series(2, 4) AS n`,
+    [tenant.organizationId, pool!.id],
+  );
+  return pool!.id;
+}
+
+test('one file, two pools: each row is written in its mapped pool, free swim as free_swim (QA 3, 5)', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    const learner = await learnerPool(tenant);
+    const [main] = await tenant.sql<{ id: string }>(`SELECT id FROM pool WHERE name = 'Tanque Grande'`);
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const bookings = new BookingsController();
+      const rows = [
+        row({ name: 'Hidroginástica', weekday: 1, startTime: '07:00', durationMinutes: 60, laneNames: [], laneCount: 3, poolId: main!.id, line: 1 }),
+        row({ name: 'Natação Livre', weekday: 1, startTime: '07:00', durationMinutes: 60, laneNames: [], laneCount: 3, poolId: main!.id, kind: 'free_swim', line: 1 }),
+        row({ name: 'Bebés', weekday: 1, startTime: '09:00', durationMinutes: 60, laneNames: [], laneCount: null, poolId: learner, line: 2 }),
+      ];
+
+      const preview = await bookings.importTimetable(tenant.facilityId, { rows });
+      assert.equal(preview.committable, true, 'the split cell does not clash with itself');
+      assert.equal(await bookingCount(tenant), 0);
+
+      const done = await bookings.importTimetable(tenant.facilityId, { rows, commit: true });
+      assert.equal(done.created, 3);
+
+      const written = await tenant.sql<{ title: string; subject_type: string; pools: string[]; lanes: number }>(
+        `SELECT cs.title, cs.subject_type::text AS subject_type,
+                coalesce(array_agg(DISTINCT l.pool_id::text) FILTER (WHERE l.id IS NOT NULL), '{}') AS pools,
+                count(l.id)::int AS lanes
+           FROM class_schedule cs
+           LEFT JOIN booking_lane bl ON bl.schedule_id = cs.id
+           LEFT JOIN lane l ON l.id = bl.lane_id
+          GROUP BY cs.id ORDER BY cs.title`,
+      );
+      assert.deepEqual(written, [
+        { title: 'Bebés', subject_type: 'evento', pools: [], lanes: 0 },
+        { title: 'Hidroginástica', subject_type: 'evento', pools: [main!.id], lanes: 3 },
+        { title: 'Natação Livre', subject_type: 'free_swim', pools: [main!.id], lanes: 3 },
+      ]);
+    });
+  });
+});
+
+test('a row mapped to another club’s pool is not found, and nothing is written (QA 12)', async () => {
+  await withScratchTenant(async (mine) => {
+    await withScratchTenant(async (theirs) => {
+      const foreign = await learnerPool(theirs);
+      await actingAs(mine, { roles: ['owner'] }, async () => {
+        await sixLanes(mine);
+        await expectStatus(
+          () =>
+            new BookingsController().importTimetable(mine.facilityId, {
+              rows: [row({ name: 'Bebés' }), row({ name: 'Intrusa', poolId: foreign, line: 3 })],
+              commit: true,
+            }),
+          404,
+        );
+        assert.equal(await bookingCount(mine), 0);
+      });
+    });
+  });
+});
+
+test('a malformed kind, pool or lane count is refused before anything is read', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await sixLanes(tenant);
+      const bookings = new BookingsController();
+      for (const bad of [{ kind: 'turma' }, { poolId: 'x' }, { laneCount: 0 }, { laneCount: 2.5 }]) {
+        await expectStatus(() => bookings.importTimetable(tenant.facilityId, { rows: [row(bad)] }), 400);
+      }
+    });
+  });
+});
+
+test('a row with no lanes keeps its mapped pool, and a lane added later moves it (12-11-2026)', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    const learner = await learnerPool(tenant);
+    const [main] = await tenant.sql<{ id: string }>(`SELECT id FROM pool WHERE name = 'Tanque Grande'`);
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const done = await new BookingsController().importTimetable(tenant.facilityId, {
+        rows: [row({ name: 'Bebés', laneNames: [], poolId: learner })],
+        commit: true,
+      });
+      assert.equal(done.created, 1);
+
+      const grid = await new GridController().read(tenant.facilityId);
+      const bebes = grid.bookings.find((one) => one.name === 'Bebés');
+      assert.deepEqual(bebes?.laneIds, []);
+      assert.equal(bebes?.poolId, learner, 'the calendar draws it in the learner pool’s Sem pista');
+
+      // A lane of the main pool, written by any path, makes it the main pool's.
+      const [lane] = await tenant.sql<{ id: string }>(
+        `SELECT id FROM lane WHERE pool_id = $1 AND position = 2`,
+        [main!.id],
+      );
+      await tenant.sql(
+        `INSERT INTO booking_lane (organization_id, schedule_id, lane_id) VALUES ($1, $2, $3)`,
+        [tenant.organizationId, bebes!.id, lane!.id],
+      );
+      const [after] = await tenant.sql<{ pool_id: string }>(`SELECT pool_id FROM class_schedule WHERE id = $1`, [bebes!.id]);
+      assert.equal(after!.pool_id, main!.id);
+    });
+  });
+});
+
+test('a booking cannot name a pool of another site', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    const [other] = await tenant.sql<{ id: string }>(
+      `INSERT INTO facility (organization_id, name) VALUES ($1, 'Outra Sede') RETURNING id`,
+      [tenant.organizationId],
+    );
+    const [elsewhere] = await tenant.sql<{ id: string }>(
+      `INSERT INTO pool (organization_id, facility_id, name, kind) VALUES ($1, $2, 'Lá Longe', 'indoor') RETURNING id`,
+      [tenant.organizationId, other!.id],
+    );
+    await assert.rejects(
+      tenant.sql(
+        `INSERT INTO class_schedule (organization_id, facility_id, subject_type, season_id, weekday, start_time, duration_minutes, title, pool_id)
+         VALUES ($1, $2, 'evento', $3, 1, '10:00', 45, 'Fora', $4)`,
+        [tenant.organizationId, tenant.facilityId, tenant.seasonId, elsewhere!.id],
+      ),
+      /class_schedule_pool_fk/,
+    );
+  });
+});

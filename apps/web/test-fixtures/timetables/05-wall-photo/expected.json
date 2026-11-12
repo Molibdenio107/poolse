@@ -1,0 +1,145 @@
+{
+  "validity": null,
+  "rows": [
+    {
+      "sourcePool": "",
+      "weekday": 1,
+      "start": "08:00",
+      "end": "10:00",
+      "activity": "Natação Livre",
+      "lanes": 4,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 1,
+      "start": "10:00",
+      "end": "11:00",
+      "activity": "Hidroginástica",
+      "lanes": 2,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 1,
+      "start": "10:00",
+      "end": "11:00",
+      "activity": "Natação Livre",
+      "lanes": 2,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 1,
+      "start": "11:00",
+      "end": "13:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "",
+      "weekday": 2,
+      "start": "08:00",
+      "end": "09:00",
+      "activity": "Bebés",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 2,
+      "start": "09:00",
+      "end": "13:00",
+      "activity": "Natação Livre",
+      "lanes": 4,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 3,
+      "start": "08:00",
+      "end": "10:00",
+      "activity": "Natação Livre",
+      "lanes": 4,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 3,
+      "start": "10:00",
+      "end": "11:00",
+      "activity": "Hidroginástica",
+      "lanes": 2,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 3,
+      "start": "10:00",
+      "end": "11:00",
+      "activity": "Natação Livre",
+      "lanes": 2,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 3,
+      "start": "11:00",
+      "end": "13:00",
+      "activity": "",
+      "lanes": null,
+      "laneNames": [],
+      "closed": true
+    },
+    {
+      "sourcePool": "",
+      "weekday": 4,
+      "start": "08:00",
+      "end": "09:00",
+      "activity": "Bebés",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 4,
+      "start": "09:00",
+      "end": "13:00",
+      "activity": "Natação Livre",
+      "lanes": 4,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 6,
+      "start": "08:00",
+      "end": "11:00",
+      "activity": "Escola de Natação",
+      "lanes": null,
+      "laneNames": [],
+      "closed": false
+    },
+    {
+      "sourcePool": "",
+      "weekday": 6,
+      "start": "11:00",
+      "end": "13:00",
+      "activity": "Natação Livre",
+      "lanes": 4,
+      "laneNames": [],
+      "closed": false
+    }
+  ]
+}

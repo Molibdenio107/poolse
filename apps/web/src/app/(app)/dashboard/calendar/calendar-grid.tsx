@@ -266,16 +266,19 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
   const choosing = pools.length > 1 && !pools.some((pool) => pool.id === poolId);
 
   /*
-   * Whether this week has a class in no pista at all — round 8.
+   * A class in no pista, in the chosen tank — round 8, then POOLSE-223.
    *
-   * Not filtered by the chosen tank, deliberately: a booking with no lanes is in
-   * no *pool* either, so there is no tank it could be filtered out of. Hiding it
-   * behind a tank selector would put it back where it was, which was invisible.
+   * It is drawn in the tank it was put in (`poolId`, kept when its lanes go or
+   * set by an import), and in every tank when nobody ever said which: hiding
+   * one of those behind a tank selector would put it back where it was before
+   * round 8, which was invisible.
    */
-  const hasLaneless = useMemo(
-    () => bookings.some((booking) => booking.laneIds.length === 0),
-    [bookings],
+  const lanelessHere = useCallback(
+    (booking: GridBooking): boolean =>
+      booking.laneIds.length === 0 && (pools.length <= 1 || booking.poolId === null || booking.poolId === poolId),
+    [pools.length, poolId],
   );
+  const hasLaneless = useMemo(() => bookings.some(lanelessHere), [bookings, lanelessHere]);
 
   const shownLanes = useMemo(() => {
     const real = (pools.length > 1 ? lanes.filter((lane) => lane.poolId === poolId) : lanes)
@@ -472,7 +475,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
     const lanePool = new Map(lanes.map((lane) => [lane.id, lane.poolId]));
     const inPool = (booking: GridBooking): boolean =>
       pools.length <= 1 ||
-      booking.laneIds.length === 0 ||
+      lanelessHere(booking) ||
       booking.laneIds.some((id) => lanePool.get(id) === poolId);
 
     const tally = new Map<string, number>();
@@ -482,12 +485,14 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
       tally.set(key, (tally.get(key) ?? 0) + 1);
     }
     return tally;
-  }, [bookings, keyOf, lanes, pools.length, poolId]);
+  }, [bookings, keyOf, lanes, pools.length, poolId, lanelessHere]);
 
   const shown = useMemo(
     () =>
       bookings
         .filter((booking) => !hidden.has(keyOf(booking)))
+        // Another tank's class in no pista is not drawn in this tank's column.
+        .filter((booking) => booking.laneIds.length > 0 || lanelessHere(booking))
         .map((booking) => {
         const override = pending.get(booking.id);
         if (override === undefined) return booking;
@@ -499,7 +504,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
           laneIds: override.laneIds,
         };
         }),
-    [bookings, pending, hidden, keyOf],
+    [bookings, pending, hidden, keyOf, lanelessHere],
   );
 
   // ---------------------------------------------------------------- dragging
@@ -1013,7 +1018,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
         <p className="flex items-start gap-2 text-sm text-foreground-muted">
           <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
           {t('grid.noLaneNote', {
-            count: bookings.filter((booking) => booking.laneIds.length === 0).length,
+            count: bookings.filter(lanelessHere).length,
           })}
         </p>
       )}
