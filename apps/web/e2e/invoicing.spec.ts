@@ -77,14 +77,14 @@ test('QA 2 — no Configuração on Faturação; the books are on Dados do clube
 
   // The signpost line leads to the tab.
   await page.getByRole('link', { name: /abrir os dados do clube|open the club details/i }).click();
-  await expect(page).toHaveURL(new RegExp(`/dashboard/facilities/${owed.facilityId}\\?.*tab=club`));
-  const books = page.locator('section', {
-    has: page.getByRole('heading', { name: /livros de numeração|numbering books/i }),
-  });
+  await expect(page).toHaveURL(new RegExp(`/dashboard/facilities/${owed.facilityId}\\?.*tab=general.*section=club`));
+  // Each setting is a folded card (FoldCard, 10-11-2026): its summary says the value.
+  const books = page.locator('details', { hasText: /livros de numeração|numbering books/i });
   await expect(books).toBeVisible();
   // Under Como pagar.
-  const payment = page.getByRole('heading', { name: /^como pagar$|^how to pay$/i }).first();
+  const payment = page.locator('details', { hasText: /como pagar|how to pay/i }).first();
   expect((await payment.boundingBox())!.y).toBeLessThan((await books.boundingBox())!.y);
+  await books.locator('summary').click();
 
   // Rename the invoice book and put it back.
   const first = books.locator('li').first();

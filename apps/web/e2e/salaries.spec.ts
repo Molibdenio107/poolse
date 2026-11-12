@@ -129,7 +129,8 @@ test.describe('an owner', () => {
     await page.goto(SALARIES, { waitUntil: 'domcontentloaded' });
 
     // A row that only a mouse can open is a row half the staff cannot read.
-    const first = page.getByRole('button').filter({ hasNotText: /exportar|importar/i }).first();
+    // In the page's own content: the top bar's bell is a button too (POOLSE-212).
+    const first = page.locator('main').getByRole('button').filter({ hasNotText: /exportar|importar/i }).first();
     await first.focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('dialog')).toBeVisible();
