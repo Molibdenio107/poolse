@@ -23,6 +23,10 @@ Energy, 12-11-2026: `energy_readings` (any reading archive, one or many, as one 
 naming each reading by its moment, because a reading has no id), `energy_invoice` (one bill) and
 `energy_invoices` (a meter's bills together). See `features/energy.md` › Histórico.
 
+Timetable, 12-11-2026: `timetable_import` (*Desfazer importação*, the import and everything it
+wrote) and `calendar_replaced` (a pool's calendar replaced by an import, as one entry on the pool).
+Restoring either tops up the lessons again. See `features/calendar.md`.
+
 These are excluded:
 
 - **Staff.** Bringing a person back touches seats, Clerk and invitations, so the answer there

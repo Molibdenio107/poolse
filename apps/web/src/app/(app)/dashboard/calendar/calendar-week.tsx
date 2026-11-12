@@ -117,7 +117,17 @@ export function CalendarWeek({
   const preview = useImportPreview();
   const drawn = useMemo(
     () => (preview !== null && preview.done === undefined && preview.facilityId === facilityId
-        ? [...bookings, ...previewBookings(preview)]
+        ? [
+            // Replacing a pool's calendar (12-11-2026): its current blocks are not drawn under the
+            // new ones, except the turmas with students that stay.
+            ...bookings.filter(
+              (booking) =>
+                booking.poolId === null ||
+                !preview.replacedPoolIds.includes(booking.poolId) ||
+                (booking.classGroupId !== null && (preview.replace?.keepTurmaIds ?? []).includes(booking.classGroupId)),
+            ),
+            ...previewBookings(preview),
+          ]
         : bookings),
     [preview, facilityId, bookings],
   );

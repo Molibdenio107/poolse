@@ -1,3 +1,4 @@
+import { archiveCalendarIn, calendarsOf, replacedBy, type PoolCalendar } from './timetable-imports.repository.js';
 import { withOrg, type Tx } from '@poolse/db';
 import { isContiguous, type RuleLane } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
@@ -1119,6 +1120,17 @@ export async function assignInstructor(
 export interface TimetableImportRequest {
   facilityId: string;
   /**
+   * The operator said *Substituir o calendário atual* (Rui, 12-11-2026): the
+   * named pools' calendars are archived before this import goes in, except the
+   * turmas with students listed in `keepTurmaIds`. Null: nothing is replaced,
+   * and a pool that already has a calendar refuses the commit.
+   */
+  replace: { keepTurmaIds: string[] } | null;
+  /** The file's name, for the import's record. */
+  fileName: string | null;
+  /** Who confirms, for the import's record. */
+  membershipId: string | null;
+  /**
    * The pool the file is for (Rui, 02-11-2026): a timetable is one tank's, and
    * "Pista 2" names a lane of that tank only. Null reads lanes across the site,
    * as before — which is ambiguous the moment a site has two pools.
@@ -1149,6 +1161,15 @@ export interface TimetableImportResult {
   created?: number;
   /** Only on a commit: turmas created (not those added to). */
   turmasCreated?: number;
+  /**
+   * The pools this import goes into that already have a calendar this season
+   * (12-11-2026). Non-empty and not replacing: the commit is refused until the
+   * operator replaces it or chooses another pool.
+   */
+  existingCalendars: PoolCalendar[];
+  replacing: boolean;
+  /** Only on a commit: the import's record, for *Desfazer*. */
+  importId?: string;
 }
 
 /** The grid this facility already keeps, as `packages/rules` wants to see it. */
@@ -1380,9 +1401,26 @@ export async function runTimetableImport(
     // Lane names resolve inside each row's pool (the request's by default);
     // everything already booked at the site still counts for clashes.
     const context = await timetableContext(tx, request.facilityId, seasonId);
+    /*
+     * A pool that already has a calendar (Rui, 12-11-2026). Replacing it judges
+     * the new rows as if the old calendar had gone — no clash with what is
+     * leaving, no turma name held by a turma about to be archived. Not
+     * replacing: the commit is refused below until the operator decides.
+     */
+    const existingCalendars = await calendarsOf(tx, request.facilityId, seasonId, pools);
+    const replacedPools = existingCalendars.map((calendar) => calendar.poolId);
+    if (request.replace !== null && replacedPools.length > 0) {
+      const plan = await replacedBy(tx, request.facilityId, seasonId, replacedPools, request.replace.keepTurmaIds);
+      context.existing = context.existing.filter((booking) => !plan.slotIds.has(booking.id));
+      if (context.turmas !== undefined) context.turmas = context.turmas.filter((turma) => !plan.turmaIds.has(turma.id));
+    }
     const judged = previewTimetable(kept, context, request.poolId);
+    const blockedByCalendar = existingCalendars.length > 0 && request.replace === null;
     const preview = {
       ...judged,
+      committable: judged.committable && !blockedByCalendar,
+      existingCalendars,
+      replacing: request.replace !== null && existingCalendars.length > 0,
       rows: judged.rows.map((row) => ({ ...row, index: origin[row.index] ?? row.index })),
       turmas: judged.turmas.map((turma) => ({ ...turma, slots: turma.slots.map((at) => origin[at] ?? at) })),
     };
@@ -1395,6 +1433,25 @@ export async function runTimetableImport(
 
     let created = 0;
     let freeSwim = 0;
+
+    if (request.replace !== null && replacedPools.length > 0) {
+      await archiveCalendarIn(tx, request.facilityId, seasonId, replacedPools, request.replace.keepTurmaIds);
+    }
+    if (request.membershipId === null) throw new Error('An import is confirmed by a member');
+    const { rows: record } = await tx.query<{ id: string }>(
+      `INSERT INTO timetable_import (organization_id, facility_id, season_id, pool_ids, file_name, replaced, created_by_membership_id)
+       VALUES ($1, $2, $3, $4::uuid[], $5, $6, $7) RETURNING id`,
+      [
+        organizationId,
+        request.facilityId,
+        seasonId,
+        [...new Set([...pools, ...preview.rows.map((row) => row.poolId).filter((id): id is string => id !== null)])],
+        request.fileName,
+        preview.replacing,
+        request.membershipId,
+      ],
+    );
+    const importId = record[0]!.id;
 
     /*
      * The turmas first (POOLSE-224): one per planned group with a slot to write,
@@ -1425,6 +1482,8 @@ export async function runTimetableImport(
         },
         null,
       );
+      // The turma remembers the import that made it, for Desfazer (12-11-2026).
+      await tx.query(`UPDATE class_group SET timetable_import_id = $2 WHERE id = $1`, [id, importId]);
       turmaIds.set(turma.key, id);
       turmasCreated += 1;
     }
@@ -1436,15 +1495,20 @@ export async function runTimetableImport(
       if (row.kind === 'turma') {
         const groupId = row.turmaKey === null ? undefined : turmaIds.get(row.turmaKey);
         if (groupId === undefined) throw new Error(`no turma planned for row ${row.index}`);
+        // A slot the turma already has at that day and hour is already there: skipped,
+        // never a refusal of the whole import (12-11-2026).
         const slot = await tx.query<{ id: string }>(
           `INSERT INTO class_schedule
              (organization_id, class_group_id, facility_id, weekday, start_time, duration_minutes,
-              instructor_membership_id, pool_id, slot_id)
+              instructor_membership_id, pool_id, slot_id, timetable_import_id)
            VALUES ($1, $2, $3, $4::smallint, $5::time, $6, $7, $8,
                    (SELECT s.id FROM facility_time_slot s
                      WHERE s.facility_id = $3 AND s.season_id = $9 AND s.archived_at IS NULL
                        AND s.day_group = $10::day_group AND s.start_time = $5::time
-                     LIMIT 1))
+                     LIMIT 1), $11)
+           ON CONFLICT (organization_id, (COALESCE(class_group_id, partner_group_id)), weekday, start_time)
+             WHERE archived_at IS NULL AND (class_group_id IS NOT NULL OR partner_group_id IS NOT NULL)
+             DO NOTHING
            RETURNING id`,
           [
             organizationId,
@@ -1458,12 +1522,15 @@ export async function runTimetableImport(
             row.poolId,
             seasonId,
             row.weekday === 6 ? 'saturday' : row.weekday === 7 ? 'sunday' : 'weekday',
+            importId,
           ],
         );
+        const slotId = slot.rows[0]?.id;
+        if (slotId === undefined) continue;
         for (const laneId of row.laneIds) {
           await tx.query(
             `INSERT INTO booking_lane (organization_id, schedule_id, lane_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
-            [organizationId, slot.rows[0]!.id, laneId],
+            [organizationId, slotId, laneId],
           );
         }
         created += 1;
@@ -1488,7 +1555,7 @@ export async function runTimetableImport(
             toClockText(row.startMinutes),
           ],
         );
-        await insertFreeSwim(tx, organizationId, {
+        const freeSwimId = await insertFreeSwim(tx, organizationId, {
           facilityId: request.facilityId,
           seasonId,
           slotId: slot.rows[0]?.id ?? null,
@@ -1499,6 +1566,7 @@ export async function runTimetableImport(
           laneIds: row.laneIds,
           poolId: row.poolId,
         });
+        await tx.query(`UPDATE class_schedule SET timetable_import_id = $2 WHERE id = $1`, [freeSwimId, importId]);
         created += 1;
         freeSwim += 1;
         continue;
@@ -1530,14 +1598,14 @@ export async function runTimetableImport(
         `INSERT INTO class_schedule
            (organization_id, facility_id, subject_type, season_id, weekday,
             start_time, duration_minutes, title, instructor_membership_id,
-            headcount_override, pool_id, slot_id)
+            headcount_override, pool_id, slot_id, timetable_import_id)
          VALUES ($1, $2, 'evento', $3, $4::smallint, $5::time, $6, $7, $8, $9, $11,
                  (SELECT s.id FROM facility_time_slot s
                    WHERE s.facility_id = $2 AND s.season_id = $3
                      AND s.archived_at IS NULL
                      AND s.day_group = $10::day_group
                      AND s.start_time = $5::time
-                   LIMIT 1))
+                   LIMIT 1), $12)
          RETURNING id`,
         [
           organizationId,
@@ -1552,6 +1620,7 @@ export async function runTimetableImport(
           dayGroup,
           // The row's pool (POOLSE-223): a block with no lanes keeps it.
           row.poolId,
+          importId,
         ],
       );
 
@@ -1572,10 +1641,14 @@ export async function runTimetableImport(
       action: 'timetable.imported',
       entityType: 'facility',
       entityId: request.facilityId,
-      data: { created, freeSwim, turmasCreated, dropped: request.drop.length },
+      data: { created, freeSwim, turmasCreated, dropped: request.drop.length, importId, replaced: preview.replacing },
     });
+    await tx.query(
+      `UPDATE timetable_import SET turmas_created = $2, slots_created = $3 WHERE id = $1`,
+      [importId, turmasCreated, created],
+    );
 
-    return { ...preview, created, turmasCreated };
+    return { ...preview, created, turmasCreated, importId };
   });
 }
 

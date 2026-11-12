@@ -10,6 +10,7 @@ import { OwnEmailPreferenceController } from '../notifications/email-preferences
 import pg from 'pg';
 import assert from 'node:assert/strict';
 import { ArchiveController } from '../archive/archive.controller.js';
+import { BookingsController } from '../facilities/bookings.controller.js';
 import { EnergyController } from '../energy/energy.controller.js';
 import { ActivityController } from '../activity/activity.controller.js';
 import { CoverRequestsController, LessonRequestsController } from '../classes/lesson-requests.controller.js';
@@ -650,6 +651,10 @@ test('operational reads refuse non-staff (403)', async () => {
     );
     // 12-11-2026: Energia › Histórico — read by the module's staff, cleared by owner and admin.
     await refused('GET energy/history', 403, () => new EnergyController().history('readings'));
+    // 12-11-2026: a timetable import's record and its Desfazer are owner and admin's.
+    await refused('GET bookings/timetable-imports/:facilityId', 403, () => new BookingsController().timetableImports(fac));
+    await refused('GET bookings/timetable-imports/:id/in-use', 403, () => new BookingsController().timetableImportInUse(NO_SUCH_ID));
+    await refused('POST bookings/timetable-imports/:id/undo', 403, () => new BookingsController().undoTimetableImport(NO_SUCH_ID, {}));
     // 12-11-2026: a gas meter's conversion factor is owner and admin's, as a tariff.
     await refused('POST energy/meters/:id/gas-factors', 403, () =>
       new EnergyController().setGasFactor(NO_SUCH_ID, { kwhPerUnit: 11, effectiveFrom: '2026-01-01' }),

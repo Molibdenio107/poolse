@@ -4624,3 +4624,14 @@ energy_invoice
   conversion_factor numeric(10,6) (0 < x < 100) -- kWh/m³ printed on a gas bill
 energy_line_kind  + fixed, water, sanitation, waste
 ```
+
+#### timetable_import — 12-11-2026
+
+```
+timetable_import
+  id, organization_id, facility_id, season_id, pool_ids uuid[], file_name,
+  turmas_created, slots_created, replaced boolean, created_by_membership_id,
+  created_at, updated_at, archived_at (= undone)
+  RLS on organization_id; composite keys to facility, season, membership
+class_group.timetable_import_id, class_schedule.timetable_import_id  -- what an import wrote
+```

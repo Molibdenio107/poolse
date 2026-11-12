@@ -47,6 +47,10 @@ export interface ImportPreview {
   rows: PreviewRow[];
   turmas: PreviewTurma[];
   fileName: string;
+  /** *Substituir o calendário atual* (12-11-2026): sent again with Confirmar. */
+  replace: { keepTurmaIds: string[] } | null;
+  /** The pools whose current calendar is being replaced, hidden under the preview. */
+  replacedPoolIds: string[];
   /** Set after a confirm: what was written, for the bar to say once. */
   done?: { created: number; turmas: number };
   /**
@@ -58,11 +62,19 @@ export interface ImportPreview {
 
 /** The preview the API's answer describes, ready for the calendar. */
 export function previewFrom(
-  base: { facilityId: string; poolId: string; rowsJson: string; drop: number[]; fileName: string },
+  base: {
+    facilityId: string;
+    poolId: string;
+    rowsJson: string;
+    drop: number[];
+    fileName: string;
+    replace: { keepTurmaIds: string[] } | null;
+  },
   result: TimetableResult,
 ): ImportPreview {
   return {
     ...base,
+    replacedPoolIds: result.replacing === true ? (result.existingCalendars ?? []).map((calendar) => calendar.poolId) : [],
     rows: result.rows.map((row) => ({
       index: row.index,
       name: row.name,

@@ -39,7 +39,9 @@ export type RestorableKindName =
   | 'water_alerts'
   | 'energy_readings'
   | 'energy_invoice'
-  | 'energy_invoices';
+  | 'energy_invoices'
+  | 'timetable_import'
+  | 'calendar_replaced';
 
 /**
  * One child of an archive action, as recorded in `audit_log.data.cascade`.
@@ -70,6 +72,8 @@ export const ARCHIVED_CHILDREN = {
   pool_analysis_alert: { table: 'pool_analysis_alert', parentColumn: 'pool_id' },
   // 12-11-2026: a meter's bills, archived together from Energia › Histórico.
   energy_invoice: { table: 'energy_invoice', parentColumn: 'meter_id' },
+  // 12-11-2026: an undone or replaced timetable brings its turmas back.
+  class_group: { table: 'class_group', parentColumn: 'timetable_import_id' },
 } as const;
 
 export type ArchivedChild = keyof typeof ARCHIVED_CHILDREN;
@@ -362,6 +366,33 @@ export const RESTORABLE: readonly RestorableKind[] = [
     restoresSelf: false,
     archivedBy: (at) =>
       `EXISTS (SELECT 1 FROM energy_invoice x WHERE x.meter_id = t.id AND x.archived_at = ${at})`,
+  },
+  {
+    // 12-11-2026: Desfazer importação — the import and everything it wrote.
+    kind: 'timetable_import',
+    action: 'timetable.importUndone',
+    table: 'timetable_import',
+    labelKey: 'archive.kind.timetable_import',
+    label: {
+      from: 'timetable_import t',
+      name: "coalesce(t.file_name, '') || ' · ' || to_char(t.created_at AT TIME ZONE 'Europe/Lisbon', 'DD-MM-YYYY HH24:MI')",
+    },
+    parents: [],
+    cascades: ['class_group', 'class_schedule', 'enrollment', 'student_fee.ends_on'],
+  },
+  {
+    // 12-11-2026: a pool's calendar replaced by an import, all of it, as one entry on the pool.
+    kind: 'calendar_replaced',
+    action: 'timetable.calendarReplaced',
+    table: 'pool',
+    labelKey: 'archive.kind.calendar_replaced',
+    label: { from: 'pool t', name: 't.name' },
+    parents: [{ kind: 'pool', column: 'id' }],
+    cascades: ['class_group', 'class_schedule', 'enrollment', 'student_fee.ends_on'],
+    restoresSelf: false,
+    archivedBy: (at) =>
+      `(EXISTS (SELECT 1 FROM class_group g WHERE g.pool_id = t.id AND g.archived_at = ${at})
+        OR EXISTS (SELECT 1 FROM class_schedule y WHERE y.pool_id = t.id AND y.archived_at = ${at}))`,
   },
 ];
 

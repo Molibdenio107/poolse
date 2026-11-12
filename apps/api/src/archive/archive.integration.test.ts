@@ -20,6 +20,7 @@ import { archiveAllAnalyses, archiveAllWaterAlerts } from '../facilities/analyse
 import { archiveEnergyHistory } from '../energy/history.repository.js';
 import { archiveInvoice } from '../energy/invoices.repository.js';
 import { EnergyController } from '../energy/energy.controller.js';
+import { BookingsController } from '../facilities/bookings.controller.js';
 import {
   ownerSql,
   actingAs,
@@ -539,6 +540,25 @@ test('every cascading kind records its cascade on the entry it writes', async ()
       const { meterId } = await addMeterWithHistory(tenant, 'Contador R');
       await archiveEnergyHistory(tenant.organizationId, { kind: 'readings', meterId, month: null });
       return { action: 'energy.readingsArchived', id: meterId };
+    },
+    // 12-11-2026: an undone import, and a pool's calendar replaced by another.
+    timetable_import: async (tenant) => {
+      const poolId = await addPool(tenant, 'Piscina T');
+      const done = await new BookingsController().importTimetable(tenant.facilityId, {
+        poolId,
+        rows: [{ weekday: 2, startTime: '19:15', durationMinutes: 45, name: 'Golfinhos', kind: 'turma', laneNames: [], line: 2, poolId }],
+        commit: true,
+      });
+      await new BookingsController().undoTimetableImport(done.importId!, {});
+      return { action: 'timetable.importUndone', id: done.importId! };
+    },
+    calendar_replaced: async (tenant) => {
+      const poolId = await addPool(tenant, 'Piscina C');
+      const api = new BookingsController();
+      const one = (name: string) => [{ weekday: 2, startTime: '19:15', durationMinutes: 45, name, kind: 'turma', laneNames: [], line: 2, poolId }];
+      await api.importTimetable(tenant.facilityId, { poolId, rows: one('Golfinhos'), commit: true });
+      await api.importTimetable(tenant.facilityId, { poolId, rows: one('Tubarões'), commit: true, replace: { keepTurmaIds: [] } });
+      return { action: 'timetable.calendarReplaced', id: poolId };
     },
     energy_invoices: async (tenant) => {
       const { meterId } = await addMeterWithHistory(tenant, 'Contador F');

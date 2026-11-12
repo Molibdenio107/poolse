@@ -25,7 +25,7 @@ const preview: ImportPreview = {
   poolId: 'p1',
   rowsJson: '[]',
   drop: [3],
-  fileName: 'horario.pdf',
+  fileName: 'horario.pdf', replace: null, replacedPoolIds: [],
   rows: [
     row(0),
     row(1, { weekday: 3 }),

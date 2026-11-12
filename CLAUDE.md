@@ -345,6 +345,7 @@ Read [`docs/conventions/importers-and-exports.md`](docs/conventions/importers-an
 - A document importer is an `AnalysisReportParser`.
 - A list importer takes a PDF by `readSheet(file, { pdf: true })`, and the PDF becomes a spreadsheet.
 - An imported timetable is a preview in the tab (`lib/import-preview.ts`, bar `components/import-preview-bar.tsx`) until *Confirmar*; nothing provisional is ever in the database (POOLSE-224).
+- A pool with a calendar is never imported onto: *Substituir* (all of it to the bin) or a new pool; every import is a `timetable_import`, undone from *Importações anteriores* (Rui, 12-11-2026).
 - A timetable PDF or photo is read for its meaning (`timetable-reader-agent.ts`) and mapped in `lib/timetable-mapping.ts`; a reader change ships with a recorded `pnpm timetable:eval` (POOLSE-223).
 - An importer is a `MatchSpec`, never a new pipeline.
 - What an export writes, its importer reads back — and a test proves it against the real catalogue.

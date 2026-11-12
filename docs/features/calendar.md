@@ -642,3 +642,28 @@ When the week has nothing to draw, the page shows a card instead of an empty gri
 Readers who cannot manage see one line, *Ainda não há aulas marcadas*. The card shows only after a read that succeeded; a read that failed shows its error and the grid. As soon as one turma, booking or session exists, the grid comes back.
 
 The make-up lessons page (`/dashboard/classes/reposicoes`) applies the same check. With no pool or no turma, it shows the card instead of its rules form.
+
+## An import onto a calendar, and taking an import back (Rui, 12-11-2026)
+
+- **A pool that already has a calendar is never imported onto silently.** "A calendar" means live
+  weekly slots this season; turmas made by hand with no times are not one, and an import may fill
+  them in. After *Verificar*, the dialog lists each such pool (*N turmas e M aulas semanais*) and
+  asks: **Substituir o calendário atual** or **Criar um tanque novo** (the site's new-pool page; the
+  file is read again in the new pool). *Confirmar* is refused until then (`existingCalendars`, `replacing`).
+- **Substituir** archives the pool's whole calendar this season in the same transaction as the new
+  rows: turmas, their slots and future lessons, events, natação livre and parcerias. Turmas with
+  students are listed and stay unless ticked; a ticked one's enrolments end, as archiving a turma
+  does. The new rows are judged without the old calendar, so they don't clash with it and names
+  are free. While the import waits, the calendar hides the old blocks of those pools. The old
+  calendar is one entry in Arquivados (`calendar_replaced`, on the pool).
+- **Every confirmed import is a record** (`timetable_import`: who, when, the file, the pools,
+  counts), and every turma and slot it writes points at it (`timetable_import_id`).
+  *Importações anteriores* (bottom of the import dialog) lists them with **Desfazer**: it
+  archives exactly what that import wrote (its new turmas and every slot it added, to existing
+  turmas too), with the same rule for turmas with students. One restorable entry
+  (`timetable_import`).
+- **Lessons:** archiving removes the future lessons of those slots that nothing points at yet.
+  A lesson with attendance, a reposição, a notice, feedback or a lead stays as a record. A restore
+  from the bin tops the lessons up again.
+- **A slot an existing turma already has** at that day and hour is skipped on Confirmar, never a
+  refusal of the whole import. That was the cause of "Não foi possível importar o horário."

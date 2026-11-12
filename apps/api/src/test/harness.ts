@@ -264,6 +264,7 @@ const TENANT_TABLES = [
   'booking_lane',
   'class_schedule',
   'class_group',
+  'timetable_import',
   /*
    * After the turma, not before it — POOLSE-23 AC4.
    *

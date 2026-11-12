@@ -1,6 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BookingsController } from './bookings.controller.js';
+import { ArchiveController } from '../archive/archive.controller.js';
 import { GridController } from './grid.controller.js';
 import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant } from '../test/harness.js';
 import type { ScratchTenant } from '../test/harness.js';
@@ -597,6 +598,147 @@ test('a lane taken between preview and confirm stops the commit and writes no tu
       assert.equal(refused.created, 0);
       assert.equal(refused.committable, false);
       assert.deepEqual(await turmaRows(tenant), []);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A pool that already has a calendar, and taking an import back (12-11-2026)
+// ---------------------------------------------------------------------------
+
+async function poolOf(tenant: ScratchTenant): Promise<string> {
+  const [pool] = await tenant.sql<{ id: string }>(`SELECT id FROM pool WHERE name = 'Tanque Grande'`);
+  return pool!.id;
+}
+
+async function enrol(tenant: ScratchTenant, turmaName: string): Promise<void> {
+  const [student] = await tenant.sql<{ id: string }>(
+    `INSERT INTO student (organization_id, first_name, last_name) VALUES ($1, 'Ana', 'Silva') RETURNING id`,
+    [tenant.organizationId],
+  );
+  await tenant.sql(
+    `INSERT INTO enrollment (organization_id, student_id, class_group_id)
+     SELECT $1, $2, cg.id FROM class_group cg WHERE cg.name = $3 AND cg.archived_at IS NULL`,
+    [tenant.organizationId, student!.id, turmaName],
+  );
+}
+
+test('12-11-2026: a pool with a calendar refuses the import until replaced; replace archives it as one bin entry', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    const poolId = await poolOf(tenant);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const api = new BookingsController();
+      await api.importTimetable(tenant.facilityId, {
+        poolId,
+        rows: [row({ name: 'Golfinhos', kind: 'turma', laneNames: ['Pista 1'] })],
+        commit: true,
+      });
+
+      const second = [row({ name: 'Tubarões', kind: 'turma', laneNames: ['Pista 1'] })];
+      const preview = await api.importTimetable(tenant.facilityId, { poolId, rows: second });
+      assert.equal(preview.existingCalendars.length, 1, 'the pool already has a calendar');
+      assert.equal(preview.existingCalendars[0]!.slots, 1);
+      assert.equal(preview.committable, false);
+      assert.equal((await api.importTimetable(tenant.facilityId, { poolId, rows: second, commit: true })).created, 0);
+
+      // Replacing: the new rows are judged without the old ones (no clash on Pista 1).
+      const replaced = await api.importTimetable(tenant.facilityId, {
+        poolId,
+        rows: second,
+        commit: true,
+        replace: { keepTurmaIds: [] },
+        fileName: 'horario-novo.pdf',
+      });
+      assert.equal(replaced.created, 1);
+      assert.equal(replaced.replacing, true);
+      assert.deepEqual((await turmaRows(tenant)).map((t) => t.name), ['Tubarões']);
+
+      const imports = await api.timetableImports(tenant.facilityId);
+      assert.equal(imports[0]!.fileName, 'horario-novo.pdf');
+      assert.equal(imports[0]!.replaced, true);
+
+      const [entry] = await tenant.sql<{ id: string }>(
+        `SELECT id FROM audit_log WHERE action = 'timetable.calendarReplaced' AND entity_id = $1`,
+        [poolId],
+      );
+      assert.ok(entry, 'the old calendar is one entry in the bin');
+    });
+  });
+});
+
+test('12-11-2026: replacing keeps a turma with students unless it is ticked', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    const poolId = await poolOf(tenant);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const api = new BookingsController();
+      await api.importTimetable(tenant.facilityId, {
+        poolId,
+        rows: [
+          row({ name: 'Golfinhos', kind: 'turma', laneNames: ['Pista 1'] }),
+          row({ name: 'Bebés', kind: 'turma', laneNames: ['Pista 3'] }),
+        ],
+        commit: true,
+      });
+      await enrol(tenant, 'Golfinhos');
+
+      const preview = await api.importTimetable(tenant.facilityId, {
+        poolId,
+        rows: [row({ name: 'Tubarões', kind: 'turma', laneNames: ['Pista 5'] })],
+      });
+      const inUse = preview.existingCalendars[0]!.inUse;
+      assert.deepEqual(inUse.map((t) => [t.name, t.students]), [['Golfinhos', 1]]);
+
+      await api.importTimetable(tenant.facilityId, {
+        poolId,
+        rows: [row({ name: 'Tubarões', kind: 'turma', laneNames: ['Pista 5'] })],
+        commit: true,
+        replace: { keepTurmaIds: inUse.map((t) => t.id) },
+      });
+      assert.deepEqual((await turmaRows(tenant)).map((t) => [t.name, t.slots]), [['Golfinhos', 1], ['Tubarões', 1]]);
+    });
+  });
+});
+
+test('12-11-2026: Desfazer archives what the import wrote, and the bin brings it back', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    const poolId = await poolOf(tenant);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const api = new BookingsController();
+      const done = await api.importTimetable(tenant.facilityId, {
+        poolId,
+        rows: [row({ name: 'Golfinhos', kind: 'turma', laneNames: ['Pista 1'] }), row({ name: 'Masters', kind: 'evento', laneNames: ['Pista 4'] })],
+        commit: true,
+      });
+      assert.ok(done.importId);
+      assert.deepEqual(await api.timetableImportInUse(done.importId!), []);
+
+      assert.deepEqual(await api.undoTimetableImport(done.importId!, {}), { turmas: 1, slots: 2, lessonsKept: 0 });
+      assert.deepEqual(await turmaRows(tenant), []);
+      assert.equal(await bookingCount(tenant), 0);
+      assert.equal((await api.timetableImports(tenant.facilityId))[0]!.undone, true);
+      await expectStatus(() => api.undoTimetableImport(done.importId!, {}), 404);
+
+      const [entry] = await tenant.sql<{ id: string }>(
+        `SELECT id FROM audit_log WHERE action = 'timetable.importUndone' AND entity_id = $1`,
+        [done.importId],
+      );
+      const restored = await new ArchiveController().restore(entry!.id);
+      assert.equal(restored.kind, 'timetable_import');
+      assert.deepEqual((await turmaRows(tenant)).map((t) => t.name), ['Golfinhos']);
+      assert.equal(await bookingCount(tenant), 2);
+    });
+  });
+});
+
+test('12-11-2026: an import record is owner and admin business', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      const api = new BookingsController();
+      await expectStatus(() => api.timetableImports(tenant.facilityId), 403);
+      await expectStatus(() => api.undoTimetableImport('00000000-0000-0000-0000-000000000000', {}), 403);
     });
   });
 });

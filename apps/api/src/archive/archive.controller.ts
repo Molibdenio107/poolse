@@ -99,7 +99,10 @@ export class ArchiveController {
 
     // A turma is back on its pattern; its lessons from today on follow, as they
     // do after every other write to a pattern. Never the past.
-    const lessons = restored.kind === 'class_group' ? await syncSeasonLessons(organizationId) : null;
+    // So is an undone import or a replaced calendar (12-11-2026): its lessons come back the same way.
+    const lessons = ['class_group', 'timetable_import', 'calendar_replaced'].includes(restored.kind)
+      ? await syncSeasonLessons(organizationId)
+      : null;
     return { ...restored, lessons };
   }
 }

@@ -213,6 +213,67 @@ export interface TimetableResult {
   turmas?: { key: string; name: string; poolId: string | null; existingId: string | null; slots: number[] }[];
   created?: number;
   turmasCreated?: number;
+  /** Pools this import goes into that already have a calendar (12-11-2026); the commit waits for a choice. */
+  existingCalendars?: PoolCalendar[];
+  replacing?: boolean;
+  importId?: string;
+}
+
+/** A pool's calendar this season, as the import found it (12-11-2026). */
+export interface PoolCalendar {
+  poolId: string;
+  poolName: string;
+  turmas: number;
+  slots: number;
+  /** Turmas with students: they stay unless ticked. */
+  inUse: { id: string; name: string; students: number }[];
+}
+
+/** A confirmed import, for *Importações anteriores* (12-11-2026). */
+export interface TimetableImportRecord {
+  id: string;
+  fileName: string | null;
+  createdAt: string;
+  createdByName: string | null;
+  poolNames: string[];
+  turmasCreated: number;
+  slotsCreated: number;
+  replaced: boolean;
+  undone: boolean;
+}
+
+export async function listImportsAction(facilityId: string): Promise<TimetableImportRecord[] | null> {
+  try {
+    return await apiFetch<TimetableImportRecord[]>(`/bookings/timetable-imports/${encodeURIComponent(facilityId)}`);
+  } catch {
+    return null;
+  }
+}
+
+export async function importInUseAction(importId: string): Promise<{ id: string; name: string; students: number }[] | null> {
+  try {
+    return await apiFetch(`/bookings/timetable-imports/${encodeURIComponent(importId)}/in-use`);
+  } catch {
+    return null;
+  }
+}
+
+/** *Desfazer importação*: archive what it wrote; turmas with students only when ticked. */
+export async function undoImportAction(
+  importId: string,
+  archiveTurmaIds: string[],
+): Promise<{ ok: boolean; turmas?: number; slots?: number; errorKey?: string }> {
+  try {
+    const done = await apiPost<{ turmas: number; slots: number }>(
+      `/bookings/timetable-imports/${encodeURIComponent(importId)}/undo`,
+      { archiveTurmaIds },
+    );
+    revalidatePath('/dashboard/calendar');
+    revalidatePath('/dashboard/classes');
+    return { ok: true, turmas: done.turmas, slots: done.slots };
+  } catch {
+    return { ok: false, errorKey: 'timetableImport.history.undoFailed' };
+  }
 }
 
 export interface TimetableHoursNeeded {
@@ -283,7 +344,7 @@ export async function runTimetableImportAction(
   }
 
   let rows: unknown;
-  let settings: { commit?: boolean; drop?: number[] } = {};
+  let settings: { commit?: boolean; drop?: number[]; replace?: { keepTurmaIds: string[] } | null; fileName?: string } = {};
   try {
     rows = JSON.parse(rawRows);
     if (rawSettings.trim() !== '') settings = JSON.parse(rawSettings) as typeof settings;
@@ -302,6 +363,9 @@ export async function runTimetableImportAction(
       rows,
       commit: settings.commit === true,
       drop: Array.isArray(settings.drop) ? settings.drop : [],
+      // Substituir o calendário atual (12-11-2026), and the file's name for the import's record.
+      replace: settings.replace ?? null,
+      fileName: settings.fileName ?? null,
     });
 
     if (settings.commit === true) {

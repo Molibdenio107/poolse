@@ -1619,4 +1619,55 @@ BEGIN
   RAISE NOTICE 'PASS test 29: a gas factor cannot cross the tenant boundary';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 30 — an import record stays in its club (12-11-2026)
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_fac_a uuid := 'a1111111-1111-1111-1111-111111111111';
+  v_fac_b uuid := 'b1111111-1111-1111-1111-111111111111';
+  v_mem_a uuid; v_season_a uuid; v_import uuid; v_group_b uuid;
+  v_seen integer; ok boolean;
+BEGIN
+  RESET ROLE;
+  SELECT id INTO v_mem_a FROM membership WHERE organization_id = v_a LIMIT 1;
+  SELECT id INTO v_season_a FROM season WHERE organization_id = v_a LIMIT 1;
+  IF v_season_a IS NULL THEN
+    INSERT INTO season (organization_id, name, starts_on, ends_on) VALUES (v_a, 'Época A', DATE '2026-09-01', DATE '2027-06-30')
+    RETURNING id INTO v_season_a;
+  END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO timetable_import (organization_id, facility_id, season_id, created_by_membership_id)
+    VALUES (v_a, v_fac_b, v_season_a, v_mem_a);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 30a: org A recorded an import on org B site'; END IF;
+
+  INSERT INTO timetable_import (organization_id, facility_id, season_id, created_by_membership_id)
+  VALUES (v_a, v_fac_a, v_season_a, v_mem_a) RETURNING id INTO v_import;
+
+  SELECT id INTO v_group_b FROM class_group WHERE organization_id = v_b LIMIT 1;
+  IF v_group_b IS NOT NULL THEN
+    ok := false;
+    BEGIN
+      UPDATE class_group SET timetable_import_id = v_import WHERE id = v_group_b;
+    EXCEPTION WHEN foreign_key_violation THEN ok := true;
+    END;
+    IF NOT ok THEN RAISE EXCEPTION 'FAIL test 30b: an org B turma pointed at an org A import'; END IF;
+  END IF;
+
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_b::text, true);
+  SELECT count(*) INTO v_seen FROM timetable_import;
+  IF v_seen <> 0 THEN RAISE EXCEPTION 'FAIL test 30c: org B saw % of org A imports', v_seen; END IF;
+  RESET ROLE;
+
+  RAISE NOTICE 'PASS test 30: an import record cannot cross the tenant boundary';
+END $$;
+
 ROLLBACK;

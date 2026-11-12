@@ -1532,3 +1532,5 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-12** — **A meter's unit follows its carrier, a gas meter in m³ converts to kWh by dated factors, and water gets make-up and backwash meters with a backwash count per reading** (Rui). The gas factor is entered by hand from the bill for now. Reading gas and water bills is the next slice.
 
 - **2026-11-12** — **Gas and water bills are read and filed like electricity bills** (Rui). The reader takes one fatura per document (electricity, then gas, then water). A gas bill's factor becomes its meter's from the period's first day. Water lines are água, saneamento, resíduos and termo fixo. The summary already files a bill under its meter's carrier.
+
+- **2026-11-12** — **A timetable import never lands on a pool that already has a calendar: replace it (to the bin) or create a new pool; every import can be undone** (Rui). Replacing takes everything, parcerias included. Turmas with students stay unless ticked, both on replace and on undo. A pool's calendar means its weekly slots, so hand-made turmas with no times can still be filled by an import.

@@ -54,6 +54,7 @@ const CHILD_KEYS: Record<string, string> = {
   pool_analysis_alert: 'waterAlert',
   energy_reading: 'energyReading',
   energy_invoice: 'energyInvoice',
+  class_group: 'classGroup',
 };
 
 const BASE = '/dashboard/arquivados';

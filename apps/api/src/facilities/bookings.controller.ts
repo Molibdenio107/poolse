@@ -1,8 +1,15 @@
 import {
+  importInUse,
+  listTimetableImports,
+  undoTimetableImport,
+  type TimetableImportRecord,
+} from './timetable-imports.repository.js';
+import {
   BadRequestException,
   Body,
   ConflictException,
   Controller,
+  Get,
   NotFoundException,
   Param,
   Post,
@@ -175,7 +182,7 @@ export class BookingsController {
     @Body() body: Record<string, unknown>,
   ): Promise<TimetableImportResult> {
     requireRole('owner', 'admin');
-    const { organizationId } = currentTenant();
+    const { organizationId, membershipId } = currentTenant();
 
     const rawPool = body['poolId'];
     if (rawPool !== undefined && rawPool !== null && (typeof rawPool !== 'string' || !/^[0-9a-f-]{36}$/i.test(rawPool))) {
@@ -187,6 +194,9 @@ export class BookingsController {
       rows: readTimetableRows(body['rows']),
       commit: body['commit'] === true,
       drop: readIndexes(body['drop']),
+      replace: readReplace(body['replace']),
+      fileName: typeof body['fileName'] === 'string' && body['fileName'].trim() !== '' ? body['fileName'].trim().slice(0, 200) : null,
+      membershipId,
     });
 
     // One 404 for "no such site" and "no published season": neither is a thing
@@ -196,6 +206,44 @@ export class BookingsController {
     // A committed timetable is seventy patterns at once; their lessons follow.
     if (body['commit'] === true) await syncSeasonLessons(organizationId);
     return result;
+  }
+
+  /** The site's confirmed imports, newest first, for *Importações* and Desfazer (12-11-2026). */
+  @Get('timetable-imports/:facilityId')
+  async timetableImports(@Param('facilityId') facilityId: string): Promise<TimetableImportRecord[]> {
+    requireRole('owner', 'admin');
+    if (!/^[0-9a-f-]{36}$/i.test(facilityId)) throw new BadRequestException('facilityId must be a site id');
+    return listTimetableImports(currentTenant().organizationId, facilityId);
+  }
+
+  /** An import's turmas that have students — what the Desfazer question lists. */
+  @Get('timetable-imports/:importId/in-use')
+  async timetableImportInUse(@Param('importId') importId: string): Promise<{ id: string; name: string; students: number }[]> {
+    requireRole('owner', 'admin');
+    if (!/^[0-9a-f-]{36}$/i.test(importId)) throw new BadRequestException('importId must be an import id');
+    const found = await importInUse(currentTenant().organizationId, importId);
+    if (found === null) throw new NotFoundException('No such import, or it was undone');
+    return found;
+  }
+
+  /**
+   * *Desfazer importação* (Rui, 12-11-2026): archive what the import wrote, one
+   * restorable entry. Turmas with students stay unless named in `archiveTurmaIds`.
+   */
+  @Post('timetable-imports/:importId/undo')
+  async undoTimetableImport(
+    @Param('importId') importId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ turmas: number; slots: number; lessonsKept: number }> {
+    requireRole('owner', 'admin');
+    if (!/^[0-9a-f-]{36}$/i.test(importId)) throw new BadRequestException('importId must be an import id');
+    const raw = body['archiveTurmaIds'] ?? [];
+    if (!Array.isArray(raw) || !raw.every((id) => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id))) {
+      throw new BadRequestException('archiveTurmaIds are turma ids');
+    }
+    const done = await undoTimetableImport(currentTenant().organizationId, importId, raw as string[]);
+    if (done === null) throw new NotFoundException('No such import, or it was undone');
+    return done;
   }
 
   /**
@@ -484,4 +532,15 @@ function readTarget(body: Record<string, unknown>): BookingTarget {
       : null;
 
   return { weekday, slotId, startTime, laneIds, durationMinutes, fromDate };
+}
+
+/** *Substituir o calendário atual*: the turmas with students to keep, or null for no replace. */
+function readReplace(raw: unknown): { keepTurmaIds: string[] } | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== 'object' || Array.isArray(raw)) throw new BadRequestException('replace is an object');
+  const keep = (raw as Record<string, unknown>)['keepTurmaIds'] ?? [];
+  if (!Array.isArray(keep) || !keep.every((id) => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id))) {
+    throw new BadRequestException('keepTurmaIds are turma ids');
+  }
+  return { keepTurmaIds: keep as string[] };
 }

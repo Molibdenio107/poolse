@@ -1,5 +1,7 @@
 'use client';
 
+import { ExistingCalendar } from './existing-calendar';
+import { ImportHistory } from './import-history';
 import type { PoolseSport } from '@poolse/rules';
 import { sportNameKey } from '@/components/sport-icon';
 import { startTransition, useActionState, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -207,6 +209,8 @@ export function TimetableImport({
    * nobody saw judged.
    */
   const [checked, setChecked] = useState('');
+  // Substituir o calendário atual (12-11-2026): the turmas with students that stay, once chosen.
+  const [replace, setReplace] = useState<{ keepTurmaIds: string[] } | null>(null);
   const result = (run.result !== undefined && checked === rowsJson ? run.result : undefined) ?? reopened?.reopen;
 
   /*
@@ -218,7 +222,11 @@ export function TimetableImport({
    */
   useEffect(() => {
     setDropped([]);
+    setReplace(null);
   }, [read.attempt, other.attempt]);
+
+  // The file's name, for the import's record and Importações anteriores (12-11-2026).
+  const fileName = read.fileName ?? reopened?.fileName ?? '';
 
   /*
    * Reading a file always opens the panel; the drop is how most people will.
@@ -230,14 +238,14 @@ export function TimetableImport({
   }, [read.attempt]);
 
   /** Check again with these rows left out, or import with them left out — one request. */
-  const recheck = (drop: number[], commit: boolean): void => {
+  const recheck = (drop: number[], commit: boolean, nextReplace = replace): void => {
     setDropped(drop);
     setChecked(rowsJson);
     const data = new FormData();
     data.set('facilityId', facilityId);
     data.set('poolId', poolId);
     data.set('rows', rowsJson);
-    data.set('settings', JSON.stringify({ commit, drop }));
+    data.set('settings', JSON.stringify({ commit, drop, replace: nextReplace, fileName }));
     startTransition(() => runAction(data));
   };
 
@@ -259,6 +267,7 @@ export function TimetableImport({
   if (!canManage) return null;
 
   const blocked = result === undefined ? 0 : result.summary.blocked + result.summary.refused;
+  const undecided = result !== undefined && (result.existingCalendars ?? []).length > 0 && result.replacing !== true;
   const held = blocked;
 
   return (
@@ -537,7 +546,7 @@ export function TimetableImport({
                       data.set('facilityId', facilityId);
                       data.set('poolId', poolId);
                       data.set('rows', rowsJson);
-                      data.set('settings', JSON.stringify({ commit: false, drop: dropped }));
+                      data.set('settings', JSON.stringify({ commit: false, drop: dropped, replace, fileName }));
                       runAction(data);
                     }}
                   >
@@ -585,6 +594,31 @@ export function TimetableImport({
                   </p>
 
                   {/*
+                    A pool that already has a calendar (Rui, 12-11-2026): never merged
+                    silently. Until the operator replaces it or picks another pool,
+                    this question stands where the conflicts would.
+                  */}
+                  {undecided ? (
+                    <ExistingCalendar
+                      calendars={result.existingCalendars ?? []}
+                      facilityId={facilityId}
+                      working={running}
+                      onReplace={(keepTurmaIds) => {
+                        const next = { keepTurmaIds };
+                        setReplace(next);
+                        recheck(dropped, false, next);
+                      }}
+                    />
+                  ) : (
+                  <>
+                  {result.replacing === true && (
+                    <p className="text-sm text-foreground-muted">
+                      {t('timetableImport.existing.replacing', {
+                        pools: (result.existingCalendars ?? []).map((calendar) => calendar.poolName).join(', '),
+                      })}
+                    </p>
+                  )}
+                  {/*
                     By cause, one action each (Rui, 11-11-2026), instead of a card per row.
                     The commit shows once nothing is held back; *Importar as N sem
                     conflito* is the one-click way there.
@@ -617,7 +651,8 @@ export function TimetableImport({
                               poolId,
                               rowsJson,
                               drop: dropped,
-                              fileName: read.fileName ?? reopened?.fileName ?? '',
+                              fileName,
+                              replace: result.replacing === true ? replace : null,
                             },
                             result,
                           ),
@@ -628,10 +663,18 @@ export function TimetableImport({
                       {t('timetableImport.showOnCalendar', { count: result.summary.importable })}
                     </button>
                   )}
+                  </>
+                  )}
                 </>
               )}
             </div>
           )}
+
+          {/* Importações anteriores, each with Desfazer (Rui, 12-11-2026). */}
+          <ImportHistory
+            facilityIds={facilityId !== '' ? [facilityId] : [...new Set(pools.map((pool) => pool.facilityId))]}
+            refreshKey={run.attempt}
+          />
         </div>
       </Dialog>
 
