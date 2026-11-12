@@ -32,6 +32,7 @@ import {
 } from './import.actions';
 import { Reveal } from '@/components/ui/reveal';
 import { ConfirmButton } from '@/components/confirm-action';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * Slice 1.10 — the import, in four steps.
@@ -547,7 +548,7 @@ function MappingStep({
               <label htmlFor={`map-${field}`} className={FIELD_LABEL}>
                 {t(`students.import.field.${field}`)}
               </label>
-              <select
+              <SelectList
                 id={`map-${field}`}
                 value={mapping[field] === null ? '' : String(mapping[field])}
                 onChange={(event) => {
@@ -562,7 +563,7 @@ function MappingStep({
                     {column.label}
                   </option>
                 ))}
-              </select>
+              </SelectList>
               <p className="text-sm text-foreground-muted">
                 {mapping[field] === null
                   ? t('students.import.sampleNone')
@@ -646,7 +647,7 @@ function ColumnQuestion({
           ? t('students.import.sampleNone')
           : t('students.import.sample', { value: sample })}
       </p>
-      <select
+      <SelectList
         id={`question-${column}`}
         value={chosen ?? ''}
         onChange={(event) =>
@@ -659,7 +660,7 @@ function ColumnQuestion({
             {option.label}
           </option>
         ))}
-      </select>
+      </SelectList>
       {guessed !== null && (
         <p className="text-sm text-foreground-muted">
           {guessed.reason === 'agent'

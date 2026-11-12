@@ -15,6 +15,8 @@ const twMerge = extendTailwindMerge({
   extend: {
     classGroups: {
       'font-size': [{ text: ['control'] }],
+      // `h-control` is a height, so a caller's `h-7` replaces it (12-11-2026).
+      h: [{ h: ['control'] }],
     },
     /*
      * POOLSE-88: the safe-area spacing keys, so `pt-safe-top` replaces a

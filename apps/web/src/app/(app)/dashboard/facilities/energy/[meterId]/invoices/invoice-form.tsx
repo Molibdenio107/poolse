@@ -30,6 +30,7 @@ import {
   type InvoiceReadState,
 } from '../../invoice.actions';
 import { Reveal } from '@/components/ui/reveal';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * The bill, as a form — slice 5.3.
@@ -366,7 +367,7 @@ export function InvoiceForm({
             required
           >
             {(id, cls) => (
-              <select id={id} className={cls} value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
+              <SelectList id={id} className={cls} value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
                 <option value="">{t('energy.invoice.chooseMeter')}</option>
                 {meters.map((m) => (
                   <option key={m.id} value={m.id}>
@@ -376,7 +377,7 @@ export function InvoiceForm({
                 {facilities !== undefined && facilities.length > 0 && (
                   <option value={NEW_METER}>{t('energy.invoice.newMeter')}</option>
                 )}
-              </select>
+              </SelectList>
             )}
           </Field>
           {creating && facilities !== undefined && facilities.length > 1 && (

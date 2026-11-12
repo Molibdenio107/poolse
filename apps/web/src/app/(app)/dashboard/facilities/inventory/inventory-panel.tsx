@@ -17,6 +17,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { RecordPurchase } from '../../faturacao/custos/cost-forms';
 import { DownloadLink } from '@/components/download-link';
 import { Reveal } from '@/components/ui/reveal';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * What the club owns, at one site — round 6.
@@ -918,7 +919,7 @@ function Fields({
         <label htmlFor={`item-place-${suffix}`} className={FIELD_LABEL}>
           {t('inventory.field.location')}
         </label>
-        <select
+        <SelectList
           id={`item-place-${suffix}`}
           value={placeField}
           onChange={(event) => setPlaceField(event.target.value)}
@@ -957,7 +958,7 @@ function Fields({
               ))}
             </optgroup>
           )}
-        </select>
+        </SelectList>
         <p id={`item-place-hint-${suffix}`} className="text-sm text-foreground-muted">
           {t('inventory.place.hint')}
         </p>

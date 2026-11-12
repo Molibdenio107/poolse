@@ -15,6 +15,7 @@ import {
   createPoolAction,
 } from './facilities.actions';
 import { Dialog } from '@/components/ui/dialog';
+import { SelectList } from '@/components/ui/list-select';
 
 const INITIAL: FormState = { ok: false };
 
@@ -87,7 +88,7 @@ export function CreateFacilityForm({
         <label htmlFor="facility-timezone" className={FIELD_LABEL}>
           {t('facilities.timezoneLabel')}
         </label>
-        <select
+        <SelectList
           id="facility-timezone"
           name="timezone"
           value={timezoneField}
@@ -99,7 +100,7 @@ export function CreateFacilityForm({
               {zone}
             </option>
           ))}
-        </select>
+        </SelectList>
         <p className="text-sm text-foreground-muted">{t('facilities.timezoneHint')}</p>
       </div>
 

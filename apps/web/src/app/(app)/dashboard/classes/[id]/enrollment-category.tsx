@@ -6,6 +6,7 @@ import { CONTROL_LINE, useSeeded } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
 import { setEnrollmentCategoryAction } from './enrollment-category.actions';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * One person's own fee category, against their turma's — POOLSE-23 AC4.
@@ -45,7 +46,7 @@ export function EnrollmentCategoryPicker({
       <label className="sr-only" htmlFor={`cat-${enrollmentId}`}>
         {t('categories.onEnrollment')}
       </label>
-      <select
+      <SelectList
         id={`cat-${enrollmentId}`}
         name="categoryId"
         value={chosen}
@@ -71,7 +72,7 @@ export function EnrollmentCategoryPicker({
             {category.name}
           </option>
         ))}
-      </select>
+      </SelectList>
 
       {state.errorKey !== undefined && (
         <p role="alert" className="mt-1 text-sm text-danger">

@@ -90,6 +90,7 @@ import {
   setInstructorStatusAction,
 } from './classes.actions';
 import { DownloadLink } from '@/components/download-link';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * The week: what is happening, and how to change it — POOLSE-49.
@@ -2525,7 +2526,7 @@ function Filter({
       <label htmlFor={id} className={FIELD_LABEL}>
         {label}
       </label>
-      <select
+      <SelectList
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -2536,7 +2537,7 @@ function Filter({
             {option.label}
           </option>
         ))}
-      </select>
+      </SelectList>
     </div>
   );
 }
@@ -3827,7 +3828,8 @@ function InstructorPicker({
       : (staff.find((person) => person.id === booking.instructorId)?.id ?? TO_DEFINE);
 
   return (
-    <select
+    <SelectList
+      unstyled
       value={value}
       aria-label={t('grid.assignLabel')}
       onPointerDown={(event) => event.stopPropagation()}
@@ -3855,7 +3857,7 @@ function InstructorPicker({
           {person.name}
         </option>
       ))}
-    </select>
+    </SelectList>
   );
 }
 

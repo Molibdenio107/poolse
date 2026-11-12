@@ -23,6 +23,7 @@ import {
   type ReadState,
   type RunState,
 } from './import.actions';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * Importing a standard's entry times — POOLSE-85, slice 2.
@@ -378,7 +379,7 @@ function ColumnList({
                 </span>
               )}
             </div>
-            <select
+            <SelectList
               id={`qualifying-column-${column}`}
               value={chosen}
               onChange={(event) => choose(column, event.target.value)}
@@ -389,7 +390,7 @@ function ColumnList({
                   {option.label}
                 </option>
               ))}
-            </select>
+            </SelectList>
           </li>
         );
       })}

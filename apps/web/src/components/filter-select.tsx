@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * A dropdown filter that writes itself into the URL — POOLSE-30.
@@ -63,7 +64,7 @@ export function FilterSelect({
       <label htmlFor={`filter-${name}`} className={hideLabel ? 'sr-only' : 'text-sm text-foreground-muted'}>
         {label}
       </label>
-      <select
+      <SelectList
         id={`filter-${name}`}
         value={value}
         aria-busy={pending}
@@ -76,7 +77,7 @@ export function FilterSelect({
             {option.label}
           </option>
         ))}
-      </select>
+      </SelectList>
     </div>
   );
 }

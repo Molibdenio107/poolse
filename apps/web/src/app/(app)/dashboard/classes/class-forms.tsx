@@ -23,6 +23,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { ConfirmButton } from '@/components/confirm-action';
 import { Archive } from 'lucide-react';
 import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
+import { SelectList } from '@/components/ui/list-select';
 
 const INITIAL: FormState = { ok: false };
 
@@ -510,7 +511,7 @@ export function EnrolForm({
           <label htmlFor="enrol-student" className={FIELD_LABEL}>
             {t('classes.student')}
           </label>
-          <select
+          <SelectList
             id="enrol-student"
             name="studentId"
             required
@@ -541,7 +542,7 @@ export function EnrolForm({
                 </option>
               );
             })}
-          </select>
+          </SelectList>
           {/* Under the field it is about — a clash with another turma (POOLSE-144). */}
           {state.fields?.['studentId'] !== undefined && (
             <p id="enrol-student-error" className="text-sm text-danger">
@@ -796,7 +797,7 @@ function LevelChoice({
       <label htmlFor="class-level" className={FIELD_LABEL}>
         {t('classes.level')}
       </label>
-      <select
+      <SelectList
         id="class-level"
         name="levelId"
         value={selected}
@@ -809,7 +810,7 @@ function LevelChoice({
             {choice.name}
           </option>
         ))}
-      </select>
+      </SelectList>
 
       {/*
         A button, not a link — round 4 follow-up. Underlined text beneath a

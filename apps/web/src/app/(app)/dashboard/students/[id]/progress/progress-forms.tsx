@@ -15,6 +15,7 @@ import {
   archiveRecordAction,
   setFavouriteStrokeAction,
 } from './progress.actions';
+import { SelectList } from '@/components/ui/list-select';
 
 const INITIAL: FormState = { ok: false };
 
@@ -210,7 +211,7 @@ export function AddRecordForm({
           <label htmlFor="record-meet" className={FIELD_LABEL}>
             {t('progress.meet')}
           </label>
-          <select
+          <SelectList
             id="record-meet"
             name="meetId"
             value={meetField}
@@ -225,7 +226,7 @@ export function AddRecordForm({
               </option>
             ))}
             <option value="new">{t('progress.meetNew')}</option>
-          </select>
+          </SelectList>
         </div>
         {meetField === 'new' && (
           <>

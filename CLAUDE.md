@@ -253,6 +253,7 @@ Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before tou
 - A decision asks first
 - An *Arquivar* is quiet (`ARCHIVE_TRIGGER` in `lib/archive-trigger.ts`) and always asks before it archives (Rui, 07-11-2026).
 - A question asked in the middle of the page uses `components/ui/dialog.tsx`.
+- A dropdown whose options come from data is `SelectList` / `ListSelect` (`components/ui/list-select.tsx`), never a bare `<select>`; `SelectField` switches itself past `LONG_LIST` options (Rui, 12-11-2026).
 - A refusal that needs numbers carries them as structure, never as prose.
 - Light and dark mode in every app
 - Palette: desktop primary `rgb(103, 166, 182)`, complementary `rgb(179, 212, 157)`; text reads an ink, fills read the token.

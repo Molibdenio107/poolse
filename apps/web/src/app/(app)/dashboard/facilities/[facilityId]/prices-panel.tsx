@@ -28,6 +28,7 @@ import {
 } from './prices.actions';
 import { Reveal } from '@/components/ui/reveal';
 import { ConfirmButton } from '@/components/confirm-action';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * What a price actually charges — round 5, ticket 3.0.
@@ -1015,7 +1016,7 @@ function PlanForm({
               <label htmlFor={`f-level-${id}`} className={FIELD_LABEL}>
                 {t('fees.level')}
               </label>
-              <select
+              <SelectList
                 id={`f-level-${id}`}
                 name="levelId"
                 value={levelIdField}
@@ -1029,7 +1030,7 @@ function PlanForm({
                     {level.name}
                   </option>
                 ))}
-              </select>
+              </SelectList>
             </div>
 
             <div className={cn(FIELD_COLUMN, 'max-w-none')}>
@@ -1076,7 +1077,7 @@ function PlanForm({
             <label htmlFor={`f-period-${id}`} className={FIELD_LABEL}>
               {t('fees.defaultPeriodLabel')}
             </label>
-            <select
+            <SelectList
               id={`f-period-${id}`}
               name="defaultFeePeriodId"
               value={defaultFeePeriodIdField}
@@ -1089,7 +1090,7 @@ function PlanForm({
                   {period.name}
                 </option>
               ))}
-            </select>
+            </SelectList>
           </div>
         )}
 

@@ -9,6 +9,7 @@ import type { OrganizationMember } from '@/lib/api';
 import type { FormState } from '../actions';
 import { transferOwnershipAction } from '../actions';
 import { Reveal } from '@/components/ui/reveal';
+import { SelectList } from '@/components/ui/list-select';
 
 const INITIAL: FormState = { ok: false };
 
@@ -75,7 +76,7 @@ export function TransferOwnership({
       <p className="text-sm text-warning">{t('transfer.warning')}</p>
 
       <div className="flex flex-wrap gap-2">
-        <select
+        <SelectList
           name="membershipId"
           required
           value={membershipId}
@@ -88,7 +89,7 @@ export function TransferOwnership({
               {candidate.shortName || candidate.email || candidate.membershipId}
             </option>
           ))}
-        </select>
+        </SelectList>
 
         <button
           type="submit"

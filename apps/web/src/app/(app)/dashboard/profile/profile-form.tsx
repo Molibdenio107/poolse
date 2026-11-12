@@ -11,6 +11,7 @@ import type { Me } from '@/lib/api';
 import { applyTheme } from '@/lib/apply-theme';
 import { isTheme } from '@/lib/theme';
 import { saveProfileAction, type ProfileState } from './profile.actions';
+import { SelectList } from '@/components/ui/list-select';
 
 const INITIAL: ProfileState = { ok: false };
 
@@ -262,7 +263,7 @@ function Choice({
       <label htmlFor={id} className={FIELD_LABEL}>
         {label}
       </label>
-      <select
+      <SelectList
         id={id}
         name={name}
         value={value}
@@ -276,7 +277,7 @@ function Choice({
             {option.label}
           </option>
         ))}
-      </select>
+      </SelectList>
       {error !== undefined && (
         <p id={`${id}-error`} className="text-sm text-danger">
           {t(error)}

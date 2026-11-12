@@ -29,6 +29,7 @@ import {
 } from './import.actions';
 import { Reveal } from '@/components/ui/reveal';
 import { ConfirmButton } from '@/components/confirm-action';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * The pay list, in four steps — POOLSE-59.
@@ -427,7 +428,7 @@ function MappingStep({
                     ? t('students.import.columnUnnamed', { number: column + 1 })
                     : sheet.headers[column]}
                 </label>
-                <select
+                <SelectList
                   id={`salary-col-${column}`}
                   value={fieldOf(mapping, column) ?? ''}
                   onChange={(event) =>
@@ -447,7 +448,7 @@ function MappingStep({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </SelectList>
                 {/* The sample is the whole reason the question is answerable at a glance. */}
                 <p className="text-sm text-foreground-muted">
                   {t('students.import.sample', { value: sampleOf(sheet, column) })}
@@ -476,7 +477,7 @@ function MappingStep({
               <label htmlFor={`salary-map-${field}`} className={FIELD_LABEL}>
                 {t(`salaries.field.${field}`)}
               </label>
-              <select
+              <SelectList
                 id={`salary-map-${field}`}
                 value={mapping[field] === null ? '' : String(mapping[field])}
                 onChange={(event) => {
@@ -491,7 +492,7 @@ function MappingStep({
                     {column.label}
                   </option>
                 ))}
-              </select>
+              </SelectList>
               <p className="text-sm text-foreground-muted">
                 {mapping[field] === null
                   ? t('students.import.sampleNone')

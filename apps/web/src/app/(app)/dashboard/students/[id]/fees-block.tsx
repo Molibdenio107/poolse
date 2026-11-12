@@ -33,6 +33,7 @@ import {
 import { formatDate } from '@/lib/date-format';
 import { Reveal } from '@/components/ui/reveal';
 import { ConfirmAction, ConfirmButton } from '@/components/confirm-action';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * What this student pays — POOLSE-42, AC3.
@@ -295,7 +296,7 @@ function ChargeSeasonForm({
             <label htmlFor={`policy-${charge.planId}`} className={FIELD_LABEL}>
               {t('fees.policy')}
             </label>
-            <select
+            <SelectList
               id={`policy-${charge.planId}`}
               name="insurancePolicyId"
               value={policyId}
@@ -309,7 +310,7 @@ function ChargeSeasonForm({
                   {one.insurer} · {one.policyNumber}
                 </option>
               ))}
-            </select>
+            </SelectList>
             {charge.policies.length === 0 && (
               // Visible text rather than a disabled control with no reason: the
               // fix is on another screen and this is where somebody finds out.
@@ -1136,7 +1137,7 @@ function PaidToggle({
           <label htmlFor={`period-${line.id}`} className={FIELD_LABEL}>
             {t('fees.periodSwitcher')}
           </label>
-          <select
+          <SelectList
             id={`period-${line.id}`}
             value={period ?? ''}
             onChange={(event) => onPeriod(event.target.value)}
@@ -1149,7 +1150,7 @@ function PaidToggle({
                   : formatDate(choice)}
               </option>
             ))}
-          </select>
+          </SelectList>
         </span>
       )}
     </form>
@@ -1212,7 +1213,7 @@ function PeriodPicker({
         <label htmlFor={`pay-${line.id}`} className={FIELD_LABEL}>
           {t('fees.howTheyPay')}
         </label>
-        <select
+        <SelectList
           id={`pay-${line.id}`}
           name="feePeriodId"
           value={periodId ?? ''}
@@ -1224,7 +1225,7 @@ function PeriodPicker({
               {period.name}
             </option>
           ))}
-        </select>
+        </SelectList>
       </div>
 
       {/* Only once it would do something. A save button beside an unchanged
@@ -1320,7 +1321,7 @@ function DiscountFields({
         <label htmlFor={`${idPrefix}-dsource`} className={FIELD_LABEL}>
           {t('fees.discount')}
         </label>
-        <select
+        <SelectList
           id={`${idPrefix}-dsource`}
           name="discountSource"
           value={source}
@@ -1348,7 +1349,7 @@ function DiscountFields({
             </option>
           ))}
           <option value="own">{t('fees.ownDiscount')}</option>
-        </select>
+        </SelectList>
         {/* The id the API reads. Empty for a typed discount and for none, which
             is what makes the fields below the ones that count. */}
         <input type="hidden" name="feeCategoryId" value={chosen === undefined ? '' : chosen.id} />
@@ -1573,7 +1574,7 @@ function ChargePlanForm({
           <label htmlFor={`charge-${planId}-period`} className={FIELD_LABEL}>
             {t('fees.period')}
           </label>
-          <select
+          <SelectList
             id={`charge-${planId}-period`}
             name="feePeriodId"
             key={suggested}
@@ -1587,7 +1588,7 @@ function ChargePlanForm({
                 {period.name}
               </option>
             ))}
-          </select>
+          </SelectList>
         </div>
 
         <DiscountFields
@@ -1646,7 +1647,7 @@ function EditFeeForm({
           <label htmlFor={`edit-period-${line.id}`} className={FIELD_LABEL}>
             {t('fees.period')}
           </label>
-          <select
+          <SelectList
             id={`edit-period-${line.id}`}
             name="feePeriodId"
             value={feePeriodIdField}
@@ -1658,7 +1659,7 @@ function EditFeeForm({
                 {period.name}
               </option>
             ))}
-          </select>
+          </SelectList>
         </div>
 
         <div className={cn(FIELD_COLUMN, 'max-w-none')}>

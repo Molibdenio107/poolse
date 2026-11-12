@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
 import { useTranslations } from 'next-intl';
+import { SelectList } from '@/components/ui/list-select';
 
 const SELECT =
   'h-control rounded-sm border border-border-strong bg-background px-2.5 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
@@ -52,7 +53,7 @@ export function TrendsPeriod({
         <label htmlFor="trends-year" className="text-sm text-foreground-muted">
           {t('facilities.trends.year')}
         </label>
-        <select
+        <SelectList
           id="trends-year"
           value={String(year)}
           onChange={(event) => go({ year: event.target.value, month: null })}
@@ -63,13 +64,13 @@ export function TrendsPeriod({
               {one.year}
             </option>
           ))}
-        </select>
+        </SelectList>
       </div>
       <div className="flex min-w-40 flex-col gap-1.5">
         <label htmlFor="trends-month" className="text-sm text-foreground-muted">
           {t('facilities.trends.month')}
         </label>
-        <select
+        <SelectList
           id="trends-month"
           value={month === null ? 'all' : String(month)}
           onChange={(event) => go({ year: String(year), month: event.target.value })}
@@ -81,7 +82,7 @@ export function TrendsPeriod({
               {monthNames[one - 1]}
             </option>
           ))}
-        </select>
+        </SelectList>
       </div>
     </div>
   );

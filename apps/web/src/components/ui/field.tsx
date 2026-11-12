@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useId, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { ListSelect } from '@/components/ui/list-select';
 
 /**
  * Form fields that survive a failed submission — POOLSE-09 and POOLSE-10.
@@ -418,6 +419,14 @@ export function TextAreaField({
   );
 }
 
+/**
+ * Past this many options a `SelectField` is a `ListSelect` (12-11-2026): a
+ * native select's popup is drawn by the system, and Chrome on Windows draws a
+ * long one from the top of the screen. A short list drops under its field
+ * natively, so it stays a select.
+ */
+export const LONG_LIST = 8;
+
 export function SelectField({
   name,
   label,
@@ -456,28 +465,48 @@ export function SelectField({
       <FieldLabel htmlFor={id} required={required}>
         {label}
       </FieldLabel>
-      <select
-        id={id}
-        name={name}
-        value={value}
-        onChange={(event) => {
-          setValue(event.target.value);
-          refusal.clear();
-          onValueChange?.(event.target.value);
-        }}
-        required={required}
-        onInvalid={refusal.onInvalid}
-        data-field=""
-        aria-invalid={shown === undefined ? undefined : true}
-        aria-describedby={describedBy === '' ? undefined : describedBy}
-        className={cn(CONTROL_LINE, shown !== undefined && INVALID)}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value} disabled={option.disabled === true}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      {options.length > LONG_LIST ? (
+        // A long list opens under its field, never from the top of the screen (12-11-2026).
+        <ListSelect
+          id={id}
+          name={name}
+          value={value}
+          onValueChange={(next) => {
+            setValue(next);
+            refusal.clear();
+            onValueChange?.(next);
+          }}
+          options={options}
+          required={required}
+          onInvalid={refusal.onInvalid}
+          aria-invalid={shown === undefined ? undefined : true}
+          aria-describedby={describedBy === '' ? undefined : describedBy}
+          className={cn(shown !== undefined && INVALID)}
+        />
+      ) : (
+        <select
+          id={id}
+          name={name}
+          value={value}
+          onChange={(event) => {
+            setValue(event.target.value);
+            refusal.clear();
+            onValueChange?.(event.target.value);
+          }}
+          required={required}
+          onInvalid={refusal.onInvalid}
+          data-field=""
+          aria-invalid={shown === undefined ? undefined : true}
+          aria-describedby={describedBy === '' ? undefined : describedBy}
+          className={cn(CONTROL_LINE, shown !== undefined && INVALID)}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value} disabled={option.disabled === true}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      )}
       {hint !== undefined && (
         <p id={`${id}-hint`} className="text-sm text-foreground-muted">
           {hint}

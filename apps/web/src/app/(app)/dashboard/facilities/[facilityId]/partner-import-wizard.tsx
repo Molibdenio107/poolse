@@ -27,6 +27,7 @@ import {
 } from './partner-import.actions';
 import { Reveal } from '@/components/ui/reveal';
 import { ConfirmButton } from '@/components/confirm-action';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * The partnerships sheet, in four steps — POOLSE-48.
@@ -523,7 +524,7 @@ function MappingStep({
               <label htmlFor={`partner-map-${field}`} className={FIELD_LABEL}>
                 {t(`partners.field.${field}`)}
               </label>
-              <select
+              <SelectList
                 id={`partner-map-${field}`}
                 value={mapping[field] === null ? '' : String(mapping[field])}
                 onChange={(event) => {
@@ -538,7 +539,7 @@ function MappingStep({
                     {column.label}
                   </option>
                 ))}
-              </select>
+              </SelectList>
               <p className="text-sm text-foreground-muted">
                 {mapping[field] === null
                   ? t('students.import.sampleNone')
@@ -610,7 +611,7 @@ function ColumnQuestion({
           ? t('students.import.sampleNone')
           : t('students.import.sample', { value: sample })}
       </p>
-      <select
+      <SelectList
         id={`partner-question-${column}`}
         value={chosen ?? ''}
         onChange={(event) =>
@@ -623,7 +624,7 @@ function ColumnQuestion({
             {option.label}
           </option>
         ))}
-      </select>
+      </SelectList>
       {guessed !== null && (
         <p className="text-sm text-foreground-muted">{t('students.import.reasonWeak')}</p>
       )}

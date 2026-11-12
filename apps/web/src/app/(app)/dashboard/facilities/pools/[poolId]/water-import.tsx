@@ -29,6 +29,7 @@ import { formatDate } from '@/lib/date-format';
 import { chooseColumnForField } from '@/lib/column-mapping';
 import { Dialog } from '@/components/ui/dialog';
 import { formatReading } from '@/lib/pool-metrics';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * Importing a club's water log — round 5, ticket 5.
@@ -495,7 +496,7 @@ function Mapping({
             <label htmlFor={`map-${field}`} className={FIELD_LABEL}>
               {t(`facilities.waterImport.field.${field}`)}
             </label>
-            <select
+            <SelectList
               id={`map-${field}`}
               className={CONTROL_LINE}
               value={mapping[field] ?? ''}
@@ -512,7 +513,7 @@ function Mapping({
                   {header === '' ? t('facilities.waterImport.column', { at: at + 1 }) : header}
                 </option>
               ))}
-            </select>
+            </SelectList>
           </div>
         ))}
       </div>

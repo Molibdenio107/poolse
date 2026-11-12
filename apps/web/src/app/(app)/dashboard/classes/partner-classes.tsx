@@ -17,6 +17,7 @@ import { bookPartnerDaysAction, moveBookingAction, removePartnerDayAction } from
 import { saveGroupAction } from '../facilities/[facilityId]/partners.actions';
 import { Reveal } from '@/components/ui/reveal';
 import { ConfirmButton } from '@/components/confirm-action';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * A partnership's timetable, on the Classes screen.
@@ -588,7 +589,7 @@ function DayLine({
               <label htmlFor={`slot-${booking.id}`} className={FIELD_LABEL}>
                 {t('partnerClasses.time')}
               </label>
-              <select
+              <SelectList
                 id={`slot-${booking.id}`}
                 value={slotId}
                 onChange={(event) => setSlotId(event.target.value)}
@@ -600,7 +601,7 @@ function DayLine({
                     {slot.startTime}–{slot.endTime}
                   </option>
                 ))}
-              </select>
+              </SelectList>
             </div>
 
             <div className={FIELD_COLUMN}>
@@ -750,7 +751,7 @@ function AddDay({
           <label htmlFor={`add-slot-${groupId}`} className={FIELD_LABEL}>
             {t('partnerClasses.time')}
           </label>
-          <select
+          <SelectList
             id={`add-slot-${groupId}`}
             value={slotId}
             onChange={(event) => setSlotId(event.target.value)}
@@ -762,7 +763,7 @@ function AddDay({
                 {one.startTime}–{one.endTime}
               </option>
             ))}
-          </select>
+          </SelectList>
         </div>
         <div className={FIELD_COLUMN}>
           <label htmlFor={`add-lane-${groupId}`} className={FIELD_LABEL}>

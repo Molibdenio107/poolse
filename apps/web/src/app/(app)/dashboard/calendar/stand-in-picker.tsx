@@ -7,6 +7,7 @@ import type { StandInOptions } from '@/lib/api';
 import { CONTROL_LINE } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { setStandInAction, standInOptionsAction } from './lesson-plan.actions';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * Who is teaching this one lesson — round 6.
@@ -107,7 +108,7 @@ export function StandInPicker({
         {t('calendar.standIn.label')}
       </label>
 
-      <select
+      <SelectList
         id={`stand-in-${sessionId}`}
         value={options?.currentId ?? ''}
         // Failed as well as loading: with nothing in the list there is nothing to
@@ -145,7 +146,7 @@ export function StandInPicker({
             </option>
           );
         })}
-      </select>
+      </SelectList>
 
       {/*
         The load itself failed — a sentence and a way back, not a dead control.

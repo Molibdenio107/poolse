@@ -17,6 +17,7 @@ import {
   returnFoundAction,
 } from './lost-and-found.actions';
 import { Reveal } from '@/components/ui/reveal';
+import { SelectList } from '@/components/ui/list-select';
 
 /**
  * Lost property — round 5, ticket 6.1.
@@ -344,7 +345,7 @@ function AddFound({
           <label htmlFor="lf-location" className={FIELD_LABEL}>
             {t('inventory.lostAndFound.locationFound')}
           </label>
-          <select
+          <SelectList
             id="lf-location"
             name="locationFound"
             value={locationFound}
@@ -379,7 +380,7 @@ function AddFound({
                 ))}
               </optgroup>
             )}
-          </select>
+          </SelectList>
         </div>
 
         <div className={cn(FIELD_COLUMN, 'sm:w-40')}>
@@ -407,7 +408,7 @@ function AddFound({
             lets somebody find a child whose name they are unsure how to spell.
             Empty is the ordinary answer.
           */}
-          <select
+          <SelectList
             id="lf-student"
             name="studentId"
             value={studentIdField}
@@ -420,7 +421,7 @@ function AddFound({
                 {student.name}
               </option>
             ))}
-          </select>
+          </SelectList>
           <p className="text-sm text-foreground-muted">
             {t('inventory.lostAndFound.studentHint')}
           </p>
