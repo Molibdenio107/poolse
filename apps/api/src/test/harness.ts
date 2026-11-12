@@ -374,6 +374,7 @@ const TENANT_TABLES = [
   'ai_read',
   'facility_climate_month',
   'energy_tariff',
+  'energy_gas_factor',
   'energy_reading',
   'energy_meter',
   // A pool's own safe ranges, before the tank they belong to. Not cascaded, for

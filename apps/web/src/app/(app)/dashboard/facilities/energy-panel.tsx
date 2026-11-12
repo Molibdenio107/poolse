@@ -6,12 +6,12 @@ import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { Gauge, Plus } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { timeAgo } from '@/lib/relative-time';
-import type { EnergyMeter, MeterList } from '@/lib/api';
+import type { EnergyMeter, MeterCarrier, MeterList } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import type { FormState } from '../actions';
 import { createMeter } from './energy.actions';
-import { DIAL_SETS } from '@poolse/rules';
+import { DIAL_SETS, UNITS_OF_CARRIER } from '@poolse/rules';
 
 /**
  * Energy — slices 5.1 and 5.2, on the site's page.
@@ -31,7 +31,7 @@ const INITIAL: FormState = { ok: false };
 const BUTTON =
    'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';
 
-export const METER_KINDS = ['total', 'pump', 'heating', 'lighting', 'other'] as const;
+export const METER_KINDS = ['total', 'pump', 'heating', 'lighting', 'make_up_water', 'backwash', 'other'] as const;
 /** What a meter measures — POOLSE-106. Electricity first, as most meters are. */
 export const METER_CARRIER_OPTIONS = ['electricity', 'gas', 'water'] as const;
 
@@ -160,6 +160,7 @@ function MeterDialog({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(createMeter, INITIAL);
+  const [carrier, setCarrier] = useState<MeterCarrier>('electricity');
   const [reads, setReads] = useState<'cumulative_index' | 'interval_consumption'>('cumulative_index');
 
   // Closed by a *new* successful result, in an effect: state.ok stays true after
@@ -195,6 +196,7 @@ function MeterDialog({
             label={t('energy.carrierLabel')}
             initial="electricity"
             options={METER_CARRIER_OPTIONS.map((carrier) => ({ value: carrier, label: t(`energy.carrier.${carrier}`) }))}
+            onValueChange={(value) => setCarrier(value as MeterCarrier)}
           />
           <SelectField
             name="dialSet"
@@ -202,7 +204,7 @@ function MeterDialog({
             initial={"single"}
             options={DIAL_SETS.map((set) => ({ value: set, label: t(`energy.dials.set.${set}`) }))}
           />
-          <TextField name="unit" label={t('energy.unit')} initial="kWh" className="w-28" />
+          <UnitSelect carrier={carrier} />
         </div>
 
         <SelectField
@@ -270,5 +272,24 @@ function MeterDialog({
         </div>
       </form>
     </Dialog>
+  );
+}
+
+/**
+ * The unit a meter counts in, offered by what it measures (12-11-2026):
+ * electricity kWh, water m³, gas m³ or kWh (`UNITS_OF_CARRIER`). Keyed on the
+ * carrier, so changing what the meter measures resets the unit with it.
+ */
+export function UnitSelect({ carrier, initial }: { carrier: MeterCarrier; initial?: string }): React.ReactElement {
+  const t = useTranslations();
+  const units: readonly string[] = UNITS_OF_CARRIER[carrier];
+  return (
+    <SelectField
+      key={carrier}
+      name="unit"
+      label={t('energy.unit')}
+      initial={initial !== undefined && units.includes(initial) ? initial : units[0]!}
+      options={units.map((unit) => ({ value: unit, label: unit }))}
+    />
   );
 }

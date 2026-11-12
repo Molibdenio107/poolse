@@ -64,3 +64,27 @@ export function dialTotal(dials: Partial<Record<Dial, number>>): number {
   const sum = DIALS.reduce((total, dial) => total + (dials[dial] ?? 0), 0);
   return Math.round(sum * 1000) / 1000;
 }
+
+/**
+ * The units a meter may count in, by what it measures (Rui, 12-11-2026):
+ * electricity in kWh; gas in m³ off its own dial, or kWh when it is typed from
+ * the bill; water in m³. The first is the default a new meter takes.
+ */
+export const UNITS_OF_CARRIER = {
+  electricity: ['kWh'],
+  gas: ['m³', 'kWh'],
+  water: ['m³'],
+} as const satisfies Record<'electricity' | 'gas' | 'water', readonly string[]>;
+
+/** A unit as typed, in the spelling Poolse stores: "m3" and "M3" are m³. */
+export function normaliseUnit(unit: string): string {
+  const compact = unit.trim().replace(/\s+/g, '');
+  if (/^m3$/i.test(compact) || compact === 'm³') return 'm³';
+  if (/^kwh$/i.test(compact)) return 'kWh';
+  return compact;
+}
+
+/** Whether a gas meter's readings need a conversion factor to become kWh. */
+export function needsGasFactor(carrier: string, unit: string): boolean {
+  return carrier === 'gas' && normaliseUnit(unit) === 'm³';
+}

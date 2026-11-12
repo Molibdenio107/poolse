@@ -131,6 +131,10 @@ export async function recordReading(_previous: FormState, formData: FormData): P
       takenAt,
       ...(Object.keys(dials).length > 0 ? { dials } : { value: number(formData.get('value')) }),
       note: String(formData.get('note') ?? '').trim(),
+      // A water reading's filter backwashes (12-11-2026); blank says nothing.
+      ...(String(formData.get('backwashes') ?? '').trim() === ''
+        ? {}
+        : { backwashes: number(formData.get('backwashes')) }),
     });
   } catch (error) {
     return describeFailure(error, 'energy.readingFailed');
@@ -183,6 +187,36 @@ function tariffBody(formData: FormData): Record<string, unknown> {
     effectiveTo: String(formData.get('effectiveTo') ?? '').trim(),
     note: String(formData.get('note') ?? '').trim(),
   };
+}
+
+/** A gas meter's conversion factor, from a day (12-11-2026). */
+export async function setGasFactor(_previous: FormState, formData: FormData): Promise<FormState> {
+  const facilityId = String(formData.get('facilityId') ?? '');
+  const meterId = String(formData.get('meterId') ?? '');
+  try {
+    await apiPost(`/energy/meters/${meterId}/gas-factors`, {
+      kwhPerUnit: String(formData.get('kwhPerUnit') ?? '').trim(),
+      effectiveFrom: String(formData.get('effectiveFrom') ?? ''),
+      note: String(formData.get('note') ?? '').trim(),
+    });
+  } catch (error) {
+    return describeFailure(error, 'energy.gas.saveFailed');
+  }
+  refresh(facilityId, meterId);
+  return { ok: true };
+}
+
+export async function removeGasFactor(_previous: FormState, formData: FormData): Promise<FormState> {
+  const facilityId = String(formData.get('facilityId') ?? '');
+  const meterId = String(formData.get('meterId') ?? '');
+  const factorId = String(formData.get('factorId') ?? '');
+  try {
+    await apiPost(`/energy/meters/${meterId}/gas-factors/${factorId}/archive`, {});
+  } catch (error) {
+    return describeFailure(error, 'energy.gas.saveFailed');
+  }
+  refresh(facilityId, meterId);
+  return { ok: true };
 }
 
 /** A new rate, from a day. The overlap is the database's to refuse. */

@@ -13,7 +13,8 @@ import { listInvoices } from '../invoice.actions';
 import { MeterAdmin, ReadingForm, RemoveReading } from './meter-forms';
 import { TariffPanel } from './tariff-panel';
 import { EnergyArchiveButton } from '../../../energy/energy-archive-button';
-import { DIALS_OF, UNUSUAL_SHARE, BASELINE_INTERVALS } from '@poolse/rules';
+import { DIALS_OF, UNUSUAL_SHARE, BASELINE_INTERVALS, needsGasFactor } from '@poolse/rules';
+import { GasFactorPanel } from './gas-factor-panel';
 import { FoldCard } from '@/components/fold-card';
 import { YearOnYearPanel, hasYearOnYear } from './year-on-year';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
@@ -58,7 +59,8 @@ export default async function MeterPage({
     );
   }
   if (loaded.state !== 'ok') notFound();
-  const { meter, readings, usage, monthly, pools, tariffs, canPlan, canRecord, canPrice } = loaded.data;
+  const { meter, readings, usage, gasFactors, monthly, pools, tariffs, canPlan, canRecord, canPrice } = loaded.data;
+  const gasInM3 = needsGasFactor(meter.carrier, meter.unit);
   const perDay = (value: number): string => format.number(value, { maximumFractionDigits: value < 10 ? 2 : 0 });
 
   const back = backTarget(from, '/dashboard/energy');
@@ -342,6 +344,17 @@ export default async function MeterPage({
                               </span>
                             )}
                           </span>
+                          {/* Gas m³ in kWh at the day's factor, and a water interval's backwashes (12-11-2026). */}
+                          {(reading.consumedKwh !== null || reading.backwashes !== null || (gasInM3 && reading.consumed !== null)) && (
+                            <span className="text-xs tabular-nums text-foreground-muted">
+                              {reading.consumedKwh !== null
+                                ? t('energy.gas.inKwh', { value: format.number(reading.consumedKwh, { maximumFractionDigits: 0 }) })
+                                : gasInM3 && reading.consumed !== null
+                                  ? t('energy.gas.noFactor')
+                                  : null}
+                              {reading.backwashes !== null && t('energy.water.backwashCount', { count: reading.backwashes })}
+                            </span>
+                          )}
                           {/* Use per day, and the word when it is unusual — words, never colour alone. */}
                           {reading.perDay !== null && (
                             <span className="text-xs tabular-nums text-foreground-muted">
@@ -521,7 +534,13 @@ export default async function MeterPage({
           */
           slug: 'tariff',
           labelKey: 'energy.tariff.section',
-          content: () => <TariffPanel meter={meter} tariffs={tariffs} canPrice={canPrice} />,
+          content: () => (
+            <>
+              {/* A gas meter in m³ is converted before it is priced (12-11-2026). */}
+              {gasInM3 && <GasFactorPanel meter={meter} factors={gasFactors} canPlan={canPlan} />}
+              <TariffPanel meter={meter} tariffs={tariffs} canPrice={canPrice} />
+            </>
+          ),
         },
         {
           slug: 'details',

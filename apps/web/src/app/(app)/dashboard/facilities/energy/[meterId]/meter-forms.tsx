@@ -10,7 +10,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { ConfirmButton } from '@/components/confirm-action';
 import { SelectField, TextAreaField, TextField, useSuccessKey } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
-import { METER_CARRIER_OPTIONS, METER_KINDS } from '../../energy-panel';
+import { METER_CARRIER_OPTIONS, METER_KINDS, UnitSelect } from '../../energy-panel';
 import { DIAL_DISPLAY_CODE, DIAL_SETS, DIALS_OF } from '@poolse/rules';
 import { archiveMeter, recordReading, removeReading, updateMeter } from '../../energy.actions';
 
@@ -128,6 +128,17 @@ export function ReadingForm({
         </p>
       )}
 
+      {/* A water meter's interval may say how many filter backwashes it held (12-11-2026). */}
+      {meter.carrier === 'water' && (
+        <TextField
+          name="backwashes"
+          label={t('energy.water.backwashes')}
+          inputMode="numeric"
+          className="max-w-[14rem]"
+          {...(state.fields?.['backwashes'] === undefined ? {} : { error: t(state.fields['backwashes']) })}
+        />
+      )}
+
       <TextAreaField name="note" label={t('energy.note')} rows={2} className="max-w-xl" />
 
       {state.ok === false && state.errorKey !== undefined && (
@@ -199,6 +210,7 @@ export function MeterAdmin({
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(updateMeter, INITIAL);
   const [confirming, setConfirming] = useState(false);
+  const [carrier, setCarrier] = useState(meter.carrier);
 
   return (
     <div className="flex flex-col gap-4">
@@ -227,6 +239,7 @@ export function MeterAdmin({
             label={t('energy.carrierLabel')}
             initial={meter.carrier}
             options={METER_CARRIER_OPTIONS.map((carrier) => ({ value: carrier, label: t(`energy.carrier.${carrier}`) }))}
+            onValueChange={(value) => setCarrier(value as typeof meter.carrier)}
           />
           <SelectField
             name="dialSet"
@@ -234,7 +247,7 @@ export function MeterAdmin({
             initial={meter.dialSet}
             options={DIAL_SETS.map((set) => ({ value: set, label: t(`energy.dials.set.${set}`) }))}
           />
-          <TextField name="unit" label={t('energy.unit')} initial={meter.unit} className="w-28" />
+          <UnitSelect carrier={carrier} initial={meter.unit} />
         </div>
 
         <SelectField

@@ -291,3 +291,44 @@ test('12-11-2026: altos e baixos — a month well above the usual daily use is f
     });
   });
 });
+
+test('12-11-2026: a gas meter in m³ shows each interval in kWh at the factor live that day', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const controller = new EnergyController();
+      const { id } = await controller.create(tenant.facilityId, { name: 'Caldeira', kind: 'heating', carrier: 'gas' });
+      assert.equal((await controller.one(id)).meter.unit, 'm³', 'a gas meter counts in m³ unless told otherwise');
+
+      const lastMonth = firstOf(1).slice(0, 10);
+      await controller.setGasFactor(id, { kwhPerUnit: '11,25', effectiveFrom: lastMonth });
+      await expectStatus(() => controller.setGasFactor(id, { kwhPerUnit: 11.3, effectiveFrom: lastMonth }), 409);
+
+      await controller.record(id, { takenAt: firstOf(1), value: 1000 });
+      await controller.record(id, { takenAt: firstOf(0), value: 1200 });
+      const { readings, gasFactors } = await controller.one(id);
+      assert.equal(gasFactors.length, 1);
+      assert.equal(readings[0]!.consumed, 200);
+      assert.equal(readings[0]!.consumedKwh, 2250, '200 m³ × 11,25 kWh/m³');
+    });
+  });
+});
+
+test('12-11-2026: water counts in m³, a reading keeps its backwashes, and kWh is refused for water', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const controller = new EnergyController();
+      await expectStatus(
+        () => controller.create(tenant.facilityId, { name: 'Rede', kind: 'total', carrier: 'water', unit: 'kWh' }),
+        400,
+      );
+      const { id } = await controller.create(tenant.facilityId, { name: 'Compensação', kind: 'make_up_water', carrier: 'water', unit: 'm3' });
+      await controller.record(id, { takenAt: firstOf(1), value: 500 });
+      await controller.record(id, { takenAt: firstOf(0), value: 640, backwashes: 4 });
+      const { meter, readings } = await controller.one(id);
+      assert.equal(meter.unit, 'm³');
+      assert.equal(meter.kind, 'make_up_water');
+      assert.equal(readings[0]!.backwashes, 4);
+      assert.equal(readings[0]!.consumedKwh, null);
+    });
+  });
+});

@@ -22,7 +22,7 @@ import { liveTariffJoin } from './tariffs.repository.js';
  * "consumo em Agosto", for that reason.
  */
 
-export type MeterKind = 'pump' | 'heating' | 'lighting' | 'total' | 'other';
+export type MeterKind = 'pump' | 'heating' | 'lighting' | 'total' | 'other' | 'make_up_water' | 'backwash';
 /** What a meter measures — POOLSE-106. `kind` is what it is for; a gas boiler and a heat pump are both `heating`. */
 export type MeterCarrier = 'electricity' | 'gas' | 'water';
 export const CARRIERS: readonly MeterCarrier[] = ['electricity', 'gas', 'water'];
@@ -111,6 +111,10 @@ export interface EnergyReading {
   deviation: number | null;
   /** Unusual: more than 30 % above or below the usual (`@poolse/rules` › energy-usage). */
   flag: 'high' | 'low' | null;
+  /** A gas meter in m³: what the interval used in kWh, at the factor live that day (12-11-2026). */
+  consumedKwh: number | null;
+  /** A water meter: filter backwashes in the interval. */
+  backwashes: number | null;
 }
 
 /**
@@ -520,7 +524,7 @@ export async function archiveMeter(organizationId: string, meterId: string): Pro
  * treats it.
  */
 const CONSUMED = `
-  SELECT r.organization_id, r.meter_id, r.taken_at, r.value, r.source, r.recorded_by, r.note,
+  SELECT r.organization_id, r.meter_id, r.taken_at, r.value, r.source, r.recorded_by, r.note, r.backwashes,
          CASE
            WHEN m.reads = 'interval_consumption' THEN r.value
            ELSE r.value - coalesce(
@@ -598,9 +602,14 @@ export async function listReadings(
       tariff_provenance: string | null;
       dials: Partial<Record<Dial, number>>;
       dials_consumed: Partial<Record<Dial, number>>;
+      consumed_kwh: number | null;
+      backwashes: number | null;
     }>(
       `WITH c AS (${CONSUMED}), p AS (${PRICED('$3')})
        SELECT p.taken_at, p.value::float8 AS value, p.source::text AS source, p.note, p.dials, p.dials_consumed,
+              p.backwashes,
+              -- A gas meter's m³ in kWh, at the factor live on the reading's day (12-11-2026).
+              (p.consumed * gf.kwh_per_unit)::float8 AS consumed_kwh,
               p.consumed::float8 AS consumed,
               -- Rounded to the cent once, here, at the edge. Never in TypeScript.
               round(p.cost * 100)::int AS cost_cents,
@@ -609,6 +618,15 @@ export async function listReadings(
          FROM p
          LEFT JOIN membership bm ON bm.id = p.recorded_by AND bm.organization_id = p.organization_id
          LEFT JOIN app_user bu   ON bu.id = bm.app_user_id
+         LEFT JOIN LATERAL (
+           SELECT g.kwh_per_unit
+             FROM energy_gas_factor g
+            WHERE g.organization_id = p.organization_id AND g.meter_id = p.meter_id
+              AND g.archived_at IS NULL
+              AND g.effective_from <= (p.taken_at AT TIME ZONE $3)::date
+            ORDER BY g.effective_from DESC
+            LIMIT 1
+         ) gf ON true
         ORDER BY p.taken_at DESC`,
       [organizationId, meterId, timezone],
     );
@@ -638,6 +656,8 @@ export async function listReadings(
       costProvenance: costProvenanceOf(row.tariff_provenance),
       dials: Object.keys(row.dials).length === 0 ? null : row.dials,
       dialsConsumed: Object.keys(row.dials_consumed).length === 0 ? null : row.dials_consumed,
+      consumedKwh: row.consumed_kwh,
+      backwashes: row.backwashes,
     }));
   });
 }
@@ -854,6 +874,8 @@ export interface ReadingInput {
   takenAt: string;
   value: number;
   note: string | null;
+  /** Filter backwashes in the interval — a water meter only (12-11-2026). */
+  backwashes: number | null;
   /** One value per dial of the meter's set; empty for a single-dial meter. */
   dials: Partial<Record<Dial, number>>;
 }
@@ -871,8 +893,8 @@ export async function addReading(
   input: ReadingInput,
 ): Promise<void> {
   return withOrg(organizationId, async (tx) => {
-    const { rows: meters } = await tx.query<{ archived: boolean; dial_set: DialSet }>(
-      `SELECT (archived_at IS NOT NULL) AS archived, dial_set::text AS dial_set FROM energy_meter
+    const { rows: meters } = await tx.query<{ archived: boolean; dial_set: DialSet; carrier: MeterCarrier }>(
+      `SELECT (archived_at IS NOT NULL) AS archived, dial_set::text AS dial_set, carrier::text AS carrier FROM energy_meter
         WHERE organization_id = $1 AND id = $2`,
       [organizationId, meterId],
     );
@@ -888,23 +910,25 @@ export async function addReading(
     const several = DIALS_OF[meter.dial_set].length > 0;
     const value = several ? dialTotal(input.dials) : input.value;
     const dial = (name: Dial): number | null => (several ? (input.dials[name] ?? null) : null);
+    // Backwashes belong to a water meter's interval; anywhere else they are not said.
+    const backwashes = meter.carrier === 'water' ? input.backwashes : null;
 
     await tx
       .query(
         `INSERT INTO energy_reading
            (organization_id, meter_id, taken_at, value, source, recorded_by, note,
-            dial_super_vazio, dial_vazio, dial_fora_vazio, dial_cheias, dial_ponta)
-         VALUES ($1, $2, $3, $4, 'manual', $5, $6, $7, $8, $9, $10, $11)
+            dial_super_vazio, dial_vazio, dial_fora_vazio, dial_cheias, dial_ponta, backwashes)
+         VALUES ($1, $2, $3, $4, 'manual', $5, $6, $7, $8, $9, $10, $11, $12)
          ON CONFLICT (organization_id, meter_id, taken_at) DO UPDATE
            SET value = EXCLUDED.value, recorded_by = EXCLUDED.recorded_by,
                note = EXCLUDED.note, archived_at = NULL,
                dial_super_vazio = EXCLUDED.dial_super_vazio, dial_vazio = EXCLUDED.dial_vazio,
                dial_fora_vazio = EXCLUDED.dial_fora_vazio, dial_cheias = EXCLUDED.dial_cheias,
-               dial_ponta = EXCLUDED.dial_ponta
+               dial_ponta = EXCLUDED.dial_ponta, backwashes = EXCLUDED.backwashes
            WHERE energy_reading.archived_at IS NOT NULL`,
         [
           organizationId, meterId, input.takenAt, value, membershipId, input.note,
-          dial('super_vazio'), dial('vazio'), dial('fora_vazio'), dial('cheias'), dial('ponta'),
+          dial('super_vazio'), dial('vazio'), dial('fora_vazio'), dial('cheias'), dial('ponta'), backwashes,
         ],
       )
       .then(({ rowCount }) => {

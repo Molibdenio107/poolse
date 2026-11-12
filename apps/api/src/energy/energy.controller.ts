@@ -11,7 +11,25 @@ import {
   Query,
 } from '@nestjs/common';
 import { localInstant, sampleMoment } from '../facilities/sample-moment.js';
-import { DIALS, dialTotal, isDialSet, summariseUsage, intervalUsage, type Dial, type UsageSummary } from '@poolse/rules';
+import {
+  DIALS,
+  dialTotal,
+  isDialSet,
+  intervalUsage,
+  needsGasFactor,
+  normaliseUnit,
+  summariseUsage,
+  UNITS_OF_CARRIER,
+  type Dial,
+  type UsageSummary,
+} from '@poolse/rules';
+import {
+  addGasFactor,
+  archiveGasFactor,
+  GasFactorTakenError,
+  listGasFactors,
+  type GasFactor,
+} from './gas-factors.repository.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { readPageQuery } from '../common/pagination.js';
 import {
@@ -89,7 +107,7 @@ const MAX_VALUE = 99_999_999_999;
 /** €/kWh. Well above any tariff and well inside `numeric(12,6)`. */
 const MAX_UNIT_PRICE = 1_000_000;
 
-const KINDS: readonly MeterKind[] = ['pump', 'heating', 'lighting', 'total', 'other'];
+const KINDS: readonly MeterKind[] = ['pump', 'heating', 'lighting', 'total', 'other', 'make_up_water', 'backwash'];
 const READS: readonly MeterReads[] = ['cumulative_index', 'interval_consumption'];
 
 interface MeterListResponse {
@@ -105,6 +123,8 @@ interface MeterResponse {
   readings: EnergyReading[];
   /** Altos e baixos over the last twelve months (12-11-2026). */
   usage: UsageSummary;
+  /** A gas meter in m³: its conversion factors, newest first; empty otherwise. */
+  gasFactors: GasFactor[];
   /** Twelve months ending this one, every month present, with their coverage. */
   monthly: ConsumptionSeries;
   pools: Option[];
@@ -170,6 +190,7 @@ export class EnergyController {
       meter,
       readings,
       usage: usageOf(readings),
+      gasFactors: needsGasFactor(meter.carrier, meter.unit) ? await listGasFactors(organizationId, meterId) : [],
       monthly: await monthlyConsumption(organizationId, meterId, timezone),
       pools: canPlan ? await listPools(organizationId, meter.facilityId) : [],
       tariffs: await listTariffs(organizationId, meterId),
@@ -263,6 +284,7 @@ export class EnergyController {
         value: Math.round(value * 1000) / 1000,
         note: text(body['note'], MAX_NOTE, 'note'),
         dials,
+        backwashes: backwashesOf(body['backwashes']),
       });
     } catch (error) {
       throw asHttp(error);
@@ -395,6 +417,50 @@ export class EnergyController {
   }
 
   /**
+   * A gas meter's conversion factor — kWh per m³ as its bill prints it, from a
+   * date (Rui, 12-11-2026). Owner and Admin, as a tariff.
+   */
+  @Post('meters/:meterId/gas-factors')
+  async setGasFactor(
+    @Param('meterId') meterId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ id: string }> {
+    requireRole(...CAN_PLAN);
+    const { organizationId, membershipId } = currentTenant();
+    if (membershipId === null) throw new BadRequestException('Only a member of this organization can set a factor');
+    const raw = typeof body['kwhPerUnit'] === 'number' ? body['kwhPerUnit'] : Number(String(body['kwhPerUnit'] ?? '').replace(',', '.'));
+    if (!Number.isFinite(raw) || raw <= 0 || raw >= 100) {
+      throw new BadRequestException({ message: 'kWh per m³, more than 0', field: 'kwhPerUnit', fields: { kwhPerUnit: 'energy.gas.factorInvalid' } });
+    }
+    const from = String(body['effectiveFrom'] ?? '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) {
+      throw new BadRequestException({ message: 'From which day?', field: 'effectiveFrom', fields: { effectiveFrom: 'energy.gas.fromInvalid' } });
+    }
+    try {
+      const made = await addGasFactor(organizationId, meterId, membershipId, {
+        kwhPerUnit: Math.round(raw * 1_000_000) / 1_000_000,
+        effectiveFrom: from,
+        note: text(body['note'], MAX_NOTE, 'note'),
+      });
+      if (made === null) throw new NotFoundException('No such meter');
+      return made;
+    } catch (error) {
+      if (error instanceof GasFactorTakenError) {
+        throw new ConflictException({ code: 'gas_factor_taken', message: error.message, fields: { effectiveFrom: 'energy.gas.fromTaken' } });
+      }
+      throw error;
+    }
+  }
+
+  @Post('meters/:meterId/gas-factors/:factorId/archive')
+  async removeGasFactor(@Param('meterId') meterId: string, @Param('factorId') factorId: string): Promise<{ archived: true }> {
+    requireRole(...CAN_PLAN);
+    const { organizationId } = currentTenant();
+    if (!(await archiveGasFactor(organizationId, meterId, factorId))) throw new NotFoundException('No such factor');
+    return { archived: true };
+  }
+
+  /**
    * Energia › Histórico — every meter's readings or bills, filtered by meter and
    * month (Rui, 12-11-2026). Read by everyone the module serves; `canArchive`
    * says whether this person may clear them.
@@ -499,7 +565,7 @@ function readMeter(body: Record<string, unknown>, facilityId: string): MeterInpu
     name,
     kind: kind as MeterKind,
     carrier: carrier as MeterCarrier,
-    unit: text(body['unit'], MAX_UNIT, 'unit') ?? 'kWh',
+    unit: unitFor(carrier as MeterCarrier, text(body['unit'], MAX_UNIT, 'unit')),
     reads: reads as MeterReads,
     // Absent means one figure, which is every meter before 12-11-2026.
     dialSet: body['dialSet'] === undefined || body['dialSet'] === '' ? 'single' : dialSetOf(body['dialSet']),
@@ -769,4 +835,29 @@ function usageOf(readings: EnergyReading[]): UsageSummary {
   }));
   const since = new Date(Date.now() - 365 * 86_400_000).toISOString();
   return summariseUsage(series, intervalUsage(series), since);
+}
+
+/**
+ * The unit a meter counts in, by what it measures (12-11-2026): electricity in
+ * kWh, water in m³, gas in m³ or kWh. Absent takes the carrier's first; any
+ * other is refused by name. Spelling is Poolse's own — "m3" is m³.
+ */
+function unitFor(carrier: MeterCarrier, typed: string | null): string {
+  const allowed: readonly string[] = UNITS_OF_CARRIER[carrier];
+  if (typed === null) return allowed[0]!;
+  const unit = normaliseUnit(typed);
+  if (!allowed.includes(unit)) {
+    throw new BadRequestException({ message: `A ${carrier} meter counts in ${allowed.join(' or ')}`, field: 'unit', fields: { unit: 'energy.unitForCarrier' } });
+  }
+  return unit;
+}
+
+/** Backwashes in an interval: a whole number 0–999, or nothing. */
+function backwashesOf(raw: unknown): number | null {
+  if (raw === undefined || raw === null || raw === '') return null;
+  const value = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isInteger(value) || value < 0 || value > 999) {
+    throw new BadRequestException({ message: 'Backwashes are a whole number', field: 'backwashes', fields: { backwashes: 'energy.water.backwashesInvalid' } });
+  }
+  return value;
 }

@@ -1003,7 +1003,7 @@ export interface TaskTarget extends TaskOption {
 // Energy — slices 5.1 and 5.2
 // ---------------------------------------------------------------------------
 
-export type MeterKind = 'pump' | 'heating' | 'lighting' | 'total' | 'other';
+export type MeterKind = 'pump' | 'heating' | 'lighting' | 'total' | 'other' | 'make_up_water' | 'backwash';
 /** What a meter measures — POOLSE-106. */
 export type MeterCarrier = 'electricity' | 'gas' | 'water';
 export const METER_CARRIERS: readonly MeterCarrier[] = ['electricity', 'gas', 'water'];
@@ -1062,6 +1062,18 @@ export interface EnergyReading {
   usualPerDay: number | null;
   deviation: number | null;
   flag: 'high' | 'low' | null;
+  /** A gas meter in m³: the interval in kWh at the factor live that day (12-11-2026). */
+  consumedKwh: number | null;
+  /** A water meter: filter backwashes in the interval. */
+  backwashes: number | null;
+}
+
+/** kWh per m³ for a gas meter, as its bill prints it, from a date (12-11-2026). */
+export interface GasFactor {
+  id: string;
+  kwhPerUnit: number;
+  effectiveFrom: string;
+  note: string | null;
 }
 
 /**
@@ -1417,6 +1429,8 @@ export interface MeterDetail {
   readings: EnergyReading[];
   /** The last twelve months' highs and lows — `@poolse/rules` › energy-usage. */
   usage: import('@poolse/rules').UsageSummary;
+  /** A gas meter in m³: its conversion factors, newest first. */
+  gasFactors: GasFactor[];
   monthly: ConsumptionSeries;
   pools: { id: string; name: string }[];
   tariffs: Tariff[];

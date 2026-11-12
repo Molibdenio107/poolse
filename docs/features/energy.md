@@ -383,3 +383,17 @@ line beneath, and the form empties after every saved reading, its date back to n
 - **Derived once**, in the API (`listReadings`, `usage` on the meter), by `@poolse/rules` › `energy-usage.ts`.
 - **Known limit:** a heated pool's use is seasonal, so the turn of the seasons can be flagged.
   Comparing with the same months last year is the existing *Comparação*.
+
+## Gas and water as quantities of their own (Rui, 12-11-2026)
+
+- **The unit follows what the meter measures** (`UNITS_OF_CARRIER` in `@poolse/rules`): electricity
+  kWh; water m³; gas m³ off its own dial, or kWh when typed from the bill. The form offers only those,
+  the API refuses others, and "m3" is stored as m³.
+- **A gas meter in m³ keeps conversion factors** (`energy_gas_factor`, *Tarifa* tab): kWh per m³ as
+  each gas bill prints it, from a date until the next. Owner and Admin set them. Each reading
+  shows "≈ N kWh" at the factor live on its day, or says it has none.
+- **Water:** a meter may feed *água de compensação* (make-up water) or *lavagens de filtros*
+  (backwash). The make-up-lesson module already owns *reposição*, so it is not used here. A water
+  reading may record the filter backwashes in its interval, shown beside it. Altos e baixos
+  works in m³/day too.
+- **Not yet:** reading gas and water bills (m³, factor, saneamento) is the next slice.

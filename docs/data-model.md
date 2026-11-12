@@ -4603,3 +4603,15 @@ energy_reading
 
 Columns, not a child table: `energy_reading` is a hypertable, and nothing can hold a foreign key to it.
 `energy_index_monotonic()` checks each dial against the same dial either side.
+
+#### Gas factor and water extras — 12-11-2026
+
+```
+energy_gas_factor
+  id, organization_id, meter_id, kwh_per_unit numeric(10,6) (0 < x < 100), effective_from date,
+  note, created_by_membership_id, created_at, updated_at, archived_at
+  unique (organization_id, meter_id, effective_from) where archived_at is null
+  foreign key (organization_id, meter_id) references energy_meter; RLS on organization_id
+energy_meter_kind  + make_up_water, backwash
+energy_reading.backwashes smallint (0..999), water meters only
+```

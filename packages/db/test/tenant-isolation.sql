@@ -1579,4 +1579,44 @@ BEGIN
   RAISE NOTICE 'PASS test 28: a post-it cannot cross the tenant boundary';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 29 — a gas factor cannot convert another club's meter (12-11-2026)
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_fac_a uuid := 'a1111111-1111-1111-1111-111111111111';
+  v_fac_b uuid := 'b1111111-1111-1111-1111-111111111111';
+  v_meter_a uuid; v_meter_b uuid; v_mem_a uuid;
+  v_seen integer; ok boolean;
+BEGIN
+  RESET ROLE;
+  INSERT INTO energy_meter (organization_id, facility_id, name, carrier, unit)
+  VALUES (v_a, v_fac_a, 'Gás A', 'gas', 'm³') RETURNING id INTO v_meter_a;
+  INSERT INTO energy_meter (organization_id, facility_id, name, carrier, unit)
+  VALUES (v_b, v_fac_b, 'Gás B', 'gas', 'm³') RETURNING id INTO v_meter_b;
+  SELECT id INTO v_mem_a FROM membership WHERE organization_id = v_a LIMIT 1;
+
+  INSERT INTO energy_gas_factor (organization_id, meter_id, kwh_per_unit, effective_from, created_by_membership_id)
+  VALUES (v_a, v_meter_a, 11.272, DATE '2026-01-01', v_mem_a);
+
+  ok := false;
+  BEGIN
+    INSERT INTO energy_gas_factor (organization_id, meter_id, kwh_per_unit, effective_from, created_by_membership_id)
+    VALUES (v_a, v_meter_b, 11.272, DATE '2026-01-01', v_mem_a);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 29a: org A set a factor on org B meter'; END IF;
+
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_b::text, true);
+  SELECT count(*) INTO v_seen FROM energy_gas_factor;
+  IF v_seen <> 0 THEN RAISE EXCEPTION 'FAIL test 29b: org B saw % of org A factors', v_seen; END IF;
+  RESET ROLE;
+
+  RAISE NOTICE 'PASS test 29: a gas factor cannot cross the tenant boundary';
+END $$;
+
 ROLLBACK;

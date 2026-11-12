@@ -650,6 +650,13 @@ test('operational reads refuse non-staff (403)', async () => {
     );
     // 12-11-2026: Energia › Histórico — read by the module's staff, cleared by owner and admin.
     await refused('GET energy/history', 403, () => new EnergyController().history('readings'));
+    // 12-11-2026: a gas meter's conversion factor is owner and admin's, as a tariff.
+    await refused('POST energy/meters/:id/gas-factors', 403, () =>
+      new EnergyController().setGasFactor(NO_SUCH_ID, { kwhPerUnit: 11, effectiveFrom: '2026-01-01' }),
+    );
+    await refused('POST energy/meters/:id/gas-factors/:id/archive', 403, () =>
+      new EnergyController().removeGasFactor(NO_SUCH_ID, NO_SUCH_ID),
+    );
     await refused('POST energy/history/archive', 403, () =>
       new EnergyController().archiveHistory({ kind: 'readings' }),
     );

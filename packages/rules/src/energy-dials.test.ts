@@ -19,3 +19,13 @@ test('a reading must carry every dial of its set, and no other', () => {
 test('the total is the dials summed, to the column precision', () => {
   assert.equal(dialTotal({ vazio: 300000.1, cheias: 200000.2, ponta: 100000.3 }), 600000.6);
 });
+
+test('units follow the carrier, and m3 is m³', async () => {
+  const { UNITS_OF_CARRIER, normaliseUnit, needsGasFactor } = await import('./energy-dials.js');
+  assert.deepEqual([...UNITS_OF_CARRIER.water], ['m³']);
+  assert.equal(normaliseUnit(' M3 '), 'm³');
+  assert.equal(normaliseUnit('kwh'), 'kWh');
+  assert.equal(needsGasFactor('gas', 'm3'), true);
+  assert.equal(needsGasFactor('gas', 'kWh'), false);
+  assert.equal(needsGasFactor('water', 'm³'), false);
+});
