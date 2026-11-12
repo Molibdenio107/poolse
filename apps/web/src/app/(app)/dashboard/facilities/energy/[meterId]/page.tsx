@@ -13,7 +13,8 @@ import { listInvoices } from '../invoice.actions';
 import { MeterAdmin, ReadingForm, RemoveReading } from './meter-forms';
 import { TariffPanel } from './tariff-panel';
 import { EnergyArchiveButton } from '../../../energy/energy-archive-button';
-import { DIALS_OF } from '@poolse/rules';
+import { DIALS_OF, UNUSUAL_SHARE, BASELINE_INTERVALS } from '@poolse/rules';
+import { FoldCard } from '@/components/fold-card';
 import { YearOnYearPanel, hasYearOnYear } from './year-on-year';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 
@@ -57,7 +58,8 @@ export default async function MeterPage({
     );
   }
   if (loaded.state !== 'ok') notFound();
-  const { meter, readings, monthly, pools, tariffs, canPlan, canRecord, canPrice } = loaded.data;
+  const { meter, readings, usage, monthly, pools, tariffs, canPlan, canRecord, canPrice } = loaded.data;
+  const perDay = (value: number): string => format.number(value, { maximumFractionDigits: value < 10 ? 2 : 0 });
 
   const back = backTarget(from, '/dashboard/energy');
 
@@ -225,6 +227,52 @@ export default async function MeterPage({
                 </section>
               )}
 
+              {/*
+                Altos e baixos (Rui, 12-11-2026): the last twelve months per day,
+                folded, its line saying the headline. The rule is said in words.
+              */}
+              {usage.intervals > 0 && (
+                <FoldCard
+                  title={t('energy.usage.title')}
+                  summary={t('energy.usage.line', {
+                    average: usage.averagePerDay === null ? '—' : perDay(usage.averagePerDay),
+                    unit: meter.unit,
+                    unusual: usage.unusual,
+                  })}
+                >
+                  <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    {(
+                      [
+                        ['highest', usage.highest],
+                        ['lowest', usage.lowest],
+                      ] as const
+                    ).map(([key, point]) => (
+                      <div key={key} className="flex flex-col gap-0.5">
+                        <dt className="text-sm text-foreground-muted">{t(`energy.usage.${key}`)}</dt>
+                        <dd className="text-lg font-semibold tabular-nums">
+                          {point === null ? '—' : t('energy.usage.perDay', { value: perDay(point.perDay), unit: meter.unit })}
+                        </dd>
+                        {point !== null && (
+                          <dd className="text-xs text-foreground-muted tabular-nums">
+                            {formatDate(point.previousAt)} – {formatDate(point.takenAt)}
+                          </dd>
+                        )}
+                      </div>
+                    ))}
+                    <div className="flex flex-col gap-0.5">
+                      <dt className="text-sm text-foreground-muted">{t('energy.usage.unusualLabel')}</dt>
+                      <dd className="text-lg font-semibold tabular-nums">{usage.unusual}</dd>
+                      <dd className="text-xs text-foreground-muted">
+                        {t('energy.usage.intervals', { count: usage.intervals })}
+                      </dd>
+                    </div>
+                  </dl>
+                  <p className="mt-3 text-sm text-foreground-muted">
+                    {t('energy.usage.rule', { share: Math.round(UNUSUAL_SHARE * 100), intervals: BASELINE_INTERVALS })}
+                  </p>
+                </FoldCard>
+              )}
+
               <section className="rounded bg-surface p-5 shadow-card">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
@@ -294,6 +342,23 @@ export default async function MeterPage({
                               </span>
                             )}
                           </span>
+                          {/* Use per day, and the word when it is unusual — words, never colour alone. */}
+                          {reading.perDay !== null && (
+                            <span className="text-xs tabular-nums text-foreground-muted">
+                              {t('energy.usage.perDay', { value: perDay(reading.perDay), unit: meter.unit })}
+                              {reading.flag !== null && reading.deviation !== null && (
+                                <span
+                                  className={
+                                    reading.flag === 'high' ? 'ml-2 font-medium text-danger' : 'ml-2 font-medium text-warning'
+                                  }
+                                >
+                                  {t(`energy.usage.flag.${reading.flag}`, {
+                                    share: Math.round(Math.abs(reading.deviation) * 100),
+                                  })}
+                                </span>
+                              )}
+                            </span>
+                          )}
                           {/* What each dial used, in the meter's own order (12-11-2026). */}
                           {(reading.dialsConsumed ?? reading.dials) !== null && (
                             <span className="text-xs tabular-nums text-foreground-muted">

@@ -11,7 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { localInstant, sampleMoment } from '../facilities/sample-moment.js';
-import { DIALS, dialTotal, isDialSet, type Dial } from '@poolse/rules';
+import { DIALS, dialTotal, isDialSet, summariseUsage, intervalUsage, type Dial, type UsageSummary } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { readPageQuery } from '../common/pagination.js';
 import {
@@ -103,6 +103,8 @@ interface MeterListResponse {
 interface MeterResponse {
   meter: EnergyMeter;
   readings: EnergyReading[];
+  /** Altos e baixos over the last twelve months (12-11-2026). */
+  usage: UsageSummary;
   /** Twelve months ending this one, every month present, with their coverage. */
   monthly: ConsumptionSeries;
   pools: Option[];
@@ -162,10 +164,12 @@ export class EnergyController {
 
     const timezone = (await meterTimezone(organizationId, meterId)) ?? 'Europe/Lisbon';
     const canPlan = hasRole(...CAN_PLAN);
+    const readings = await listReadings(organizationId, meterId, timezone);
 
     return {
       meter,
-      readings: await listReadings(organizationId, meterId, timezone),
+      readings,
+      usage: usageOf(readings),
       monthly: await monthlyConsumption(organizationId, meterId, timezone),
       pools: canPlan ? await listPools(organizationId, meter.facilityId) : [],
       tariffs: await listTariffs(organizationId, meterId),
@@ -753,4 +757,16 @@ function readDials(raw: unknown): Partial<Record<Dial, number>> {
     dials[key as Dial] = Math.round(value * 1000) / 1000;
   }
   return dials;
+}
+
+/** The last twelve months' highs and lows, from the readings already listed (newest first). */
+function usageOf(readings: EnergyReading[]): UsageSummary {
+  const oldestFirst = [...readings].reverse();
+  const series = oldestFirst.map((reading, index) => ({
+    takenAt: reading.takenAt,
+    previousAt: index === 0 ? null : oldestFirst[index - 1]!.takenAt,
+    consumed: reading.consumed,
+  }));
+  const since = new Date(Date.now() - 365 * 86_400_000).toISOString();
+  return summariseUsage(series, intervalUsage(series), since);
 }

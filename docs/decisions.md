@@ -1526,3 +1526,5 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-11-12** — **A bill keeps its original file, and old bills can have one attached** (Rui). It lives in object storage, not the database. Owner, Admin and Maintenance may open and attach it (Rui chose the wider group over owner and admin).
 
 - **2026-11-12** — **A meter reading carries one value per dial, following the ERSE tariff options** (Rui, after research). Highs and lows on Leituras, and gas and water as first-class quantities, come next in that order. The research is in `docs/research/energy-metering-2026-11.md`. Cost per period waits until a tariff carries per-period prices.
+
+- **2026-11-12** — **Altos e baixos compares a reading's daily use with the median of the six intervals before it, ±30 %** (from the research; Rui asked for highs and lows). It is a yardstick that catches a leak, a stuck pump or a typo quickly. The seasonal year-on-year comparison stays in Comparação.

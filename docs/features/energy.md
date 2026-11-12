@@ -370,3 +370,16 @@ line beneath, and the form empties after every saved reading, its date back to n
   stays total × price. A bill's own per-period lines are already exact. The period *hours* are
   not stored: ERSE moves them in 2027 (Diretiva 3/2026). See `docs/research/energy-metering-2026-11.md`.
 - **One definition** of the sets and dials: `@poolse/rules` › `energy-dials.ts`.
+
+## Altos e baixos (Rui, 12-11-2026)
+
+- **Use is compared per day**: an interval's consumption ÷ its days, because readings typed by
+  hand are never evenly spaced.
+- **A reading is unusual** when its daily use is more than **30 %** above or below the **median** of
+  the six intervals before it, needing at least three. The list says it in words ("34 % acima do
+  habitual"), in colour as well, never colour alone.
+- **On Leituras, a folded *Altos e baixos* card** covers the last twelve months: the highest and lowest daily
+  use with their dates, the average per day, and how many readings were unusual. The rule is stated on the card.
+- **Derived once**, in the API (`listReadings`, `usage` on the meter), by `@poolse/rules` › `energy-usage.ts`.
+- **Known limit:** a heated pool's use is seasonal, so the turn of the seasons can be flagged.
+  Comparing with the same months last year is the existing *Comparação*.

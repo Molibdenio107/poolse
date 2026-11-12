@@ -269,3 +269,25 @@ test('12-11-2026: a tri-horário meter is read dial by dial; the total is their 
     });
   });
 });
+
+test('12-11-2026: altos e baixos — a month well above the usual daily use is flagged, and the summary says so', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const controller = new EnergyController();
+      const { id } = await controller.create(tenant.facilityId, { name: 'Geral', kind: 'total' });
+      const values = [1000, 1310, 1590, 1900, 2350];
+      for (const [index, value] of values.entries()) {
+        await controller.record(id, { takenAt: firstOf(values.length - 1 - index), value });
+      }
+
+      const { readings, usage } = await controller.one(id);
+      const newest = readings[0]!;
+      assert.equal(newest.flag, 'high', '450 in a month after ~300 a month');
+      assert.ok(newest.perDay !== null && newest.usualPerDay !== null && newest.perDay > newest.usualPerDay);
+      assert.deepEqual(readings.slice(1).map((one) => one.flag), [null, null, null, null]);
+      assert.equal(usage.unusual, 1);
+      assert.equal(usage.highest?.takenAt, newest.takenAt);
+      assert.equal(usage.intervals, 4);
+    });
+  });
+});

@@ -1057,6 +1057,11 @@ export interface EnergyReading {
   /** The reading's dials and what each used since the one before (12-11-2026); null on a one-figure meter. */
   dials: Partial<Record<import('@poolse/rules').Dial, number>> | null;
   dialsConsumed: Partial<Record<import('@poolse/rules').Dial, number>> | null;
+  /** Altos e baixos (12-11-2026): use per day since the reading before, the usual, and whether it is unusual. */
+  perDay: number | null;
+  usualPerDay: number | null;
+  deviation: number | null;
+  flag: 'high' | 'low' | null;
 }
 
 /**
@@ -1410,6 +1415,8 @@ export interface MeterList {
 export interface MeterDetail {
   meter: EnergyMeter;
   readings: EnergyReading[];
+  /** The last twelve months' highs and lows — `@poolse/rules` › energy-usage. */
+  usage: import('@poolse/rules').UsageSummary;
   monthly: ConsumptionSeries;
   pools: { id: string; name: string }[];
   tariffs: Tariff[];

@@ -1,5 +1,5 @@
 import { withOrg } from '@poolse/db';
-import { DIALS, DIALS_OF, dialProblem, dialTotal, type Dial, type DialSet } from '@poolse/rules';
+import { DIALS, DIALS_OF, dialProblem, dialTotal, intervalUsage, type Dial, type DialSet } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
 import { auditReadings } from './history.repository.js';
 import { liveTariffJoin } from './tariffs.repository.js';
@@ -103,6 +103,14 @@ export interface EnergyReading {
   dials: Partial<Record<Dial, number>> | null;
   /** What each dial used since the reading before — the per-period split of `consumed`. */
   dialsConsumed: Partial<Record<Dial, number>> | null;
+  /** Use per day since the reading before — altos e baixos (12-11-2026). */
+  perDay: number | null;
+  /** The median per-day use of the intervals before it, or null with too little history. */
+  usualPerDay: number | null;
+  /** How far from the usual, as a fraction: +0.42 is 42 % above. */
+  deviation: number | null;
+  /** Unusual: more than 30 % above or below the usual (`@poolse/rules` › energy-usage). */
+  flag: 'high' | 'low' | null;
 }
 
 /**
@@ -605,7 +613,21 @@ export async function listReadings(
       [organizationId, meterId, timezone],
     );
 
-    return rows.map((row) => ({
+    // Altos e baixos, derived once, here, oldest first (12-11-2026).
+    const oldestFirst = [...rows].reverse();
+    const usage = intervalUsage(
+      oldestFirst.map((row, index) => ({
+        takenAt: row.taken_at.toISOString(),
+        previousAt: index === 0 ? null : oldestFirst[index - 1]!.taken_at.toISOString(),
+        consumed: row.consumed,
+      })),
+    ).reverse();
+
+    return rows.map((row, index) => ({
+      perDay: usage[index]!.perDay,
+      usualPerDay: usage[index]!.usual,
+      deviation: usage[index]!.deviation,
+      flag: usage[index]!.flag,
       takenAt: row.taken_at.toISOString(),
       value: row.value,
       source: row.source,
