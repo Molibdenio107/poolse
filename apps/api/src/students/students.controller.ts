@@ -130,6 +130,7 @@ import {
 import { deliverLevelChangeNotice } from './level-change-delivery.js';
 import { clubToday } from '../common/club-day.js';
 import { CoreRoute } from '../tenant/modules.js';
+import { handAccessToGuardian, type HandoverOutcome } from './access-handover.repository.js';
 import { forReader, parseIdentity } from './identity.js';
 import { studentCover, type StudentCover } from '../billing/fees.repository.js';
 
@@ -565,6 +566,27 @@ export class StudentsController {
             ),
           }),
     };
+  }
+
+  /**
+   * *O acesso é do encarregado* — POOLSE-218, rule 5. A student's own login
+   * that is really a parent's becomes the student's encarregado. Owner and
+   * admin; support changes nobody's access. 404 for a record that is not this
+   * club's; 409 when the record no longer looks like that.
+   */
+  @Post(':id/access/hand-to-guardian')
+  async handToGuardian(@Param('id', ParseUUIDPipe) id: string): Promise<Extract<HandoverOutcome, { kind: 'done' }>> {
+    requireRole('owner', 'admin');
+    const { organizationId, membershipId, support } = currentTenant();
+    if (support === true) {
+      throw new ForbiddenException({ code: 'support_no_access_change', message: 'Support changes nobody’s access' });
+    }
+    const outcome = await handAccessToGuardian(organizationId, id, membershipId);
+    if (outcome.kind === 'not_found') throw new NotFoundException('No such student');
+    if (outcome.kind === 'not_applicable') {
+      throw new ConflictException({ code: 'not_applicable', message: 'This record’s login is not a child’s' });
+    }
+    return outcome;
   }
 
   @Get(':id')

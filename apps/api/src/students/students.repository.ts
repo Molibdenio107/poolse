@@ -148,6 +148,12 @@ export interface SportLevel {
 
 export interface Student {
   /**
+   * POOLSE-218: the age of a student whose own login is too young to be theirs
+   * (`student_login_child_age()`), for *O acesso é do encarregado*. Only on the
+   * record; undefined on lists.
+   */
+  loginChildAge?: number | null;
+  /**
    * The levels this student holds in sports other than swimming — POOLSE-148.
    * Swimming's is `levelId`. Only on the record, never on a list.
    */
@@ -1317,7 +1323,8 @@ export async function findStudent(
              student_left_on(s.id)::text AS left_on,
              (student_left_on(s.id) + retention_health_period())::date::text AS health_erases_on,
              (student_left_on(s.id) + retention_identity_period())::date::text AS identity_erases_on,
-             s.health_erased_at
+             s.health_erased_at,
+             student_login_child_age(s.id) AS login_child_age
         FROM student_person s
         LEFT JOIN student_level l
                ON l.id = s.level_id AND l.organization_id = s.organization_id
@@ -2176,8 +2183,10 @@ function toStudent(row: {
   health_erases_on?: string | null;
   identity_erases_on?: string | null;
   health_erased_at?: Date | null;
+  login_child_age?: number | null;
 }): Student {
   return {
+    ...(row.login_child_age === undefined ? {} : { loginChildAge: row.login_child_age }),
     retention:
       row.left_on === undefined || row.left_on === null
         ? null

@@ -35,7 +35,7 @@ The fix has two parts. **The door:** *Convidar aluno* asks who will use the app.
    - `student.membership_id` becomes null;
    - a `guardian_link` (`parental`, `is_primary` when the record has no primary) joins the student to that membership;
    - **the login's own `app_user.birth_date` is cleared when it equals the student's date**, because it is the child's date typed into the parent's account (POOLSE-186 put it there);
-   - each consent recorded as signed by the student themself is marked as needing the guardian's signature (**Open:** default: archive them, so the guardian is asked again on their next visit).
+   - each consent recorded as signed by the student themself is marked as needing the guardian's signature (**Decided** (Rui, 12-11-2026): archive them, so the guardian is asked again on their next visit).
 
    The login keeps its email, name and sessions. Only what it is to the club changes. Atividade records it, with who acted.
 6. **After the turn,** the record's *Contactos* show the guardian, read through from the login (`person_phone`, `person_email`). The guardian block's missing details are asked the way the guardian path already asks them. The family app opens on *Os meus educandos* at the next request.
@@ -74,9 +74,9 @@ The fix has two parts. **The door:** *Convidar aluno* asks who will use the app.
 
 ### Acceptance criteria
 
-- [ ] *Convidar aluno* asks *Quem vai usar a app?*; the guardian option creates student, guardian, parental link and guardian invitation in one transaction (QA 1–2).
-- [ ] A date under 12 on the student option is refused with `child_needs_guardian` (QA 3); no date behaves as today (QA 4).
-- [ ] The warning shows exactly when a student's own login has a confirmed age under `self_answer_min_age()` (QA 5, 7).
-- [ ] *O acesso é do encarregado* turns the login into the guardian, links them, clears the copied birth date, and is recorded (QA 6).
-- [ ] Owner and admin only, refused server-side, support refused; cross-tenant 404 (QA 8–9).
-- [ ] pt-PT and en strings, both themes, phone width (QA 10); docs and `decisions.md` updated in the same commit; the palette offers nothing new (no new page).
+- [x] *Convidar aluno* asks *Quem vai usar a app?*; the guardian option creates student, guardian, parental link and guardian invitation in one transaction (QA 1–2).
+- [x] A date under 12 on the student option is refused with `child_needs_guardian` (QA 3); no date behaves as today (QA 4).
+- [x] The warning shows exactly when a student's own login has a confirmed age under `self_answer_min_age()` (QA 5, 7).
+- [x] *O acesso é do encarregado* turns the login into the guardian, links them, clears the copied birth date, and is recorded (QA 6).
+- [x] Owner and admin only, refused server-side, support refused; cross-tenant 404 (QA 8–9).
+- [x] pt-PT and en strings, both themes, phone width (QA 10); docs and `decisions.md` updated in the same commit; the palette offers nothing new (no new page).

@@ -86,31 +86,59 @@ export interface InviteStudentState extends FormState {
   /** Somebody in the club already holds this contact: their record, if a student. */
   existingStudentId?: string | null;
   email?: string | null;
+  /** POOLSE-218: invited through an encarregado; the share text names the child. */
+  forGuardian?: boolean;
+  childFirstName?: string;
+  /** The guardian already uses the app, or already holds an invitation: no new link. */
+  covered?: 'has_login' | 'already_invited';
 }
 
 export async function inviteNewStudentAction(
   _previous: InviteStudentState,
   formData: FormData,
 ): Promise<InviteStudentState> {
+  const text = (key: string): string => String(formData.get(key) ?? '');
+  const forGuardian = formData.get('for') === 'guardian';
   try {
     const issued = await apiPost<{
       studentId: string;
-      link: string;
+      link: string | null;
       email: string | null;
       emailed: boolean;
       emailConfigured?: boolean;
+      guardian?: 'invited' | 'has_login' | 'already_invited';
     }>(
       '/family-invitations/new-student',
-      {
-        firstName: String(formData.get('firstName') ?? ''),
-        lastName: String(formData.get('lastName') ?? ''),
-        phone: String(formData.get('phone') ?? ''),
-        email: String(formData.get('email') ?? ''),
-      },
+      forGuardian
+        ? {
+            for: 'guardian',
+            firstName: text('firstName'),
+            lastName: text('lastName'),
+            birthDate: text('birthDate'),
+            guardianFirstName: text('guardianFirstName'),
+            guardianLastName: text('guardianLastName'),
+            guardianRelationship: text('guardianRelationship'),
+            guardianEmail: text('guardianEmail'),
+            guardianTaxNumber: text('guardianTaxNumber'),
+            guardianPhone: text('guardianPhone'),
+          }
+        : {
+            firstName: text('firstName'),
+            lastName: text('lastName'),
+            phone: text('phone'),
+            email: text('email'),
+          },
     );
     revalidatePath('/dashboard/students');
+    if (issued.link === null) {
+      // The guardian is already covered: the child appears under *Os meus educandos*.
+      const covered = issued.guardian === 'has_login' ? 'has_login' : 'already_invited';
+      return { ok: true, studentId: issued.studentId, covered, forGuardian: true };
+    }
     return {
       ok: true,
+      forGuardian,
+      childFirstName: text('firstName'),
       link: issued.link,
       studentId: issued.studentId,
       email: issued.email,
@@ -133,6 +161,9 @@ export async function inviteNewStudentAction(
         fields: { email: 'inviteStudent.exists' },
         existingStudentId: typeof record['studentId'] === 'string' ? record['studentId'] : null,
       };
+    }
+    if (error instanceof ApiError && error.code === 'child_needs_guardian') {
+      return { ok: false, errorKey: 'inviteStudent.childNeedsGuardian' };
     }
     if (error instanceof ApiError && error.status < 500) {
       const fields = Object.keys(error.fields).length > 0 ? error.fields : undefined;

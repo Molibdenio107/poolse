@@ -47,6 +47,7 @@ import { FpnSection, IdentificationSection } from './documents';
 import { FamilySubmissions, type FamilySubmission } from './family-submissions';
 import { BirthDateConfirm } from './birth-date-confirm';
 import { AcompanhanteWarning } from './acompanhante-warning';
+import { ChildLoginWarning } from './child-login-warning';
 import { ageInYears } from '@/lib/ages';
 import { StudentMessages, type StudentMessagesData } from './student-messages';
 import { moduleIsOn } from '@/lib/modules';
@@ -263,6 +264,19 @@ export default async function StudentPage({
   // Each turma's sport, only for a club with a second sport (Slice 5): the same
   // `/me` the layout reads, which Next answers once per render.
   const viewerMembership = await apiFetch<Me>('/me').then((me) => me.memberships[0] ?? null, () => null);
+  /*
+   * POOLSE-218: a child's own login that is really a parent's. The age is the
+   * server's; *O acesso é do encarregado* is owner and admin, never support.
+   */
+  const childLogin =
+    !family && reg.canManage && loaded.loginChildAge != null ? (
+      <ChildLoginWarning
+        studentId={loaded.id}
+        age={loaded.loginChildAge}
+        studentName={loaded.displayName}
+        canAct={(viewerMembership?.supportExpiresAt ?? null) === null}
+      />
+    ) : null;
   const clubSports = viewerMembership?.sports ?? [];
   const multiSport = isMultiSport(clubSports);
   // POOLSE-145: an instructor scoped to some sports sees only their cards; the
@@ -439,6 +453,7 @@ export default async function StudentPage({
                       .map((guardian) => ({ linkId: guardian.linkId, name: guardian.name }))}
                   />
                 )}
+              {childLogin}
               {!family && (
                 <ContactsCard
                   guardians={loaded.guardians}
@@ -987,6 +1002,8 @@ export default async function StudentPage({
               );
             }
             return (
+              <>
+              {childLogin}
               <FamilyAccess
                 studentId={id}
                 studentFirstName={loaded.firstName}
@@ -994,6 +1011,7 @@ export default async function StudentPage({
                 canInvite={access.data.canInvite}
                 invitees={access.data.invitees}
               />
+              </>
             );
           },
         },

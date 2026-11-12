@@ -979,6 +979,10 @@ test('family invitations refuse a guardian and a student (403), and maintenance'
     await refused('POST family-invitations/new-student', 403, () =>
       new FamilyInvitationsBulkController().newStudent({ firstName: 'X', lastName: 'Y', phone: '912000000' }),
     );
+    // POOLSE-218: turning a child's login into the guardian is owner and admin only.
+    await refused('POST students/:id/access/hand-to-guardian', 403, () =>
+      new StudentsController().handToGuardian(fixture.aliceId),
+    );
   };
   await asEach(probe);
   await as(fixture.maintenanceId, ['maintenance'], probe);

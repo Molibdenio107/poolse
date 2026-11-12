@@ -4566,6 +4566,10 @@ Migration `1794653300000_student-birth-date-declared`.
 - **`student_is_adult_path()`** refuses a declared date. `student_person` carries both columns and still reads a declared record through.
 - Asserted in `test/student-birth-date.sql`.
 
+Migration `1794655800000_student-login-child-age` (POOLSE-218):
+
+- **`student_login_child_age(student_id)`**: the age of a student whose own membership has a login, whose date is confirmed (not declared), and who is under `self_answer_min_age()`; null otherwise. It feeds the record's `loginChildAge` and gates `POST /students/:id/access/hand-to-guardian`.
+
 ### What a family records (06-11-2026)
 
 `student_record.self_reported` marks a time typed in the app: it may be a personal best, never names a meet (by CHECK), and never reaches `qualifying_attempts()`.

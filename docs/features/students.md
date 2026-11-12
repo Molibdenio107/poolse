@@ -285,6 +285,31 @@ convite*, *Convite enviado em dd-MM-yyyy* (or *Link criado em*), *Convite expira
   the ordinary insert and invites them in one transaction (no birth date, so the 12-year rule is waived
   for this one path), emails if there is an address, and returns the link for *Partilhar*. A taken
   address is a 409 and leaves no student behind.
+- **Quem vai usar a app?** (POOLSE-218, Rui 10-11-2026). *Convidar aluno* opens on two cards:
+  - *O próprio aluno* is the form above, for students of 12 and over. A date of birth under
+    `self_answer_min_age()` that reaches the API is refused with 422 `child_needs_guardian`, which
+    names the guardian option. No date behaves as before.
+  - *Um encarregado de educação* (`for: 'guardian'`) takes the child's names and date of birth (the
+    office's, not declared), then the guardian's names, relationship, email and/or NIF, and an
+    optional phone. A phone alone cannot tell two parents apart (`guardian_needs_a_key`, POOLSE-17).
+  - One transaction, through the ordinary insert: the student, the guardian (an existing person
+    matched by NIF or email is reused), a primary `parental` link, and an invitation **to the
+    guardian** (`{guardian}`).
+  - A guardian who already uses the app, or already holds a live invitation, gets no new link. The
+    answer says so, and the child appears under *Os meus educandos*.
+- **O acesso é do encarregado** (POOLSE-218, the safety net). A record whose own login is a
+  child's shows a warning on *Geral* and *Acesso à app*: *Este acesso é do próprio aluno, mas o
+  aluno tem N anos.* The condition is `student_login_child_age()`: own login, confirmed date, age
+  under `self_answer_min_age()`. It warns and never gates.
+  - Owner and admin (never support) can press *O acesso é do encarregado*, which asks first.
+    `POST /students/:id/access/hand-to-guardian` then, in one transaction:
+    - the membership loses `student` and gains `guardian`, and `student.membership_id` is cleared;
+    - a primary-if-none `parental` link is added;
+    - the login's `birth_date` is cleared when it is the child's;
+    - consents the login signed as the student are ended (`withdrawn_at`), so the guardian is asked
+      again (Rui, 12-11-2026).
+  - The login keeps its email, name and sessions. It is audited as `student.access_handed_to_guardian`.
+    409 when the record no longer looks like that, 404 for another club's student.
 - **Convidar para a app** on the record's General tab opens the same rows in place, one student at a
   time; it shows only while somebody on the record has not joined.
 - **Convidar membros** (renamed from *Convidar famílias*) on Alunos takes the list's search and level, previews (students, by email,

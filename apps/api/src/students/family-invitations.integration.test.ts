@@ -396,7 +396,7 @@ test('Convidar aluno — a new student is created and invited in one go; the log
       routes.newStudent({ firstName: 'Lia', lastName: 'Nova', phone: '914000000' }),
     );
     assert.equal(byPhone.email, null);
-    assert.match(byPhone.link, /\/join\?token=/);
+    assert.match(byPhone.link ?? '', /\/join\?token=/);
     const [lia] = await tenant.sql<{ phone: string; membership_id: string | null; invited: string }>(
       `SELECT s.contact_phone AS phone, s.membership_id, i.membership_id AS invited
          FROM student s JOIN invitation i ON i.id = $2

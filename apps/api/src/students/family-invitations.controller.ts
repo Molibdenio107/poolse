@@ -10,6 +10,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { withOrg } from '@poolse/db';
 import { currentTenant } from '../tenant/tenant.context.js';
@@ -25,8 +26,8 @@ import {
   revokeInvitation,
 } from '../invitations/invitations.repository.js';
 import { invitationExpiry, issueToken, normaliseEmail } from '../invitations/invitations.service.js';
-import { insertStudent } from './students.repository.js';
-import { parseStudent } from './students.controller.js';
+import { ageOfMajority, insertStudent } from './students.repository.js';
+import { parseBirthDate, parseStudent } from './students.controller.js';
 import {
   createFamilyInvitationIn,
   invitationOnRecord,
@@ -267,11 +268,40 @@ export class FamilyInvitationsBulkController {
    * emailed; the link comes back either way, for the club's phone.
    */
   @Post('new-student')
-  async newStudent(@Body() body: Record<string, unknown>): Promise<InvitationIssued & { studentId: string }> {
+  async newStudent(@Body() body: Record<string, unknown>): Promise<(InvitationIssued & { studentId: string }) | ChildInvited> {
     requireRole('owner', 'admin');
     const { organizationId, membershipId, support } = currentTenant();
     if (support === true) {
       throw new ForbiddenException({ code: 'not_your_student', message: 'Support invites nobody' });
+    }
+
+    // POOLSE-218: *Quem vai usar a app?* — the student, or an encarregado for a child.
+    const forWho = body['for'] ?? 'self';
+    if (forWho !== 'self' && forWho !== 'guardian') {
+      throw new BadRequestException({ code: 'bad_for', message: 'for is self or guardian' });
+    }
+    if (forWho === 'guardian') return inviteForChild(body, organizationId, membershipId);
+
+    /*
+     * A child is never their own login (POOLSE-218, rule 3): a date under the age
+     * a person answers for themself is refused, naming the guardian option. With
+     * no date, today's waiver stands: an adult signing up their own place.
+     */
+    const selfBirthDate = parseBirthDate(body['birthDate']);
+    if (selfBirthDate !== null) {
+      const { rows: young } = await withOrg(organizationId, (tx) =>
+        tx.query<{ child: boolean }>(
+          `SELECT age(club_today(), $1::date) < make_interval(years => self_answer_min_age()) AS child`,
+          [selfBirthDate],
+        ),
+      );
+      if (young[0]?.child === true) {
+        throw new UnprocessableEntityException({
+          code: 'child_needs_guardian',
+          message: 'A child is invited through their encarregado',
+          fields: { birthDate: 'inviteStudent.childNeedsGuardian' },
+        });
+      }
     }
 
     const rawEmail = typeof body['email'] === 'string' ? body['email'].trim() : '';
@@ -288,9 +318,16 @@ export class FamilyInvitationsBulkController {
       });
     }
     // No birth date, so no guardian is required: the club's maioridade cannot apply.
+    // A date of 12 or more still goes through the record's own minor rule.
     const input = parseStudent(
-      { firstName: body['firstName'], lastName: body['lastName'], contactEmail: email ?? '', contactPhone: phone },
-      18,
+      {
+        firstName: body['firstName'],
+        lastName: body['lastName'],
+        contactEmail: email ?? '',
+        contactPhone: phone,
+        ...(selfBirthDate === null ? {} : { birthDate: selfBirthDate }),
+      },
+      selfBirthDate === null ? 18 : await ageOfMajority(organizationId),
     );
 
     const { token, tokenHash } = issueToken();
@@ -439,4 +476,149 @@ export class FamilyInvitationsBulkController {
     const { candidates: _omit, ...figures } = preview;
     return { ...figures, sent: issued.length };
   }
+}
+
+/**
+ * *Convidar aluno* for a child — POOLSE-218, rules 1 and 2 (Rui, 10-11-2026).
+ *
+ * *Quem vai usar a app?* — *Um encarregado de educação*: the child (name and a
+ * date of birth, the office's), the guardian (a person with no login, found
+ * first by NIF or email so a second sibling never makes a second mother), a
+ * primary `parental` link, and an invitation **to the guardian**, in one
+ * transaction. The ordinary insert does the first three, so the minor rule and
+ * the guardian's key (NIF or email, POOLSE-17) are the record form's own.
+ *
+ * A guardian who already uses the app needs no invitation: the child appears
+ * under *Os meus educandos* at their next visit. One who already holds a live
+ * invitation is covered by it (it opens every child they answer for).
+ */
+type ChildInvited =
+  | (InvitationIssued & { studentId: string; guardian: 'invited' })
+  | {
+      studentId: string;
+      /** The guardian already uses the app, or already holds a live invitation: no new link. */
+      guardian: 'has_login' | 'already_invited';
+      invitationId: null;
+      link: null;
+      email: null;
+      emailed: false;
+      emailConfigured: boolean;
+      expiresAt: null;
+    };
+
+async function inviteForChild(
+  body: Record<string, unknown>,
+  organizationId: string,
+  membershipId: string,
+): Promise<ChildInvited> {
+  const birthDate = parseBirthDate(body['birthDate']);
+  if (birthDate === null) {
+    throw new BadRequestException({
+      code: 'birth_date_required',
+      message: 'A child invited through a guardian needs a date of birth',
+      fields: { birthDate: 'inviteStudent.child.birthDateRequired' },
+    });
+  }
+  const text = (key: string): string => (typeof body[key] === 'string' ? (body[key] as string).trim() : '');
+  const guardianFirst = text('guardianFirstName');
+  const guardianLast = text('guardianLastName');
+  if (guardianFirst === '' || guardianLast === '') {
+    throw new BadRequestException({
+      code: 'guardian_name_required',
+      message: 'The guardian’s first name and surname are needed',
+      fields: { [guardianFirst === '' ? 'guardianFirstName' : 'guardianLastName']: 'inviteStudent.guardian.nameRequired' },
+    });
+  }
+  const rawEmail = text('guardianEmail');
+  const email = rawEmail === '' ? null : normaliseEmail(rawEmail);
+  if (rawEmail !== '' && email === null) {
+    throw new BadRequestException({
+      code: 'invalid_email',
+      message: 'Not an email address',
+      fields: { guardianEmail: 'familyAccess.error.invalidEmail' },
+    });
+  }
+
+  const input = parseStudent(
+    {
+      firstName: body['firstName'],
+      lastName: body['lastName'],
+      birthDate,
+      guardians: [
+        {
+          name: `${guardianFirst} ${guardianLast}`,
+          email: email ?? '',
+          phone: text('guardianPhone'),
+          taxNumber: text('guardianTaxNumber'),
+          relationship: text('guardianRelationship'),
+          isPrimary: true,
+          kind: 'parental',
+        },
+      ],
+    },
+    await ageOfMajority(organizationId),
+  );
+
+  const { token, tokenHash } = issueToken();
+  const expiresAt = invitationExpiry();
+  const created = await withOrg(organizationId, async (tx) => {
+    const studentId = await insertStudent(tx, organizationId, input);
+    if (studentId === null) throw new Error('The student could not be created');
+    const { rows } = await tx.query<{ guardian_membership_id: string }>(
+      `SELECT guardian_membership_id FROM guardian_link
+        WHERE student_id = $1 AND is_primary AND archived_at IS NULL`,
+      [studentId],
+    );
+    const guardianId = rows[0]?.guardian_membership_id;
+    if (guardianId === undefined) throw new Error('The guardian could not be created');
+
+    const outcome = await createFamilyInvitationIn(tx, {
+      organizationId,
+      invitedByMembershipId: membershipId,
+      studentId,
+      membershipId: guardianId,
+      channel: email === null ? 'link' : 'email',
+      email,
+      tokenHash,
+      expiresAt,
+    });
+    if (outcome.kind === 'has_login') return { studentId, covered: 'has_login' as const };
+    if (outcome.kind === 'already_invited') return { studentId, covered: 'already_invited' as const };
+    if (outcome.kind === 'email_taken') {
+      throw new ConflictException({
+        code: 'email_taken',
+        message: 'Somebody else in the club holds that email',
+        fields: { guardianEmail: 'familyAccess.error.emailTaken' },
+      });
+    }
+    if (outcome.kind !== 'created') throw new Error(`Inviting the guardian failed: ${outcome.kind}`);
+    return { studentId, outcome };
+  });
+
+  if ('covered' in created) {
+    return {
+      studentId: created.studentId,
+      guardian: created.covered,
+      invitationId: null,
+      link: null,
+      email: null,
+      emailed: false,
+      emailConfigured: emailIsConfigured(),
+      expiresAt: null,
+    };
+  }
+  const emailed =
+    created.outcome.email === null
+      ? false
+      : await deliver(organizationId, created.outcome.invitationId, created.outcome.email, created.outcome.roles, token, expiresAt);
+  return {
+    studentId: created.studentId,
+    guardian: 'invited',
+    invitationId: created.outcome.invitationId,
+    link: joinLink(token),
+    email: created.outcome.email,
+    emailed,
+    emailConfigured: emailIsConfigured(),
+    expiresAt: created.outcome.expiresAt,
+  };
 }

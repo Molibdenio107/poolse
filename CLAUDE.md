@@ -312,6 +312,7 @@ Read [`docs/conventions/students-and-families.md`](docs/conventions/students-and
 - At 18 a `majority_notice` tells parent and student once, and a parent's consent stays in force until the young adult answers it (`consent_awaits_self()`, POOLSE-208).
 - A warning about a person never gates what a club does with them.
 - A student holds one level per sport
+- *Convidar aluno* asks who uses the app; a child is invited through their encarregado, and a child's own login is turned by *O acesso é do encarregado* (`student_login_child_age()`, POOLSE-218).
 - A minor is never saved without an encarregado (`parseStudent`, Receção included); one who slipped in is `MINOR_WITHOUT_GUARDIAN`, flagged and in *Por rever*.
 - An archive is undone through the bin, and an archive that takes children lists them.
 - An edit records what it changed, and a revert goes through the edit's own path.

@@ -1740,6 +1740,8 @@ export interface StudentIdentity {
 }
 
 export interface Student {
+  /** POOLSE-218: the age of a student whose own login is too young to be theirs, else null. */
+  loginChildAge?: number | null;
   /** The date of birth's standing, for the office only — POOLSE-186. */
   birthDateState?: { declared: boolean; verifiedAt: string | null; idDocument: 'pending' | 'on_file' | 'none' };
   /** Their level in each sport other than swimming — POOLSE-148; on the record only. */
