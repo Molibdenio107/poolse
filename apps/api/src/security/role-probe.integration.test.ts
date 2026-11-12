@@ -10,6 +10,7 @@ import { OwnEmailPreferenceController } from '../notifications/email-preferences
 import pg from 'pg';
 import assert from 'node:assert/strict';
 import { ArchiveController } from '../archive/archive.controller.js';
+import { EnergyController } from '../energy/energy.controller.js';
 import { ActivityController } from '../activity/activity.controller.js';
 import { CoverRequestsController, LessonRequestsController } from '../classes/lesson-requests.controller.js';
 import { AppViewController } from '../app-view/app-view.controller.js';
@@ -636,6 +637,21 @@ test('operational reads refuse non-staff (403)', async () => {
     );
     await refused('POST facilities/playing-areas/:id/archive', 403, () =>
       new FacilitiesController().archivePlayingArea(NO_SUCH_ID),
+    );
+    // 12-11-2026: clearing a tank's water history or alerts is Owner and Admin's.
+    await refused('POST facilities/pools/:id/analyses/archive-all', 403, () =>
+      new FacilitiesController().archiveAllAnalyses(fixture.poolId),
+    );
+    await refused('POST facilities/pools/:id/alerts/archive-all', 403, () =>
+      new FacilitiesController().archiveAllAlerts(fixture.poolId),
+    );
+    await refused('POST facilities/water-alerts/:id/archive', 403, () =>
+      new FacilitiesController().archiveAlert(NO_SUCH_ID),
+    );
+    // 12-11-2026: Energia › Histórico — read by the module's staff, cleared by owner and admin.
+    await refused('GET energy/history', 403, () => new EnergyController().history('readings'));
+    await refused('POST energy/history/archive', 403, () =>
+      new EnergyController().archiveHistory({ kind: 'readings' }),
     );
     await refused('GET maintenance/facilities/:id/tasks', 403, () =>
       new MaintenanceController().list(fac),

@@ -3,7 +3,7 @@
 import { aiNoteKey } from '@/lib/ai-failure-codes';
 import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
 import { revalidatePath } from 'next/cache';
-import { ApiError, apiFetch, apiPost, type EnergyInvoiceCheck, type EnergyInvoiceDetail, type EnergyInvoiceList } from '@/lib/api';
+import { ApiError, apiFetch, apiPost, apiUpload, type EnergyInvoiceCheck, type EnergyInvoiceDetail, type EnergyInvoiceList } from '@/lib/api';
 import { draftToBody, reportMediaType, type InvoiceDraft } from '@/lib/energy-invoice';
 import { energyInvoiceParser } from '@/lib/energy-invoice-agent';
 import { readAiReaderGate } from '@/lib/ai-meter';
@@ -26,6 +26,8 @@ export interface InvoiceReadState {
   ok: boolean;
   draft?: InvoiceDraft;
   fileName?: string;
+  /** The file as received, kept in storage for the bill (12-11-2026); absent if it could not be kept. */
+  originalFileId?: string;
   errorKey?: string;
   /** The parser is off for this club — a sentence, not a failure. */
   disabled?: boolean;
@@ -48,20 +50,38 @@ export async function readInvoiceFileAction(
     return { ok: false, errorKey: 'energy.invoice.chooseAFile', attempt };
   }
 
-  // The bytes go to the model call and no further: nothing is stored. File
-  // storage is the deferred decision the photo controls also wait on. Every
-  // call is claimed before and finished after by the parser itself, so it is
-  // counted per club on /admin and against the club's cap (POOLSE-137).
+  // Every call is claimed before and finished after by the parser itself, so
+  // it is counted per club on /admin and against the club's cap (POOLSE-137).
   const bytes = Buffer.from(await file.arrayBuffer());
   const result = await energyInvoiceParser().parse({ name: file.name, mediaType, bytes });
 
-  if ('error' in result) {
-    // Switched off for this club: a sentence, not a failure, and the form is there.
-    if (result.error === 'off') return { ok: false, disabled: true, fileName: file.name, attempt };
+  if ('error' in result && result.error !== 'off') {
     return { ok: false, errorKey: aiNoteKey('energy.invoice', result.error), fileName: file.name, attempt };
   }
 
-  return { ok: true, draft: result.draft, fileName: file.name, attempt };
+  /*
+   * The bill keeps its original (Rui, 12-11-2026): the same bytes go to file
+   * storage as `energy_invoice`, and the id rides with the form to the commit,
+   * which attaches it. Best-effort — storage that is down or not configured
+   * costs the bill its original, never the read. A file read and then not
+   * filed stays in storage unattached, which is a few hundred KB.
+   */
+  const originalFileId = await keepOriginal(file.name, bytes);
+  const kept = originalFileId === null ? {} : { originalFileId };
+
+  // Switched off for this club: a sentence, not a failure, and the form is there.
+  if ('error' in result) return { ok: false, disabled: true, fileName: file.name, ...kept, attempt };
+  return { ok: true, draft: result.draft, fileName: file.name, ...kept, attempt };
+}
+
+async function keepOriginal(name: string, bytes: Buffer): Promise<string | null> {
+  try {
+    const query = new URLSearchParams({ purpose: 'energy_invoice', name });
+    const view = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    return (await apiUpload<{ id: string }>(`/files?${query.toString()}`, view)).id;
+  } catch {
+    return null;
+  }
 }
 
 export interface InvoicePreviewState extends FormState {
@@ -95,12 +115,14 @@ async function send(
   const newMeterFacilityId = String(formData.get('newMeterFacilityId') ?? '');
   const source = formData.get('source') === 'import' ? 'import' : 'manual';
   const sourceFileName = String(formData.get('sourceFileName') ?? '') || null;
+  const originalFileId = String(formData.get('originalFileId') ?? '') || null;
 
   const draft = draftOf(formData);
   if (draft === null) return { ok: false, errorKey: 'energy.invoice.saveFailed', attempt };
 
   const { body, fields } = draftToBody(draft, { source, sourceFileName, commit });
   if (Object.keys(fields).length > 0) return { ok: false, fields, attempt };
+  if (originalFileId !== null) Object.assign(body, { originalFileId });
 
   /*
    * The first bill of a new supply: no meter carries its CPE, so the bill

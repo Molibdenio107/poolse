@@ -5,7 +5,9 @@ import {
   Get,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Post,
+  Put,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
@@ -18,6 +20,8 @@ import {
   getInvoice,
   listInvoices,
   InvoiceRefusedError,
+  NotABillFileError,
+  setInvoiceOriginal,
   type EnergyCosts,
   type InvoiceCheck,
   type InvoiceDetail,
@@ -131,6 +135,9 @@ export class EnergyInvoicesController {
     try {
       return { id: await addInvoice(organizationId, meterId, membershipId, input) };
     } catch (error) {
+      if (error instanceof NotABillFileError) {
+        throw new BadRequestException({ code: 'wrong_file', message: error.message, field: 'originalFileId' });
+      }
       if (error instanceof InvoiceRefusedError) {
         throw new UnprocessableEntityException({
           code: 'invoice_refused',
@@ -149,6 +156,31 @@ export class EnergyInvoicesController {
       }
       throw error;
     }
+  }
+
+  /**
+   * The bill as received, attached to a bill already on record (Rui,
+   * 12-11-2026) — one filed before originals were kept, or typed by hand. Who
+   * files bills may attach one; who reads them may open it (`RULES.energy_invoice`).
+   */
+  @Put('invoices/:invoiceId/original')
+  async attachOriginal(
+    @Param('invoiceId', new ParseUUIDPipe()) invoiceId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ saved: true }> {
+    requireRole(...ENERGY);
+    const { organizationId } = currentTenant();
+    const fileId = fileIdOf(body['fileId']);
+    if (fileId === null) throw new BadRequestException({ message: 'fileId is required', field: 'fileId' });
+    try {
+      if (!(await setInvoiceOriginal(organizationId, invoiceId, fileId))) {
+        throw new NotFoundException('No such invoice');
+      }
+    } catch (error) {
+      if (error instanceof NotABillFileError) throw new BadRequestException({ code: 'wrong_file', message: error.message });
+      throw error;
+    }
+    return { saved: true };
   }
 
   @Post('invoices/:invoiceId/archive')
@@ -221,6 +253,7 @@ function readInvoice(body: Record<string, unknown>): InvoiceInput {
     notes: text(body['notes'], 'notes', MAX_NOTES),
     source,
     sourceFileName: text(body['sourceFileName'], 'sourceFileName'),
+    originalFileId: fileIdOf(body['originalFileId']),
     registers,
     lines: rawLines.map((raw, i) => readLine(raw, i)),
   };
@@ -325,4 +358,13 @@ function cpeOf(value: unknown): string | null {
   if (compact === '') return null;
   if (!/^[A-Z]{2}[A-Z0-9]{14,20}$/.test(compact)) throw refuse('cpe', 'Not a CPE');
   return compact;
+}
+
+/** A file id, or null; anything else is refused by name. */
+function fileIdOf(value: unknown): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+    throw new BadRequestException({ message: 'Not a file id', field: 'originalFileId' });
+  }
+  return value;
 }

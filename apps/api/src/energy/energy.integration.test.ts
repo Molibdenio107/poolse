@@ -235,3 +235,37 @@ test('5.1 — a name is unique per site, and a foreign pool is refused', async (
     });
   });
 });
+
+test('12-11-2026: a tri-horário meter is read dial by dial; the total is their sum, and each dial is its own series', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const controller = new EnergyController();
+      const { id } = await controller.create(tenant.facilityId, { name: 'Geral', kind: 'total', dialSet: 'tri' });
+
+      await controller.record(id, { takenAt: firstOf(1), dials: { vazio: 3000, cheias: 2000, ponta: 1000 } });
+      await controller.record(id, { takenAt: firstOf(0), dials: { vazio: 3400, cheias: 2250, ponta: 1100 } });
+
+      const meter = await controller.one(id);
+      assert.equal(meter.meter.dialSet, 'tri');
+      assert.equal(meter.meter.latestValue, 6750, 'the total is the dials summed');
+      assert.deepEqual(meter.meter.latestDials, { vazio: 3400, cheias: 2250, ponta: 1100 });
+
+      const newest = meter.readings[0]!;
+      assert.equal(newest.consumed, 750);
+      assert.deepEqual(newest.dialsConsumed, { vazio: 400, cheias: 250, ponta: 100 });
+
+      // A dial missing is refused under that dial; one going backwards is refused under it too.
+      const refusal = async (dials: Record<string, number>): Promise<unknown> => {
+        try {
+          await controller.record(id, { takenAt: new Date().toISOString(), dials });
+        } catch (error) {
+          assert.equal((error as { status?: number }).status, 409);
+          return (error as { getResponse: () => { fields?: unknown } }).getResponse().fields;
+        }
+        throw new Error('expected a refusal');
+      };
+      assert.deepEqual(await refusal({ vazio: 3500, cheias: 2300 }), { dial_ponta: 'energy.dials.missing' });
+      assert.deepEqual(await refusal({ vazio: 3500, cheias: 2300, ponta: 1050 }), { dial_ponta: 'energy.readingBackwards' });
+    });
+  });
+});

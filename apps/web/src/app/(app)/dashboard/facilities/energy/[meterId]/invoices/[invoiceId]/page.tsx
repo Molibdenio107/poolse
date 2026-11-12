@@ -5,6 +5,8 @@ import { backTarget } from '@/lib/back';
 import { centsToText } from '@/lib/energy-invoice';
 import { getInvoice } from '../../../invoice.actions';
 import { ArchiveInvoice } from './archive-invoice';
+import { FileUpload } from '@/components/file-upload';
+import { FileText } from 'lucide-react';
 import { formatDate } from '@/lib/date-format';
 
 /**
@@ -80,6 +82,37 @@ export default async function InvoicePage({
           />
         </dl>
         {invoice.notes !== null && <p className="mt-4 text-sm text-foreground-muted">{invoice.notes}</p>}
+      </section>
+
+      {/*
+        The bill as received (Rui, 12-11-2026): kept when it was imported from a
+        file, or attached here later. Everyone who reads the bill may open it and
+        attach one; a replaced original stays in storage, as every document does.
+      */}
+      <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+          {t('energy.invoice.original.title')}
+        </h2>
+        <div className="flex flex-wrap items-center gap-3">
+          {invoice.originalFileId === null ? (
+            <p className="text-sm text-foreground-muted">{t('energy.invoice.original.none')}</p>
+          ) : (
+            <a
+              href={`/files/${invoice.originalFileId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <FileText aria-hidden className="size-4" />
+              {t('energy.invoice.original.open')}
+            </a>
+          )}
+          <FileUpload
+            target={`energy-invoice:${invoice.id}`}
+            label={t(invoice.originalFileId === null ? 'energy.invoice.original.attach' : 'energy.invoice.original.replace')}
+            hint={t('energy.invoice.original.hint')}
+          />
+        </div>
       </section>
 
       {invoice.registers.length > 0 && (

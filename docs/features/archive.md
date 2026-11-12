@@ -11,6 +11,18 @@ maintenance task, partner and fee line, then a meet (POOLSE-81) and a lesson fee
 (POOLSE-116). The list is `RESTORABLE` in
 `apps/api/src/archive/restorable.ts`.
 
+Water, 12-11-2026 (Rui): one analysis (with its alert), one alert, and two entries on a tank
+that carry many rows. *Apagar todas as análises* is `water_history`, and *Apagar todos os
+alertas* is `water_alerts`. Each is one bin row naming the tank and listing every row it took.
+Restoring it brings those rows back and never writes to the tank itself (`restoresSelf: false`).
+It counts as still in the bin while any of those rows is still archived by it (`archivedBy`),
+and it is refused while the tank is archived. These four have no toast *Anular*; they are undone
+from the bin.
+
+Energy, 12-11-2026: `energy_readings` (any reading archive, one or many, as one entry on the meter
+naming each reading by its moment, because a reading has no id), `energy_invoice` (one bill) and
+`energy_invoices` (a meter's bills together). See `features/energy.md` › Histórico.
+
 These are excluded:
 
 - **Staff.** Bringing a person back touches seats, Clerk and invitations, so the answer there

@@ -8,9 +8,10 @@ import { useSavedAction } from '@/lib/saved';
 import type { EnergyMeter } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { ConfirmButton } from '@/components/confirm-action';
-import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
+import { SelectField, TextAreaField, TextField, useSuccessKey } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { METER_CARRIER_OPTIONS, METER_KINDS } from '../../energy-panel';
+import { DIAL_DISPLAY_CODE, DIAL_SETS, DIALS_OF } from '@poolse/rules';
 import { archiveMeter, recordReading, removeReading, updateMeter } from '../../energy.actions';
 
 /**
@@ -55,40 +56,79 @@ export function ReadingForm({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(recordReading, INITIAL);
+  // A fresh, empty form after every saved reading, its date back to now (Rui, 12-11-2026).
+  const fresh = useSuccessKey(state);
+  const dials = DIALS_OF[meter.dialSet];
 
   const valueError = state.fields?.['value'];
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form key={fresh} action={action} className="flex flex-col gap-4">
       <input type="hidden" name="facilityId" value={meter.facilityId} />
       <input type="hidden" name="meterId" value={meter.id} />
 
-      <div className="flex flex-wrap gap-4">
+      {/* Two equal columns on one line (Rui, 12-11-2026): the hint below both, so the inputs align. */}
+      {/*
+        A multi-rate meter is read dial by dial, each named with the code its
+        display shows (12-11-2026); the API adds them into the total.
+      */}
+      {dials.length > 0 && (
+        <fieldset className="flex max-w-xl flex-col gap-2">
+          <legend className="mb-1 text-sm font-medium">{t('energy.dials.legend', { unit: meter.unit })}</legend>
+          <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+            {dials.map((dial) => {
+              const error = state.fields?.[`dial_${dial}`];
+              const code = DIAL_DISPLAY_CODE[dial];
+              return (
+                <TextField
+                  key={dial}
+                  name={`dial_${dial}`}
+                  label={code === null ? t(`energy.dials.name.${dial}`) : `${t(`energy.dials.name.${dial}`)} (${code})`}
+                  inputMode="decimal"
+                  required
+                  {...(error === undefined ? {} : { error: t(error, state.values ?? {}) })}
+                />
+              );
+            })}
+          </div>
+        </fieldset>
+      )}
+
+      <div className="grid max-w-xl grid-cols-1 items-start gap-4 sm:grid-cols-2">
+        {dials.length === 0 && (
         <TextField
           name="value"
           label={t(meter.reads === 'cumulative_index' ? 'energy.valueIndex' : 'energy.valueInterval', { unit: meter.unit })}
-          hint={
-            meter.reads === 'cumulative_index' && meter.latestValue !== null
-              ? t('energy.lastWas', { value: meter.latestValue, unit: meter.unit })
-              : undefined
-          }
           inputMode="decimal"
           required
-          className="w-48"
           {...(valueError === undefined ? {} : { error: t(valueError, state.values ?? {}) })}
         />
+        )}
         <TextField
           name="takenAt"
           label={t('energy.takenAt')}
           type="datetime-local"
           initial={localNow()}
           required
-          className="w-56"
           {...(state.fields?.['takenAt'] === undefined ? {} : { error: t('energy.takenAtInvalid') })}
         />
       </div>
 
-      <TextAreaField name="note" label={t('energy.note')} rows={2} />
+      {meter.reads === 'cumulative_index' && meter.latestValue !== null && (
+        <p className="-mt-2 text-sm text-foreground-muted">
+          {dials.length > 0 && meter.latestDials !== null
+            ? t('energy.dials.lastWas', {
+                list: dials
+                  .filter((dial) => meter.latestDials?.[dial] !== undefined)
+                  .map((dial) => `${t(`energy.dials.name.${dial}`)} ${meter.latestDials?.[dial]}`)
+                  .join(' · '),
+                unit: meter.unit,
+              })
+            : t('energy.lastWas', { value: meter.latestValue, unit: meter.unit })}
+        </p>
+      )}
+
+      <TextAreaField name="note" label={t('energy.note')} rows={2} className="max-w-xl" />
 
       {state.ok === false && state.errorKey !== undefined && (
         <p className="text-sm text-danger">{t(state.errorKey)}</p>
@@ -187,6 +227,12 @@ export function MeterAdmin({
             label={t('energy.carrierLabel')}
             initial={meter.carrier}
             options={METER_CARRIER_OPTIONS.map((carrier) => ({ value: carrier, label: t(`energy.carrier.${carrier}`) }))}
+          />
+          <SelectField
+            name="dialSet"
+            label={t('energy.dials.setLabel')}
+            initial={meter.dialSet}
+            options={DIAL_SETS.map((set) => ({ value: set, label: t(`energy.dials.set.${set}`) }))}
           />
           <TextField name="unit" label={t('energy.unit')} initial={meter.unit} className="w-28" />
         </div>

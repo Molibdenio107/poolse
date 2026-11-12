@@ -49,6 +49,11 @@ const CHILD_KEYS: Record<string, string> = {
   partner_contact: 'partnerContact',
   partner_group: 'partnerGroup',
   student_record: 'meetResult',
+  // 12-11-2026: water and energy batches.
+  pool_analysis: 'analysis',
+  pool_analysis_alert: 'waterAlert',
+  energy_reading: 'energyReading',
+  energy_invoice: 'energyInvoice',
 };
 
 const BASE = '/dashboard/arquivados';

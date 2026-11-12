@@ -1,4 +1,4 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 
 /**
@@ -70,6 +70,8 @@ export interface InvoiceInput {
   notes: string | null;
   source: 'manual' | 'import';
   sourceFileName: string | null;
+  /** The uploaded original, a `stored_file` of purpose `energy_invoice` (12-11-2026). */
+  originalFileId: string | null;
   registers: RegisterInput[];
   lines: LineInput[];
 }
@@ -108,6 +110,8 @@ export interface InvoiceDetail extends InvoiceSummary {
   regulatedDifferenceCents: number | null;
   notes: string | null;
   sourceFileName: string | null;
+  /** The bill as received, when one was kept — opened at `/files/<id>`. */
+  originalFileId: string | null;
   recordedByName: string | null;
   registers: RegisterInput[];
   lines: LineInput[];
@@ -226,6 +230,7 @@ export async function getInvoice(organizationId: string, invoiceId: string): Pro
         regulated_difference_cents: number | null;
         notes: string | null;
         source_file_name: string | null;
+        original_file_id: string | null;
         recorded_by_name: string | null;
       }
     >(
@@ -235,7 +240,7 @@ export async function getInvoice(organizationId: string, invoiceId: string): Pro
               i.contracted_power_kva::float8 AS contracted_power_kva,
               i.tariff, i.cycle, i.reading_quality::text AS reading_quality,
               i.vat_cents, i.other_charges_cents, i.network_access_cents,
-              i.regulated_difference_cents, i.notes, i.source_file_name,
+              i.regulated_difference_cents, i.notes, i.source_file_name, i.original_file_id,
               ${ACTOR_NAME('bm', 'bu')} AS recorded_by_name
          FROM energy_invoice i
          JOIN energy_meter m ON m.id = i.meter_id AND m.organization_id = i.organization_id
@@ -302,6 +307,7 @@ export async function getInvoice(organizationId: string, invoiceId: string): Pro
       regulatedDifferenceCents: row.regulated_difference_cents,
       notes: row.notes,
       sourceFileName: row.source_file_name,
+      originalFileId: row.original_file_id,
       recordedByName: row.recorded_by_name,
       registers: registers.map((r) => ({
         register: r.register,
@@ -467,6 +473,9 @@ export async function addInvoice(
   if (Object.keys(check.fields).length > 0) throw new InvoiceRefusedError(check.fields);
 
   return withOrg(organizationId, async (tx) => {
+    // The original must be a bill's file of this club, refused otherwise.
+    if (input.originalFileId !== null) await requireBillFile(tx, input.originalFileId);
+
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO energy_invoice
          (organization_id, meter_id, supplier, invoice_number, atcud, document_reference,
@@ -474,10 +483,10 @@ export async function addInvoice(
           contracted_power_kva, tariff, cycle, reading_quality,
           subtotal_cents, vat_cents, total_cents, other_charges_cents, document_total_cents,
           network_access_cents, regulated_difference_cents,
-          source, source_file_name, recorded_by, notes)
+          source, source_file_name, recorded_by, notes, original_file_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
                $14::energy_reading_quality, $15, $16, $17, $18, $19, $20, $21,
-               $22::energy_reading_source, $23, $24, $25)
+               $22::energy_reading_source, $23, $24, $25, $26)
        RETURNING id`,
       [
         organizationId, meterId, input.supplier, input.invoiceNumber, input.atcud, input.documentReference,
@@ -485,7 +494,7 @@ export async function addInvoice(
         input.contractedPowerKva, input.tariff, input.cycle, input.readingQuality,
         input.subtotalCents, input.vatCents, input.totalCents, input.otherChargesCents, input.documentTotalCents,
         input.networkAccessCents, input.regulatedDifferenceCents,
-        input.source, input.sourceFileName, membershipId, input.notes,
+        input.source, input.sourceFileName, membershipId, input.notes, input.originalFileId,
       ],
     );
     const id = rows[0]?.id;
@@ -536,6 +545,45 @@ export async function addInvoice(
     });
 
     return id;
+  });
+}
+
+/** A file that is not a bill's original, or not this club's. */
+export class NotABillFileError extends Error {
+  constructor() {
+    super('That file is not a bill');
+  }
+}
+
+async function requireBillFile(tx: Tx, fileId: string): Promise<void> {
+  const { rowCount } = await tx.query(
+    `SELECT 1 FROM stored_file WHERE id = $1 AND purpose = 'energy_invoice' AND archived_at IS NULL`,
+    [fileId],
+  );
+  if (rowCount === 0) throw new NotABillFileError();
+}
+
+/**
+ * Attach the original to a bill already on record — one filed before files were
+ * kept, or typed by hand (Rui, 12-11-2026). Replaces a previous one; the old file
+ * stays in storage, as every replaced document does. False when the bill is not
+ * this club's or is archived.
+ */
+export async function setInvoiceOriginal(organizationId: string, invoiceId: string, fileId: string): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    await requireBillFile(tx, fileId);
+    const { rowCount } = await tx.query(
+      `UPDATE energy_invoice SET original_file_id = $2 WHERE id = $1 AND archived_at IS NULL`,
+      [invoiceId, fileId],
+    );
+    if (rowCount === 0) return false;
+    await recordAudit(tx, {
+      action: 'energy.invoiceOriginalAttached',
+      entityType: 'energy_invoice',
+      entityId: invoiceId,
+      data: { fileId },
+    });
+    return true;
   });
 }
 

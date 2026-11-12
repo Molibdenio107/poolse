@@ -1240,6 +1240,9 @@
     "noCandidatesHint": "Invite somebody as an administrator first. Ownership only passes to administrators."
   },
   "energy": {
+    "pageSection": {"nav": "Energy sections", "overview": "Overview", "history": "History"},
+    "dials": {"setLabel": "Dials", "set": {"single": "One figure (single rate, gas, water)", "bi": "Two-rate (off-peak, peak-and-standard)", "tri": "Three-rate (off-peak, standard, peak)", "tetra": "Four-rate (super off-peak, off-peak, standard, peak)"}, "name": {"super_vazio": "Super off-peak", "vazio": "Off-peak", "fora_vazio": "Outside off-peak", "cheias": "Standard", "ponta": "Peak"}, "legend": "Reading of each dial ({unit})", "lastWas": "The last reading was: {list} {unit}.", "usedAs": "Used: {list} {unit}", "readAs": "Dials: {list} {unit}", "missing": "This dial is missing.", "foreign": "This meter has no such dial."},
+    "historyList": {"failed": "Could not delete. Try again.", "kindNav": "Readings or bills", "kind": {"readings": "Readings", "invoices": "Bills"}, "meter": "Meter", "allMeters": "All meters", "month": "Month", "allMonths": "All months", "scopeMeter": "of the meter “{name}”", "scopeAllMeters": "of every meter", "scopeMonth": "in {month}", "scopeAllMonths": "of every month", "count": {"readings": "{count, plural, =0 {No readings} one {# reading} other {# readings}}", "invoices": "{count, plural, =0 {No bills} one {# bill} other {# bills}}"}, "none": {"readings": "No readings match these filters.", "invoices": "No bills match these filters."}, "col": {"when": "Date and time", "period": "Period", "meter": "Meter", "value": "Reading", "total": "Total", "by": "Recorded by", "bill": "Bill", "actions": "Actions"}, "archive": {"readings": {"button": "Delete all readings", "title": "Delete the readings?", "message": "{count, plural, one {The reading} other {The # readings}} {scope} go to Archived, where they can be restored."}, "invoices": {"button": "Delete all bills", "title": "Delete the bills?", "message": "{count, plural, one {The bill} other {The # bills}} {scope} go to Archived, where they can be restored."}, "reading": {"title": "Delete this reading?", "message": "The reading goes to Archived, where it can be restored."}, "invoice": {"title": "Delete this bill?", "message": "The bill {name} goes to Archived, where it can be restored."}}},
     "section": "Energy",
     "hint": "No meters at this site yet. Add one to record readings and see consumption month by month.",
     "summary": "{count, plural, one {# meter} other {# meters}}",
@@ -1446,6 +1449,7 @@
       "periodOverlap": "The period overlaps bill {number} ({from} to {to}).",
       "remove": "Remove bill",
       "removeHint": "A bill is not edited: remove it and file it again.",
+      "original": {"title": "Original", "none": "This bill has no original kept.", "open": "View original", "attach": "Attach original", "replace": "Replace original", "hint": "PDF or photo of the bill, up to 10 MB."},
       "removeConfirm": "The bill stops counting. Its number is free to be filed again.",
       "importAction": "Import a bill",
       "importPageTitle": "Import a bill",
@@ -1830,6 +1834,7 @@
     "maxCapacityHint": "Students allowed in the water at once, across every class.",
     "maxCapacityUnlimited": "No limit set — classes in this tank are not capped.",
     "waterImport": {
+      "otherPools": {"question": "This file names {count, plural, one {the tank} other {the tanks}} {names}. Import these rows into {pool}?", "ifNot": "If not, those rows are left out of the import.", "confirm": "Import into {pool}"},
       "action": "Import a laboratory report",
       "open": "Import report",
       "hint": "A laboratory report as a PDF or a photograph, or the club's readings log as .xlsx or .csv. You can also drag one onto this page.",
@@ -1869,7 +1874,7 @@
         "timeInvalid": "The time could not be read",
         "noReadings": "No readings on this line",
         "valueInvalid": "Not a number: {metrics}",
-        "otherPool": "Belongs to another tank",
+        "otherPool": "Names another tank: confirm above",
         "dateInFuture": "Date or time still to come"
       },
       "warning": {
@@ -1934,6 +1939,9 @@
     "addressSaveFailed": "Could not save the address.",
     "open": "Open",
     "openSite": "Open {name}",
+    "trends": {"year": "Year", "month": "Month", "wholeYear": "Whole year", "periodLabel": "{month} {year}", "summaryTitle": "Summary for {period}", "analyses": "Analyses", "coverage": "Days with a reading", "daysOf": "{days} of {of}", "outsideTotal": "Readings outside the limits", "metricsCaption": "Values per parameter in {period}", "labTitle": "Laboratory in the period", "labNone": "No laboratory report in this period.", "openMetric": "{metric}: see more", "band": "This tank's limits: {from} to {to} {unit}.", "recordsCaption": "{metric} records in {period}", "inside": "Inside", "below": "Below the limit", "above": "Above the limit", "col": {"metric": "Parameter", "when": "Date and time", "value": "Value", "limits": "Limits"}, "stat": {"records": "Records", "min": "Minimum", "average": "Average", "max": "Maximum", "outside": "Outside the limits"}, "more": "See more", "summaryLine": "{analyses, plural, one {# analysis} other {# analyses}} · {days} of {of} days · {outside, plural, =0 {nothing outside the limits} one {# reading outside the limits} other {# readings outside the limits}}", "chartHelp": "{metric} chart: use the arrow keys to move through the readings", "chartHint": "Hover or tap a point to see the reading; with the keyboard, use the arrow keys."},
+    "waterExport": {"button": "Export as Excel", "sheet": "Analyses", "date": "Date", "time": "Time", "notes": "Notes"},
+    "waterArchive": {"analyses": {"button": "Delete all analyses", "title": "Delete all analyses?", "message": "{count, plural, one {The analysis} other {The # analyses}} of {pool} and their alerts go to the Archive, where they can be restored."}, "alerts": {"button": "Delete all alerts", "title": "Delete all alerts?", "message": "{count, plural, one {The alert} other {The # alerts}} of {pool} go to the Archive, where they can be restored. The analyses stay."}, "alert": {"aria": "Delete this alert", "title": "Delete this alert?", "message": "The alert goes to the Archive, where it can be restored. The analysis stays."}},
     "waterSection": {
       "nav": "Water quality sections",
       "latest": "Latest analysis",
@@ -6516,7 +6524,14 @@
       "swim_meet": "Meet",
       "lesson_feedback": "Lesson feedback",
       "aviso": "Notice",
-      "staff_note": "Staff note"
+      "staff_note": "Staff note",
+      "pool_analysis": "Water analysis",
+      "pool_analysis_alert": "Water alert",
+      "water_history": "All of a tank's analyses",
+      "water_alerts": "All of a tank's alerts",
+      "energy_readings": "Energy readings",
+      "energy_invoice": "Energy bill",
+      "energy_invoices": "Energy bills"
     },
     "children": {
       "pool": "{count, plural, one {# pool} other {# pools}}",
@@ -6525,7 +6540,11 @@
       "feeLine": "{count, plural, one {# fee line} other {# fee lines}}",
       "partnerContact": "{count, plural, one {# contact} other {# contacts}}",
       "partnerGroup": "{count, plural, one {# group} other {# groups}}",
-      "meetResult": "{count, plural, one {# result} other {# results}}"
+      "meetResult": "{count, plural, one {# result} other {# results}}",
+      "analysis": "{count, plural, one {# analysis} other {# analyses}}",
+      "waterAlert": "{count, plural, one {# alert} other {# alerts}}",
+      "energyReading": "{count, plural, one {# reading} other {# readings}}",
+      "energyInvoice": "{count, plural, one {# bill} other {# bills}}"
     },
     "filter": {
       "kind": "Type",
@@ -8115,7 +8134,7 @@
     "savedNoCertificate": "Exam saved, but the certificate was not attached. Attach it on the exam's row."
   },
   "ai": {
-    "failure": {"keyRejected": "AI reading is on, but Anthropic rejected this server's API key (invalid or revoked). It is not the file: tell Poolse support. Meanwhile, export the document to Excel or CSV and import that file.", "rateLimited": "Too many AI reads in a row. Try again in a minute.", "unavailable": "The AI reading service is not available right now. Try again in a few minutes.", "timeout": "The read took too long and was stopped. Try again in a moment, or with a shorter document.", "fileRejected": "The AI refused this file: it may be password-protected, have too many pages or be too large. Try another version of the document, or export it to Excel or CSV.", "refused": "The AI declined to read the content of this document. Export it to Excel or CSV and import that file.", "tooLong": "The document has too much content for one read. Split it into smaller parts, or export it to Excel or CSV.", "unreadable": "The AI read the document but could not transcribe a usable table. Export it to Excel or CSV and import that file."},
+    "failure": {"readerFault": "The AI read failed because of a Poolse error, not the file. Tell Poolse support. Meanwhile, export the document to Excel or CSV and import that file.", "keyRejected": "AI reading is on, but Anthropic rejected this server's API key (invalid or revoked). It is not the file: tell Poolse support. Meanwhile, export the document to Excel or CSV and import that file.", "rateLimited": "Too many AI reads in a row. Try again in a minute.", "unavailable": "The AI reading service is not available right now. Try again in a few minutes.", "timeout": "The read took too long and was stopped. Try again in a moment, or with a shorter document.", "fileRejected": "The AI refused this file: it may be password-protected, have too many pages or be too large. Try another version of the document, or export it to Excel or CSV.", "refused": "The AI declined to read the content of this document. Export it to Excel or CSV and import that file.", "tooLong": "The document has too much content for one read. Split it into smaller parts, or export it to Excel or CSV.", "unreadable": "The AI read the document but could not transcribe a usable table. Export it to Excel or CSV and import that file."},
     "error": {
       "reader": "Unknown reader.",
       "tokens": "Invalid token count."

@@ -12,6 +12,8 @@ import { getMeter } from '../../energy.actions';
 import { listInvoices } from '../invoice.actions';
 import { MeterAdmin, ReadingForm, RemoveReading } from './meter-forms';
 import { TariffPanel } from './tariff-panel';
+import { EnergyArchiveButton } from '../../../energy/energy-archive-button';
+import { DIALS_OF } from '@poolse/rules';
 import { YearOnYearPanel, hasYearOnYear } from './year-on-year';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 
@@ -224,9 +226,22 @@ export default async function MeterPage({
               )}
 
               <section className="rounded bg-surface p-5 shadow-card">
-                <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                  {t('energy.history')}
-                </h2>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                    {t('energy.history')}
+                  </h2>
+                  {/* Rui, 12-11-2026: the whole list to Arquivados, restorable. Owner and Admin. */}
+                  {canPlan && readings.length > 0 && (
+                    <EnergyArchiveButton
+                      what="batch"
+                      kind="readings"
+                      meterId={meter.id}
+                      month={null}
+                      count={readings.length}
+                      scope={`${t('energy.historyList.scopeMeter', { name: meter.name })} ${t('energy.historyList.scopeAllMonths')}`}
+                    />
+                  )}
+                </div>
 
                 {readings.length === 0 ? (
                   <p className="text-sm text-foreground-muted">{t('energy.noReadings')}</p>
@@ -279,6 +294,21 @@ export default async function MeterPage({
                               </span>
                             )}
                           </span>
+                          {/* What each dial used, in the meter's own order (12-11-2026). */}
+                          {(reading.dialsConsumed ?? reading.dials) !== null && (
+                            <span className="text-xs tabular-nums text-foreground-muted">
+                              {t(reading.dialsConsumed === null ? 'energy.dials.readAs' : 'energy.dials.usedAs', {
+                                list: DIALS_OF[meter.dialSet]
+                                  .filter((dial) => (reading.dialsConsumed ?? reading.dials)?.[dial] !== undefined)
+                                  .map(
+                                    (dial) =>
+                                      `${t(`energy.dials.name.${dial}`)} ${format.number((reading.dialsConsumed ?? reading.dials)?.[dial] ?? 0, { maximumFractionDigits: 1 })}`,
+                                  )
+                                  .join(' · '),
+                                unit: meter.unit,
+                              })}
+                            </span>
+                          )}
                           <span className="text-xs text-foreground-muted">
                             {formatStamp(new Date(reading.takenAt))}
                             {reading.recordedByName !== null && ` · ${reading.recordedByName}`}
@@ -316,6 +346,7 @@ export default async function MeterPage({
                   <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                     {t('energy.invoice.section')}
                   </h2>
+                  <div className="flex flex-wrap items-center gap-2">
                   {bills.canRecord && !meter.archived && (
                     <FromLink
                       href={`${here}/invoices/new`}
@@ -325,6 +356,17 @@ export default async function MeterPage({
                       {t('energy.invoice.add')}
                     </FromLink>
                   )}
+                  {canPlan && bills.invoices.length > 0 && (
+                    <EnergyArchiveButton
+                      what="batch"
+                      kind="invoices"
+                      meterId={meter.id}
+                      month={null}
+                      count={bills.invoices.length}
+                      scope={`${t('energy.historyList.scopeMeter', { name: meter.name })} ${t('energy.historyList.scopeAllMonths')}`}
+                    />
+                  )}
+                  </div>
                 </div>
 
                 {bills.invoices.length === 0 ? (
@@ -344,6 +386,11 @@ export default async function MeterPage({
                             {t('energy.invoice.totalShort')}
                           </th>
                           <th className="py-1 text-right font-medium">{t('energy.invoice.perKwh')}</th>
+                          {canPlan && (
+                            <th className="py-1 text-right font-medium">
+                              <span className="sr-only">{t('energy.historyList.col.actions')}</span>
+                            </th>
+                          )}
                         </tr>
                       </thead>
                       <tbody>
@@ -381,6 +428,16 @@ export default async function MeterPage({
                                 ? `${format.number(bill.totalCents / 100 / bill.kwh, { maximumFractionDigits: 3 })} €`
                                 : '—'}
                             </td>
+                            {canPlan && (
+                              <td className="py-1.5 pl-2 text-right">
+                                <EnergyArchiveButton
+                                  what="invoice"
+                                  meterId={meter.id}
+                                  invoiceId={bill.id}
+                                  name={`${bill.supplier} · ${bill.invoiceNumber}`}
+                                />
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>

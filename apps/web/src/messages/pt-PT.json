@@ -1240,6 +1240,9 @@
     "noCandidatesHint": "Convide alguém como administrador primeiro. A propriedade só passa a administradores."
   },
   "energy": {
+    "pageSection": {"nav": "Secções da energia", "overview": "Painel", "history": "Histórico"},
+    "dials": {"setLabel": "Mostradores", "set": {"single": "Um valor (simples, gás, água)", "bi": "Bi-horário (vazio, fora de vazio)", "tri": "Tri-horário (vazio, cheias, ponta)", "tetra": "Tetra-horário (super vazio, vazio, cheias, ponta)"}, "name": {"super_vazio": "Super vazio", "vazio": "Vazio", "fora_vazio": "Fora de vazio", "cheias": "Cheias", "ponta": "Ponta"}, "legend": "Leitura de cada mostrador ({unit})", "lastWas": "A última leitura foi: {list} {unit}.", "usedAs": "Gasto: {list} {unit}", "readAs": "Mostradores: {list} {unit}", "missing": "Falta este mostrador.", "foreign": "Este contador não tem este mostrador."},
+    "historyList": {"failed": "Não foi possível apagar. Tente de novo.", "kindNav": "Leituras ou faturas", "kind": {"readings": "Leituras", "invoices": "Faturas"}, "meter": "Contador", "allMeters": "Todos os contadores", "month": "Mês", "allMonths": "Todos os meses", "scopeMeter": "do contador «{name}»", "scopeAllMeters": "de todos os contadores", "scopeMonth": "em {month}", "scopeAllMonths": "de todos os meses", "count": {"readings": "{count, plural, =0 {Nenhuma leitura} one {# leitura} other {# leituras}}", "invoices": "{count, plural, =0 {Nenhuma fatura} one {# fatura} other {# faturas}}"}, "none": {"readings": "Não há leituras com estes filtros.", "invoices": "Não há faturas com estes filtros."}, "col": {"when": "Data e hora", "period": "Período", "meter": "Contador", "value": "Leitura", "total": "Total", "by": "Registada por", "bill": "Fatura", "actions": "Ações"}, "archive": {"readings": {"button": "Apagar todas as leituras", "title": "Apagar as leituras?", "message": "{count, plural, one {A leitura} other {As # leituras}} {scope} vão para Arquivados, de onde podem ser recuperadas."}, "invoices": {"button": "Apagar todas as faturas", "title": "Apagar as faturas?", "message": "{count, plural, one {A fatura} other {As # faturas}} {scope} vão para Arquivados, de onde podem ser recuperadas."}, "reading": {"title": "Apagar esta leitura?", "message": "A leitura vai para Arquivados, de onde pode ser recuperada."}, "invoice": {"title": "Apagar esta fatura?", "message": "A fatura {name} vai para Arquivados, de onde pode ser recuperada."}}},
     "section": "Energia",
     "hint": "Ainda não há contadores nesta instalação. Adicione um para registar leituras e ver o consumo mês a mês.",
     "summary": "{count, plural, one {# contador} other {# contadores}}",
@@ -1446,6 +1449,7 @@
       "periodOverlap": "O período sobrepõe-se à fatura {number} ({from} a {to}).",
       "remove": "Remover fatura",
       "removeHint": "Uma fatura não se edita: remova-a e registe-a de novo.",
+      "original": {"title": "Original", "none": "Esta fatura não tem o original guardado.", "open": "Ver original", "attach": "Anexar original", "replace": "Substituir original", "hint": "PDF ou fotografia da fatura, até 10 MB."},
       "removeConfirm": "A fatura deixa de contar. O número fica livre para a registar de novo.",
       "importAction": "Importar fatura",
       "importPageTitle": "Importar uma fatura",
@@ -1830,6 +1834,7 @@
     "maxCapacityHint": "Alunos autorizados na água em simultâneo, somando todas as turmas.",
     "maxCapacityUnlimited": "Sem limite definido — as turmas deste tanque não são limitadas.",
     "waterImport": {
+      "otherPools": {"question": "Este ficheiro indica {count, plural, one {o tanque} other {os tanques}} {names}. Importar estas linhas para {pool}?", "ifNot": "Se não, essas linhas ficam de fora da importação.", "confirm": "Importar para {pool}"},
       "action": "Importar um relatório do laboratório",
       "open": "Importar relatório",
       "hint": "Um relatório do laboratório em PDF ou fotografia, ou o registo de leituras do clube em .xlsx ou .csv. Também pode arrastá-lo para esta página.",
@@ -1869,7 +1874,7 @@
         "timeInvalid": "Não foi possível ler a hora",
         "noReadings": "Sem leituras nesta linha",
         "valueInvalid": "Não é um número: {metrics}",
-        "otherPool": "Pertence a outro tanque",
+        "otherPool": "Indica outro tanque: confirme acima",
         "dateInFuture": "Data ou hora ainda por chegar"
       },
       "warning": {
@@ -1934,6 +1939,9 @@
     "addressSaveFailed": "Não foi possível guardar a morada.",
     "open": "Abrir",
     "openSite": "Abrir {name}",
+    "trends": {"year": "Ano", "month": "Mês", "wholeYear": "Ano inteiro", "periodLabel": "{month} de {year}", "summaryTitle": "Resumo de {period}", "analyses": "Análises", "coverage": "Dias com leitura", "daysOf": "{days} de {of}", "outsideTotal": "Leituras fora dos limites", "metricsCaption": "Valores por parâmetro em {period}", "labTitle": "Laboratório no período", "labNone": "Nenhum relatório do laboratório neste período.", "openMetric": "{metric}: ver mais", "band": "Limites deste tanque: {from} a {to} {unit}.", "recordsCaption": "Registos de {metric} em {period}", "inside": "Dentro", "below": "Abaixo do limite", "above": "Acima do limite", "col": {"metric": "Parâmetro", "when": "Data e hora", "value": "Valor", "limits": "Limites"}, "stat": {"records": "Registos", "min": "Mínimo", "average": "Média", "max": "Máximo", "outside": "Fora dos limites"}, "more": "Ver mais", "summaryLine": "{analyses, plural, one {# análise} other {# análises}} · {days} de {of} dias · {outside, plural, =0 {nada fora dos limites} one {# leitura fora dos limites} other {# leituras fora dos limites}}", "chartHelp": "Gráfico de {metric}: use as setas para percorrer as leituras", "chartHint": "Passe o rato ou toque num ponto para ver a leitura; com o teclado, use as setas."},
+    "waterExport": {"button": "Exportar em Excel", "sheet": "Análises", "date": "Data", "time": "Hora", "notes": "Notas"},
+    "waterArchive": {"analyses": {"button": "Apagar todas as análises", "title": "Apagar todas as análises?", "message": "{count, plural, one {A análise} other {As # análises}} de {pool} e os seus alertas vão para o Arquivo, de onde podem ser recuperados."}, "alerts": {"button": "Apagar todos os alertas", "title": "Apagar todos os alertas?", "message": "{count, plural, one {O alerta} other {Os # alertas}} de {pool} vão para o Arquivo, de onde podem ser recuperados. As análises ficam."}, "alert": {"aria": "Apagar este alerta", "title": "Apagar este alerta?", "message": "O alerta vai para o Arquivo, de onde pode ser recuperado. A análise fica."}},
     "waterSection": {
       "nav": "Secções da qualidade da água",
       "latest": "Última análise",
@@ -6516,7 +6524,14 @@
       "swim_meet": "Prova",
       "lesson_feedback": "Feedback de aula",
       "aviso": "Aviso",
-      "staff_note": "Recado da equipa"
+      "staff_note": "Recado da equipa",
+      "pool_analysis": "Análise da água",
+      "pool_analysis_alert": "Alerta da água",
+      "water_history": "Todas as análises de um tanque",
+      "water_alerts": "Todos os alertas de um tanque",
+      "energy_readings": "Leituras de energia",
+      "energy_invoice": "Fatura de energia",
+      "energy_invoices": "Faturas de energia"
     },
     "children": {
       "pool": "{count, plural, one {# tanque} other {# tanques}}",
@@ -6525,7 +6540,11 @@
       "feeLine": "{count, plural, one {# linha de pagamento} other {# linhas de pagamento}}",
       "partnerContact": "{count, plural, one {# contacto} other {# contactos}}",
       "partnerGroup": "{count, plural, one {# grupo} other {# grupos}}",
-      "meetResult": "{count, plural, one {# resultado} other {# resultados}}"
+      "meetResult": "{count, plural, one {# resultado} other {# resultados}}",
+      "analysis": "{count, plural, one {# análise} other {# análises}}",
+      "waterAlert": "{count, plural, one {# alerta} other {# alertas}}",
+      "energyReading": "{count, plural, one {# leitura} other {# leituras}}",
+      "energyInvoice": "{count, plural, one {# fatura} other {# faturas}}"
     },
     "filter": {
       "kind": "Tipo",
@@ -8115,7 +8134,7 @@
     "savedNoCertificate": "Exame guardado, mas o certificado não foi anexado. Anexe-o na linha do exame."
   },
   "ai": {
-    "failure": {"keyRejected": "A leitura com IA está ligada, mas a Anthropic recusou a chave da API deste servidor (inválida ou revogada). Não é um problema do ficheiro: avise o suporte Poolse. Entretanto, exporte o documento para Excel ou CSV e importe esse ficheiro.", "rateLimited": "Demasiadas leituras com IA seguidas. Tente de novo dentro de um minuto.", "unavailable": "O serviço de leitura com IA não está disponível neste momento. Tente de novo dentro de alguns minutos.", "timeout": "A leitura demorou demasiado e foi interrompida. Tente de novo dentro de momentos, ou com um documento mais curto.", "fileRejected": "A IA recusou este ficheiro: pode estar protegido por palavra-passe, ter demasiadas páginas ou ser demasiado grande. Experimente outra versão do documento, ou exporte-o para Excel ou CSV.", "refused": "A IA não aceitou ler o conteúdo deste documento. Exporte-o para Excel ou CSV e importe esse ficheiro.", "tooLong": "O documento tem demasiado conteúdo para uma só leitura. Divida-o em partes mais pequenas, ou exporte-o para Excel ou CSV.", "unreadable": "A IA leu o documento, mas não conseguiu transcrever uma tabela utilizável. Exporte-o para Excel ou CSV e importe esse ficheiro."},
+    "failure": {"readerFault": "A leitura com IA falhou por um erro do Poolse, não do ficheiro. Avise o suporte Poolse. Entretanto, exporte o documento para Excel ou CSV e importe esse ficheiro.", "keyRejected": "A leitura com IA está ligada, mas a Anthropic recusou a chave da API deste servidor (inválida ou revogada). Não é um problema do ficheiro: avise o suporte Poolse. Entretanto, exporte o documento para Excel ou CSV e importe esse ficheiro.", "rateLimited": "Demasiadas leituras com IA seguidas. Tente de novo dentro de um minuto.", "unavailable": "O serviço de leitura com IA não está disponível neste momento. Tente de novo dentro de alguns minutos.", "timeout": "A leitura demorou demasiado e foi interrompida. Tente de novo dentro de momentos, ou com um documento mais curto.", "fileRejected": "A IA recusou este ficheiro: pode estar protegido por palavra-passe, ter demasiadas páginas ou ser demasiado grande. Experimente outra versão do documento, ou exporte-o para Excel ou CSV.", "refused": "A IA não aceitou ler o conteúdo deste documento. Exporte-o para Excel ou CSV e importe esse ficheiro.", "tooLong": "O documento tem demasiado conteúdo para uma só leitura. Divida-o em partes mais pequenas, ou exporte-o para Excel ou CSV.", "unreadable": "A IA leu o documento, mas não conseguiu transcrever uma tabela utilizável. Exporte-o para Excel ou CSV e importe esse ficheiro."},
     "error": {
       "reader": "Leitura desconhecida.",
       "tokens": "Contagem de tokens inválida."

@@ -16,6 +16,10 @@ import { StudentsController } from '../students/students.controller.js';
 import { FacilitiesController } from '../facilities/facilities.controller.js';
 import { FeePeriodsController, FeePlansController } from '../billing/fees.controller.js';
 import { archiveMeet } from '../meets/meets.repository.js';
+import { archiveAllAnalyses, archiveAllWaterAlerts } from '../facilities/analyses.repository.js';
+import { archiveEnergyHistory } from '../energy/history.repository.js';
+import { archiveInvoice } from '../energy/invoices.repository.js';
+import { EnergyController } from '../energy/energy.controller.js';
 import {
   ownerSql,
   actingAs,
@@ -50,6 +54,43 @@ async function addPool(tenant: ScratchTenant, name: string, facilityId = tenant.
     [tenant.organizationId, facilityId, name],
   );
   return row!.id;
+}
+
+/** A meter with two readings and two bills — Energia › Histórico, 12-11-2026. */
+async function addMeterWithHistory(tenant: ScratchTenant, name: string) {
+  const [meter] = await tenant.sql<{ id: string }>(
+    `INSERT INTO energy_meter (organization_id, facility_id, name) VALUES ($1, $2, $3) RETURNING id`,
+    [tenant.organizationId, tenant.facilityId, name],
+  );
+  const meterId = meter!.id;
+  await tenant.sql(
+    `INSERT INTO energy_reading (organization_id, meter_id, taken_at, value)
+     VALUES ($1, $2, '2026-10-01 09:00+00', 100), ($1, $2, '2026-11-01 09:00+00', 180)`,
+    [tenant.organizationId, meterId],
+  );
+  const bills: string[] = [];
+  for (const [number, start, end] of [
+    ['FT 1', '2026-09-01', '2026-09-30'],
+    ['FT 2', '2026-10-01', '2026-10-31'],
+  ] as const) {
+    const [bill] = await tenant.sql<{ id: string }>(
+      `INSERT INTO energy_invoice (organization_id, meter_id, supplier, invoice_number, issued_on,
+                                   period_start, period_end, subtotal_cents, vat_cents, total_cents,
+                                   document_total_cents)
+       VALUES ($1, $2, 'EDP', $3, $5, $4, $5, 1000, 230, 1230, 1230) RETURNING id`,
+      [tenant.organizationId, meterId, number, start, end],
+    );
+    bills.push(bill!.id);
+  }
+  return { meterId, bills };
+}
+
+async function liveReadings(tenant: ScratchTenant, meterId: string): Promise<number> {
+  const [row] = await tenant.sql<{ n: number }>(
+    `SELECT count(*)::int AS n FROM energy_reading WHERE meter_id = $1 AND archived_at IS NULL`,
+    [meterId],
+  );
+  return row!.n;
 }
 
 async function addStudent(tenant: ScratchTenant, firstName: string): Promise<string> {
@@ -130,7 +171,7 @@ test('QA 2: a site comes back with the tanks archived with it, and not one archi
 
       const entry = await entryFor(tenant, 'facility.archived', tenant.facilityId);
       assert.deepEqual(
-        entry.data.cascade?.map((item) => item.id).sort(),
+        entry.data.cascade?.map((item) => ("id" in item ? item.id : "")).sort(),
         [a, b].sort(),
         'the entry lists exactly the tanks this action took',
       );
@@ -474,6 +515,36 @@ test('every cascading kind records its cascade on the entry it writes', async ()
       await archiveMeet(tenant.organizationId, meet!.id);
       return { action: 'swim_meet.archived', id: meet!.id };
     },
+    // 12-11-2026: a tank's history and its alerts, one entry each.
+    water_history: async (tenant) => {
+      const pool = await addPool(tenant, 'Piscina H');
+      await tenant.sql(`INSERT INTO pool_analysis (organization_id, pool_id, taken_at) VALUES ($1, $2, now())`, [
+        tenant.organizationId,
+        pool,
+      ]);
+      await archiveAllAnalyses(tenant.organizationId, pool);
+      return { action: 'pool.historyArchived', id: pool };
+    },
+    water_alerts: async (tenant) => {
+      const pool = await addPool(tenant, 'Piscina W');
+      await tenant.sql(
+        `WITH a AS (INSERT INTO pool_analysis (organization_id, pool_id, taken_at) VALUES ($1, $2, now()) RETURNING id)
+         INSERT INTO pool_analysis_alert (organization_id, pool_id, analysis_id, metrics) SELECT $1, $2, a.id, '{ph}' FROM a`,
+        [tenant.organizationId, pool],
+      );
+      await archiveAllWaterAlerts(tenant.organizationId, pool);
+      return { action: 'pool.alertsArchived', id: pool };
+    },
+    energy_readings: async (tenant) => {
+      const { meterId } = await addMeterWithHistory(tenant, 'Contador R');
+      await archiveEnergyHistory(tenant.organizationId, { kind: 'readings', meterId, month: null });
+      return { action: 'energy.readingsArchived', id: meterId };
+    },
+    energy_invoices: async (tenant) => {
+      const { meterId } = await addMeterWithHistory(tenant, 'Contador F');
+      await archiveEnergyHistory(tenant.organizationId, { kind: 'invoices', meterId, month: null });
+      return { action: 'energy.invoicesArchived', id: meterId };
+    },
   };
 
   for (const kind of RESTORABLE.filter((one) => one.cascades.length > 0)) {
@@ -812,5 +883,156 @@ test('sweep: an archive that was a consequence of another change is not offered'
       assert.equal((await bin.list()).total, 0);
       await expectStatus(() => bin.restore(entry!.id), 404);
     });
+  });
+});
+
+test('12-11-2026: a tank’s whole water history leaves in one entry and comes back with its alerts', async () => {
+  await withScratchTenant(async (tenant) => {
+    const pool = await addPool(tenant, 'Piscina A');
+    const analysis = async (sql: string): Promise<string> => {
+      const [row] = await tenant.sql<{ id: string }>(
+        `INSERT INTO pool_analysis (organization_id, pool_id, taken_at, archived_at)
+         VALUES ($1, $2, now() - interval '2 days', ${sql}) RETURNING id`,
+        [tenant.organizationId, pool],
+      );
+      return row!.id;
+    };
+    const first = await analysis('NULL');
+    const second = await analysis('NULL');
+    const earlier = await analysis("now() - interval '1 hour'");
+    const [alert] = await tenant.sql<{ id: string }>(
+      `INSERT INTO pool_analysis_alert (organization_id, pool_id, analysis_id, metrics)
+       VALUES ($1, $2, $3, '{ph}') RETURNING id`,
+      [tenant.organizationId, pool, first],
+    );
+
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      const facilities = new FacilitiesController();
+      assert.deepEqual(await facilities.archiveAllAnalyses(pool), { archived: 2 });
+
+      const entry = await entryFor(tenant, 'pool.historyArchived', pool);
+      const page = await bin.list();
+      const listed = page.items.find((item) => item.id === entry.id);
+      assert.equal(listed?.kind, 'water_history');
+      assert.equal(listed?.name, 'Piscina A');
+      assert.equal(listed?.archived, true, 'still in the bin while its rows are');
+
+      const restored = await bin.restore(entry.id);
+      assert.deepEqual(restored.children, { pool_analysis: 2, pool_analysis_alert: 1 });
+      const again = await refusal(() => bin.restore(entry.id));
+      assert.equal(again['code'] ?? again['message'], 'already_restored');
+    });
+
+    assert.equal(await archivedAt(tenant, 'pool_analysis', first), false);
+    assert.equal(await archivedAt(tenant, 'pool_analysis', second), false);
+    assert.equal(await archivedAt(tenant, 'pool_analysis', earlier), true, 'archived on its own, stays so');
+    assert.equal(await archivedAt(tenant, 'pool_analysis_alert', alert!.id), false);
+    assert.equal(await archivedAt(tenant, 'pool', pool), false, 'the tank itself was never touched');
+  });
+});
+
+test('12-11-2026: an alert archived alone, and all of a tank’s, each come back from the bin', async () => {
+  await withScratchTenant(async (tenant) => {
+    const pool = await addPool(tenant, 'Piscina B');
+    const alerts: string[] = [];
+    for (let i = 0; i < 2; i += 1) {
+      const [row] = await tenant.sql<{ id: string }>(
+        `WITH a AS (INSERT INTO pool_analysis (organization_id, pool_id, taken_at)
+                    VALUES ($1, $2, now() - interval '1 day') RETURNING id)
+         INSERT INTO pool_analysis_alert (organization_id, pool_id, analysis_id, metrics)
+         SELECT $1, $2, a.id, '{ph}' FROM a RETURNING id`,
+        [tenant.organizationId, pool],
+      );
+      alerts.push(row!.id);
+    }
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const facilities = new FacilitiesController();
+      assert.deepEqual(await facilities.archiveAlert(alerts[0]!), { archived: true });
+      const one = await entryFor(tenant, 'pool.alertArchived', alerts[0]!);
+      assert.equal((await bin.restore(one.id)).kind, 'pool_analysis_alert');
+
+      assert.deepEqual(await facilities.archiveAllAlerts(pool), { archived: 2 });
+      const all = await entryFor(tenant, 'pool.alertsArchived', pool);
+      assert.deepEqual((await bin.restore(all.id)).children, { pool_analysis_alert: 2 });
+    });
+
+    for (const id of alerts) assert.equal(await archivedAt(tenant, 'pool_analysis_alert', id), false);
+  });
+});
+
+test('12-11-2026: clearing water history is refused to an instructor and to maintenance', async () => {
+  await withScratchTenant(async (tenant) => {
+    const pool = await addPool(tenant, 'Piscina C');
+    for (const role of ['instructor', 'maintenance'] as const) {
+      await actingAs(tenant, { roles: [role] }, async () => {
+        const facilities = new FacilitiesController();
+        await expectStatus(() => facilities.archiveAllAnalyses(pool), 403);
+        await expectStatus(() => facilities.archiveAllAlerts(pool), 403);
+      });
+    }
+  });
+});
+
+test('12-11-2026: a meter’s readings leave as one entry, a month at a time, and come back by their moments', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { meterId } = await addMeterWithHistory(tenant, 'Contador geral');
+    const energy = new EnergyController();
+
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      const october = await energy.history('readings', meterId, '2026-10');
+      assert.equal(october.readings?.total, 1);
+      assert.deepEqual(october.months, ['2026-11', '2026-10']);
+
+      assert.deepEqual(await energy.archiveHistory({ kind: 'readings', meterId, month: '2026-10' }), { archived: 1 });
+      assert.equal(await liveReadings(tenant, meterId), 1, 'only October went');
+
+      const entry = await entryFor(tenant, 'energy.readingsArchived', meterId);
+      const listed = (await bin.list()).items.find((item) => item.id === entry.id);
+      assert.equal(listed?.kind, 'energy_readings');
+      assert.equal(listed?.name, 'Contador geral');
+      assert.deepEqual((await bin.restore(entry.id)).children, { energy_reading: 1 });
+    });
+    assert.equal(await liveReadings(tenant, meterId), 2);
+  });
+});
+
+test('12-11-2026: a meter’s bills leave together and come back; one bill alone is its own entry', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { meterId, bills } = await addMeterWithHistory(tenant, 'Contador piscina');
+    const energy = new EnergyController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      assert.deepEqual(await energy.archiveHistory({ kind: 'invoices', meterId }), { archived: 2 });
+      assert.equal((await energy.history('invoices', meterId)).invoices?.total, 0);
+      const all = await entryFor(tenant, 'energy.invoicesArchived', meterId);
+      assert.deepEqual((await bin.restore(all.id)).children, { energy_invoice: 2 });
+      assert.equal((await energy.history('invoices', meterId)).invoices?.total, 2);
+      // One bill from its own page: its own entry, named by supplier and number.
+      await archiveInvoice(tenant.organizationId, bills[0]!);
+      const one = await entryFor(tenant, 'energy.invoiceArchived', bills[0]!);
+      const restored = await bin.restore(one.id);
+      assert.equal(restored.kind, 'energy_invoice');
+      assert.equal(restored.name, 'EDP · FT 1');
+    });
+    for (const id of bills) assert.equal(await archivedAt(tenant, 'energy_invoice', id), false);
+  });
+});
+
+test('12-11-2026: Energia’s history is read by maintenance and cleared only by owner and admin', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { meterId } = await addMeterWithHistory(tenant, 'Contador C');
+    const energy = new EnergyController();
+    await actingAs(tenant, { roles: ['maintenance'] }, async () => {
+      const read = await energy.history('readings', meterId);
+      assert.equal(read.readings?.total, 2);
+      assert.equal(read.canArchive, false);
+      await expectStatus(() => energy.archiveHistory({ kind: 'readings', meterId }), 403);
+    });
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      await expectStatus(() => energy.archiveHistory({ kind: 'everything' }), 400);
+      await expectStatus(() => energy.archiveHistory({ kind: 'readings', month: '2026-13' }), 400);
+    });
+    assert.equal(await liveReadings(tenant, meterId), 2, 'nothing was archived');
   });
 });

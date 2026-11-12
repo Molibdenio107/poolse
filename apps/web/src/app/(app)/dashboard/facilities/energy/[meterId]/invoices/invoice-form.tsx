@@ -183,10 +183,16 @@ export function InvoiceForm({
   const [draft, setDraft] = useState<InvoiceDraft>(emptyInvoiceDraft);
   const [source, setSource] = useState<'manual' | 'import'>('manual');
   const [fileName, setFileName] = useState('');
+  const [originalFileId, setOriginalFileId] = useState('');
 
   const [read, readAction, reading] = useSavedAction(readInvoiceFileAction, INITIAL_READ);
   const [preview, previewAction, previewing] = useSavedAction(previewInvoiceAction, INITIAL_SEND);
   const [commit, commitAction, committing] = useSavedAction(commitInvoiceAction, INITIAL_SEND);
+
+  // The kept original follows every read, the reader switched off included (12-11-2026).
+  useEffect(() => {
+    if (read.originalFileId !== undefined) setOriginalFileId(read.originalFileId);
+  }, [read]);
 
   // The parser's answer becomes the form. Once per answer — identity, not a
   // boolean, so a re-render does not overwrite what the operator then edited.
@@ -197,6 +203,7 @@ export function InvoiceForm({
     setDraft(read.draft);
     setSource('import');
     setFileName(read.fileName ?? '');
+    setOriginalFileId(read.originalFileId ?? '');
     setOpen(true);
     // The bill names its delivery point; the meter carrying that CPE is the
     // one. None carrying it, and a site to make one at: propose that.
@@ -279,6 +286,7 @@ export function InvoiceForm({
       <input type="hidden" name="newMeterFacilityId" value={creating ? newMeterFacilityId : ''} />
       <input type="hidden" name="source" value={source} />
       <input type="hidden" name="sourceFileName" value={fileName} />
+      <input type="hidden" name="originalFileId" value={originalFileId} />
       <input type="hidden" name="draft" value={JSON.stringify(draft)} />
     </>
   );

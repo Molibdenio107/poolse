@@ -30,6 +30,8 @@ export type FileTarget =
   | 'own-photo'
   /** `login-photo:<membership>` — the Owner correcting a login's photo, through Clerk (POOLSE-196). */
   | `login-photo:${string}`
+  /** `energy-invoice:<invoice>` — a bill's original, attached after it was filed (12-11-2026). */
+  | `energy-invoice:${string}`
   | 'logo'
   /** `document-template:<kind>` — a club's own form, an image of its paper (POOLSE-142). */
   | `document-template:${'socio_form' | 'fpn_declaration' | 'fpn_declaration_minor'}`;
@@ -47,7 +49,8 @@ export type FilePurpose =
   | 'own_photo'
   | 'student_document'
   | 'student_id_document'
-  | 'boletim_template';
+  | 'boletim_template'
+  | 'energy_invoice';
 
 export function purposeOf(target: FileTarget): FilePurpose {
   if (target === 'logo') return 'logo';
@@ -72,6 +75,8 @@ export function purposeOf(target: FileTarget): FilePurpose {
       return 'student_document';
     case 'document-template':
       return 'boletim_template';
+    case 'energy-invoice':
+      return 'energy_invoice';
     default:
       return 'qualification_document';
   }

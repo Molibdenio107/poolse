@@ -1021,6 +1021,8 @@ export interface EnergyMeter {
   carrier: MeterCarrier;
   unit: string;
   reads: MeterReads;
+  /** Which dials a reading carries (12-11-2026): `single`, `bi`, `tri` or `tetra` — `@poolse/rules`. */
+  dialSet: import('@poolse/rules').DialSet;
   initialIndex: number | null;
   replacedMeterId: string | null;
   replacedMeterName: string | null;
@@ -1032,6 +1034,8 @@ export interface EnergyMeter {
   archived: boolean;
   latestAt: string | null;
   latestValue: number | null;
+  /** The latest reading's dials, for "a última leitura foi" per dial. */
+  latestDials: Partial<Record<import('@poolse/rules').Dial, number>> | null;
   readingCount: number;
 }
 
@@ -1050,6 +1054,9 @@ export interface EnergyReading {
    */
   costCents: number | null;
   costProvenance: CostProvenance | null;
+  /** The reading's dials and what each used since the one before (12-11-2026); null on a one-figure meter. */
+  dials: Partial<Record<import('@poolse/rules').Dial, number>> | null;
+  dialsConsumed: Partial<Record<import('@poolse/rules').Dial, number>> | null;
 }
 
 /**
@@ -1249,6 +1256,8 @@ export interface EnergyInvoiceDetail extends EnergyInvoiceSummary {
   regulatedDifferenceCents: number | null;
   notes: string | null;
   sourceFileName: string | null;
+  /** The bill as received, opened at `/files/<id>` — 12-11-2026. */
+  originalFileId: string | null;
   recordedByName: string | null;
   registers: EnergyInvoiceRegister[];
   lines: EnergyInvoiceLine[];

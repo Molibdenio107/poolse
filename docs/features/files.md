@@ -17,6 +17,7 @@ Built 12 October 2026. What a club can upload, who can see it, and how it is kep
 | A staff member's *Identificação* tab (POOLSE-149, 02-11-2026) | The ID document's photograph, front and back, image or PDF; **sealed**, a look by anybody but the person audited, shredded when replaced, removed or retained away | Owner, admin, the person | Owner, admin, the person |
 | A staff member's *Contrato* tab (POOLSE-149, 02-11-2026) | The signed contract, PDF, Word or a photograph; earlier versions kept | Owner, admin (an Admin never their own) | Owner, admin, the person — an Admin never the Owner's |
 | A student's *Documentos* tab, and the family app (POOLSE-179) | The ID document's photograph; **sealed** (purpose `student_id_document`), shredded when replaced or on anonymisation, every read audited | Owner, admin; a family sends one for the office to accept | Owner, admin. Never shown back to the family |
+| An energy bill's page, and the bill import (12-11-2026) | The bill as received (purpose `energy_invoice`), kept on import or attached later | Owner, admin, maintenance | Owner, admin, maintenance |
 | *O meu perfil* (28-10-2026) | Your own photograph. It is Clerk's, like your name: the avatar at the top right, in every club | You | Wherever your avatar shows |
 
 **Not yet:** incident attachments (health data, which need encryption). That control stays

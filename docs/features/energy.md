@@ -319,3 +319,54 @@ The page opens on **Importar fatura**, a folded card (*Importar fatura — PDF o
 **A meter says what it measures** — *Mede*: electricity, gas or water (`energy_meter.carrier`), on the add and edit forms. An edit that does not send it keeps it.
 
 **Bills are read automatically** (Rui, 22-10-2026): since POOLSE-137 that is `energy_invoice_ai` on at /admin → Plataforma and the club ticked on its page (`docs/deploy.md`). Each read is a paid call and leaves a row in `ai_read` (reader `energy_invoice`) — claimed before the call, finished after, read or not, never for a file refused before the call — counted against the club's monthly cap; `/admin` → Faturação shows the count for the last six months and the club's page its reads and estimated cost. Switched off for the club, the page says so and the form is there; no key or the month's cap used, it says that instead. The reader uses structured output, not a forced tool call, which the current Opus refuses. It still reads the **electricity** fatura only; a gas bill is typed.
+
+## Histórico — every record, and its archive (Rui, 12-11-2026)
+
+- **Energia has two sections**, *Painel* (the dashboard and the meters, as before) and *Histórico*.
+  The *Importar fatura* card stays above both.
+- **Histórico** lists every meter's readings or bills (*Leituras* / *Faturas*), filtered by meter
+  and month, ten a page, all in the URL (`GET /energy/history`). A reading's month is the moment it
+  was taken (Lisbon), and a bill's month is the one its period ends in. Owner, Admin and Maintenance
+  read it.
+- **Apagar** is Owner and Admin's (`POST /energy/history/archive`). It works per row, or on everything
+  the filter shows, with the scope said in words ("as 12 faturas do contador «Geral» em outubro de
+  2026"). A meter's own *Leituras* and *Faturas* have the same *Apagar todas* and a per-row delete.
+- **Everything goes to Arquivados and is restorable.** A reading has no id (a hypertable keyed
+  on meter and moment), so any reading archive, one or many, is one entry on the meter
+  (`energy_readings`) listing each moment. One bill is its own entry (`energy_invoice`). A meter's
+  bills archived together are one entry (`energy_invoices`). A bill restored after another
+  with the same supplier and number was filed is refused, naming the number.
+
+## A bill's original file (Rui, 12-11-2026)
+
+- **A bill imported from a PDF or photo keeps the file.** The bytes read by the parser also go to
+  file storage (`stored_file`, purpose `energy_invoice`, R2), and the bill points at them
+  (`energy_invoice.original_file_id`). This is best-effort: if storage fails, the bill has no original, and
+  the read still works. A file read but never filed stays in storage unattached.
+- **The bill's page has an *Original* section**: *Ver original* opens `/files/<id>`, and *Anexar original* /
+  *Substituir original* attaches one later (`PUT /energy/invoices/:id/original`). That covers bills
+  filed before 12-11-2026 and bills typed by hand.
+- **Who:** Owner, Admin and Maintenance, the roles that read bills (`RULES.energy_invoice`). A file of
+  any other purpose is refused.
+- **Space:** a bill PDF is roughly 100–500 KB in object storage. The database holds only an id.
+
+## The reading form (12-11-2026)
+
+The value and the date sit side by side at the same width, with "a última leitura foi…" on its own
+line beneath, and the form empties after every saved reading, its date back to now.
+
+## Mostradores — a reading per dial (Rui, 12-11-2026)
+
+- **A meter says its dials** (`energy_meter.dial_set`, *Mostradores* on its form): one figure
+  (simples, gas, water); bi-horário (vazio, fora de vazio); tri-horário (vazio, cheias, ponta);
+  tetra-horário (super vazio, vazio, cheias, ponta: BTE and MT). These follow the ERSE tariff options.
+- **A reading of a multi-dial meter asks one value per dial**, each labelled with the code the
+  E-REDES display shows (1.8.1 vazio, 1.8.2 ponta, 1.8.3 cheias, 1.8.4 super vazio). The total
+  (`value`) is their sum, held by a check, so every existing sum, chart and cost reads it unchanged.
+- **Each dial is its own series.** The dial-never-goes-back trigger checks every dial against
+  that dial either side and names it, so the refusal sits under that field. The readings list
+  shows what each dial used since the reading before.
+- **Not yet:** a cost per period. Today's tariff has one price with an uncertainty range, so the estimate
+  stays total × price. A bill's own per-period lines are already exact. The period *hours* are
+  not stored: ERSE moves them in 2027 (Diretiva 3/2026). See `docs/research/energy-metering-2026-11.md`.
+- **One definition** of the sets and dials: `@poolse/rules` › `energy-dials.ts`.

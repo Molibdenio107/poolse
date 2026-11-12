@@ -1643,9 +1643,10 @@ pool_analysis_alert
   metrics pool_metric[] not null,                       -- snapshot of what failed
   recipients text[] not null default '{}',              -- who was written to, as they were then
   delivered_at timestamptz,                             -- null = recorded, nothing sent
-  created_at, updated_at                                -- no archived_at
+  archived_at timestamptz,                              -- 12-11-2026: Apagar on Alertas, or with its analysis
+  created_at, updated_at
   unique (organization_id, id)
-  unique (organization_id, analysis_id)                 -- one alert per analysis, not partial
+  unique (organization_id, analysis_id) where archived_at is null   -- one live alert per analysis
   foreign key (organization_id, pool_id) references pool (organization_id, id)
   foreign key (organization_id, analysis_id) references pool_analysis (organization_id, id)
     on delete cascade
@@ -4579,3 +4580,26 @@ Migration `1794655800000_student-login-child-age` (POOLSE-218):
 **`medical_exam_schedule`** (POOLSE-192) is an exam due, before it happens: `kind` (`appointment`, `deadline`), `due_on`, `due_time` (the clinic's wall clock, so a `time`, and only for an appointment), `place`, `note`, `aviso_message_id`, and `recorded_exam_id` when an exam closed it. One open per student by a partial unique index. Health data: office only, erased by `apply_retention()`. **`message.health`** marks a reminder: left out of an instructor's list, and its words go with the health data.
 
 **`lesson_challenge`** (POOLSE-195) is a lesson's *Desafio*: 200 characters on a turma and a date, as the plan is keyed, one live per occurrence. A table of its own, because a plan refuses a blank body and its row is deleted when emptied. **`lesson_feedback.challenge_done`** is the answer, and **`challenge_text`** the words it answered, so ending a Desafio takes nothing from those who answered.
+
+#### energy_invoice.original_file_id — 12-11-2026
+
+```
+energy_invoice
+  original_file_id uuid                                  -- the bill as received; null = none kept
+  foreign key (organization_id, original_file_id) references stored_file (organization_id, id)
+```
+
+`file_purpose` gains `energy_invoice` (read and written by owner, admin, maintenance).
+
+#### Energy dials — 12-11-2026
+
+```
+energy_meter
+  dial_set energy_dial_set not null default 'single'      -- single | bi | tri | tetra
+energy_reading
+  dial_vazio, dial_fora_vazio, dial_cheias, dial_ponta, dial_super_vazio numeric(14,3)
+  check (no dial, or value = the dials' sum); check (every dial >= 0)
+```
+
+Columns, not a child table: `energy_reading` is a hypertable, and nothing can hold a foreign key to it.
+`energy_index_monotonic()` checks each dial against the same dial either side.

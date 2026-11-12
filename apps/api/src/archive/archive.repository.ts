@@ -6,6 +6,7 @@ import { TOTAL_COUNT, paginated, totalOf, type PageQuery, type Paginated } from 
 import { personShortName } from '../people/names.js';
 import {
   ARCHIVED_CHILDREN,
+  archivedBySql,
   RESTORABLE,
   UNIQUE_FIELDS,
   cascadeAt,
@@ -207,7 +208,7 @@ async function labelsFor(
     }>(
       `SELECT a.id AS entry_id, ${kind.label.name} AS name,
               ${kind.label.detail ?? 'NULL::text'} AS detail,
-              coalesce(t.archived_at = a.created_at, false) AS still_archived
+              coalesce(${archivedBySql(kind, 'a.created_at')}, false) AS still_archived
          FROM audit_log a
          JOIN ${kind.label.from} ON t.id = a.entity_id AND t.organization_id = a.organization_id
         WHERE a.id = ANY($1::uuid[])`,
@@ -298,7 +299,7 @@ export async function restoreArchive(
 
     const parentColumns = kind.parents.map((p, i) => `t.${p.column}::text AS p${i}`).join(', ');
     const { rows: targets } = await tx.query<Record<string, string | boolean | null>>(
-      `SELECT coalesce(t.archived_at = $2::timestamptz, false) AS this_archive,
+      `SELECT coalesce(${archivedBySql(kind, '$2::timestamptz')}, false) AS this_archive,
               ${kind.label.name} AS name
               ${parentColumns ? `, ${parentColumns}` : ''}
          FROM ${kind.label.from}
@@ -317,9 +318,12 @@ export async function restoreArchive(
       if (typeof parentId === 'string') await refuseIfArchived(tx, parent.kind, parentId);
     }
 
-    await attempt(tx, kind.table, entry.entity_id, () =>
-      tx.query(`UPDATE ${kind.table} SET archived_at = NULL WHERE id = $1`, [entry.entity_id]),
-    );
+    // An entry naming a tank only to say whose rows it took never writes to the tank.
+    if (kind.restoresSelf !== false) {
+      await attempt(tx, kind.table, entry.entity_id, () =>
+        tx.query(`UPDATE ${kind.table} SET archived_at = NULL WHERE id = $1`, [entry.entity_id]),
+      );
+    }
 
     /*
      * A fee line whose enrolment ended while it sat in the bin — sweep,
@@ -417,6 +421,16 @@ async function restoreChild(tx: Tx, item: CascadeItem, at: string): Promise<bool
    * turma was gone, with no lessons in them. So it stays ended and is counted as
    * kept, and the toast says so; the office adds a line from today.
    */
+  // A reading has no id: put back by meter and moment, guarded on this archive's moment.
+  if (item.entityType === 'energy_reading') {
+    const { rowCount } = await tx.query(
+      `UPDATE energy_reading SET archived_at = NULL
+        WHERE meter_id = $1 AND taken_at = $2::timestamptz AND archived_at = $3::timestamptz`,
+      [item.meterId, item.takenAt, at],
+    );
+    return (rowCount ?? 0) > 0;
+  }
+
   if (item.entityType === 'student_fee.ends_on') {
     const { rowCount } = await tx.query(
       `UPDATE student_fee SET ends_on = NULL

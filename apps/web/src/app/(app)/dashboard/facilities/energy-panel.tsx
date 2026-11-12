@@ -11,6 +11,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import type { FormState } from '../actions';
 import { createMeter } from './energy.actions';
+import { DIAL_SETS } from '@poolse/rules';
 
 /**
  * Energy — slices 5.1 and 5.2, on the site's page.
@@ -194,6 +195,12 @@ function MeterDialog({
             label={t('energy.carrierLabel')}
             initial="electricity"
             options={METER_CARRIER_OPTIONS.map((carrier) => ({ value: carrier, label: t(`energy.carrier.${carrier}`) }))}
+          />
+          <SelectField
+            name="dialSet"
+            label={t('energy.dials.setLabel')}
+            initial={"single"}
+            options={DIAL_SETS.map((set) => ({ value: set, label: t(`energy.dials.set.${set}`) }))}
           />
           <TextField name="unit" label={t('energy.unit')} initial="kWh" className="w-28" />
         </div>

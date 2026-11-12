@@ -32,7 +32,14 @@ export type RestorableKindName =
   | 'swim_meet'
   | 'lesson_feedback'
   | 'aviso'
-  | 'staff_note';
+  | 'staff_note'
+  | 'pool_analysis'
+  | 'pool_analysis_alert'
+  | 'water_history'
+  | 'water_alerts'
+  | 'energy_readings'
+  | 'energy_invoice'
+  | 'energy_invoices';
 
 /**
  * One child of an archive action, as recorded in `audit_log.data.cascade`.
@@ -45,6 +52,8 @@ export type RestorableKindName =
  */
 export type CascadeItem =
   | { entityType: ArchivedChild; id: string }
+  // 12-11-2026: an energy reading has no id (a hypertable), so it is named by meter and moment.
+  | { entityType: 'energy_reading'; meterId: string; takenAt: string }
   | { entityType: 'enrollment'; id: string; status: 'active' | 'waiting' }
   | { entityType: 'student_fee.ends_on'; id: string; endsOn: string };
 
@@ -56,6 +65,11 @@ export const ARCHIVED_CHILDREN = {
   partner_group: { table: 'partner_group', parentColumn: 'partner_id' },
   // POOLSE-81: a meet's results leave and come back with it.
   student_record: { table: 'student_record', parentColumn: 'meet_id' },
+  // 12-11-2026: a tank's water history and alerts, archived all at once, come back together.
+  pool_analysis: { table: 'pool_analysis', parentColumn: 'pool_id' },
+  pool_analysis_alert: { table: 'pool_analysis_alert', parentColumn: 'pool_id' },
+  // 12-11-2026: a meter's bills, archived together from Energia › Histórico.
+  energy_invoice: { table: 'energy_invoice', parentColumn: 'meter_id' },
 } as const;
 
 export type ArchivedChild = keyof typeof ARCHIVED_CHILDREN;
@@ -82,7 +96,24 @@ export interface RestorableKind {
   /** Rows that must be live before this one may be. A null column is no parent. */
   parents: { kind: RestorableKindName; column: string }[];
   /** What the archive path takes with it. Empty for most kinds. */
-  cascades: (ArchivedChild | 'enrollment' | 'student_fee.ends_on')[];
+  cascades: (ArchivedChild | 'enrollment' | 'student_fee.ends_on' | 'energy_reading')[];
+  /**
+   * False for an entry that archives a tank's *rows* and names the tank only to
+   * say whose (`water_history`, `water_alerts`, 12-11-2026): the restore brings
+   * back the listed children and never writes to the tank itself.
+   */
+  restoresSelf?: false;
+  /**
+   * SQL saying the entry is still archived, given the archive's moment (`at`).
+   * Default: the row itself still carries that moment. A tank entry asks
+   * whether any of the rows it took still does.
+   */
+  archivedBy?: (at: string) => string;
+}
+
+/** Whether an entry is still in the bin, as SQL over the row aliased `t`. */
+export function archivedBySql(kind: RestorableKind, at: string): string {
+  return kind.archivedBy === undefined ? `t.archived_at = ${at}` : kind.archivedBy(at);
 }
 
 export const RESTORABLE: readonly RestorableKind[] = [
@@ -235,6 +266,103 @@ export const RESTORABLE: readonly RestorableKind[] = [
     parents: [],
     cascades: [],
   },
+  {
+    // 12-11-2026: one analysis from Histórico, with its alert (listed on the entry).
+    kind: 'pool_analysis',
+    module: 'water_quality',
+    action: 'pool.analysisArchived',
+    table: 'pool_analysis',
+    labelKey: 'archive.kind.pool_analysis',
+    label: {
+      from: 'pool_analysis t',
+      name: "(SELECT p.name FROM pool p WHERE p.id = t.pool_id) || ' · ' || to_char(t.taken_at AT TIME ZONE 'Europe/Lisbon', 'DD-MM-YYYY HH24:MI')",
+    },
+    parents: [{ kind: 'pool', column: 'pool_id' }],
+    cascades: [],
+  },
+  {
+    // 12-11-2026: one alert from Alertas.
+    kind: 'pool_analysis_alert',
+    module: 'water_quality',
+    action: 'pool.alertArchived',
+    table: 'pool_analysis_alert',
+    labelKey: 'archive.kind.pool_analysis_alert',
+    label: {
+      from: 'pool_analysis_alert t',
+      name: "(SELECT p.name FROM pool p WHERE p.id = t.pool_id) || ' · ' || to_char(t.raised_at AT TIME ZONE 'Europe/Lisbon', 'DD-MM-YYYY HH24:MI')",
+    },
+    parents: [{ kind: 'pool', column: 'pool_id' }],
+    cascades: [],
+  },
+  {
+    // 12-11-2026: Apagar todas as análises — one entry on the tank, listing them all.
+    kind: 'water_history',
+    module: 'water_quality',
+    action: 'pool.historyArchived',
+    table: 'pool',
+    labelKey: 'archive.kind.water_history',
+    label: { from: 'pool t', name: 't.name' },
+    // The tank must be live to take its history back.
+    parents: [{ kind: 'pool', column: 'id' }],
+    cascades: ['pool_analysis', 'pool_analysis_alert'],
+    restoresSelf: false,
+    archivedBy: (at) =>
+      `(EXISTS (SELECT 1 FROM pool_analysis x WHERE x.pool_id = t.id AND x.archived_at = ${at})
+        OR EXISTS (SELECT 1 FROM pool_analysis_alert y WHERE y.pool_id = t.id AND y.archived_at = ${at}))`,
+  },
+  {
+    // 12-11-2026: Apagar todos os alertas.
+    kind: 'water_alerts',
+    module: 'water_quality',
+    action: 'pool.alertsArchived',
+    table: 'pool',
+    labelKey: 'archive.kind.water_alerts',
+    label: { from: 'pool t', name: 't.name' },
+    parents: [{ kind: 'pool', column: 'id' }],
+    cascades: ['pool_analysis_alert'],
+    restoresSelf: false,
+    archivedBy: (at) =>
+      `EXISTS (SELECT 1 FROM pool_analysis_alert y WHERE y.pool_id = t.id AND y.archived_at = ${at})`,
+  },
+  {
+    // 12-11-2026: one reading or many, always one entry on the meter listing each by its moment.
+    kind: 'energy_readings',
+    module: 'energy',
+    action: 'energy.readingsArchived',
+    table: 'energy_meter',
+    labelKey: 'archive.kind.energy_readings',
+    label: { from: 'energy_meter t', name: 't.name' },
+    parents: [],
+    cascades: ['energy_reading'],
+    restoresSelf: false,
+    archivedBy: (at) =>
+      `EXISTS (SELECT 1 FROM energy_reading x WHERE x.meter_id = t.id AND x.organization_id = t.organization_id AND x.archived_at = ${at})`,
+  },
+  {
+    // A bill archived from its own page or a row of Histórico.
+    kind: 'energy_invoice',
+    module: 'energy',
+    action: 'energy.invoiceArchived',
+    table: 'energy_invoice',
+    labelKey: 'archive.kind.energy_invoice',
+    label: { from: 'energy_invoice t', name: "t.supplier || ' · ' || t.invoice_number" },
+    parents: [],
+    cascades: [],
+  },
+  {
+    // 12-11-2026: Apagar todas as faturas — one entry per meter, listing them.
+    kind: 'energy_invoices',
+    module: 'energy',
+    action: 'energy.invoicesArchived',
+    table: 'energy_meter',
+    labelKey: 'archive.kind.energy_invoices',
+    label: { from: 'energy_meter t', name: 't.name' },
+    parents: [],
+    cascades: ['energy_invoice'],
+    restoresSelf: false,
+    archivedBy: (at) =>
+      `EXISTS (SELECT 1 FROM energy_invoice x WHERE x.meter_id = t.id AND x.archived_at = ${at})`,
+  },
 ];
 
 /**
@@ -261,6 +389,8 @@ export const UNIQUE_FIELDS: Record<string, { field: string; column: string }> = 
   student_fee_one_inscricao_uq: { field: 'kind', column: 'kind::text' },
   // The family wrote again after it was archived: one live answer per lesson.
   lesson_feedback_one_uq: { field: 'feedback', column: 'mood::text' },
+  // A bill with the same supplier and number was filed while this one sat in the bin.
+  energy_invoice_number_uq: { field: 'invoiceNumber', column: 'invoice_number' },
 };
 
 export function restorableByKind(kind: string): RestorableKind | undefined {
@@ -344,6 +474,17 @@ export async function cascadeAt(
         [id, at ?? null],
       );
       for (const row of rows) items.push({ entityType: 'enrollment', id: row.id, status: row.status });
+      continue;
+    }
+
+    if (child === 'energy_reading') {
+      const { rows } = await tx.query<{ taken_at: string }>(
+        `SELECT taken_at::text AS taken_at FROM energy_reading
+          WHERE meter_id = $1 AND archived_at = coalesce($2::timestamptz, now())
+          ORDER BY taken_at`,
+        [id, at ?? null],
+      );
+      for (const row of rows) items.push({ entityType: 'energy_reading', meterId: id, takenAt: row.taken_at });
       continue;
     }
 

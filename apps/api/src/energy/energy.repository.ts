@@ -1,5 +1,7 @@
 import { withOrg } from '@poolse/db';
+import { DIALS, DIALS_OF, dialProblem, dialTotal, type Dial, type DialSet } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
+import { auditReadings } from './history.repository.js';
 import { liveTariffJoin } from './tariffs.repository.js';
 
 /**
@@ -38,6 +40,8 @@ export interface EnergyMeter {
   carrier: MeterCarrier;
   unit: string;
   reads: MeterReads;
+  /** Which dials a reading carries — single, bi, tri or tetra (12-11-2026). */
+  dialSet: DialSet;
   initialIndex: number | null;
   replacedMeterId: string | null;
   replacedMeterName: string | null;
@@ -51,6 +55,8 @@ export interface EnergyMeter {
   /** The most recent live reading, or null. */
   latestAt: string | null;
   latestValue: number | null;
+  /** The latest reading's dials, for the form's "a última leitura foi" per dial. */
+  latestDials: Partial<Record<Dial, number>> | null;
   readingCount: number;
 }
 
@@ -62,6 +68,7 @@ export interface MeterInput {
   carrier: MeterCarrier;
   unit: string;
   reads: MeterReads;
+  dialSet: DialSet;
   initialIndex: number | null;
   replacedMeterId: string | null;
   cpe: string | null;
@@ -92,6 +99,10 @@ export interface EnergyReading {
    */
   costCents: number | null;
   costProvenance: CostProvenance | null;
+  /** The reading's own dials, when its meter has several (12-11-2026). */
+  dials: Partial<Record<Dial, number>> | null;
+  /** What each dial used since the reading before — the per-period split of `consumed`. */
+  dialsConsumed: Partial<Record<Dial, number>> | null;
 }
 
 /**
@@ -214,7 +225,7 @@ const METER_JOINS = `
   LEFT JOIN energy_meter rm
     ON rm.id = m.replaced_meter_id AND rm.organization_id = m.organization_id
   LEFT JOIN LATERAL (
-    SELECT r.taken_at, r.value
+    SELECT r.taken_at, r.value, jsonb_strip_nulls(jsonb_build_object('super_vazio', r.dial_super_vazio::float8, 'vazio', r.dial_vazio::float8, 'fora_vazio', r.dial_fora_vazio::float8, 'cheias', r.dial_cheias::float8, 'ponta', r.dial_ponta::float8)) AS dials
       FROM energy_reading r
      WHERE r.meter_id = m.id AND r.organization_id = m.organization_id
        AND r.archived_at IS NULL
@@ -231,13 +242,13 @@ const METER_JOINS = `
 const METER_COLUMNS = `
   m.id, m.facility_id, f.name AS facility_name,
   m.pool_id, p.name AS pool_name,
-  m.name, m.kind::text AS kind, m.carrier::text AS carrier, m.unit, m.reads::text AS reads,
+  m.name, m.kind::text AS kind, m.carrier::text AS carrier, m.unit, m.reads::text AS reads, m.dial_set::text AS dial_set,
   -- ::float8, or numeric arrives as a string and the form shows "18402.000".
   m.initial_index::float8 AS initial_index,
   m.replaced_meter_id, rm.name AS replaced_meter_name,
   m.cpe, m.serial,
   m.notes, (m.archived_at IS NOT NULL) AS archived,
-  latest.taken_at AS latest_at, latest.value::float8 AS latest_value,
+  latest.taken_at AS latest_at, latest.value::float8 AS latest_value, latest.dials AS latest_dials,
   counted.n AS reading_count`;
 
 interface MeterRow {
@@ -251,6 +262,7 @@ interface MeterRow {
   carrier: MeterCarrier;
   unit: string;
   reads: MeterReads;
+  dial_set: DialSet;
   initial_index: number | null;
   replaced_meter_id: string | null;
   replaced_meter_name: string | null;
@@ -260,6 +272,7 @@ interface MeterRow {
   archived: boolean;
   latest_at: Date | null;
   latest_value: number | null;
+  latest_dials: Partial<Record<Dial, number>> | null;
   reading_count: number;
 }
 
@@ -275,6 +288,7 @@ function meterOf(row: MeterRow): EnergyMeter {
     carrier: row.carrier,
     unit: row.unit,
     reads: row.reads,
+    dialSet: row.dial_set,
     initialIndex: row.initial_index,
     replacedMeterId: row.replaced_meter_id,
     replacedMeterName: row.replaced_meter_name,
@@ -284,6 +298,7 @@ function meterOf(row: MeterRow): EnergyMeter {
     archived: row.archived,
     latestAt: row.latest_at?.toISOString() ?? null,
     latestValue: row.latest_value,
+    latestDials: row.latest_dials === null || Object.keys(row.latest_dials).length === 0 ? null : row.latest_dials,
     readingCount: row.reading_count,
   };
 }
@@ -382,9 +397,9 @@ export async function addMeter(organizationId: string, input: MeterInput): Promi
       .query<{ id: string }>(
         `INSERT INTO energy_meter
            (organization_id, facility_id, pool_id, name, kind, unit, reads,
-            initial_index, replaced_meter_id, cpe, serial, notes, carrier)
+            initial_index, replaced_meter_id, cpe, serial, notes, carrier, dial_set)
          VALUES ($1, $2, $3, $4, $5::energy_meter_kind, $6, $7::energy_meter_reads, $8, $9, $10, $11, $12,
-                 $13::energy_carrier)
+                 $13::energy_carrier, $14::energy_dial_set)
          RETURNING id`,
         [
           organizationId,
@@ -400,6 +415,7 @@ export async function addMeter(organizationId: string, input: MeterInput): Promi
           input.serial,
           input.notes,
           input.carrier,
+          input.dialSet,
         ],
       )
       .catch(asMeterError);
@@ -430,6 +446,8 @@ export async function updateMeter(
   input: Pick<MeterInput, 'poolId' | 'name' | 'kind' | 'unit' | 'initialIndex' | 'cpe' | 'serial' | 'notes'> & {
     /** Null keeps the meter's carrier: an edit that did not ask about it changes nothing. */
     carrier: MeterCarrier | null;
+    /** Null keeps the meter's dials, as the carrier (12-11-2026). */
+    dialSet: DialSet | null;
   },
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
@@ -438,11 +456,12 @@ export async function updateMeter(
         `UPDATE energy_meter
             SET pool_id = $3, name = $4, kind = $5::energy_meter_kind, unit = $6,
                 initial_index = $7, cpe = $8, serial = $9, notes = $10,
-                carrier = coalesce($11::energy_carrier, carrier)
+                carrier = coalesce($11::energy_carrier, carrier),
+                dial_set = coalesce($12::energy_dial_set, dial_set)
           WHERE organization_id = $1 AND id = $2 AND archived_at IS NULL`,
         [
           organizationId, meterId, input.poolId, input.name, input.kind, input.unit,
-          input.initialIndex, input.cpe, input.serial, input.notes, input.carrier,
+          input.initialIndex, input.cpe, input.serial, input.notes, input.carrier, input.dialSet,
         ],
       )
       .catch(asMeterError);
@@ -499,10 +518,26 @@ const CONSUMED = `
            ELSE r.value - coalesce(
                   lag(r.value) OVER (PARTITION BY r.meter_id ORDER BY r.taken_at),
                   m.initial_index)
-         END AS consumed
+         END AS consumed,
+         jsonb_strip_nulls(jsonb_build_object('super_vazio', r.dial_super_vazio::float8, 'vazio', r.dial_vazio::float8, 'fora_vazio', r.dial_fora_vazio::float8, 'cheias', r.dial_cheias::float8, 'ponta', r.dial_ponta::float8)) AS dials,
+         -- Per dial, the same rule as the total: a dial's difference from its own
+         -- previous value, or the value itself on an interval meter (12-11-2026).
+         jsonb_strip_nulls(jsonb_build_object(
+           'super_vazio', (CASE WHEN m.reads = 'interval_consumption' THEN r.dial_super_vazio
+                                ELSE r.dial_super_vazio - lag(r.dial_super_vazio) OVER w END)::float8,
+           'vazio',       (CASE WHEN m.reads = 'interval_consumption' THEN r.dial_vazio
+                                ELSE r.dial_vazio - lag(r.dial_vazio) OVER w END)::float8,
+           'fora_vazio',  (CASE WHEN m.reads = 'interval_consumption' THEN r.dial_fora_vazio
+                                ELSE r.dial_fora_vazio - lag(r.dial_fora_vazio) OVER w END)::float8,
+           'cheias',      (CASE WHEN m.reads = 'interval_consumption' THEN r.dial_cheias
+                                ELSE r.dial_cheias - lag(r.dial_cheias) OVER w END)::float8,
+           'ponta',       (CASE WHEN m.reads = 'interval_consumption' THEN r.dial_ponta
+                                ELSE r.dial_ponta - lag(r.dial_ponta) OVER w END)::float8
+         )) AS dials_consumed
     FROM energy_reading r
     JOIN energy_meter m ON m.id = r.meter_id AND m.organization_id = r.organization_id
-   WHERE r.organization_id = $1 AND r.meter_id = $2 AND r.archived_at IS NULL`;
+   WHERE r.organization_id = $1 AND r.meter_id = $2 AND r.archived_at IS NULL
+  WINDOW w AS (PARTITION BY r.meter_id ORDER BY r.taken_at)`;
 
 /*
  * What a reading's consumption cost, from the rate live on the day it was
@@ -553,9 +588,11 @@ export async function listReadings(
       consumed: number | null;
       cost_cents: number | null;
       tariff_provenance: string | null;
+      dials: Partial<Record<Dial, number>>;
+      dials_consumed: Partial<Record<Dial, number>>;
     }>(
       `WITH c AS (${CONSUMED}), p AS (${PRICED('$3')})
-       SELECT p.taken_at, p.value::float8 AS value, p.source::text AS source, p.note,
+       SELECT p.taken_at, p.value::float8 AS value, p.source::text AS source, p.note, p.dials, p.dials_consumed,
               p.consumed::float8 AS consumed,
               -- Rounded to the cent once, here, at the edge. Never in TypeScript.
               round(p.cost * 100)::int AS cost_cents,
@@ -577,6 +614,8 @@ export async function listReadings(
       consumed: row.consumed,
       costCents: row.cost_cents,
       costProvenance: costProvenanceOf(row.tariff_provenance),
+      dials: Object.keys(row.dials).length === 0 ? null : row.dials,
+      dialsConsumed: Object.keys(row.dials_consumed).length === 0 ? null : row.dials_consumed,
     }));
   });
 }
@@ -763,9 +802,11 @@ export async function meterTimezone(organizationId: string, meterId: string): Pr
  */
 export class ReadingRefusedError extends Error {
   constructor(
-    readonly reason: 'backwards' | 'ahead' | 'duplicate' | 'meter_archived',
+    readonly reason: 'backwards' | 'ahead' | 'duplicate' | 'meter_archived' | 'dial_missing' | 'dial_foreign',
     readonly neighbour: number | null,
     readonly value: number | null,
+    /** The dial the refusal is about, so the form puts it under that field. */
+    readonly dial: Dial | null = null,
   ) {
     super(`reading refused: ${reason}`);
   }
@@ -775,11 +816,12 @@ function asReadingError(error: unknown): never {
   const code = (error as { code?: string }).code;
   const detail = (error as { detail?: unknown }).detail;
   if (code === '23514' && typeof detail === 'string' && detail.startsWith('energy_index_')) {
-    const [tag, neighbour, value] = detail.split('|');
+    const [tag, neighbour, value, dial] = detail.split('|');
     throw new ReadingRefusedError(
       tag === 'energy_index_ahead' ? 'ahead' : 'backwards',
       Number(neighbour),
       Number(value),
+      (DIALS as readonly string[]).includes(dial ?? '') ? (dial as Dial) : null,
     );
   }
   if (code === '23505') throw new ReadingRefusedError('duplicate', null, null);
@@ -790,6 +832,8 @@ export interface ReadingInput {
   takenAt: string;
   value: number;
   note: string | null;
+  /** One value per dial of the meter's set; empty for a single-dial meter. */
+  dials: Partial<Record<Dial, number>>;
 }
 
 /**
@@ -805,8 +849,8 @@ export async function addReading(
   input: ReadingInput,
 ): Promise<void> {
   return withOrg(organizationId, async (tx) => {
-    const { rows: meters } = await tx.query<{ archived: boolean }>(
-      `SELECT (archived_at IS NOT NULL) AS archived FROM energy_meter
+    const { rows: meters } = await tx.query<{ archived: boolean; dial_set: DialSet }>(
+      `SELECT (archived_at IS NOT NULL) AS archived, dial_set::text AS dial_set FROM energy_meter
         WHERE organization_id = $1 AND id = $2`,
       [organizationId, meterId],
     );
@@ -814,16 +858,32 @@ export async function addReading(
     if (meter === undefined) throw new Error('No such meter');
     if (meter.archived) throw new ReadingRefusedError('meter_archived', null, null);
 
+    // Every dial of the meter's set and no other; the total is their sum (12-11-2026).
+    const problem = dialProblem(meter.dial_set, input.dials);
+    if (problem !== null) {
+      throw new ReadingRefusedError(problem.problem === 'missing' ? 'dial_missing' : 'dial_foreign', null, null, problem.dial);
+    }
+    const several = DIALS_OF[meter.dial_set].length > 0;
+    const value = several ? dialTotal(input.dials) : input.value;
+    const dial = (name: Dial): number | null => (several ? (input.dials[name] ?? null) : null);
+
     await tx
       .query(
         `INSERT INTO energy_reading
-           (organization_id, meter_id, taken_at, value, source, recorded_by, note)
-         VALUES ($1, $2, $3, $4, 'manual', $5, $6)
+           (organization_id, meter_id, taken_at, value, source, recorded_by, note,
+            dial_super_vazio, dial_vazio, dial_fora_vazio, dial_cheias, dial_ponta)
+         VALUES ($1, $2, $3, $4, 'manual', $5, $6, $7, $8, $9, $10, $11)
          ON CONFLICT (organization_id, meter_id, taken_at) DO UPDATE
            SET value = EXCLUDED.value, recorded_by = EXCLUDED.recorded_by,
-               note = EXCLUDED.note, archived_at = NULL
+               note = EXCLUDED.note, archived_at = NULL,
+               dial_super_vazio = EXCLUDED.dial_super_vazio, dial_vazio = EXCLUDED.dial_vazio,
+               dial_fora_vazio = EXCLUDED.dial_fora_vazio, dial_cheias = EXCLUDED.dial_cheias,
+               dial_ponta = EXCLUDED.dial_ponta
            WHERE energy_reading.archived_at IS NOT NULL`,
-        [organizationId, meterId, input.takenAt, input.value, membershipId, input.note],
+        [
+          organizationId, meterId, input.takenAt, value, membershipId, input.note,
+          dial('super_vazio'), dial('vazio'), dial('fora_vazio'), dial('cheias'), dial('ponta'),
+        ],
       )
       .then(({ rowCount }) => {
         // DO UPDATE with a WHERE that did not match writes nothing and raises
@@ -836,7 +896,7 @@ export async function addReading(
       action: 'energy.readingRecorded',
       entityType: 'energy_meter',
       entityId: meterId,
-      data: { takenAt: input.takenAt, value: input.value },
+      data: { takenAt: input.takenAt, value, ...(several ? { dials: input.dials } : {}) },
     });
   });
 }
@@ -848,19 +908,16 @@ export async function archiveReading(
   takenAt: string,
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
-    const { rowCount } = await tx.query(
+    const { rows } = await tx.query<{ taken_at: string }>(
       `UPDATE energy_reading SET archived_at = now()
-        WHERE organization_id = $1 AND meter_id = $2 AND taken_at = $3 AND archived_at IS NULL`,
+        WHERE organization_id = $1 AND meter_id = $2 AND taken_at = $3 AND archived_at IS NULL
+      RETURNING taken_at::text AS taken_at`,
       [organizationId, meterId, takenAt],
     );
-    if (rowCount === 0) return false;
+    if (rows.length === 0) return false;
 
-    await recordAudit(tx, {
-      action: 'energy.readingArchived',
-      entityType: 'energy_meter',
-      entityId: meterId,
-      data: { takenAt },
-    });
+    // One bin entry on the meter listing the reading, as a batch does (12-11-2026).
+    await auditReadings(tx, meterId, rows.map((row) => row.taken_at));
     return true;
   });
 }

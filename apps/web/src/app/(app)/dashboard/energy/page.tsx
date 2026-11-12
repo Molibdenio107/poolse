@@ -16,6 +16,8 @@ import {
 import { dataOf } from '@/lib/load-failure';
 import { EnergyDashboard } from './energy-dashboard';
 import { ImportBillCard } from './import-bill-card';
+import { EnergyHistory } from './energy-history';
+import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 
 /**
  * Energia — the module's own front door, at Rui's ask.
@@ -41,10 +43,21 @@ import { ImportBillCard } from './import-bill-card';
  * as before. The dashboard is best-effort: a summary that will not load says
  * so in its place and costs neither the card nor the meters.
  */
+const BASE = '/dashboard/energy';
+
 export default async function EnergyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; import?: string }>;
+  searchParams: Promise<{
+    from?: string;
+    import?: string;
+    /** Painel or Histórico (Rui, 12-11-2026), and the history's own filters. */
+    section?: string;
+    kind?: string;
+    meter?: string;
+    month?: string;
+    page?: string;
+  }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const query = await searchParams;
@@ -87,6 +100,7 @@ export default async function EnergyPage({
   const summary = sites === null || sites.facilities.length === 0 ? null : await outcome(apiFetch<EnergySummary>('/energy/summary'));
   // A missing bill's link names its meter; one this club has, or nothing.
   const linkedMeter = meters.some((meter) => meter.id === query.import) ? query.import : undefined;
+  const section = pickSection(['overview', 'history'] as const, query.section, 'overview');
 
   return (
     <PageShell
@@ -115,10 +129,34 @@ export default async function EnergyPage({
         />
       )}
 
-      {summary !== null && summary.state === 'ok' && <EnergyDashboard summary={summary.data} />}
-      {summary !== null && summary.state === 'failed' && <PageError message={t(summary.failure.key)} />}
+      {/*
+        Painel and Histórico, one at a time (Rui, 12-11-2026): the dashboard and
+        the meters as before, or every meter's readings and bills in one list.
+        The import card stays above both — a bill dropped on either is read.
+      */}
+      {meters.length > 0 && (
+        <SectionPills
+          label={t('energy.pageSection.nav')}
+          current={section}
+          items={(['overview', 'history'] as const).map((key) => ({
+            key,
+            label: t(`energy.pageSection.${key}`),
+            href: sectionHref(BASE, { from: query.from }, key),
+          }))}
+        />
+      )}
 
-      {panels.map(({ site, list }) => (
+      {section === 'history' && (
+        <EnergyHistory
+          meters={meters.map((meter) => ({ id: meter.id, label: meter.label }))}
+          query={{ kind: query.kind, meter: query.meter, month: query.month, page: query.page }}
+        />
+      )}
+
+      {section === 'overview' && summary !== null && summary.state === 'ok' && <EnergyDashboard summary={summary.data} />}
+      {section === 'overview' && summary !== null && summary.state === 'failed' && <PageError message={t(summary.failure.key)} />}
+
+      {section === 'overview' && panels.map(({ site, list }) => (
         <section
           key={site.id}
           className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card"

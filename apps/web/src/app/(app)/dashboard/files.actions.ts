@@ -186,6 +186,8 @@ function attachRoute(target: FileTarget): { method: 'POST' | 'PUT'; path: string
       return { method: 'PUT', path: `/students/${first}/photo` };
     case 'staff-photo':
       return { method: 'PUT', path: `/staff/${first}/photo` };
+    case 'energy-invoice':
+      return { method: 'PUT', path: `/energy/invoices/${first}/original` };
     default:
       return null;
   }

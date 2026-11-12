@@ -33,7 +33,9 @@ export type FilePurpose =
   | 'boletim_template'
   | 'staff_id_document'
   | 'student_id_document'
-  | 'staff_contract';
+  | 'staff_contract'
+  // 12-11-2026: a bill as received, kept beside its figures.
+  | 'energy_invoice';
 
 /**
  * Health data, sealed at rest — POOLSE-109. The bucket holds ciphertext, the
@@ -56,6 +58,8 @@ export const SEALED_PURPOSES: ReadonlySet<FilePurpose> = new Set<FilePurpose>([
 
 const OFFICE: readonly MemberRole[] = ['owner', 'admin'];
 const STAFF: readonly MemberRole[] = ['owner', 'admin', 'instructor', 'maintenance'];
+/** Who reads and files energy bills — the module's own roles (Rui, 12-11-2026). */
+const ENERGY: readonly MemberRole[] = ['owner', 'admin', 'maintenance'];
 const ANYONE: readonly MemberRole[] = ['owner', 'admin', 'instructor', 'maintenance', 'student', 'guardian'];
 
 /**
@@ -113,6 +117,8 @@ export const RULES: Record<FilePurpose, { write: readonly MemberRole[] | null; r
   // /files — the record's own route files it as a version — and read as pay is:
   // owner and admin, an Admin never the Owner's, and the person (see openFile).
   staff_contract: { write: null, read: OFFICE },
+  // A bill's original: filed by whoever files bills, read by whoever reads them.
+  energy_invoice: { write: ENERGY, read: ENERGY },
 };
 
 export interface StoredFile {

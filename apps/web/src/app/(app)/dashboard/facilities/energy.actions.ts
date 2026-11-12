@@ -51,6 +51,8 @@ function meterBody(formData: FormData): Record<string, unknown> {
     carrier: formData.get('carrier') === null ? undefined : String(formData.get('carrier')),
     unit: String(formData.get('unit') ?? '').trim(),
     reads: String(formData.get('reads') ?? 'cumulative_index'),
+    // 12-11-2026: which dials a reading carries. Absent keeps a meter's own on an edit.
+    dialSet: formData.get('dialSet') === null ? undefined : String(formData.get('dialSet')),
     initialIndex: initial === '' ? null : Number(initial),
     poolId: String(formData.get('poolId') ?? ''),
     replacedMeterId: String(formData.get('replacedMeterId') ?? ''),
@@ -117,9 +119,17 @@ export async function recordReading(_previous: FormState, formData: FormData): P
   const takenAt = takenAtRaw;
 
   try {
+    // A multi-dial meter's form posts `dial_<name>` fields; the API sums them (12-11-2026).
+    const number = (raw: FormDataEntryValue | null): number =>
+      Number(String(raw ?? '').trim().replace(/\s/g, '').replace(',', '.'));
+    const dials = Object.fromEntries(
+      [...formData.keys()]
+        .filter((key) => key.startsWith('dial_'))
+        .map((key) => [key.slice('dial_'.length), number(formData.get(key))]),
+    );
     await apiPost(`/energy/meters/${meterId}/readings`, {
       takenAt,
-      value: Number(String(formData.get('value') ?? '').trim().replace(/\s/g, '').replace(',', '.')),
+      ...(Object.keys(dials).length > 0 ? { dials } : { value: number(formData.get('value')) }),
       note: String(formData.get('note') ?? '').trim(),
     });
   } catch (error) {

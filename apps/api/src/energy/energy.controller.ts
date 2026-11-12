@@ -8,9 +8,18 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { localInstant, sampleMoment } from '../facilities/sample-moment.js';
+import { DIALS, dialTotal, isDialSet, type Dial } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
+import { readPageQuery } from '../common/pagination.js';
+import {
+  archiveEnergyHistory,
+  readEnergyHistory,
+  type EnergyHistory,
+  type HistoryFilter,
+} from './history.repository.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import {
   CARRIERS,
@@ -181,9 +190,10 @@ export class EnergyController {
     const { facilityId: _f, reads: _r, replacedMeterId: _m, ...input } = readMeter(body, '');
     // An edit that does not send a carrier keeps the meter's (POOLSE-106).
     const carrier = body['carrier'] === undefined ? null : input.carrier;
+    const dialSet = body['dialSet'] === undefined ? null : input.dialSet;
 
     try {
-      if (!(await updateMeter(organizationId, meterId, { ...input, carrier }))) {
+      if (!(await updateMeter(organizationId, meterId, { ...input, carrier, dialSet }))) {
         throw new NotFoundException('No such meter');
       }
       return { updated: true };
@@ -229,7 +239,14 @@ export class EnergyController {
     }
     const takenAt = await localInstant(organizationId, 'energy_meter', meterId, typed);
 
-    const value = typeof body['value'] === 'number' ? body['value'] : Number(body['value']);
+    // A multi-dial meter sends its dials and the total is their sum; a single one sends `value`.
+    const dials = readDials(body['dials']);
+    const value =
+      Object.keys(dials).length > 0
+        ? dialTotal(dials)
+        : typeof body['value'] === 'number'
+          ? body['value']
+          : Number(body['value']);
     if (!Number.isFinite(value) || value < 0 || value > MAX_VALUE) {
       throw new BadRequestException({ message: 'The reading must be a number, zero or more', field: 'value' });
     }
@@ -241,6 +258,7 @@ export class EnergyController {
         // rounded by Postgres, and a client should hear about it from us.
         value: Math.round(value * 1000) / 1000,
         note: text(body['note'], MAX_NOTE, 'note'),
+        dials,
       });
     } catch (error) {
       throw asHttp(error);
@@ -373,6 +391,38 @@ export class EnergyController {
   }
 
   /**
+   * Energia › Histórico — every meter's readings or bills, filtered by meter and
+   * month (Rui, 12-11-2026). Read by everyone the module serves; `canArchive`
+   * says whether this person may clear them.
+   */
+  @Get('history')
+  async history(
+    @Query('kind') kind?: string,
+    @Query('meter') meter?: string,
+    @Query('month') month?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<EnergyHistory & { canArchive: boolean }> {
+    requireRole(...ENERGY);
+    const { organizationId } = currentTenant();
+    const filter = readHistoryFilter({ kind, meterId: meter, month });
+    const found = await readEnergyHistory(organizationId, filter, readPageQuery(page, limit));
+    return { ...found, canArchive: hasRole('owner', 'admin') };
+  }
+
+  /**
+   * Apagar what the filter shows — one meter or all, one month or all (Rui,
+   * 12-11-2026). Owner and Admin; every row lands in Arquivados, restorable.
+   */
+  @Post('history/archive')
+  async archiveHistory(@Body() body: Record<string, unknown>): Promise<{ archived: number }> {
+    requireCanArchive();
+    const { organizationId } = currentTenant();
+    const filter = readHistoryFilter({ kind: body['kind'], meterId: body['meterId'], month: body['month'] });
+    return { archived: await archiveEnergyHistory(organizationId, filter) };
+  }
+
+  /**
    * A reading that never happened. Owner and admin, as every archive (Rui,
    * 02-11-2026, POOLSE-03): maintenance records readings and asks the office
    * to withdraw a wrong one — it archives nothing.
@@ -447,6 +497,8 @@ function readMeter(body: Record<string, unknown>, facilityId: string): MeterInpu
     carrier: carrier as MeterCarrier,
     unit: text(body['unit'], MAX_UNIT, 'unit') ?? 'kWh',
     reads: reads as MeterReads,
+    // Absent means one figure, which is every meter before 12-11-2026.
+    dialSet: body['dialSet'] === undefined || body['dialSet'] === '' ? 'single' : dialSetOf(body['dialSet']),
     initialIndex,
     replacedMeterId: id(body['replacedMeterId']),
     cpe: cpeOf(body['cpe']),
@@ -647,13 +699,58 @@ function asHttp(error: unknown): unknown {
       error.reason === 'backwards' ? 'energy.readingBackwards'
       : error.reason === 'ahead' ? 'energy.readingAhead'
       : error.reason === 'duplicate' ? 'energy.readingDuplicate'
+      : error.reason === 'dial_missing' ? 'energy.dials.missing'
+      : error.reason === 'dial_foreign' ? 'energy.dials.foreign'
       : 'energy.meterArchived';
     return new ConflictException({
       code: `reading_${error.reason}`,
       message: `Reading refused: ${error.reason}`,
-      fields: { value: key },
+      // Under the dial it is about, when it is about one (12-11-2026).
+      fields: { [error.dial === null ? 'value' : `dial_${error.dial}`]: key },
       energyIndex: { neighbour: error.neighbour, value: error.value },
     });
   }
   return error;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The history's filter, strictly: a known kind, a meter id or none, a `YYYY-MM` or none. */
+function readHistoryFilter(raw: { kind: unknown; meterId: unknown; month: unknown }): HistoryFilter {
+  if (raw.kind !== 'readings' && raw.kind !== 'invoices') {
+    throw new BadRequestException({ message: 'kind must be readings or invoices', field: 'kind' });
+  }
+  const meterId = raw.meterId === undefined || raw.meterId === null || raw.meterId === '' ? null : raw.meterId;
+  if (meterId !== null && (typeof meterId !== 'string' || !UUID.test(meterId))) {
+    throw new BadRequestException({ message: 'meter must be a meter id', field: 'meterId' });
+  }
+  const month = raw.month === undefined || raw.month === null || raw.month === '' ? null : raw.month;
+  if (month !== null && (typeof month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month))) {
+    throw new BadRequestException({ message: 'month must be YYYY-MM', field: 'month' });
+  }
+  return { kind: raw.kind, meterId, month };
+}
+
+function dialSetOf(value: unknown) {
+  if (!isDialSet(value)) throw new BadRequestException({ message: 'single, bi, tri or tetra', field: 'dialSet' });
+  return value;
+}
+
+/** A reading's dials: an object of known dials to numbers, zero or more; anything else refused by name. */
+function readDials(raw: unknown): Partial<Record<Dial, number>> {
+  if (raw === undefined || raw === null) return {};
+  if (typeof raw !== 'object' || Array.isArray(raw)) throw new BadRequestException({ message: 'dials is an object', field: 'dials' });
+  const dials: Partial<Record<Dial, number>> = {};
+  for (const [key, given] of Object.entries(raw as Record<string, unknown>)) {
+    if (!(DIALS as readonly string[]).includes(key)) {
+      throw new BadRequestException({ message: `Unknown dial ${key}`, field: 'dials' });
+    }
+    const value = typeof given === 'number' ? given : Number(given);
+    if (!Number.isFinite(value) || value < 0 || value > MAX_VALUE) {
+      throw new BadRequestException({ message: 'A dial is a number, zero or more', field: `dial_${key}` });
+    }
+    // Three decimals, as the column holds them.
+    dials[key as Dial] = Math.round(value * 1000) / 1000;
+  }
+  return dials;
 }
