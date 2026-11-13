@@ -248,7 +248,7 @@ Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before tou
 - A circle follows the problem down — menu, tab (`badge: { kind: 'dot' }`), pill (`attention`) — and the card holding it is `attentionClass(n)` until solved: one alone boxed, two or more in a list an accent bar (POOLSE-214, -216).
 - The bell lists the circles' own counts (`attentionLines` in `lib/attention-items.ts`); a new badge key needs a line there or typecheck fails. Every line opens where its problem is listed, and site work and lessons are named one line each.
 - The menu's entries live in `lib/nav-entries.ts`
-- A file is dropped anywhere on the page: `PageDrop` (`components/page-drop.tsx`) hands it to the page's one upload that accepts it, or asks *Onde guardar?* when there are several; an upload names itself with `data-drop-label` and opts out with `data-drop-off`.
+- A file is dropped anywhere on the page: `PageDrop` (`components/page-drop.tsx`) hands it to the page's one upload that accepts it, or asks *Onde guardar?* when there are several; an upload names itself with `data-drop-label`, opts out with `data-drop-off`, and always asks with `data-drop-ask` (ID photos).
 - A document on paper is a route with print styles; the one PDF library is `lib/form-pdf.ts`, for a club's forms on the phone
 - A decision asks first
 - An *Arquivar* is quiet (`ARCHIVE_TRIGGER` in `lib/archive-trigger.ts`) and always asks before it archives (Rui, 07-11-2026).

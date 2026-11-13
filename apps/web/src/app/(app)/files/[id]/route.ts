@@ -27,9 +27,9 @@ export async function GET(
     const value = upstream.headers.get(name);
     if (value !== null) headers.set(name, value);
   }
-  // Private to the person who asked: a shared cache must never answer the next
-  // reader with a file their role does not reach.
-  headers.set('cache-control', 'private, max-age=300');
+  // Never kept, not even by the browser: a shared reception computer must not
+  // reopen an atestado or an ID photo after its reader signed out (13-11-2026).
+  headers.set('cache-control', 'private, no-store');
   headers.set('x-content-type-options', 'nosniff');
   return new Response(upstream.body, { status: 200, headers });
 }

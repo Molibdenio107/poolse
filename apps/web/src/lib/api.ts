@@ -4805,6 +4805,7 @@ export type SalaryImportProblem =
   | 'notFound'
   | 'notStaff'
   | 'ownerRefused'
+  | 'ownRefused'
   | 'kindMissing'
   | 'provenanceInvalid'
   | 'amountInvalid'

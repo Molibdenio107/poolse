@@ -603,23 +603,34 @@ async function requireBillFile(tx: Tx, fileId: string): Promise<void> {
 
 /**
  * Attach the original to a bill already on record — one filed before files were
- * kept, or typed by hand (Rui, 12-11-2026). Replaces a previous one; the old file
- * stays in storage, as every replaced document does. False when the bill is not
- * this club's or is archived.
+ * kept, or typed by hand (Rui, 12-11-2026). Replacing a previous one is the
+ * office's only (`mayReplace`; security review 13-11-2026): a bill is filed whole,
+ * and the file a figure was read from is part of it. The old file stays in
+ * storage, as every replaced document does. False when the bill is not this
+ * club's or is archived; `'replace_refused'` when it already has one and the
+ * caller may not replace it.
  */
-export async function setInvoiceOriginal(organizationId: string, invoiceId: string, fileId: string): Promise<boolean> {
+export async function setInvoiceOriginal(
+  organizationId: string,
+  invoiceId: string,
+  fileId: string,
+  mayReplace: boolean,
+): Promise<boolean | 'replace_refused'> {
   return withOrg(organizationId, async (tx) => {
     await requireBillFile(tx, fileId);
-    const { rowCount } = await tx.query(
-      `UPDATE energy_invoice SET original_file_id = $2 WHERE id = $1 AND archived_at IS NULL`,
-      [invoiceId, fileId],
+    const { rows } = await tx.query<{ original_file_id: string | null }>(
+      `SELECT original_file_id FROM energy_invoice WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+      [invoiceId],
     );
-    if (rowCount === 0) return false;
+    if (rows.length === 0) return false;
+    const previous = rows[0]!.original_file_id;
+    if (previous !== null && !mayReplace) return 'replace_refused';
+    await tx.query(`UPDATE energy_invoice SET original_file_id = $2 WHERE id = $1`, [invoiceId, fileId]);
     await recordAudit(tx, {
       action: 'energy.invoiceOriginalAttached',
       entityType: 'energy_invoice',
       entityId: invoiceId,
-      data: { fileId },
+      data: { fileId, replaced: previous },
     });
     return true;
   });

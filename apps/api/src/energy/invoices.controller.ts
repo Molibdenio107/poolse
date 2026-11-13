@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -173,8 +174,13 @@ export class EnergyInvoicesController {
     const fileId = fileIdOf(body['fileId']);
     if (fileId === null) throw new BadRequestException({ message: 'fileId is required', field: 'fileId' });
     try {
-      if (!(await setInvoiceOriginal(organizationId, invoiceId, fileId))) {
-        throw new NotFoundException('No such invoice');
+      const saved = await setInvoiceOriginal(organizationId, invoiceId, fileId, hasRole('owner', 'admin'));
+      if (saved === false) throw new NotFoundException('No such invoice');
+      if (saved === 'replace_refused') {
+        throw new ForbiddenException({
+          code: 'original_replace_refused',
+          message: 'This bill already has its original; only the office replaces it',
+        });
       }
     } catch (error) {
       if (error instanceof NotABillFileError) throw new BadRequestException({ code: 'wrong_file', message: error.message });

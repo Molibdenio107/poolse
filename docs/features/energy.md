@@ -347,7 +347,9 @@ The page opens on **Importar fatura**, a folded card (*Importar fatura — PDF o
   *Substituir original* attaches one later (`PUT /energy/invoices/:id/original`). That covers bills
   filed before 12-11-2026 and bills typed by hand.
 - **Who:** Owner, Admin and Maintenance, the roles that read bills (`RULES.energy_invoice`). A file of
-  any other purpose is refused.
+  any other purpose is refused. **Replacing** an original a bill already has is Owner and Admin only
+  (403 `original_replace_refused`, 13-11-2026): a bill is filed whole. The audit entry names the file
+  it replaced.
 - **Space:** a bill PDF is roughly 100–500 KB in object storage. The database holds only an id.
 
 ## The reading form (12-11-2026)

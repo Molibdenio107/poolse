@@ -82,6 +82,49 @@ test('the guardian option creates the child, the guardian, a parental primary li
   });
 });
 
+test('an admin cannot point the guardian invitation at a member of staff or at another address (13-11-2026)', async () => {
+  await withScratchTenant(async (tenant) => {
+    const admin = await addMember(tenant, 'Sandra', 'Marques', ['admin']);
+    const coach = await addMember(tenant, 'Rui', 'Treinador', ['instructor']);
+    const parent = await addMember(tenant, 'Joana', 'Costa', ['guardian']);
+    await tenant.sql(`UPDATE membership SET tax_number = '123456789' WHERE id = $1`, [coach]);
+    await tenant.sql(`UPDATE membership SET tax_number = '234567899' WHERE id = $1`, [parent]);
+    const [onFile] = await tenant.sql<{ email: string }>('SELECT person_email($1)::text AS email', [parent]);
+
+    const routes = new FamilyInvitationsBulkController();
+    const child = (taxNumber: string, email: string) => ({
+      for: 'guardian',
+      firstName: 'Tomás',
+      lastName: 'Costa',
+      birthDate: yearsAgo(6),
+      guardianFirstName: 'Joana',
+      guardianLastName: 'Costa',
+      guardianEmail: email,
+      guardianTaxNumber: taxNumber,
+      guardianRelationship: 'Mãe',
+    });
+    const asAdmin = <T>(fn: () => Promise<T>) => actingAs(tenant, { membershipId: admin, roles: ['admin'] }, fn);
+
+    await asAdmin(() => expectStatus(() => routes.newStudent(child('123456789', 'outro@familia.test')), 403));
+    await asAdmin(() => expectStatus(() => routes.newStudent(child('234567899', 'outro@familia.test')), 403));
+    const [left] = await tenant.sql<{ n: number }>(
+      'SELECT count(*)::int AS n FROM student WHERE organization_id = $1',
+      [tenant.organizationId],
+    );
+    assert.equal(left?.n ?? 0, 0, 'a refusal leaves no child behind');
+
+    // The sibling's parent, invited to the address the club already has: the office's.
+    const sibling = await asAdmin(() => routes.newStudent(child('234567899', onFile!.email)));
+    assert.ok('guardian' in sibling);
+
+    // The Owner may do either.
+    const byOwner = await owner(tenant, () =>
+      routes.newStudent({ ...child('123456789', 'outro@familia.test'), firstName: 'Inês' }),
+    );
+    assert.ok('guardian' in byOwner);
+  });
+});
+
 test('the guardian option needs a date of birth and a guardian who can be told apart', async () => {
   await withScratchTenant(async (tenant) => {
     const routes = new FamilyInvitationsBulkController();

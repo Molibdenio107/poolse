@@ -145,6 +145,12 @@ const SAME_ON_PURPOSE = new Map([
   ['qualifying.ageGroupNamePlaceholder', "the FPN's proper name for an age group"],
   // POOLSE-86: "Email" and Poolse's own name read the same in both languages.
   ['invoices.channel.poolse_email', 'a product name and a word both languages share'],
+  // 12-11-2026 energy round: units and two words both languages share.
+  ['energy.gas.value', 'a unit — kWh/m³'],
+  ['energy.gas.inKwh', 'a unit — kWh'],
+  ['energy.invoice.volumeM3', '"Volume" and m³ are the same in both languages'],
+  ['energy.historyList.col.total', '"Total" is the same word in both languages'],
+  ['energy.invoice.original.title', '"Original" is the same word in both languages'],
 ]);
 
 function flatten(object, prefix = '') {

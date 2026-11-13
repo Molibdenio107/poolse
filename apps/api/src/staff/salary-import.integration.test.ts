@@ -249,6 +249,40 @@ test('59 — an admin’s export omits the owner, and an admin’s file may not 
   });
 });
 
+test('an admin’s file may not name the admin — nobody raises their own pay (13-11-2026)', async () => {
+  await withScratchTenant(async (tenant) => {
+    const admin = await addMember(tenant, 'Sandra', 'Marques', ['admin']);
+    await seedClub(tenant);
+    const adminEmail = await tenant.sql<{ email: string }>('SELECT person_email($1)::text AS email', [admin]);
+    const row = {
+      email: adminEmail[0]!.email,
+      kind: 'monthly',
+      amount: '9000.00',
+      amountCents: 900_000,
+      effectiveFrom: '2026-09-01',
+    };
+
+    await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, async () => {
+      const salaries = new SalariesController();
+      const preview = await salaries.import({ rows: [row], commit: false });
+      assert.deepEqual(preview.rows[0]?.problems, ['ownRefused'], 'stated, never silently skipped');
+      assert.equal(preview.rows[0]?.importable, false);
+
+      await salaries.import({ rows: [row], commit: true }).catch(() => undefined);
+      const written = await tenant.sql<{ n: number }>(
+        'SELECT count(*)::int AS n FROM staff_compensation WHERE staff_membership_id = $1',
+        [admin],
+      );
+      assert.equal(written[0]?.n, 0, 'a commit writes nothing for the admin’s own row');
+    });
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const result = await new SalariesController().import({ rows: [row], commit: false });
+      assert.deepEqual(result.rows[0]?.problems, [], 'the owner sets the admin’s pay');
+    });
+  });
+});
+
 test('59 — one person twice refuses the whole file', async () => {
   await withScratchTenant(async (tenant) => {
     await seedClub(tenant);

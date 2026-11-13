@@ -192,6 +192,7 @@ function PhotoSide({
         type="file"
         className="hidden"
         aria-label={t(`staffIdentity.photo.side.${side}`)}
+        data-drop-ask="true"
         accept={acceptFor('student_document')}
         onChange={(event) => {
           const file = event.target.files?.[0];

@@ -47,6 +47,8 @@ the cache is re-read from Clerk, never written from the upload. A face is shrunk
 - **A file is only ever opened through the app** (`/files/<id>`), which asks the API, which
   checks the reader's role for that kind of file on every request. There are no public or
   shareable links, and another club's file id answers "not found".
+  The answer is `private, no-store`, so not even the browser keeps a copy: a shared reception
+  computer cannot reopen an atestado after its reader signed out (13-11-2026).
 - **Nothing is deleted.** Removing a photograph takes it out of the gallery; replacing or
   removing a document unhooks it. The file and its upload stay on record, and every upload,
   attachment and removal is in the audit log.

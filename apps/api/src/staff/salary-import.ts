@@ -54,6 +54,7 @@ export type SalaryImportProblem =
   | 'notFound'
   | 'notStaff'
   | 'ownerRefused'
+  | 'ownRefused'
   | 'kindMissing'
   | 'provenanceInvalid'
   | 'amountInvalid'
@@ -294,7 +295,13 @@ function readNumber(raw: string): number | null {
 export async function runSalaryImport(
   organizationId: string,
   viewer: Viewer,
-  request: { rows: SalaryImportInput[]; commit: boolean; include: number[] | null },
+  request: {
+    rows: SalaryImportInput[];
+    commit: boolean;
+    include: number[] | null;
+    /** The caller's membership: an Admin's own row is refused, as on the form (13-11-2026). */
+    self: string;
+  },
 ): Promise<SalaryImportResult> {
   return withOrg(organizationId, async (tx) => {
     const targets = await loadTargets(tx, viewer);
@@ -333,6 +340,7 @@ export async function runSalaryImport(
         if (target === null) problems.push('notFound');
         else if (!target.staff) problems.push('notStaff');
         else if (!target.visible) problems.push('ownerRefused');
+        else if (!viewer.isOwner && target.membershipId === request.self) problems.push('ownRefused');
       }
 
       // --- what ---------------------------------------------------------

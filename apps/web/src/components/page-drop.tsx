@@ -22,7 +22,9 @@ import { DropOverlay, pageDropActive } from '@/components/file-drop';
  *   browser never opens the file in the tab.
  *
  * "Can take it" is the input's own `accept` (a PDF is not offered to a photo)
- * and not `data-drop-off` (an upload that is unavailable or busy). With a
+ * and not `data-drop-off` (an upload that is unavailable or busy). An upload
+ * marked `data-drop-ask` (an ID photo: sealed, and read by a model) is always
+ * asked about, even when it is the only one (13-11-2026). With a
  * dialog open, only its uploads count. The file is handed to the input as if it
  * had been picked there, so the upload's own rules (type, size, shrinking, the
  * toast) apply unchanged. A page-wide importer (calendar, water, salaries…) and a
@@ -64,7 +66,7 @@ export function PageDrop(): React.ReactElement | null {
       const options = candidates(file);
       if (options.length === 0) {
         live.current.toast.show('warning', live.current.t('files.dropNowhere'));
-      } else if (options.length === 1) {
+      } else if (options.length === 1 && options[0]!.input.dataset['dropAsk'] !== 'true') {
         hand(options[0]!.input, file);
       } else {
         setChoice({ file, options });

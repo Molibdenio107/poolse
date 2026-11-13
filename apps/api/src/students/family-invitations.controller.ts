@@ -572,6 +572,40 @@ async function inviteForChild(
     const guardianId = rows[0]?.guardian_membership_id;
     if (guardianId === undefined) throw new Error('The guardian could not be created');
 
+    /*
+     * The guardian may be somebody the club already had, matched by NIF or
+     * email. Accepting ties a login to that record, so for an Admin it must not
+     * be a member of staff, nor an address other than the one on file — either
+     * would let them take over somebody else's record. Those are the Owner's
+     * (POOLSE-196; security review 13-11-2026). A sibling's parent, invited to
+     * their own address, stays open to the office.
+     */
+    if (!hasRole('owner')) {
+      const { rows: known } = await tx.query<{ existed: boolean; staff: boolean; email: string | null }>(
+        `SELECT m.created_at < now() AS existed,
+                EXISTS (
+                  SELECT 1 FROM membership_role r
+                   WHERE r.membership_id = m.id AND r.organization_id = m.organization_id
+                     AND r.archived_at IS NULL
+                     AND r.role IN ('owner', 'admin', 'instructor', 'maintenance')
+                ) AS staff,
+                person_email(m.id)::text AS email
+           FROM membership m
+          WHERE m.id = $1`,
+        [guardianId],
+      );
+      const person = known[0];
+      const otherAddress =
+        email !== null && person?.email != null && person.email.trim().toLowerCase() !== email;
+      if (person?.existed === true && (person.staff || otherAddress)) {
+        throw new ForbiddenException({
+          code: 'known_person_owner_only',
+          message: 'Only the owner invites somebody the club already has under another address or on the staff',
+          fields: { guardianTaxNumber: 'inviteStudent.guardian.knownOwnerOnly' },
+        });
+      }
+    }
+
     const outcome = await createFamilyInvitationIn(tx, {
       organizationId,
       invitedByMembershipId: membershipId,

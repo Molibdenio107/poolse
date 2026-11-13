@@ -477,6 +477,7 @@ export function IdentificationSection({
             ref={input}
             type="file"
             className="hidden"
+            data-drop-ask="true"
             accept={acceptFor('student_document')}
             onChange={(event) => {
               const file = event.target.files?.[0];

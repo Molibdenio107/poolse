@@ -75,3 +75,22 @@ test('a file of another purpose is refused, and an instructor attaches nothing',
     assert.equal(row!.original_file_id, null);
   });
 });
+
+test('a bill that has its original keeps it: maintenance may not replace it, the office may (13-11-2026)', async () => {
+  await withScratchTenant(async (tenant) => {
+    const invoiceId = await bill(tenant);
+    const first = await file(tenant, 'energy_invoice');
+    const second = await file(tenant, 'energy_invoice');
+    await actingAs(tenant, { roles: ['maintenance'] }, async () => {
+      const bills = new EnergyInvoicesController();
+      assert.deepEqual(await bills.attachOriginal(invoiceId, { fileId: first }), { saved: true });
+      await expectStatus(() => bills.attachOriginal(invoiceId, { fileId: second }), 403);
+      assert.equal((await bills.one(invoiceId)).invoice.originalFileId, first, 'the first stays');
+    });
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      const bills = new EnergyInvoicesController();
+      assert.deepEqual(await bills.attachOriginal(invoiceId, { fileId: second }), { saved: true });
+      assert.equal((await bills.one(invoiceId)).invoice.originalFileId, second);
+    });
+  });
+});

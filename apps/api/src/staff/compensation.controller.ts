@@ -157,10 +157,11 @@ export class SalariesController {
   @Post('import')
   async import(@Body() body: Record<string, unknown>): Promise<SalaryImportResult> {
     requireRole('owner', 'admin');
-    const { organizationId } = currentTenant();
+    const { organizationId, membershipId } = currentTenant();
 
     try {
       return await runSalaryImport(organizationId, viewer(), {
+        self: membershipId,
         rows: readImportRows(body['rows']),
         commit: body['commit'] === true,
         include: readInclude(body['include']),

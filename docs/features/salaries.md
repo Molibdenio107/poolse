@@ -168,7 +168,9 @@ actions since POOLSE-97 (Rui, 22-10-2026): **Exportar ▾** (Excel, CSV, or PDF 
 **Importar ficheiro**, which opens the wizard in a dialog over the list. A file dropped anywhere
 on the page opens it too, already read. Owner and Admin only, as before; the export endpoint is
 the permission. They were folded into a closed box below the list on 12-10-2026, which in testing
-read as "not switched on".
+read as "not switched on". An Admin's file may not name the Admin: that row is refused
+(`ownRefused`, 13-11-2026), as the form refuses `compensation_not_your_own` — nobody raises their
+own pay.
 
 **Exportar** hands over the pay list. The file holds the
 *contract* — name, e-mail, NIF, type, gross amount, contracted hours, pay periods, the date
