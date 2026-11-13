@@ -55,9 +55,10 @@ function toClock(raw: string): string {
 /**
  * The season a grid belongs to.
  *
- * The club's current one until POOLSE-45 gives seasons a status and a draft; the
- * caller may name another, which is what makes next year's planning possible
- * without this function changing.
+ * The club's published one unless the caller names another, which is how next
+ * year's draft is planned. Without the status filter a club with a draft got
+ * whichever row the planner returned first, so the live grid could show the
+ * draft's slots (found 13-11-2026 by the drafts test that "flaked" since 09-2026).
  */
 async function seasonFor(tx: Tx, requested: string | null): Promise<string | null> {
   if (requested !== null) {
@@ -68,7 +69,7 @@ async function seasonFor(tx: Tx, requested: string | null): Promise<string | nul
   }
 
   const { rows } = await tx.query<{ id: string }>(
-    `SELECT id FROM season WHERE archived_at IS NULL LIMIT 1`,
+    `SELECT id FROM season WHERE status = 'published' AND archived_at IS NULL LIMIT 1`,
   );
   return rows[0]?.id ?? null;
 }
