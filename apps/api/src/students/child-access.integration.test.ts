@@ -82,7 +82,7 @@ test('the guardian option creates the child, the guardian, a parental primary li
   });
 });
 
-test('an admin cannot point the guardian invitation at a member of staff or at another address (13-11-2026)', async () => {
+test('an admin cannot point the guardian invitation at a member of staff, another address, a bare link or a person with no email on file (13-11-2026)', async () => {
   await withScratchTenant(async (tenant) => {
     const admin = await addMember(tenant, 'Sandra', 'Marques', ['admin']);
     const coach = await addMember(tenant, 'Rui', 'Treinador', ['instructor']);
@@ -107,6 +107,13 @@ test('an admin cannot point the guardian invitation at a member of staff or at a
 
     await asAdmin(() => expectStatus(() => routes.newStudent(child('123456789', 'outro@familia.test')), 403));
     await asAdmin(() => expectStatus(() => routes.newStudent(child('234567899', 'outro@familia.test')), 403));
+    // The same parent with no email typed: a link to share would hand the record to whoever opens it.
+    await asAdmin(() => expectStatus(() => routes.newStudent(child('234567899', '')), 403));
+    // A person the club has with no email on file: any address the Admin types would claim them.
+    const noEmail = await addMember(tenant, 'Marta', 'Silva', ['guardian']);
+    await tenant.sql(`UPDATE membership SET tax_number = '345678907', email = NULL WHERE id = $1`, [noEmail]);
+    await asAdmin(() => expectStatus(() => routes.newStudent(child('345678907', 'marta@familia.test')), 403));
+    await asAdmin(() => expectStatus(() => routes.newStudent(child('345678907', '')), 403));
     const [left] = await tenant.sql<{ n: number }>(
       'SELECT count(*)::int AS n FROM student WHERE organization_id = $1',
       [tenant.organizationId],

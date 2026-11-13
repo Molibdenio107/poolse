@@ -2280,7 +2280,7 @@ function splitName(full: string): { first: string; last: string } {
  * Case does not distinguish an email — the column is `citext` — so a guardian
  * found by address is found however it was typed.
  */
-async function findPerson(
+export async function findPerson(
   tx: Tx,
   taxNumber: string | null,
   email: string | null,

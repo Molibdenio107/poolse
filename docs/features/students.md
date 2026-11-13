@@ -295,9 +295,11 @@ convite*, *Convite enviado em dd-MM-yyyy* (or *Link criado em*), *Convite expira
   - One transaction, through the ordinary insert: the student, the guardian (an existing person
     matched by NIF or email is reused), a primary `parental` link, and an invitation **to the
     guardian** (`{guardian}`).
-  - When the matched person already existed and is on the staff, or the typed email is not the one
-    on file, only the Owner may send it (403 `known_person_owner_only`, 13-11-2026): accepting ties
-    a login to that record (POOLSE-196). A sibling's parent at the address on file stays the office's.
+  - When the matched person already existed and is on the staff, or the invitation does not go to the
+    email on file (another address, no email typed so only a link, or no email on file at all), only
+    the Owner may send it (403 `known_person_owner_only`, 13-11-2026): accepting ties a login to that
+    record (POOLSE-196). The address on file is read before the insert, which fills a blank one with
+    the typed email. A sibling's parent at the address on file stays the office's.
   - A guardian who already uses the app, or already holds a live invitation, gets no new link. The
     answer says so, and the child appears under *Os meus educandos*.
 - **O acesso é do encarregado** (POOLSE-218, the safety net). A record whose own login is a

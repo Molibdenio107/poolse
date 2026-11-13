@@ -26,7 +26,7 @@ import {
   revokeInvitation,
 } from '../invitations/invitations.repository.js';
 import { invitationExpiry, issueToken, normaliseEmail } from '../invitations/invitations.service.js';
-import { ageOfMajority, insertStudent } from './students.repository.js';
+import { ageOfMajority, findPerson, insertStudent } from './students.repository.js';
 import { parseBirthDate, parseStudent } from './students.controller.js';
 import {
   createFamilyInvitationIn,
@@ -562,6 +562,22 @@ async function inviteForChild(
   const { token, tokenHash } = issueToken();
   const expiresAt = invitationExpiry();
   const created = await withOrg(organizationId, async (tx) => {
+    /*
+     * Who the guardian matches, and the address on file, read *before* the
+     * insert: matching a known person fills a blank email with the one typed,
+     * so read afterwards the typed address would always look like it was on file.
+     */
+    const asked = input.guardians[0];
+    const knownId = asked === undefined ? null : await findPerson(tx, asked.taxNumber, asked.email);
+    let emailOnFile: string | null = null;
+    if (knownId !== null) {
+      const { rows: before } = await tx.query<{ email: string | null }>(
+        'SELECT person_email($1)::text AS email',
+        [knownId],
+      );
+      emailOnFile = before[0]?.email == null ? null : before[0].email.trim().toLowerCase();
+    }
+
     const studentId = await insertStudent(tx, organizationId, input);
     if (studentId === null) throw new Error('The student could not be created');
     const { rows } = await tx.query<{ guardian_membership_id: string }>(
@@ -575,32 +591,31 @@ async function inviteForChild(
     /*
      * The guardian may be somebody the club already had, matched by NIF or
      * email. Accepting ties a login to that record, so for an Admin it must not
-     * be a member of staff, nor an address other than the one on file — either
-     * would let them take over somebody else's record. Those are the Owner's
-     * (POOLSE-196; security review 13-11-2026). A sibling's parent, invited to
-     * their own address, stays open to the office.
+     * be a member of staff, and the invitation must go to the address already
+     * on file — another address, a share-it-yourself link (no email typed) or a
+     * person with no email on file would each let whoever accepts take over
+     * somebody else's record. Those are the Owner's (POOLSE-196; security
+     * review 13-11-2026). A sibling's parent, invited to their own address,
+     * stays open to the office.
      */
     if (!hasRole('owner')) {
-      const { rows: known } = await tx.query<{ existed: boolean; staff: boolean; email: string | null }>(
-        `SELECT m.created_at < now() AS existed,
-                EXISTS (
+      const { rows: known } = await tx.query<{ staff: boolean }>(
+        `SELECT EXISTS (
                   SELECT 1 FROM membership_role r
                    WHERE r.membership_id = m.id AND r.organization_id = m.organization_id
                      AND r.archived_at IS NULL
                      AND r.role IN ('owner', 'admin', 'instructor', 'maintenance')
-                ) AS staff,
-                person_email(m.id)::text AS email
+                ) AS staff
            FROM membership m
           WHERE m.id = $1`,
         [guardianId],
       );
-      const person = known[0];
-      const otherAddress =
-        email !== null && person?.email != null && person.email.trim().toLowerCase() !== email;
-      if (person?.existed === true && (person.staff || otherAddress)) {
+      const existed = knownId !== null && knownId === guardianId;
+      const otherAddress = email === null || emailOnFile === null || emailOnFile !== email;
+      if (existed && (known[0]?.staff === true || otherAddress)) {
         throw new ForbiddenException({
           code: 'known_person_owner_only',
-          message: 'Only the owner invites somebody the club already has under another address or on the staff',
+          message: 'Only the owner invites somebody the club already has on the staff, or to any address but the one on file',
           fields: { guardianTaxNumber: 'inviteStudent.guardian.knownOwnerOnly' },
         });
       }
