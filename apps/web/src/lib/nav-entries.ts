@@ -105,15 +105,27 @@ export interface Item {
  * `meetInbox` is POOLSE-114's count; the rest are POOLSE-120's circles — what
  * needs doing, from `GET /attention`, cleared when it is done.
  */
-export type BadgeKey = 'meetInbox' | 'leads' | 'facilities' | 'calendar' | 'students' | 'categories' | 'classes' | 'staff' | 'support';
+export type BadgeKey =
+  | 'meetInbox'
+  | 'leads'
+  | 'facilities'
+  | 'calendar'
+  | 'students'
+  | 'categories'
+  | 'classes'
+  | 'staff'
+  | 'support'
+  | 'overlaps';
 /** By badge key, and `<key>:<sport>` for a per-sport copy (POOLSE-143). */
 export type Badges = Partial<Record<string, number>>;
 
 /** The count an entry shows: its sport's own where the badge is per sport. */
 export function badgeCount(item: Item, badges: Badges): number {
   if (item.badge === undefined) return 0;
+  // Turmas sharing a lane (Rui, 14-11-2026) are the pool calendar's: lanes are a pool's.
+  const extra = item.badge === 'calendar' && (item.sport === undefined || item.sport === 'pool') ? (badges['overlaps'] ?? 0) : 0;
   const key = item.badgePerSport === true && item.sport !== undefined ? `${item.badge}:${item.sport}` : item.badge;
-  return badges[key] ?? 0;
+  return (badges[key] ?? 0) + extra;
 }
 
 /*

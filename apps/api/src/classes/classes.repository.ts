@@ -178,6 +178,44 @@ export class DuplicateNameError extends Error {}
 /** The lane a turma was moved onto is already busy at one of its hours. */
 export class LaneOccupiedError extends Error {}
 export class FullError extends Error {}
+/**
+ * The tank at one of the turma's hours would hold more people than it may
+ * (Rui, 14-11-2026): `pool_people|<max>|<people>` from `enrollment_pool_people`.
+ */
+export class PoolPeopleError extends Error {
+  constructor(
+    readonly max: number,
+    readonly people: number,
+  ) {
+    super('pool_people');
+  }
+}
+
+/** An hour of a turma whose turmas promise more places than the tank holds — a warning, never a refusal. */
+export interface PoolPlacesOver {
+  weekday: number;
+  startTime: string;
+  max: number;
+  taken: number;
+  own: number;
+}
+
+/** The hours of this turma over the tank's capacity, by places promised (`pool_places_over`). */
+export async function poolPlacesOver(organizationId: string, groupId: string): Promise<PoolPlacesOver[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ weekday: number; start_time: string; max_capacity: number; taken: number; own: number }>(
+      `SELECT weekday, start_time, max_capacity, taken, own FROM pool_places_over($1, $2)`,
+      [organizationId, groupId],
+    );
+    return rows.map((row) => ({
+      weekday: row.weekday,
+      startTime: row.start_time,
+      max: row.max_capacity,
+      taken: row.taken,
+      own: row.own,
+    }));
+  });
+}
 export class AlreadyEnrolledError extends Error {}
 
 /**
@@ -1170,6 +1208,11 @@ export function enrollmentRefusal(error: unknown, groupId: string, studentId: st
   if (clash !== null) return clash;
   const code = error instanceof Error ? (error as { code?: string }).code : undefined;
   if (code === '23505') return new AlreadyEnrolledError(studentId);
+  const detail = (error as { detail?: unknown }).detail;
+  if (code === '23514' && typeof detail === 'string' && detail.startsWith('pool_people|')) {
+    const [, max, people] = detail.split('|').map(Number);
+    return new PoolPeopleError(max ?? 0, people ?? 0);
+  }
   if (code === '23514') return new FullError(groupId);
   return error;
 }

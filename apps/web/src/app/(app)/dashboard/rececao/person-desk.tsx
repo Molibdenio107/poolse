@@ -7,7 +7,7 @@ import { useSavedAction } from '@/lib/saved';
 import { SelectField, TextField } from '@/components/ui/field';
 import { formatCents } from '@/lib/money';
 import { formatDate } from '@/lib/date-format';
-import type { Pass, PassProduct, PersonPrice, PersonSummary, Swimmer } from '@/lib/api';
+import type { Pass, PassProduct, PersonPrice, Swimmer } from '@/lib/api';
 import {
   checkInAction,
   passesOf,
@@ -15,6 +15,7 @@ import {
   searchPeople,
   sellAction,
   walkInAction,
+  type DeskPerson,
   type ReceptionState,
 } from './reception.actions';
 import { BUTTON, BUTTON_QUIET, PANEL, PANEL_TITLE } from './styles';
@@ -110,7 +111,7 @@ export function PersonDesk({
 function PersonSearch({ onPick }: { onPick: (person: Chosen) => void }): React.ReactElement {
   const t = useTranslations();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<PersonSummary[] | null>(null);
+  const [results, setResults] = useState<DeskPerson[] | null>(null);
   const [state, setState] = useState<'idle' | 'loading' | 'failed' | 'done'>('idle');
 
   const run = useCallback(async (text: string) => {

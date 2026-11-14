@@ -86,6 +86,16 @@ export function useSavedAction<State extends { ok?: boolean }, Payload>(
       // A success whose screen says it better — the join's arrival — asks for
       // no message of its own (Rui, 10-11-2026).
       if (done.quiet === true) return;
+      // Saved, with something still to adjust: a warning toast, never the pulse.
+      const warned = state as { warningKey?: string; values?: Record<string, string | number> };
+      if (warned.warningKey !== undefined) {
+        try {
+          toast.show('warning', t(warned.warningKey as never, warned.values as never));
+          return;
+        } catch {
+          // An unknown key falls through to the plain success.
+        }
+      }
       const message = successMessage(t, state);
       if (done.undo !== undefined) offerUndo(done.undo, message);
       else toast.show('success', message);

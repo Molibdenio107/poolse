@@ -449,6 +449,8 @@ export function CalendarWeek({
     }
     setPlacing(null);
     if (result.lessonClash) show('warning', t('grid.lessonsClash'));
+    // Placed on a lane another turma holds at that hour (Rui, 14-11-2026): kept, and said.
+    else if (result.overlap !== null) show('warning', result.overlap);
     router.refresh();
   }
 

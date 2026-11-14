@@ -1819,10 +1819,19 @@ pool
   + max_capacity integer                    -- null means no ceiling, and none enforced
   check max_capacity is null or max_capacity > 0
 
-pool_capacity_respected(organization_id, class_group_id)   -- raises check_violation
-  triggers: class_schedule after insert/update
-            class_group    after update of capacity, pool_id, archived_at
+pool_places_over(organization_id, class_group_id)   -- 14-11-2026: a warning, never raises
+  -- each hour of the turma where the turmas in the tank promise more places than it holds
+enrollment_pool_people()                             -- 14-11-2026: the limit is on people
+  trigger: enrollment after insert / update of status, class_group_id
+  -- an enrolment newly active is refused when the active students across the tank's turmas
+  -- at an overlapping hour that season exceed max_capacity: check_violation,
+  -- DETAIL pool_people|<max>|<people>. Null max_capacity enforces nothing.
 ```
+
+**Since 14-11-2026 (Rui) the tank is a warning on the timetable and a limit on people.** The
+round-5 triggers that refused a turma save on the sum of *places* (`pool_capacity_respected`)
+are gone: a turma always saves, and the API answers `poolOver` for the hours over. What cannot
+happen is more *people* enrolled at an hour than the tank holds, when it has a capacity.
 
 **Three capacity rules now exist and they answer three different questions.** Keeping them
 straight is the whole difficulty:
@@ -1831,7 +1840,7 @@ straight is the whole difficulty:
 |---|---|---|
 | `class_group.capacity` | How many places does this turma promise? | `enrollment_respects_capacity` trigger |
 | `lane_level_capacity` | How many of this level fit in one lane? | A teaching judgement — POOLSE-49 |
-| `pool.max_capacity` | How many bodies are in the water at once? | `pool_capacity_respected` trigger |
+| `pool.max_capacity` | How many bodies are in the water at once? | `enrollment_pool_people` trigger; places over it are a warning (`pool_places_over`) |
 
 They compose rather than override: an enrolment must fit its turma, the turmas sharing a
 slot must fit the tank, and the per-lane level caps go on meaning what they meant.

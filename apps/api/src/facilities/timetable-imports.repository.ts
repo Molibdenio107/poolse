@@ -306,3 +306,75 @@ export async function undoTimetableImport(
     };
   });
 }
+
+/*
+ * *Limpar calendário* (Rui, 14-11-2026): the same replace as an import's, with
+ * nothing coming in. One pool, the published season, one bin entry; turmas with
+ * students stay unless named. Null when the site, the pool or a published season
+ * is not this club's.
+ */
+async function poolInSeason(tx: Tx, facilityId: string, poolId: string): Promise<string | null> {
+  const found = await tx.query(
+    `SELECT 1 FROM pool p JOIN facility f ON f.id = p.facility_id
+      WHERE p.id = $1 AND p.facility_id = $2 AND p.archived_at IS NULL AND f.archived_at IS NULL`,
+    [poolId, facilityId],
+  );
+  if (found.rowCount === 0) return null;
+  const season = await tx.query<{ id: string }>(
+    `SELECT id FROM season WHERE status = 'published' AND archived_at IS NULL LIMIT 1`,
+  );
+  return season.rows[0]?.id ?? null;
+}
+
+/** What clearing a pool's calendar would take: null when not found, empty when there is nothing. */
+export async function calendarToClear(
+  organizationId: string,
+  facilityId: string,
+  poolId: string,
+): Promise<PoolCalendar | null | 'empty'> {
+  return withOrg(organizationId, async (tx) => {
+    const seasonId = await poolInSeason(tx, facilityId, poolId);
+    if (seasonId === null) return null;
+    const [calendar] = await calendarsOf(tx, facilityId, seasonId, [poolId]);
+    return calendar ?? 'empty';
+  });
+}
+
+/**
+ * Clears it, to Arquivados as one entry. `slots` (Rui, 14-11-2026): only the
+ * weekly slots go, every one of them, and the turmas stay with their students,
+ * *Sem horário*. `all`: the turmas go too, except those with students not named.
+ */
+export async function clearCalendar(
+  organizationId: string,
+  facilityId: string,
+  poolId: string,
+  archiveTurmaIds: string[],
+  mode: 'slots' | 'all' = 'all',
+): Promise<{ turmas: number; slots: number } | null> {
+  return withOrg(organizationId, async (tx) => {
+    const seasonId = await poolInSeason(tx, facilityId, poolId);
+    if (seasonId === null) return null;
+    const [calendar] = await calendarsOf(tx, facilityId, seasonId, [poolId]);
+    if (calendar === undefined) return { turmas: 0, slots: 0 };
+    if (mode === 'slots') {
+      const { rows } = await tx.query<{ id: string }>(POOL_SLOTS, [facilityId, seasonId, poolId]);
+      const slotIds = rows.map((row) => row.id);
+      const { cascade } = await archiveTurmasAndSlotsIn(tx, [], slotIds);
+      const { rows: pool } = await tx.query<{ name: string }>(`SELECT name FROM pool WHERE id = $1`, [poolId]);
+      await recordAudit(tx, {
+        action: 'timetable.calendarReplaced',
+        entityType: 'calendar_replaced',
+        entityId: poolId,
+        data: { name: pool[0]?.name ?? null, cascade, slotsOnly: true },
+      });
+      return { turmas: 0, slots: slotIds.length };
+    }
+    const archive = new Set(archiveTurmaIds);
+    // A turma kept keeps its hours too: its students still have their lessons.
+    const keep = calendar.inUse.map((turma) => turma.id).filter((id) => !archive.has(id));
+    const plan = await replacedBy(tx, facilityId, seasonId, [poolId], keep);
+    await archiveCalendarIn(tx, facilityId, seasonId, [poolId], keep);
+    return { turmas: plan.turmaIds.size, slots: plan.slotIds.size };
+  });
+}

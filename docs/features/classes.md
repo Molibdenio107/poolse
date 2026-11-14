@@ -47,6 +47,8 @@ The weekly board (`WeekGrid`) is one column below `md`: each day is a heading wi
 
 ## Lista (was Cartões) — multi-sport Slice 4 (1 November 2026)
 
+**Turmas of one name fold together** (Rui, 14-11-2026). Turmas named *Nome · HH:MM* (the timetable import's form) with the same *Nome* are one folded heading on *Lista*: the name, then *13 turmas · 19 horários · 84 alunos* and how many have no teacher, with the attention dot when any does. Opened, it shows their cards. A turma is still a group of students: the same class taught to different people at different hours is rightly several turmas, so nothing is merged by the list.
+
 Turmas opens on **Lista** (*Cartões* until Rui renamed it, 09-11-2026), the handoff's *05 Turmas*. *Semana*, *Sem horário* and *Parcerias* follow it in the
 same pill row, and `?section=week` still opens the weekly board.
 
@@ -115,3 +117,9 @@ turmas: no level, capacity, price or students, editable and archivable, audited 
 `class_group.created`. An existing live turma of the same name in the published season and pool
 gets the new slots instead. While an import waits, Turmas lists what it would create, marked
 *nova (por confirmar)*. See `docs/features/calendar.md`.
+
+**At several hours, the import asks** (Rui, 14-11-2026). Before *Confirmar*, each class name the file has at more than one start in a pool shows *Uma turma por hora* (default: different hours are usually different people) or *Uma turma com todos os horários*. The choice travels with the preview and is sent again on *Confirmar* (`wholeNames`, keyed by the preview's `nameKey`).
+
+## Juntar turmas (Rui, 14-11-2026)
+
+Owner and admin, from a folded set on *Lista*: tick the turmas that are really the same students, choose the one that stays (its teacher, level and capacity are kept) and its name. Its slots, lessons (taught ones too, with their registers), students, plans, challenges, leads and transfer proposals move into the one kept; the others are archived, empty. A student in two of them keeps one enrolment. Where two have a plan or challenge on the same day, the kept turma's wins. Refused with nothing written when two meet on the same weekday and hour, when the students exceed the kept turma's capacity (with the numbers), when the name belongs to another live turma, or when a student would clash (POOLSE-144). Not undone from Arquivados; audited as `class_group.merged`. `POST /class-groups/:id/merge { from, name }`.

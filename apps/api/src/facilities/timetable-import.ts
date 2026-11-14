@@ -225,6 +225,8 @@ export interface TimetableContext {
   turmas?: ExistingTurma[];
   /** The site's pools by name, for telling apart one name in two pools. */
   pools?: { id: string; name: string }[];
+  /** Names chosen as one turma with every hour, `pool|folded name` (14-11-2026). */
+  wholeNames?: string[];
 }
 
 /** What the file needs of the site's hours, where it asks for more than the site keeps (11-11-2026). */
@@ -607,7 +609,7 @@ export function previewTimetable(
    * Turmas by name and start time (POOLSE-224, decided 2), after every row is
    * judged: a name another season or pool already uses refuses its rows here.
    */
-  const turmas = groupIntoTurmas(rows, context.turmas ?? [], context.pools ?? []);
+  const turmas = groupIntoTurmas(rows, context.turmas ?? [], context.pools ?? [], new Set(context.wholeNames ?? []));
   for (const turma of turmas) {
     for (const index of turma.slots) {
       const row = rows[index]!;
@@ -697,6 +699,12 @@ export interface PlannedTurma {
   slots: number[];
   /** The one teacher every slot names, else null. */
   instructorId: string | null;
+  /** Pool and folded name: what the operator's *one turma* choice is keyed on (14-11-2026). */
+  nameKey: string;
+  /** The name runs at more than one start in its pool, so the preview asks. */
+  atSeveralHours: boolean;
+  /** The operator chose one turma with every hour for this name. */
+  whole: boolean;
 }
 
 /**
@@ -718,6 +726,12 @@ export function groupIntoTurmas(
   rows: readonly Pick<TimetableRow, 'index' | 'kind' | 'name' | 'poolId' | 'startMinutes' | 'instructorId'>[],
   existing: readonly ExistingTurma[],
   pools: readonly { id: string; name: string }[],
+  /**
+   * Names the operator wants as one turma with every hour (Rui, 14-11-2026),
+   * keyed `pool|folded name`. Default, and for any name not here: one turma
+   * per hour, because different hours are usually different people.
+   */
+  whole: ReadonlySet<string> = new Set(),
 ): PlannedTurma[] {
   const turmaRows = rows.filter((row) => row.kind === 'turma' && row.name.trim() !== '');
 
@@ -729,22 +743,27 @@ export function groupIntoTurmas(
 
   const groups = new Map<string, PlannedTurma>();
   for (const row of turmaRows) {
-    const key = `${row.poolId ?? '-'}|${normaliseName(row.name)}|${row.startMinutes}`;
+    const nameKey = `${row.poolId ?? '-'}|${normaliseName(row.name)}`;
+    const atSeveralHours = (startsOf.get(nameKey)?.size ?? 0) > 1;
+    const isWhole = atSeveralHours && whole.has(nameKey);
+    const key = isWhole ? nameKey : `${nameKey}|${row.startMinutes}`;
     const group = groups.get(key);
     if (group !== undefined) {
       group.slots.push(row.index);
       if (group.instructorId !== row.instructorId) group.instructorId = null;
       continue;
     }
-    const manyStarts = (startsOf.get(`${row.poolId ?? '-'}|${normaliseName(row.name)}`)?.size ?? 0) > 1;
     groups.set(key, {
       key,
-      name: manyStarts ? `${row.name.trim()} · ${clockOf(row.startMinutes)}` : row.name.trim(),
+      name: atSeveralHours && !isWhole ? `${row.name.trim()} · ${clockOf(row.startMinutes)}` : row.name.trim(),
       poolId: row.poolId,
       existingId: null,
       taken: false,
       slots: [row.index],
       instructorId: row.instructorId,
+      nameKey,
+      atSeveralHours,
+      whole: isWhole,
     });
   }
 

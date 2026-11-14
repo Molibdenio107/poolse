@@ -192,6 +192,8 @@ document.
 
 ## Both capacities, one record
 
+The guardian picker on a student's form finds adult students the club has no person record for yet (enrolled without a login), as well as people. Picking one makes her person from her student file, or joins the person who already has her NIF or email, and links the two, so she never becomes a second record (14-11-2026). Only students of known age at or past the club's age of majority are offered. Reception's search is unchanged: people only.
+
 A person who is an adult student **and** an encarregado de educação is one record and appears
 once in Alunos, with a badge for each. She has to: the list is over `student`, and she has one
 student record.

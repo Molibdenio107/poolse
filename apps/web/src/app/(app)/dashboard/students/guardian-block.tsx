@@ -55,6 +55,11 @@ interface Draft {
   existing: boolean;
   /** POOLSE-207: encarregado de educação, or acompanhante of a maior acompanhado. */
   kind: 'parental' | 'accompanying';
+  /**
+   * An adult student picked with no person record yet (14-11-2026). The API
+   * makes her person on save, from her student file, so she stays one record.
+   */
+  studentId?: string | null;
 }
 
 function draftOf(guardian: Guardian): Draft {
@@ -214,7 +219,7 @@ export function GuardianBlock({
       <div className={open ? 'flex flex-col gap-4' : 'hidden'}>
         {drafts.map((draft, index) => (
           <GuardianRow
-            key={draft.membershipId ?? `new-${index}`}
+            key={draft.membershipId ?? draft.studentId ?? `new-${index}`}
             draft={draft}
             index={index}
             only={drafts.length === 1}
@@ -565,7 +570,7 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
       {results.length > 0 && (
         <ul className="flex flex-col divide-y divide-border rounded border border-border bg-surface">
           {results.map((person) => (
-            <li key={person.membershipId}>
+            <li key={person.membershipId ?? `student-${person.studentId}`}>
               <button
                 type="button"
                 onClick={() =>
@@ -579,8 +584,14 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
                     address: person.address ?? '',
                     isPrimary: true,
                     hasLogin: person.hasLogin,
-                    existing: true,
+                    // A student with no NIF and no email on file stays editable,
+                    // so the office can give the guardian the key it needs.
+                    existing:
+                      person.membershipId !== null ||
+                      person.taxNumber !== null ||
+                      person.email !== null,
                     kind: 'parental',
+                    studentId: person.studentId,
                   })
                 }
                 className="flex w-full flex-col gap-1 p-3 text-left hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"

@@ -105,7 +105,16 @@ export function ImportPreviewBar(): React.ReactElement | null {
     data.set('facilityId', preview.facilityId);
     data.set('poolId', preview.poolId);
     data.set('rows', preview.rowsJson);
-    data.set('settings', JSON.stringify({ commit: true, drop: preview.drop, replace: preview.replace, fileName: preview.fileName }));
+    data.set(
+      'settings',
+      JSON.stringify({
+        commit: true,
+        drop: preview.drop,
+        replace: preview.replace,
+        fileName: preview.fileName,
+        wholeNames: preview.wholeNames,
+      }),
+    );
     const answer = await runTimetableImportAction({ ok: false, attempt: 0 }, data);
     setConfirming(false);
 

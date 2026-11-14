@@ -101,48 +101,35 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
--- Test 3 — the one that goes over is refused
+-- Test 3 — the one that goes over is saved, and said (Rui, 14-11-2026)
 --
--- A third turma of 12 would make 44 in a tank of 40.
+-- A third turma of 12 makes 44 places in a tank of 40. Since 14-11-2026 that is
+-- a warning, never a refusal: `pool_places_over` names the hour and the numbers.
 -- ---------------------------------------------------------------------------
 
 DO $$
-DECLARE v_org uuid; v_fac uuid; v_absolutos uuid; ok boolean := false;
+DECLARE v_org uuid; v_fac uuid; v_absolutos uuid; v_cadetes uuid; r record; n integer;
 BEGIN
   v_org := '99999999-0000-4444-8888-999999999999';
   SELECT id INTO v_fac FROM facility WHERE organization_id = v_org;
   SELECT id INTO v_absolutos FROM class_group WHERE organization_id = v_org AND name = 'Absolutos';
-
-  BEGIN
-    INSERT INTO class_schedule
-      (organization_id, facility_id, class_group_id, weekday, start_time, duration_minutes)
-    VALUES (v_org, v_fac, v_absolutos, 1, '19:15', 45);
-  EXCEPTION WHEN check_violation THEN ok := true;
-  END;
-
-  IF NOT ok THEN
-    RAISE EXCEPTION 'FAIL test 3: 44 swimmers were allowed into a tank of 40';
-  END IF;
-
-  -- A partial overlap is still an overlap: half an hour of 44 people is 44
-  -- people. Starting as the first two finish is not.
-  ok := false;
-  BEGIN
-    INSERT INTO class_schedule
-      (organization_id, facility_id, class_group_id, weekday, start_time, duration_minutes)
-    VALUES (v_org, v_fac, v_absolutos, 1, '19:45', 45);
-  EXCEPTION WHEN check_violation THEN ok := true;
-  END;
-
-  IF NOT ok THEN
-    RAISE EXCEPTION 'FAIL test 3b: a partial overlap was not counted';
-  END IF;
+  SELECT id INTO v_cadetes FROM class_group WHERE organization_id = v_org AND name = 'Cadetes';
 
   INSERT INTO class_schedule
     (organization_id, facility_id, class_group_id, weekday, start_time, duration_minutes)
-  VALUES (v_org, v_fac, v_absolutos, 1, '20:00', 45);
+  VALUES (v_org, v_fac, v_absolutos, 1, '19:15', 45);
 
-  RAISE NOTICE 'PASS test 3: over the ceiling is refused, back-to-back is allowed';
+  SELECT * INTO r FROM pool_places_over(v_org, v_absolutos);
+  IF r.weekday IS DISTINCT FROM 1 OR r.start_time <> '19:15' OR r.max_capacity <> 40 OR r.taken <> 32 OR r.own <> 12 THEN
+    RAISE EXCEPTION 'FAIL test 3: the warning did not name Monday 19:15, 40, 32, 12 (got %)', r;
+  END IF;
+  -- Every turma at that hour sees the same problem.
+  SELECT count(*) INTO n FROM pool_places_over(v_org, v_cadetes);
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 3b: Cadetes did not see the hour it shares';
+  END IF;
+
+  RAISE NOTICE 'PASS test 3: over the ceiling by places is saved and warned, with the numbers';
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -186,32 +173,23 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
--- Test 6 — editing the turma is checked too
---
--- Without the second trigger the ceiling would hold only against new schedules,
--- and a turma of 12 in a full tank could be edited to 80 with nothing objecting.
+-- Test 6 — widening a turma is saved too, and warned
 -- ---------------------------------------------------------------------------
 
 DO $$
-DECLARE v_org uuid; v_infantis uuid; ok boolean := false;
+DECLARE v_org uuid; v_infantis uuid; n integer;
 BEGIN
   v_org := '99999999-0000-4444-8888-999999999999';
   SELECT id INTO v_infantis FROM class_group WHERE organization_id = v_org AND name = 'Infantis';
 
-  BEGIN
-    UPDATE class_group SET capacity = 80 WHERE id = v_infantis;
-  EXCEPTION WHEN check_violation THEN ok := true;
-  END;
-
-  IF NOT ok THEN
-    RAISE EXCEPTION 'FAIL test 6: a turma was widened past the tank it swims in';
+  UPDATE class_group SET capacity = 80 WHERE id = v_infantis;
+  SELECT count(*) INTO n FROM pool_places_over(v_org, v_infantis);
+  IF n = 0 THEN
+    RAISE EXCEPTION 'FAIL test 6: a turma widened past the tank was not warned';
   END IF;
+  UPDATE class_group SET capacity = 12 WHERE id = v_infantis;
 
-  -- Shrinking is always fine, and so is widening within the room that is left:
-  -- 20 + 16 = 36 in a tank of 40.
-  UPDATE class_group SET capacity = 16 WHERE id = v_infantis;
-
-  RAISE NOTICE 'PASS test 6: raising a turma past the tank ceiling is refused';
+  RAISE NOTICE 'PASS test 6: raising a turma past the tank ceiling saves, and warns';
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -253,6 +231,56 @@ BEGIN
   VALUES (v_other, v_fac, v_turma, 1, '19:15', 45);
 
   RAISE NOTICE 'PASS test 7: the tank ceiling counts only its own tenant';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 8 — people, not places: an enrolment over a tank with a ceiling is refused
+--
+-- A small tank of 2. Two turmas of 5 at the same hour may be timetabled (a
+-- warning); two people may enrol; the third, in either turma, is refused with
+-- `pool_people|2|3`. The tank with no ceiling refuses nobody.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid; v_fac uuid; v_season uuid; v_pool uuid; v_a uuid; v_b uuid; v_free uuid;
+  s1 uuid; s2 uuid; s3 uuid; ok boolean := false; why text;
+BEGIN
+  v_org := '99999999-0000-4444-8888-999999999999';
+  SELECT id INTO v_fac FROM facility WHERE organization_id = v_org;
+  SELECT id INTO v_season FROM season WHERE organization_id = v_org;
+  SELECT id INTO v_free FROM class_group WHERE organization_id = v_org AND name = 'Livres';
+
+  INSERT INTO pool (organization_id, facility_id, name, kind, max_capacity)
+  VALUES (v_org, v_fac, 'Tanque Pequeno', 'indoor', 2) RETURNING id INTO v_pool;
+  INSERT INTO class_group (organization_id, season_id, facility_id, name, pool_id, capacity)
+  VALUES (v_org, v_season, v_fac, 'Pequenos A', v_pool, 5) RETURNING id INTO v_a;
+  INSERT INTO class_group (organization_id, season_id, facility_id, name, pool_id, capacity)
+  VALUES (v_org, v_season, v_fac, 'Pequenos B', v_pool, 5) RETURNING id INTO v_b;
+  INSERT INTO class_schedule (organization_id, facility_id, class_group_id, weekday, start_time, duration_minutes)
+  VALUES (v_org, v_fac, v_a, 3, '18:00', 45), (v_org, v_fac, v_b, 3, '18:30', 45);
+
+  INSERT INTO student (organization_id, first_name, last_name) VALUES (v_org, 'Ana', 'Um') RETURNING id INTO s1;
+  INSERT INTO student (organization_id, first_name, last_name) VALUES (v_org, 'Bia', 'Dois') RETURNING id INTO s2;
+  INSERT INTO student (organization_id, first_name, last_name) VALUES (v_org, 'Cris', 'Tres') RETURNING id INTO s3;
+
+  INSERT INTO enrollment (organization_id, student_id, class_group_id) VALUES (v_org, s1, v_a), (v_org, s2, v_b);
+  BEGIN
+    INSERT INTO enrollment (organization_id, student_id, class_group_id) VALUES (v_org, s3, v_a);
+  EXCEPTION WHEN check_violation THEN
+    ok := true;
+    GET STACKED DIAGNOSTICS why = PG_EXCEPTION_DETAIL;
+  END;
+  IF NOT ok OR why <> 'pool_people|2|3' THEN
+    RAISE EXCEPTION 'FAIL test 8: a third person entered a tank of 2 (detail %)', why;
+  END IF;
+
+  -- The waiting list is not in the water.
+  INSERT INTO enrollment (organization_id, student_id, class_group_id, status) VALUES (v_org, s3, v_a, 'waiting');
+  -- The tank with no ceiling takes everybody.
+  INSERT INTO enrollment (organization_id, student_id, class_group_id) VALUES (v_org, s3, v_free);
+
+  RAISE NOTICE 'PASS test 8: people over a tank with a ceiling are refused; waiting and uncapped are not';
 END $$;
 
 ROLLBACK;

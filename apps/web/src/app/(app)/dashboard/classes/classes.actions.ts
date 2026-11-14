@@ -60,9 +60,11 @@ export async function createClassAction(
   const body = groupBody(formData);
   if (!body['name']) return { ok: false, errorKey: 'classes.nameRequired' };
 
-  let created: { id: string };
+  let created: { id: string; poolOver?: PoolOver[]; laneOverlaps?: LaneOverlap[] };
   try {
-    created = await apiPost<{ id: string }>('/class-groups', body, { organizationId });
+    created = await apiPost<{ id: string; poolOver?: PoolOver[]; laneOverlaps?: LaneOverlap[] }>('/class-groups', body, {
+      organizationId,
+    });
   } catch (error) {
     return failure(error, 'classes.createFailed');
   }
@@ -71,7 +73,62 @@ export async function createClassAction(
   // Straight to the turma, because a class group with no weekly pattern is not
   // yet a class — adding the days is the next thing anyone wants to do.
   // `redirectTo` rather than redirect(), which swallowed the save's toast.
-  return { ok: true, redirectTo: `/dashboard/classes/${created.id}` };
+  return { ok: true, redirectTo: `/dashboard/classes/${created.id}`, ...(await poolWarning(created.poolOver, created.laneOverlaps)) };
+}
+
+/** Another turma on the same lane at an overlapping hour, or with no lane yet — 14-11-2026. */
+interface LaneOverlap {
+  weekday: number;
+  startTime: string;
+  other: string;
+  otherStartTime: string;
+}
+
+/** "Seg 19:15 com Infantis", at most three, then "…". */
+function overlapWhen(t: Awaited<ReturnType<typeof getTranslations>>, overlaps: LaneOverlap[]): string {
+  const named = overlaps
+    .slice(0, 3)
+    .map((one) => `${t(`weekShort.${one.weekday}` as never)} ${one.startTime} ${t('classes.withTurma', { name: one.other })}`);
+  return overlaps.length > 3 ? `${named.join(', ')}…` : named.join(', ');
+}
+
+/** The warning a drop on the calendar shows, already in words; null when there is none. */
+async function overlapSentence(overlaps: LaneOverlap[] | undefined): Promise<string | null> {
+  if (overlaps === undefined || overlaps.length === 0) return null;
+  const t = await getTranslations();
+  return t('classes.laneOverlapWarning', { count: overlaps.length, when: overlapWhen(t, overlaps) });
+}
+
+/** An hour of the turma where the tank's turmas promise more places than it holds — 14-11-2026. */
+interface PoolOver {
+  weekday: number;
+  startTime: string;
+  max: number;
+  taken: number;
+  own: number;
+}
+
+/**
+ * Saved, but the tank is over by places at some hour (Rui, 14-11-2026): the
+ * warning the save shows instead of the pulse, naming the hours and the worst
+ * figures. Nothing when there is nothing over.
+ */
+async function poolWarning(
+  over: PoolOver[] | undefined,
+  overlaps?: LaneOverlap[] | undefined,
+): Promise<Pick<FormState, 'warningKey' | 'values'>> {
+  const t = await getTranslations();
+  // Sharing a lane comes first: it is the one the calendar has to sort out by hand.
+  if (overlaps !== undefined && overlaps.length > 0) {
+    return { warningKey: 'classes.laneOverlapWarning', values: { count: overlaps.length, when: overlapWhen(t, overlaps) } };
+  }
+  if (over === undefined || over.length === 0) return {};
+  const worst = over.reduce((a, b) => (b.taken + b.own - b.max > a.taken + a.own - a.max ? b : a));
+  const when = over.map((hour) => `${t(`weekShort.${hour.weekday}` as never)} ${hour.startTime}`).join(', ');
+  return {
+    warningKey: 'classes.poolOverWarning',
+    values: { count: over.length, when, places: worst.taken + worst.own, max: worst.max },
+  };
 }
 
 export async function updateClassAction(
@@ -83,15 +140,16 @@ export async function updateClassAction(
   const body = groupBody(formData);
   if (!body['name']) return { ok: false, errorKey: 'classes.nameRequired' };
 
+  let saved: { poolOver?: PoolOver[]; laneOverlaps?: LaneOverlap[] };
   try {
-    await apiPatch(`/class-groups/${groupId}`, body, { organizationId });
+    saved = await apiPatch<{ poolOver?: PoolOver[]; laneOverlaps?: LaneOverlap[] }>(`/class-groups/${groupId}`, body, { organizationId });
   } catch (error) {
     return failure(error, 'classes.createFailed');
   }
 
   revalidatePath('/dashboard/classes');
   revalidatePath(`/dashboard/classes/${groupId}`);
-  return { ok: true };
+  return { ok: true, ...(await poolWarning(saved.poolOver, saved.laneOverlaps)) };
 }
 
 export async function archiveClassAction(
@@ -121,8 +179,9 @@ export async function addSlotAction(
   const organizationId = String(formData.get('organizationId') ?? '');
   const groupId = String(formData.get('groupId') ?? '');
 
+  let added: { poolOver?: PoolOver[]; laneOverlaps?: LaneOverlap[] };
   try {
-    await apiPost(
+    added = await apiPost<{ poolOver?: PoolOver[]; laneOverlaps?: LaneOverlap[] }>(
       `/class-groups/${groupId}/schedules`,
       {
         weekday: String(formData.get('weekday') ?? ''),
@@ -137,7 +196,7 @@ export async function addSlotAction(
 
   revalidatePath('/dashboard/classes');
   revalidatePath(`/dashboard/classes/${groupId}`);
-  return { ok: true };
+  return { ok: true, ...(await poolWarning(added.poolOver, added.laneOverlaps)) };
 }
 
 export async function removeSlotAction(
@@ -232,8 +291,8 @@ export async function placeSlotAction(
   weekday: number,
   startTime: string,
   durationMinutes: number,
-): Promise<{ ok: true; lessonClash: boolean } | { ok: false; errorKey: string }> {
-  let added: { lessons?: { clashes?: unknown[] } | null };
+): Promise<{ ok: true; lessonClash: boolean; overlap: string | null } | { ok: false; errorKey: string }> {
+  let added: { lessons?: { clashes?: unknown[] } | null; laneOverlaps?: LaneOverlap[] };
   try {
     added = await apiPost(
       `/class-groups/${groupId}/schedules`,
@@ -255,7 +314,11 @@ export async function placeSlotAction(
   revalidatePath(`/dashboard/classes/${groupId}`);
   // Placed, but two turmas share an instructor at one hour, so the season's
   // lessons could not be created — said by the calendar, not hidden.
-  return { ok: true, lessonClash: (added.lessons?.clashes?.length ?? 0) > 0 };
+  return {
+    ok: true,
+    lessonClash: (added.lessons?.clashes?.length ?? 0) > 0,
+    overlap: await overlapSentence(added.laneOverlaps),
+  };
 }
 
 /** Move a slot already on the grid. Same refusals, same reasons. */
@@ -764,4 +827,43 @@ export async function removePartnerDayAction(
   revalidatePath('/dashboard/calendar');
   revalidatePath('/dashboard/classes');
   return { ok: true };
+}
+
+/**
+ * *Juntar turmas* (Rui, 14-11-2026): `from` are the same students as `targetId`.
+ * The refusal comes back as its code, with the numbers the sentence needs.
+ */
+export async function mergeTurmasAction(
+  targetId: string,
+  from: string[],
+  name: string,
+): Promise<
+  | { ok: true; slots: number; students: number; turmas: number }
+  | {
+      ok: false;
+      code: string;
+      capacity?: number | undefined;
+      students?: number | undefined;
+      weekday?: number | undefined;
+      startTime?: string | undefined;
+    }
+> {
+  try {
+    const done = await apiPost<{ slots: number; students: number; turmas: number }>(
+      `/class-groups/${encodeURIComponent(targetId)}/merge`,
+      { from, name },
+    );
+    revalidatePath('/dashboard/classes');
+    revalidatePath('/dashboard/calendar');
+    return { ok: true, ...done };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const body = (error.details ?? {}) as {
+        merge?: { capacity?: number; students?: number; weekday?: number; startTime?: string };
+      };
+      const { capacity, students, weekday, startTime } = body.merge ?? {};
+      return { ok: false, code: error.code ?? 'merge_failed', capacity, students, weekday, startTime };
+    }
+    return { ok: false, code: 'merge_failed' };
+  }
 }

@@ -28,6 +28,7 @@ import { CalendarWeek } from './calendar-week';
 import { NoPoolDrop } from './no-pool-drop';
 import { NothingYet } from '@/components/nothing-yet';
 import { ImportGate } from './import-gate';
+import { ClearCalendar } from './clear-calendar';
 import { LessonRequests } from './lesson-requests';
 import { CalendarAgenda } from './calendar-agenda';
 import { bookingKey, slotKey } from '@/lib/slot-key';
@@ -724,6 +725,13 @@ export default async function CalendarPage({
               >
                 {t('calendar.manageClosures')}
               </FromLink>
+
+              {/* Limpar calendário, quiet and asked (Rui, 14-11-2026). */}
+              <ClearCalendar
+                pools={importPools
+                  .filter((pool) => pool.bookable)
+                  .map((pool) => ({ id: pool.id, name: pool.name, facilityId: pool.facilityId }))}
+              />
             </section>
           )}
         </ImportGate>

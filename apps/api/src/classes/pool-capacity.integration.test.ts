@@ -78,7 +78,7 @@ function capacityOf(error: unknown): {
   };
 }
 
-test('4.2 — a slot over the tank ceiling is a 409 that names the numbers', async () => {
+test('14-11-2026 — a slot over the tank ceiling saves, and the answer names the numbers', async () => {
   await withScratchTenant(async (tenant) => {
     const { capped } = await tanks(tenant);
     const cadetes = await aTurma(tenant, 'Cadetes', capped, 20);
@@ -89,26 +89,14 @@ test('4.2 — a slot over the tank ceiling is a 409 that names the numbers', asy
       const classes = new ClassesController();
       const slot = { weekday: 1, startTime: '19:15', durationMinutes: 45 };
 
-      // 20 + 12 = 32 in a tank of 40. The club's ordinary Monday, and it saves.
+      // 20 + 12 = 32 in a tank of 40: nothing to say.
       await classes.schedule(cadetes, slot);
-      await classes.schedule(infantis, slot);
+      assert.deepEqual((await classes.schedule(infantis, slot)).poolOver, []);
 
-      // The third would make 44.
-      let refusal: unknown = null;
-      try {
-        await classes.schedule(absolutos, slot);
-      } catch (error) {
-        refusal = error;
-      }
-
-      assert.ok(refusal !== null, 'a fourth dozen swimmers were let into a tank of 40');
-
-      const seen = capacityOf(refusal);
-      assert.equal(seen.status, 409, 'a full tank is a conflict, never a 500');
-      assert.equal(seen.code, 'pool_full');
-      assert.equal(seen.max, 40, 'the ceiling, as the database counted it');
-      assert.equal(seen.taken, 32, 'what the slot already holds');
-      assert.equal(seen.remaining, 8, 'what this class may actually take');
+      // The third makes 44 places: saved (Rui, 14-11-2026), and warned.
+      const third = await classes.schedule(absolutos, slot);
+      assert.equal(third.added, true);
+      assert.deepEqual(third.poolOver, [{ weekday: 1, startTime: '19:15', max: 40, taken: 32, own: 12 }]);
     });
   });
 });
@@ -133,7 +121,7 @@ test('4.2 — a tank with no ceiling refuses nothing', async () => {
   });
 });
 
-test('4.2 — dragging a turma into a full slot is refused the same way', async () => {
+test('14-11-2026 — dragging a turma into a full slot is not refused', async () => {
   await withScratchTenant(async (tenant) => {
     const { capped } = await tanks(tenant);
     const cadetes = await aTurma(tenant, 'Cadetes', capped, 32);
@@ -141,31 +129,50 @@ test('4.2 — dragging a turma into a full slot is refused the same way', async 
 
     await actingAs(tenant, { roles: ['owner'] }, async () => {
       const classes = new ClassesController();
-
       await classes.schedule(cadetes, { weekday: 1, startTime: '19:15', durationMinutes: 45 });
       await classes.schedule(infantis, { weekday: 2, startTime: '19:15', durationMinutes: 45 });
-
       const [slot] = await tenant.sql<{ id: string }>(
         `SELECT id FROM class_schedule WHERE class_group_id = $1 AND archived_at IS NULL`,
         [infantis],
       );
+      const moved = await classes.moveSlot(infantis, slot!.id, { weekday: 1, startTime: '19:15' });
+      assert.equal(moved.moved, true);
+    });
+  });
+});
 
-      // The calendar drop is the other way a turma reaches a slot, and it used
-      // to bypass this entirely — the endpoint did not catch what the trigger
-      // raised.
+test('14-11-2026 — enrolling past the people a tank holds is a 409 with the numbers', async () => {
+  await withScratchTenant(async (tenant) => {
+    const [small] = await tenant.sql<{ id: string }>(
+      `INSERT INTO pool (organization_id, facility_id, name, kind, max_capacity)
+       VALUES ($1, $2, 'Tanque Pequeno', 'indoor', 1) RETURNING id`,
+      [tenant.organizationId, tenant.facilityId],
+    );
+    const turma = await aTurma(tenant, 'Pequenos', small!.id, 5);
+    const students = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name)
+       VALUES ($1, 'Ana', 'Um'), ($1, 'Bia', 'Dois') RETURNING id`,
+      [tenant.organizationId],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const classes = new ClassesController();
+      await classes.schedule(turma, { weekday: 3, startTime: '18:00', durationMinutes: 45 });
+      await classes.addStudent(turma, { studentId: students[0]!.id });
+
       let refusal: unknown = null;
       try {
-        await classes.moveSlot(infantis, slot!.id, { weekday: 1, startTime: '19:15' });
+        await classes.addStudent(turma, { studentId: students[1]!.id });
       } catch (error) {
         refusal = error;
       }
+      const body = (refusal as { response?: Record<string, unknown> }).response ?? {};
+      assert.equal((refusal as { status?: number }).status, 409);
+      assert.equal(body['code'], 'pool_people_full');
+      assert.deepEqual(body['poolPeople'], { max: 1, people: 2 });
 
-      assert.ok(refusal !== null, 'a drop walked past the tank ceiling');
-      const seen = capacityOf(refusal);
-      assert.equal(seen.status, 409);
-      assert.equal(seen.max, 40);
-      assert.equal(seen.taken, 32);
-      assert.equal(seen.remaining, 8);
+      // The waiting list is not in the water.
+      assert.equal((await classes.addStudent(turma, { studentId: students[1]!.id, waiting: true })).status, 'waiting');
     });
   });
 });

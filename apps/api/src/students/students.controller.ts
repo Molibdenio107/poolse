@@ -438,7 +438,10 @@ export class FamilyController {
 @Controller('people-search')
 export class PeopleSearchController {
   @Get()
-  async search(@Query('q') q?: string): Promise<{ people: PersonSummary[] }> {
+  async search(
+    @Query('q') q?: string,
+    @Query('students') students?: string,
+  ): Promise<{ people: PersonSummary[] }> {
     // Security review, 12 October 2026: this answered any member, a guardian included.
     requireRole('owner', 'admin', 'instructor');
     const { organizationId } = currentTenant();
@@ -449,7 +452,13 @@ export class PeopleSearchController {
     const search = q?.trim() ?? '';
     if (search.length < 2) return { people: [] };
 
-    return { people: await searchPeople(organizationId, search) };
+    /*
+     * Adult students with no person yet only for the guardian picker, which can
+     * turn one into a person on save (14-11-2026); reception cannot. Office only:
+     * an instructor reads only their own sports' students, and this list is all.
+     */
+    const withStudents = students === '1' && hasRole('owner', 'admin');
+    return { people: await searchPeople(organizationId, search, 10, withStudents) };
   }
 
   /** The children one person is responsible for — POOLSE-04, criterion 9. */
@@ -1274,9 +1283,11 @@ function readGuardian(
     isPrimary: entry['isPrimary'] === true || entry['isPrimary'] === 'true' || index === 0,
     // POOLSE-207. Absent is a parent's link, as every link was before it.
     kind: readGuardianKind(entry['kind']),
+    // An adult student picked from the search with no person yet (14-11-2026).
+    studentId: optionalText(entry['studentId'], 'guardianStudentId', 64),
   };
 
-  if (guardian.membershipId === null && guardian.name === null) return null;
+  if (guardian.membershipId === null && guardian.name === null && guardian.studentId == null) return null;
   return guardian;
 }
 

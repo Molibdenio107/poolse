@@ -1,9 +1,14 @@
 import {
+  calendarToClear,
+  clearCalendar,
   importInUse,
   listTimetableImports,
   undoTimetableImport,
+  type PoolCalendar,
   type TimetableImportRecord,
 } from './timetable-imports.repository.js';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import {
   BadRequestException,
   Body,
@@ -195,6 +200,7 @@ export class BookingsController {
       commit: body['commit'] === true,
       drop: readIndexes(body['drop']),
       replace: readReplace(body['replace']),
+      wholeNames: readWholeNames(body['wholeNames']),
       fileName: typeof body['fileName'] === 'string' && body['fileName'].trim() !== '' ? body['fileName'].trim().slice(0, 200) : null,
       membershipId,
     });
@@ -243,6 +249,42 @@ export class BookingsController {
     }
     const done = await undoTimetableImport(currentTenant().organizationId, importId, raw as string[]);
     if (done === null) throw new NotFoundException('No such import, or it was undone');
+    return done;
+  }
+
+  /**
+   * *Limpar calendário* (Rui, 14-11-2026): what clearing one pool's calendar this
+   * season would take, for the question; `calendar: null` when it is empty.
+   */
+  @Get('calendar-clear/:facilityId/:poolId')
+  async calendarToClear(
+    @Param('facilityId') facilityId: string,
+    @Param('poolId') poolId: string,
+  ): Promise<{ calendar: PoolCalendar | null }> {
+    requireRole('owner', 'admin');
+    if (!UUID_RE.test(facilityId) || !UUID_RE.test(poolId)) throw new BadRequestException('ids must be uuids');
+    const found = await calendarToClear(currentTenant().organizationId, facilityId, poolId);
+    if (found === null) throw new NotFoundException('No such pool, or no published season');
+    return { calendar: found === 'empty' ? null : found };
+  }
+
+  /** Clears it, restorably, as an import's *Substituir* does. Turmas with students stay unless named. */
+  @Post('calendar-clear/:facilityId/:poolId')
+  async clearCalendar(
+    @Param('facilityId') facilityId: string,
+    @Param('poolId') poolId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ turmas: number; slots: number }> {
+    requireRole('owner', 'admin');
+    if (!UUID_RE.test(facilityId) || !UUID_RE.test(poolId)) throw new BadRequestException('ids must be uuids');
+    const raw = body['archiveTurmaIds'] ?? [];
+    if (!Array.isArray(raw) || !raw.every((id) => typeof id === 'string' && UUID_RE.test(id))) {
+      throw new BadRequestException('archiveTurmaIds are turma ids');
+    }
+    const mode = body['mode'] ?? 'all';
+    if (mode !== 'slots' && mode !== 'all') throw new BadRequestException('mode is slots or all');
+    const done = await clearCalendar(currentTenant().organizationId, facilityId, poolId, raw as string[], mode);
+    if (done === null) throw new NotFoundException('No such pool, or no published season');
     return done;
   }
 
@@ -535,6 +577,15 @@ function readTarget(body: Record<string, unknown>): BookingTarget {
 }
 
 /** *Substituir o calendário atual*: the turmas with students to keep, or null for no replace. */
+/** *Uma turma com todos os horários* (14-11-2026): the preview's name keys, echoed back. */
+function readWholeNames(raw: unknown): string[] {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw) || raw.length > 500 || !raw.every((key) => typeof key === 'string' && key.length <= 300)) {
+    throw new BadRequestException('wholeNames are name keys');
+  }
+  return raw as string[];
+}
+
 function readReplace(raw: unknown): { keepTurmaIds: string[] } | null {
   if (raw === undefined || raw === null) return null;
   if (typeof raw !== 'object' || Array.isArray(raw)) throw new BadRequestException('replace is an object');

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { BookingsController } from './bookings.controller.js';
 import { ArchiveController } from '../archive/archive.controller.js';
 import { GridController } from './grid.controller.js';
+import { ClassesController } from '../classes/classes.controller.js';
 import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant } from '../test/harness.js';
 import type { ScratchTenant } from '../test/harness.js';
 
@@ -564,6 +565,35 @@ test('turma rows become turmas by name and start, with no level or capacity, and
   });
 });
 
+test('14-11-2026: a name at several hours is one turma per hour unless the operator says one turma', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const rows = [
+        row({ name: 'Masters', weekday: 1, startTime: '07:00', laneNames: ['Pista 1'], kind: 'turma', line: 1 }),
+        row({ name: 'Masters', weekday: 1, startTime: '19:00', laneNames: ['Pista 1'], kind: 'turma', line: 2 }),
+        row({ name: 'Bebés', weekday: 2, startTime: '10:00', laneNames: ['Pista 3'], kind: 'turma', line: 3 }),
+      ];
+      const api = new BookingsController();
+      const perHour = await api.importTimetable(tenant.facilityId, { rows });
+      const masters = perHour.turmas.filter((one) => one.atSeveralHours);
+      assert.deepEqual(masters.map((one) => one.name), ['Masters · 07:00', 'Masters · 19:00']);
+      assert.equal(perHour.turmas.find((one) => one.name === 'Bebés')?.atSeveralHours, false);
+
+      const nameKey = masters[0]!.nameKey;
+      const whole = await api.importTimetable(tenant.facilityId, { rows, wholeNames: [nameKey], commit: true });
+      const one = whole.turmas.find((turma) => turma.nameKey === nameKey)!;
+      assert.equal(one.name, 'Masters');
+      assert.equal(one.whole, true);
+      assert.deepEqual(one.slots, [0, 1]);
+      assert.deepEqual(await turmaRows(tenant), [
+        { name: 'Bebés', level_id: null, capacity: null, slots: 1 },
+        { name: 'Masters', level_id: null, capacity: null, slots: 2 },
+      ]);
+    });
+  });
+});
+
 test('an existing turma of that name gets the slots, never a duplicate (QA 7)', async () => {
   await withScratchTenant(async (tenant) => {
     await sixLanes(tenant);
@@ -739,6 +769,157 @@ test('12-11-2026: an import record is owner and admin business', async () => {
       const api = new BookingsController();
       await expectStatus(() => api.timetableImports(tenant.facilityId), 403);
       await expectStatus(() => api.undoTimetableImport('00000000-0000-0000-0000-000000000000', {}), 403);
+    });
+  });
+});
+
+test('14-11-2026: Limpar calendário archives the pool’s calendar as one entry, keeping a turma with students unless ticked', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    const poolId = await poolOf(tenant);
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      const api = new BookingsController();
+      await api.importTimetable(tenant.facilityId, {
+        poolId,
+        rows: [
+          row({ name: 'Golfinhos', kind: 'turma', laneNames: ['Pista 1'] }),
+          row({ name: 'Bebés', kind: 'turma', laneNames: ['Pista 3'] }),
+        ],
+        commit: true,
+      });
+      await enrol(tenant, 'Golfinhos');
+
+      const asked = await api.calendarToClear(tenant.facilityId, poolId);
+      assert.equal(asked.calendar?.slots, 2);
+      assert.deepEqual(asked.calendar?.inUse.map((t) => t.name), ['Golfinhos']);
+
+      const done = await api.clearCalendar(tenant.facilityId, poolId, {});
+      assert.deepEqual(done, { turmas: 1, slots: 1 });
+      const live = await tenant.sql<{ name: string }>(`SELECT name FROM class_group WHERE archived_at IS NULL`);
+      assert.deepEqual(live.map((t) => t.name), ['Golfinhos'], 'the turma with students stays');
+      assert.equal(await bookingCount(tenant), 1, 'with its own hours; everything else is gone');
+      const [entry] = await tenant.sql<{ id: string }>(
+        `SELECT id FROM audit_log WHERE action = 'timetable.calendarReplaced' AND entity_id = $1`,
+        [poolId],
+      );
+      assert.ok(entry, 'one entry in the bin');
+
+      // Ticked, the kept turma goes too, and the pool is empty.
+      assert.deepEqual(await api.clearCalendar(tenant.facilityId, poolId, { archiveTurmaIds: [asked.calendar!.inUse[0]!.id] }), {
+        turmas: 1,
+        slots: 1,
+      });
+      assert.equal((await api.calendarToClear(tenant.facilityId, poolId)).calendar, null);
+      await expectStatus(() => api.calendarToClear(tenant.facilityId, '00000000-0000-4000-8000-000000000000'), 404);
+    });
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      await expectStatus(() => new BookingsController().clearCalendar(tenant.facilityId, poolId, {}), 403);
+    });
+  });
+});
+
+test('14-11-2026: Juntar turmas moves slots, students and lessons into one turma and archives the others', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      await new BookingsController().importTimetable(tenant.facilityId, {
+        rows: [
+          row({ name: 'Masters', weekday: 1, startTime: '07:00', laneNames: ['Pista 1'], kind: 'turma', line: 1 }),
+          row({ name: 'Masters', weekday: 4, startTime: '19:00', laneNames: ['Pista 1'], kind: 'turma', line: 2 }),
+          row({ name: 'Masters', weekday: 1, startTime: '20:00', laneNames: ['Pista 1'], kind: 'turma', line: 3 }),
+        ],
+        commit: true,
+      });
+      await enrol(tenant, 'Masters · 07:00');
+      await enrol(tenant, 'Masters · 19:00');
+      const ids = await tenant.sql<{ id: string; name: string }>(
+        `SELECT id, name FROM class_group WHERE archived_at IS NULL ORDER BY name`,
+      );
+      const at = (name: string): string => ids.find((one) => one.name === name)!.id;
+
+      const classes = new ClassesController();
+      // A name another live turma holds is refused, and nothing moves.
+      await assert.rejects(
+        classes.merge(at('Masters · 07:00'), { from: [at('Masters · 19:00')], name: 'masters · 20:00' }),
+        (error: unknown) => (error as { getResponse(): { code: string } }).getResponse().code === 'merge_name_taken',
+      );
+      const done = await classes.merge(at('Masters · 07:00'), { from: [at('Masters · 19:00')], name: 'Masters manhã' });
+      assert.deepEqual(done, { slots: 1, students: 2, turmas: 1 });
+      assert.deepEqual(
+        new Map((await turmaRows(tenant)).map((one) => [one.name, one.slots])),
+        new Map([
+          ['Masters manhã', 2],
+          ['Masters · 20:00', 1],
+        ]),
+      );
+      const [students] = await tenant.sql<{ n: number }>(
+        `SELECT count(*)::int AS n FROM enrollment WHERE class_group_id = $1 AND status <> 'ended'`,
+        [at('Masters · 07:00')],
+      );
+      assert.equal(students!.n, 2, 'both students are in the kept turma');
+      const [orphans] = await tenant.sql<{ n: number }>(
+        `SELECT count(*)::int AS n FROM class_session WHERE class_group_id = $1`,
+        [at('Masters · 19:00')],
+      );
+      assert.equal(orphans!.n, 0, 'its lessons moved with it');
+
+      // Capacity: a refusal with numbers, and nothing written.
+      await tenant.sql(`UPDATE class_group SET capacity = 1 WHERE id = $1`, [at('Masters · 20:00')]);
+      await enrol(tenant, 'Masters · 20:00');
+      await assert.rejects(
+        classes.merge(at('Masters · 20:00'), { from: [at('Masters · 07:00')] }),
+        (error: unknown) => {
+          const body = (error as { getResponse(): { code: string; merge: { capacity: number; students: number } } }).getResponse();
+          assert.equal(body.code, 'merge_over_capacity');
+          assert.deepEqual([body.merge.capacity, body.merge.students], [1, 3]);
+          return true;
+        },
+      );
+      await expectStatus(() => classes.merge(at('Masters · 07:00'), { from: ['00000000-0000-4000-8000-000000000000'] }), 404);
+    });
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      await expectStatus(() => new ClassesController().merge('00000000-0000-4000-8000-000000000000', { from: ['00000000-0000-4000-8000-000000000001'] }), 403);
+    });
+  });
+});
+
+test('14-11-2026: Limpar calendário can take only the hours, leaving every turma and its students', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    const poolId = await poolOf(tenant);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const api = new BookingsController();
+      await api.importTimetable(tenant.facilityId, {
+        poolId,
+        rows: [
+          row({ name: 'Golfinhos', kind: 'turma', laneNames: ['Pista 1'] }),
+          row({ name: 'Bebés', kind: 'turma', laneNames: ['Pista 3'] }),
+        ],
+        commit: true,
+      });
+      await enrol(tenant, 'Golfinhos');
+
+      assert.deepEqual(await api.clearCalendar(tenant.facilityId, poolId, { mode: 'slots' }), { turmas: 0, slots: 2 });
+      assert.equal(await bookingCount(tenant), 0, 'no weekly slot is left');
+      assert.deepEqual(
+        (await turmaRows(tenant)).map((one) => [one.name, one.slots]),
+        [
+          ['Bebés', 0],
+          ['Golfinhos', 0],
+        ],
+        'both turmas stay, Sem horário',
+      );
+      const [students] = await tenant.sql<{ n: number }>(`SELECT count(*)::int AS n FROM enrollment WHERE status <> 'ended'`);
+      assert.equal(students!.n, 1, 'the student is still enrolled');
+      await expectStatus(() => api.clearCalendar(tenant.facilityId, poolId, { mode: 'everything' }), 400);
+
+      // Arquivados brings the hours back, in one go.
+      const [entry] = await tenant.sql<{ id: string }>(
+        `SELECT id FROM audit_log WHERE action = 'timetable.calendarReplaced' AND entity_id = $1`,
+        [poolId],
+      );
+      await new ArchiveController().restore(entry!.id);
+      assert.equal(await bookingCount(tenant), 2);
     });
   });
 });

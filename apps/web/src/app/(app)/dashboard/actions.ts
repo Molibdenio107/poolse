@@ -53,6 +53,12 @@ export interface FormState {
    */
   toastKey?: string;
   /**
+   * A success that still needs the operator (Rui, 14-11-2026): saved, but the
+   * tank is over at some hour. Shown as a warning toast instead of the pulse,
+   * rendered with `values`.
+   */
+  warningKey?: string;
+  /**
    * An archive's audit entry — POOLSE-78. Present, the success toast carries
    * *Anular*, which restores exactly that action through the bin's endpoint.
    */

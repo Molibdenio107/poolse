@@ -1,5 +1,6 @@
 import { REQUEST_WAITING } from '../classes/lesson-requests.repository.js';
 import { turmasWithoutInstructor } from '../classes/turmas-without-instructor.js';
+import { countLaneOverlaps } from '../classes/lane-overlaps.js';
 import { withOrg } from '@poolse/db';
 import { excursions, gradeLabResult, isMultiSport, resolveBands } from '@poolse/rules';
 import { readPoolWater } from '../dashboard/management.repository.js';
@@ -175,6 +176,9 @@ export async function readAttention(organizationId: string, scope: AttentionScop
       add(out.menu, 'classes');
       add(out.menu, `classes:${turma.sport}`);
     }
+    // Turmas on one lane at one hour, or one with no lane yet (Rui, 14-11-2026): the calendar's to sort.
+    const overlaps = await countLaneOverlaps(organizationId);
+    if (overlaps > 0) add(out.menu, 'overlaps', overlaps);
   }
 
   if (scope.review) {

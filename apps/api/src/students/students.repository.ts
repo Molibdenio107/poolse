@@ -134,6 +134,8 @@ export interface GuardianInput {
   isPrimary: boolean;
   /** POOLSE-207: encarregado of a minor (default) or acompanhante of a maior acompanhado. */
   kind: GuardianKind;
+  /** An adult student picked as guardian who has no person yet (14-11-2026). */
+  studentId?: string | null;
 }
 
 export type GuardianKind = 'parental' | 'accompanying';
@@ -2307,6 +2309,85 @@ export async function findPerson(
 }
 
 /**
+ * The person behind an adult student picked as a guardian (14-11-2026).
+ *
+ * A student enrolled without a login has no membership, and a guardian link
+ * needs one. This makes it from the student's own details and points the
+ * student at it, so she is one human in two roles rather than two records. If
+ * the club already holds somebody with her NIF or email, that is her, and she
+ * is linked to it instead. Null for a student who is not this club's, archived,
+ * a minor, or the child being saved; the caller then treats the row as typed.
+ */
+async function personOfAdultStudent(
+  tx: Tx,
+  organizationId: string,
+  guardian: GuardianInput,
+  childId: string,
+): Promise<string | null> {
+  const pickedStudentId = guardian.studentId;
+  if (pickedStudentId == null || pickedStudentId === childId) return null;
+  // The office's, as the search that offers her is (an instructor sees only their sports).
+  const { roles } = currentTenant();
+  if (!roles.includes('owner') && !roles.includes('admin')) return null;
+  const { rows } = await tx.query<{
+    membership_id: string | null;
+    first_name: string;
+    last_name: string | null;
+    email: string | null;
+    phone: string | null;
+    tax_number: string | null;
+    birth_date: string;
+  }>(
+    `SELECT s.membership_id, s.first_name, s.last_name, s.contact_email::text AS email,
+            s.contact_phone AS phone, s.tax_number, s.birth_date::text AS birth_date
+       FROM student s
+       JOIN organization o ON o.id = s.organization_id
+      WHERE s.id = $1
+        AND s.archived_at IS NULL
+        AND s.anonymised_at IS NULL
+        AND s.birth_date IS NOT NULL
+        AND s.birth_date <= club_today() - make_interval(years => o.age_of_majority)
+      FOR UPDATE OF s`,
+    [pickedStudentId],
+  );
+  const student = rows[0];
+  if (student === undefined) return null;
+  if (student.membership_id !== null) return student.membership_id;
+
+  // Her file may hold no NIF and no email; then the office typed one here.
+  const taxNumber = student.tax_number ?? guardian.taxNumber;
+  const email = student.email ?? guardian.email;
+  const phone = student.phone ?? guardian.phone;
+  let membershipId = await findPerson(tx, taxNumber, email);
+  if (membershipId === null) {
+    const { rows: made } = await tx.query<{ id: string }>(
+      `INSERT INTO membership (organization_id, status, first_name, last_name,
+                               email, phone, tax_number, birth_date)
+       VALUES ($1, 'active', $2, $3, $4::citext, $5, $6, $7::date)
+       RETURNING id`,
+      [
+        organizationId,
+        student.first_name,
+        student.last_name,
+        email,
+        phone,
+        taxNumber,
+        student.birth_date,
+      ],
+    );
+    membershipId = made[0]!.id;
+  }
+  await tx.query(`UPDATE student SET membership_id = $2 WHERE id = $1`, [pickedStudentId, membershipId]);
+  await recordAudit(tx, {
+    action: 'student.person_linked',
+    entityType: 'student',
+    entityId: pickedStudentId,
+    data: { membershipId, asGuardianOf: childId },
+  });
+  return membershipId;
+}
+
+/**
  * Makes the student's guardians match what the caller asked for.
  *
  * The whole set is posted, not a delta, so anything no longer in the list is
@@ -2328,6 +2409,10 @@ async function syncGuardians(
 
   for (const guardian of guardians) {
     let membershipId = guardian.membershipId;
+
+    if (membershipId === null && guardian.studentId != null) {
+      membershipId = await personOfAdultStudent(tx, organizationId, guardian, studentId);
+    }
 
     if (membershipId === null) {
       membershipId = await findPerson(tx, guardian.taxNumber, guardian.email);
@@ -2485,7 +2570,8 @@ async function syncGuardians(
  * human as one record.
  */
 export interface PersonSummary {
-  membershipId: string;
+  /** Null only for an adult student with no person yet — see `studentId`. */
+  membershipId: string | null;
   name: string;
   /** First given name + last surname — POOLSE-32. Null for a nameless invitee. */
   shortName: string | null;
@@ -2497,12 +2583,19 @@ export interface PersonSummary {
   hasLogin: boolean;
   /** How many students they are already responsible for. Shown so a pick is confident. */
   guardianOf: number;
+  /**
+   * An adult student with no person record yet (14-11-2026): `membershipId` is
+   * null and this names the student. Picking them as a guardian gives the
+   * student a person, so the club still has one Sara Alves and not two.
+   */
+  studentId: string | null;
 }
 
 export async function searchPeople(
   organizationId: string,
   search: string,
   limit = 10,
+  withStudents = false,
 ): Promise<PersonSummary[]> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
@@ -2559,7 +2652,7 @@ export async function searchPeople(
       [search, limit],
     );
 
-    return rows.map((row) => ({
+    const people: PersonSummary[] = rows.map((row) => ({
       membershipId: row.membership_id,
       name: row.name,
       shortName: row.short_name,
@@ -2570,7 +2663,64 @@ export async function searchPeople(
       roles: row.roles,
       hasLogin: row.has_login,
       guardianOf: row.guardian_of,
+      studentId: null,
     }));
+    if (!withStudents || people.length >= limit) return people;
+
+    /*
+     * Adult students the club has never made a person of (14-11-2026). An adult
+     * swimmer enrolled without a login has a student row and no membership, so
+     * the search above cannot see her, and the office typed her again as a new
+     * guardian. Adults only: a birth date the club does not know could be a
+     * child's, and a child answers for nobody.
+     */
+    const { rows: students } = await tx.query<{
+      id: string;
+      name: string;
+      email: string | null;
+      phone: string | null;
+      tax_number: string | null;
+      address: string | null;
+    }>(
+      `SELECT s.id,
+              trim(s.first_name || ' ' || coalesce(s.last_name, '')) AS name,
+              s.contact_email::text AS email,
+              s.contact_phone AS phone,
+              s.tax_number,
+              nullif(concat_ws(', ', nullif(s.address_line, ''),
+                     nullif(trim(concat_ws(' ', s.postal_code, s.locality)), '')), '') AS address
+         FROM student_person s
+         JOIN organization o ON o.id = s.organization_id
+        WHERE s.archived_at IS NULL
+          AND s.anonymised_at IS NULL
+          AND s.membership_id IS NULL
+          AND s.birth_date IS NOT NULL
+          AND s.birth_date <= club_today() - make_interval(years => o.age_of_majority)
+          AND (
+            ${searchPredicate("trim(s.first_name || ' ' || coalesce(s.last_name, ''))", '$1')}
+            OR s.contact_email = $1::citext
+            OR s.tax_number = $1::text
+          )
+        ORDER BY s.first_name, s.last_name
+        LIMIT $2`,
+      [search, limit - people.length],
+    );
+    for (const row of students) {
+      people.push({
+        membershipId: null,
+        name: row.name,
+        shortName: row.name,
+        email: row.email,
+        phone: row.phone,
+        taxNumber: row.tax_number,
+        address: row.address,
+        roles: ['student'],
+        hasLogin: false,
+        guardianOf: 0,
+        studentId: row.id,
+      });
+    }
+    return people;
   });
 }
 

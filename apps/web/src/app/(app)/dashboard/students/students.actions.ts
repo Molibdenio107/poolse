@@ -416,7 +416,7 @@ export async function archiveLevelAction(
 export async function searchPeopleAction(query: string): Promise<PersonSummary[] | null> {
   try {
     const result = await apiFetch<{ people: PersonSummary[] }>(
-      `/people-search?q=${encodeURIComponent(query)}`,
+      `/people-search?q=${encodeURIComponent(query)}&students=1`,
     );
     return result.people;
   } catch {

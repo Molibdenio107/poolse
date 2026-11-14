@@ -667,3 +667,11 @@ The make-up lessons page (`/dashboard/classes/reposicoes`) applies the same chec
   from the bin tops the lessons up again.
 - **A slot an existing turma already has** at that day and hour is skipped on Confirmar, never a
   refusal of the whole import. That was the cause of "Não foi possível importar o horário."
+
+## Limpar calendário (Rui, 14-11-2026)
+
+In the calendar's *Época* card, owner and admin only, one quiet *Limpar calendário · <tanque>* per pool. It asks first, saying how many turmas and weekly slots there are, and *what to clear*: **Só os horários** (the default) archives every weekly slot of the pool this season and leaves every turma and its students, *Sem horário*, to be scheduled again; **Os horários e as turmas** does what an import's *Substituir* does with nothing coming in: the pool's turmas, slots, events, natação livre and parcerias this season go to Arquivados as one restorable entry (`timetable.calendarReplaced`). Turmas with students stay, with their own hours, unless ticked. Lessons already taught stay as a record. API: `GET` / `POST /bookings/calendar-clear/:facilityId/:poolId` (`mode: 'slots' | 'all'`). Either way it is one entry in Arquivados.
+
+## Turmas on one lane (Rui, 14-11-2026)
+
+`turma_lane_overlaps()` is the one definition: two live turma slots of the published season in the same pool, on the same weekday, at overlapping hours, that share a lane in `booking_lane` or where one has no lane yet (*Sem pista*). Never refused. A save that creates one (the turma form, *Horário semanal*, a drop on the calendar) is a warning toast naming the hour and the other turma (`laneOverlaps` on the response). The count is `menu.overlaps` in the attention map, office only: a circle on the pool's *Calendário* and a bell line, *N sobreposições de turmas na mesma pista*, which clear when the lanes are spread.

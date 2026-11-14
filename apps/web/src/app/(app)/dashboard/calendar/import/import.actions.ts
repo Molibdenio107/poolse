@@ -210,7 +210,17 @@ export interface TimetableResult {
   /** Days whose hours keep rows out — *Alargar o horário* (11-11-2026). */
   hoursNeeded?: TimetableHoursNeeded[];
   /** The turmas the turma rows become, new or existing (POOLSE-224). */
-  turmas?: { key: string; name: string; poolId: string | null; existingId: string | null; slots: number[] }[];
+  turmas?: {
+    key: string;
+    name: string;
+    poolId: string | null;
+    existingId: string | null;
+    slots: number[];
+    /** 14-11-2026: pool + folded name, what *Uma turma com todos os horários* is keyed on. */
+    nameKey: string;
+    atSeveralHours: boolean;
+    whole: boolean;
+  }[];
   created?: number;
   turmasCreated?: number;
   /** Pools this import goes into that already have a calendar (12-11-2026); the commit waits for a choice. */
@@ -344,7 +354,13 @@ export async function runTimetableImportAction(
   }
 
   let rows: unknown;
-  let settings: { commit?: boolean; drop?: number[]; replace?: { keepTurmaIds: string[] } | null; fileName?: string } = {};
+  let settings: {
+    commit?: boolean;
+    drop?: number[];
+    replace?: { keepTurmaIds: string[] } | null;
+    fileName?: string;
+    wholeNames?: string[];
+  } = {};
   try {
     rows = JSON.parse(rawRows);
     if (rawSettings.trim() !== '') settings = JSON.parse(rawSettings) as typeof settings;
@@ -366,6 +382,8 @@ export async function runTimetableImportAction(
       // Substituir o calendário atual (12-11-2026), and the file's name for the import's record.
       replace: settings.replace ?? null,
       fileName: settings.fileName ?? null,
+      // One turma with every hour, per class name the operator chose (14-11-2026).
+      wholeNames: Array.isArray(settings.wholeNames) ? settings.wholeNames : [],
     });
 
     if (settings.commit === true) {
@@ -383,5 +401,37 @@ export async function runTimetableImportAction(
       return { ok: false, errorKey: 'timetableImport.noSeason', attempt };
     }
     return { ok: false, errorKey: 'timetableImport.failed', attempt };
+  }
+}
+
+/** *Limpar calendário* (Rui, 14-11-2026): what it would take. `undefined` = failed; null = empty. */
+export async function calendarToClearAction(facilityId: string, poolId: string): Promise<PoolCalendar | null | undefined> {
+  try {
+    const found = await apiFetch<{ calendar: PoolCalendar | null }>(
+      `/bookings/calendar-clear/${encodeURIComponent(facilityId)}/${encodeURIComponent(poolId)}`,
+    );
+    return found.calendar;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Clears one pool's calendar this season, to Arquivados; turmas with students only when ticked. */
+export async function clearCalendarAction(
+  facilityId: string,
+  poolId: string,
+  archiveTurmaIds: string[],
+  mode: 'slots' | 'all',
+): Promise<{ ok: boolean; turmas?: number; slots?: number }> {
+  try {
+    const done = await apiPost<{ turmas: number; slots: number }>(
+      `/bookings/calendar-clear/${encodeURIComponent(facilityId)}/${encodeURIComponent(poolId)}`,
+      { archiveTurmaIds, mode },
+    );
+    revalidatePath('/dashboard/calendar');
+    revalidatePath('/dashboard/classes');
+    return { ok: true, turmas: done.turmas, slots: done.slots };
+  } catch {
+    return { ok: false };
   }
 }

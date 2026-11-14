@@ -69,7 +69,7 @@ test('saving a turma with nothing changed succeeds', async () => {
         lane: before.lane,
       });
 
-      assert.deepEqual(saved, { updated: true });
+      assert.deepEqual(saved, { updated: true, poolOver: [], laneOverlaps: [] });
 
       const after = await classes.one(id);
       assert.equal(after.name, 'Cadetes');
@@ -132,7 +132,7 @@ test('8.2 — a turma with no tank and no lanes is refused, in words', async () 
         capacity: '',
         lane: '1',
       });
-      assert.deepEqual(saved, { updated: true });
+      assert.deepEqual(saved, { updated: true, poolOver: [], laneOverlaps: [] });
     });
   });
 });

@@ -1147,6 +1147,11 @@ export interface TimetableImportRequest {
    * imports rather than a booking somebody loses.
    */
   drop: number[];
+  /**
+   * Class names the operator wants as one turma with every hour (Rui,
+   * 14-11-2026), as the preview's `nameKey`. Absent: one turma per hour.
+   */
+  wholeNames?: string[];
 }
 
 export interface TimetableImportResult {
@@ -1414,6 +1419,7 @@ export async function runTimetableImport(
       context.existing = context.existing.filter((booking) => !plan.slotIds.has(booking.id));
       if (context.turmas !== undefined) context.turmas = context.turmas.filter((turma) => !plan.turmaIds.has(turma.id));
     }
+    context.wholeNames = request.wholeNames ?? [];
     const judged = previewTimetable(kept, context, request.poolId);
     const blockedByCalendar = existingCalendars.length > 0 && request.replace === null;
     const preview = {

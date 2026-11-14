@@ -26,6 +26,8 @@ export const ATTENTION_ITEMS: Record<BadgeKey, AttentionItem> = {
   classes: { key: 'notifications.item.classes', href: '/dashboard/classes?instructor=none' },
   facilities: { key: 'notifications.item.facilities', href: '/dashboard/facilities', app: '/app/manutencao' },
   calendar: { key: 'notifications.item.calendar', href: '/dashboard/calendar', app: '/app/aulas' },
+  // Turmas on one lane at one hour, or one with no lane yet (Rui, 14-11-2026): spread them on the calendar.
+  overlaps: { key: 'notifications.item.overlaps', href: '/dashboard/calendar' },
   categories: { key: 'notifications.item.categories', href: '/dashboard/rececao' },
   // The inbox itself, not Provas' first section (Rui, 11-11-2026: every line opens its problem).
   meetInbox: { key: 'notifications.item.meetInbox', href: '/dashboard/students/provas/recebidos' },
@@ -35,7 +37,7 @@ export const ATTENTION_ITEMS: Record<BadgeKey, AttentionItem> = {
 };
 
 /** The order lines are listed in: what blocks a lesson first, then the office's queues. */
-const ORDER: BadgeKey[] = ['support', 'classes', 'calendar', 'facilities', 'leads', 'students', 'staff', 'categories', 'meetInbox'];
+const ORDER: BadgeKey[] = ['support', 'classes', 'overlaps', 'calendar', 'facilities', 'leads', 'students', 'staff', 'categories', 'meetInbox'];
 
 export interface AttentionLine {
   /** Unique within the list: the kind, or the kind and the place for a named line. */

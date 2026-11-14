@@ -154,6 +154,13 @@ function refusalValues(error: ApiError): { values?: Record<string, string | numb
     }
   }
 
+  // The tank counted in people at one of the turma's hours (Rui, 14-11-2026).
+  const people = (body as { poolPeople?: unknown }).poolPeople;
+  if (typeof people === 'object' && people !== null) {
+    const { max, people: count } = people as Record<string, unknown>;
+    if (typeof max === 'number' && typeof count === 'number') return { values: { max, people: count } };
+  }
+
   /*
    * A student already in another turma at that hour — POOLSE-144. The other
    * turma's name is the club's own word, not server prose, and the weekday goes

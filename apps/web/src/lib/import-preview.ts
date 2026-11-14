@@ -36,6 +36,9 @@ export interface PreviewTurma {
   poolId: string | null;
   existingId: string | null;
   slots: number[];
+  nameKey: string;
+  atSeveralHours: boolean;
+  whole: boolean;
 }
 
 export interface ImportPreview {
@@ -49,6 +52,8 @@ export interface ImportPreview {
   fileName: string;
   /** *Substituir o calendário atual* (12-11-2026): sent again with Confirmar. */
   replace: { keepTurmaIds: string[] } | null;
+  /** Class names as one turma with every hour (14-11-2026): sent again with Confirmar. */
+  wholeNames: string[];
   /** The pools whose current calendar is being replaced, hidden under the preview. */
   replacedPoolIds: string[];
   /** Set after a confirm: what was written, for the bar to say once. */
@@ -69,6 +74,7 @@ export function previewFrom(
     drop: number[];
     fileName: string;
     replace: { keepTurmaIds: string[] } | null;
+    wholeNames: string[];
   },
   result: TimetableResult,
 ): ImportPreview {

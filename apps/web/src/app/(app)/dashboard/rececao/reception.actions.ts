@@ -79,12 +79,15 @@ export async function readReception(facilityId: string): Promise<Outcome<Recepti
  * Who matches what reception is typing. `null` means the search failed, which
  * the screen says — distinct from an empty list, which means nobody matched.
  */
-export async function searchPeople(query: string): Promise<PersonSummary[] | null> {
+export type DeskPerson = PersonSummary & { membershipId: string };
+
+export async function searchPeople(query: string): Promise<DeskPerson[] | null> {
   try {
     const result = await apiFetch<{ people: PersonSummary[] }>(
       `/people-search?q=${encodeURIComponent(query)}`,
     );
-    return result.people;
+    // The desk sells to a person; it never asks for students with none.
+    return result.people.filter((person): person is DeskPerson => person.membershipId !== null);
   } catch {
     return null;
   }

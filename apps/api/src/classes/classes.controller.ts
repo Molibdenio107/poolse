@@ -1,5 +1,7 @@
 import { sportScope } from '../tenant/sport-scope.js';
-import { EnrollmentClashError, clashConflict } from './enrollment-clash.js';
+import { EnrollmentClashError, clashConflict, clashFrom } from './enrollment-clash.js';
+import { mergeClassGroups } from './merge.repository.js';
+import { laneOverlapsOf, type LaneOverlap } from './lane-overlaps.js';
 import { listEnrollmentClashes, type EnrollmentClashRow } from './classes.repository.js';
 import {
   BadRequestException,
@@ -38,6 +40,9 @@ import {
   enrol,
   findClassGroup,
   FullError,
+  PoolPeopleError,
+  poolPlacesOver,
+  type PoolPlacesOver,
   listClassGroups,
   moveSchedule,
   removeSchedule,
@@ -213,7 +218,9 @@ export class ClassesController {
   }
 
   @Post()
-  async create(@Body() body: Record<string, unknown>): Promise<{ id: string }> {
+  async create(
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ id: string; poolOver: PoolPlacesOver[]; laneOverlaps: LaneOverlap[] }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
@@ -226,7 +233,12 @@ export class ClassesController {
         throw new BadRequestException('Open an época before creating a turma');
       }
 
-      return { id: created.id };
+      // Over the tank by places promised: saved, and said (Rui, 14-11-2026).
+      return {
+        id: created.id,
+        poolOver: await poolPlacesOver(organizationId, created.id),
+        laneOverlaps: await laneOverlapsOf(organizationId, created.id),
+      };
     } catch (error) {
       throw asHttp(error);
     }
@@ -236,7 +248,7 @@ export class ClassesController {
   async update(
     @Param('id') id: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ updated: true }> {
+  ): Promise<{ updated: true; poolOver: PoolPlacesOver[]; laneOverlaps: LaneOverlap[] }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
@@ -262,7 +274,11 @@ export class ClassesController {
       throw asHttp(error);
     }
     if (!updated) throw new NotFoundException('No such class group');
-    return { updated: true };
+    return {
+      updated: true,
+      poolOver: await poolPlacesOver(organizationId, id),
+      laneOverlaps: await laneOverlapsOf(organizationId, id),
+    };
   }
 
   @Post(':id/archive')
@@ -279,11 +295,52 @@ export class ClassesController {
     return { archived: true, ended: result.ended, archiveEntryId: result.entryId };
   }
 
+  /**
+   * *Juntar turmas* (Rui, 14-11-2026): the turmas in `from` are the same students
+   * as this one. Their slots, lessons, students, plans and challenges move here,
+   * and they are archived. Owner and admin, as creating a turma is.
+   */
+  @Post(':id/merge')
+  async merge(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ slots: number; students: number; turmas: number }> {
+    requireRole('owner', 'admin');
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const from = body['from'];
+    if (
+      !uuid.test(id) ||
+      !Array.isArray(from) ||
+      from.length === 0 ||
+      from.length > 30 ||
+      !from.every((one) => typeof one === 'string' && uuid.test(one))
+    ) {
+      throw new BadRequestException('from is a list of turma ids');
+    }
+    const { organizationId } = currentTenant();
+    let done;
+    try {
+      const rawName = typeof body['name'] === 'string' ? body['name'].trim() : '';
+      if (rawName.length > 120) throw new BadRequestException('name is at most 120 characters');
+      done = await mergeClassGroups(organizationId, id, from as string[], rawName === '' ? null : rawName);
+    } catch (error) {
+      const clash = clashFrom(error);
+      if (clash !== null) throw await clashConflict(organizationId, clash, 'from');
+      throw error;
+    }
+    if (done.refused === 'not_found') throw new NotFoundException('No such class group');
+    if (done.refused !== null) {
+      // A refusal that needs numbers carries them as structure.
+      throw new ConflictException({ code: `merge_${done.refused}`, message: `Cannot merge: ${done.refused}`, merge: done });
+    }
+    return { slots: done.slots, students: done.students, turmas: done.turmas };
+  }
+
   @Post(':id/schedules')
   async schedule(
     @Param('id') id: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ added: true; lessons: LessonSync }> {
+  ): Promise<{ added: true; lessons: LessonSync; poolOver: PoolPlacesOver[]; laneOverlaps: LaneOverlap[] }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
@@ -308,7 +365,12 @@ export class ClassesController {
       throw new ConflictException('That class group already runs at that time on that day');
     }
     refuseIfClosed(outcome);
-    return { added: true, lessons: await syncSeasonLessons(organizationId) };
+    return {
+      added: true,
+      lessons: await syncSeasonLessons(organizationId),
+      poolOver: await poolPlacesOver(organizationId, id),
+      laneOverlaps: await laneOverlapsOf(organizationId, id),
+    };
   }
 
   /**
@@ -324,7 +386,7 @@ export class ClassesController {
     @Param('id') id: string,
     @Param('scheduleId') scheduleId: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ moved: true; lessons: LessonSync }> {
+  ): Promise<{ moved: true; lessons: LessonSync; laneOverlaps: LaneOverlap[] }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
@@ -348,7 +410,11 @@ export class ClassesController {
       throw new ConflictException('That class group already runs at that time on that day');
     }
     refuseIfClosed(outcome);
-    return { moved: true, lessons: await syncSeasonLessons(organizationId) };
+    return {
+      moved: true,
+      lessons: await syncSeasonLessons(organizationId),
+      laneOverlaps: await laneOverlapsOf(organizationId, id),
+    };
   }
 
   @Post(':id/schedules/:scheduleId/remove')
@@ -388,6 +454,15 @@ export class ClassesController {
       }
       if (error instanceof AlreadyEnrolledError) {
         throw new ConflictException('That student is already in this class group');
+      }
+      // The tank, counted in people, at one of the turma's hours (14-11-2026).
+      if (error instanceof PoolPeopleError) {
+        throw new ConflictException({
+          code: 'pool_people_full',
+          message: `The pool holds ${error.max}; ${error.people} would be enrolled at that hour`,
+          fields: { studentId: 'classes.poolPeopleFull' },
+          poolPeople: { max: error.max, people: error.people },
+        });
       }
       // POOLSE-144: another of the student's turmas meets at that hour.
       if (error instanceof EnrollmentClashError) {

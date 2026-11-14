@@ -2,6 +2,7 @@
 
 import { ExistingCalendar } from './existing-calendar';
 import { ImportHistory } from './import-history';
+import { SeveralHours } from './several-hours';
 import type { PoolseSport } from '@poolse/rules';
 import { sportNameKey } from '@/components/sport-icon';
 import { startTransition, useActionState, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -198,6 +199,7 @@ export function TimetableImport({
       setPoolId(reopened.poolId);
       setOpen(true);
       setDropped(reopened.drop);
+      setWholeNames(reopened.wholeNames);
     }
   }, [reopened]);
   const rowsJson = reopened?.rowsJson ?? JSON.stringify(mapped ?? []);
@@ -211,6 +213,8 @@ export function TimetableImport({
   const [checked, setChecked] = useState('');
   // Substituir o calendário atual (12-11-2026): the turmas with students that stay, once chosen.
   const [replace, setReplace] = useState<{ keepTurmaIds: string[] } | null>(null);
+  // Class names the operator wants as one turma with every hour (Rui, 14-11-2026).
+  const [wholeNames, setWholeNames] = useState<string[]>([]);
   const result = (run.result !== undefined && checked === rowsJson ? run.result : undefined) ?? reopened?.reopen;
 
   /*
@@ -223,6 +227,7 @@ export function TimetableImport({
   useEffect(() => {
     setDropped([]);
     setReplace(null);
+    setWholeNames([]);
   }, [read.attempt, other.attempt]);
 
   // The file's name, for the import's record and Importações anteriores (12-11-2026).
@@ -238,14 +243,14 @@ export function TimetableImport({
   }, [read.attempt]);
 
   /** Check again with these rows left out, or import with them left out — one request. */
-  const recheck = (drop: number[], commit: boolean, nextReplace = replace): void => {
+  const recheck = (drop: number[], commit: boolean, nextReplace = replace, nextWhole = wholeNames): void => {
     setDropped(drop);
     setChecked(rowsJson);
     const data = new FormData();
     data.set('facilityId', facilityId);
     data.set('poolId', poolId);
     data.set('rows', rowsJson);
-    data.set('settings', JSON.stringify({ commit, drop, replace: nextReplace, fileName }));
+    data.set('settings', JSON.stringify({ commit, drop, replace: nextReplace, fileName, wholeNames: nextWhole }));
     startTransition(() => runAction(data));
   };
 
@@ -546,7 +551,7 @@ export function TimetableImport({
                       data.set('facilityId', facilityId);
                       data.set('poolId', poolId);
                       data.set('rows', rowsJson);
-                      data.set('settings', JSON.stringify({ commit: false, drop: dropped, replace, fileName }));
+                      data.set('settings', JSON.stringify({ commit: false, drop: dropped, replace, fileName, wholeNames }));
                       runAction(data);
                     }}
                   >
@@ -623,6 +628,15 @@ export function TimetableImport({
                     The commit shows once nothing is held back; *Importar as N sem
                     conflito* is the one-click way there.
                   */}
+                  <SeveralHours
+                    turmas={result.turmas ?? []}
+                    whole={wholeNames}
+                    working={running}
+                    onChange={(next) => {
+                      setWholeNames(next);
+                      recheck(dropped, false, replace, next);
+                    }}
+                  />
                   <ConflictGroups
                     rows={result.rows}
                     dropped={dropped}
@@ -653,6 +667,7 @@ export function TimetableImport({
                               drop: dropped,
                               fileName,
                               replace: result.replacing === true ? replace : null,
+                              wholeNames,
                             },
                             result,
                           ),

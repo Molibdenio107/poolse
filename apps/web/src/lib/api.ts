@@ -1734,7 +1734,8 @@ export interface TurnedOfAge {
  * what keeps one human as one record.
  */
 export interface PersonSummary {
-  membershipId: string;
+  /** Null only for an adult student with no person yet — see `studentId`. */
+  membershipId: string | null;
   name: string;
   email: string | null;
   phone: string | null;
@@ -1746,6 +1747,8 @@ export interface PersonSummary {
   guardianOf: number;
   /** First given name + last surname, for the picker's list — POOLSE-32. */
   shortName: string;
+  /** An adult student the club has no person record for yet (14-11-2026). */
+  studentId: string | null;
 }
 
 /** The student's ID document with its number in full — owner and admin, each read logged. */

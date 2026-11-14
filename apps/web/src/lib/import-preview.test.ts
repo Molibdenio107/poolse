@@ -25,7 +25,7 @@ const preview: ImportPreview = {
   poolId: 'p1',
   rowsJson: '[]',
   drop: [3],
-  fileName: 'horario.pdf', replace: null, replacedPoolIds: [],
+  fileName: 'horario.pdf', replace: null, wholeNames: [], replacedPoolIds: [],
   rows: [
     row(0),
     row(1, { weekday: 3 }),
@@ -34,9 +34,9 @@ const preview: ImportPreview = {
     row(4, { importable: false, turmaKey: 'tx', name: 'Recusada' }),
   ],
   turmas: [
-    { key: 't18', name: 'Hidroginástica · 18:00', poolId: 'p1', existingId: null, slots: [0, 1] },
-    { key: 'tb', name: 'Bebés', poolId: 'p1', existingId: null, slots: [3] },
-    { key: 'tx', name: 'Recusada', poolId: 'p1', existingId: null, slots: [4] },
+    { key: 't18', name: 'Hidroginástica · 18:00', poolId: 'p1', existingId: null, nameKey: 'p1|hidroginástica', atSeveralHours: false, whole: false, slots: [0, 1] },
+    { key: 'tb', name: 'Bebés', poolId: 'p1', existingId: null, nameKey: 'p1|bebés', atSeveralHours: false, whole: false, slots: [3] },
+    { key: 'tx', name: 'Recusada', poolId: 'p1', existingId: null, nameKey: 'p1|recusada', atSeveralHours: false, whole: false, slots: [4] },
   ],
 };
 

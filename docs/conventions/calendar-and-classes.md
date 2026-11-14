@@ -48,9 +48,11 @@ Turmas, and it is wired into `generate_sessions`, `class_group`, `class_schedule
 **Turmas opens on *Lista*** (called *Cartões* until 09-11-2026) (`turma-cards.tsx`, multi-sport Slice 4): a card per turma with a `Badge` of *Aberta / Completa / Sem professor*, the last outlined in amber; the weekly board is `?section=week`. `docs/features/classes.md`.
 
 **Capacity rules compose, they do not override.** An enrolment must fit its turma
-(`class_group.capacity`), the turmas sharing a slot must fit the tank (`pool.max_capacity`),
-and `lane_level_capacity` is a separate teaching judgement. A null ceiling means "not
-measured" and enforces nothing — never treat it as zero.
+(`class_group.capacity`), the people enrolled at an hour must fit the tank (`pool.max_capacity`,
+`enrollment_pool_people`, since 14-11-2026), and `lane_level_capacity` is a separate teaching
+judgement. Turmas *promising* more places than the tank are saved with a warning
+(`pool_places_over` → `poolOver` → `warningKey`), never refused (Rui, 14-11-2026). A null
+ceiling means "not measured" and enforces nothing — never treat it as zero.
 
 **A calendar block's state is words first** (multi-sport Slice 4): *Sem professor* (`uncovered`) is the amber wash (`.lesson-chip-uncovered`, .15) and a `lesson-line-warn` second line; *A definir* (`to_define`) is muted words and no wash; a full turma's fill line is `lesson-line-strong`; *Marcar aula* is a dashed hover ghost, never drawn in every free slot. A new block state is a class in globals.css plus its contrast pairs. `docs/features/calendar.md`.
 

@@ -250,7 +250,7 @@ test('a turma edit records every field before and after, and reverts through its
   });
 });
 
-test('QA 4 — a capacity revert that overfills the tank meets the tank refusal, with its numbers', async () => {
+test('QA 4 — a capacity revert that overfills the tank is applied: the tank is a warning since 14-11-2026', async () => {
   await withScratchTenant(async (tenant) => {
     const { poolId, groupId } = await turma(tenant, 8);
 
@@ -265,12 +265,9 @@ test('QA 4 — a capacity revert that overfills the tank meets the tank refusal,
       const { id: other } = await classes.create({ name: 'Infantis', poolId, lane: 1, capacity: 5 });
       await classes.schedule(other, slot);
 
-      const full = await refusal(() => activity.revert(shrink.id, {}));
-      assert.equal(full.status, 409);
-      assert.equal(full.body['code'], 'pool_full');
-      const numbers = full.body['poolCapacity'] as Record<string, unknown>;
-      assert.equal(numbers['max'], 10);
-      assert.equal((await classes.one(groupId)).capacity, 5, 'nothing was written');
+      // Places promised are a warning now (Rui, 14-11-2026); people are guarded at enrolment.
+      await activity.revert(shrink.id, {});
+      assert.equal((await classes.one(groupId)).capacity, 8, 'the revert went through');
     });
   });
 });
