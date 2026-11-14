@@ -18,6 +18,8 @@ Hero, who it is for, three pillars (lessons, fees, the pool), the phone apps, tr
 - **Re-taking them**: desk shots from Clube Medida (`pnpm --filter @poolse/db seed --size=club`, the e2e owner is
   its admin; set the `poolse_org` cookie), 1280×800 at 1.5×; the phone shot from the e2e instructor, 390 wide at 2×.
   Hide `nextjs-portal` before the capture.
+- **The sidebar mark in them** was swapped for the official icon and wordmark in place on 14-11-2026 (the shots
+  themselves predate it); a retake shows the real sidebar and needs nothing extra.
 
 ## User guide
 
