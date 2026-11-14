@@ -52,6 +52,9 @@
   nav.rail { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 2rem 0; }
   nav.rail .brand { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; display: flex; align-items: center; gap: .5rem; margin-bottom: 1.25rem; }
   nav.rail .brand img { width: 1.75rem; height: 1.75rem; }
+  nav.rail .brand a.home { display: inline-flex; padding: 0; border-radius: 6px; transition: transform .15s ease; }
+  nav.rail .brand a.home:hover { background: none; transform: scale(1.08); }
+  nav.rail .brand a.home:focus-visible { outline: 2px solid var(--accent-fill); outline-offset: 3px; }
   .hero .wordmark { display: block; height: 2.2rem; width: auto; margin-bottom: 1.25rem; }
   nav.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; }
   nav.rail li.group { margin-top: 1rem; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
@@ -129,7 +132,7 @@
 <body>
 <div class="layout">
   <nav class="rail" aria-label="Conteúdo">
-    <div class="brand"><img src="/brand/poolse-icon.svg" alt="" aria-hidden="true">Guia do Poolse</div>
+    <div class="brand"><a class="home" href="/" aria-label="Poolse, página inicial"><img src="/brand/poolse-icon.svg" alt=""></a>Guia do Poolse</div>
     <ol>
       <li><a href="#comecar">Começar</a></li>
       <li><a href="#ecra">Conhecer o ecrã</a></li>
