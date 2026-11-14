@@ -15,7 +15,7 @@ import { formatDate } from '@/lib/date-format';
 import { WaterBanner } from '../water-banner';
 import { ScrollToTop } from './scroll-to-top';
 import { LandOn } from './land-on';
-import { CheckPulse } from '@/components/check-pulse';
+import { LogoLockIn } from '@/components/logo-lock-in';
 
 type Step = { href: string; icon: LucideIcon; title: string; body: string };
 
@@ -97,7 +97,7 @@ export default async function WelcomePage({
       <ScrollToTop />
       <section className="overflow-hidden rounded bg-surface shadow-card">
         <WaterBanner tall>
-          <CheckPulse />
+          <LogoLockIn />
         </WaterBanner>
 
         <div className="flex flex-col gap-6 p-5 sm:p-8">

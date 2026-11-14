@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LogoMark, Wordmark } from '@/components/logo-mark';
 import { LEGAL_HREF, OTHER, translator, type MarketingLocale } from './content';
 import { MarketingThemeToggle } from './theme-toggle';
 
@@ -28,8 +29,9 @@ export function MarketingShell({
     <div className="flex min-h-dvh flex-col">
       <header className="z-20 border-b border-border bg-background/85 backdrop-blur md:sticky md:top-0">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-          <Link href={home} className="font-heading text-lg font-semibold tracking-tight">
-            {t('app.name')}
+          <Link href={home} className="flex items-center gap-2.5 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
+            <LogoMark />
+            <Wordmark alt={t('app.name')} className="h-[18px] w-auto" />
           </Link>
 
           <nav aria-label={t('nav.label')} className="flex flex-wrap items-center gap-2">

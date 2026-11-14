@@ -2,6 +2,7 @@ import { SignUp } from '@clerk/nextjs';
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { LEGAL_HREF } from '../../../../marketing/content';
+import { LogoMark, Wordmark } from '@/components/logo-mark';
 
 /**
  * `?email=` seeds the address — an invitation's page sends it (29-10-2026), so
@@ -21,6 +22,11 @@ export default async function SignUpPage({
   const href = LEGAL_HREF[(await getLocale()) === 'en' ? 'en' : 'pt-PT'];
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 py-12">
+      {/* The brand above Clerk's card (Rui, 14-11-2026), home on a click. */}
+      <Link href="/" className="flex items-center gap-2.5 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
+        <LogoMark />
+        <Wordmark alt={t('app.name')} className="h-5 w-auto" />
+      </Link>
       <SignUp
         fallbackRedirectUrl="/dashboard/welcome"
         {...(email === undefined ? {} : { initialValues: { emailAddress: email } })}

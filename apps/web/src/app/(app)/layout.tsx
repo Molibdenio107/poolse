@@ -30,7 +30,12 @@ export async function generateMetadata(): Promise<Metadata> {
     // Installable — POOLSE-88. `app/manifest.ts`.
     manifest: '/manifest.webmanifest',
     icons: {
-      icon: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+      // The official icon (Rui, 14-11-2026): the SVG where a browser takes it, a PNG where not.
+      icon: [
+        { url: '/icons/icon.svg', type: 'image/svg+xml' },
+        { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
+        { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      ],
       // iOS reads this, not the manifest's icons.
       apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180' }],
     },

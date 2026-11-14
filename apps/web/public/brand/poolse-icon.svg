@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="19.885 9.735 130 130" role="img" aria-label="Poolse">
+  <defs>
+    <linearGradient id="poolse-icon-depth" gradientUnits="userSpaceOnUse" x1="0" y1="20.8" x2="0" y2="128.67">
+      <stop offset="0" stop-color="#b3d49d"/>
+      <stop offset="1" stop-color="#67a6b6"/>
+    </linearGradient>
+  </defs>
+  <polygon fill="url(#poolse-icon-depth)" points="109.42 98.72 76.16 98.69 76.16 128.67 23.82 128.67 23.82 23.53 45.63 23.52 45.63 48.04 63.07 48.04 63.08 20.8 145.95 20.8 145.95 50.76 119.78 50.76 119.78 86.17 145.95 86.17 145.95 128.67 109.42 128.67 109.42 98.72"/>
+</svg>

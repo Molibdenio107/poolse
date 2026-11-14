@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Guia do Poolse</title>
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
@@ -49,7 +51,8 @@
   .layout { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 3rem; max-width: 76rem; margin: 0 auto; padding: 0 1.25rem; }
   nav.rail { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 2rem 0; }
   nav.rail .brand { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; display: flex; align-items: center; gap: .5rem; margin-bottom: 1.25rem; }
-  nav.rail .brand span { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 6px; background: var(--accent-fill); color: #fff; font-size: .95rem; }
+  nav.rail .brand img { width: 1.75rem; height: 1.75rem; }
+  .hero .wordmark { display: block; height: 2.2rem; width: auto; margin-bottom: 1.25rem; }
   nav.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; }
   nav.rail li.group { margin-top: 1rem; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
   nav.rail a { display: block; padding: .3rem .6rem; border-radius: 6px; text-decoration: none; color: var(--ink); font-size: .92rem; }
@@ -126,7 +129,7 @@
 <body>
 <div class="layout">
   <nav class="rail" aria-label="Conteúdo">
-    <div class="brand"><span aria-hidden="true">P</span>Guia do Poolse</div>
+    <div class="brand"><img src="/brand/poolse-icon.svg" alt="" aria-hidden="true">Guia do Poolse</div>
     <ol>
       <li><a href="#comecar">Começar</a></li>
       <li><a href="#ecra">Conhecer o ecrã</a></li>
@@ -153,6 +156,7 @@
 
   <main>
     <header class="hero">
+      <img class="wordmark" src="/brand/poolse-logo.svg" alt="Poolse">
       <h1>Guia do Poolse</h1>
       <p>Tudo o que precisa para usar o Poolse no dia a dia do clube: onde está cada coisa e como fazer as tarefas mais comuns, passo a passo. Clique numa imagem para a ver em grande.</p>
       <div class="roles">

@@ -11,7 +11,7 @@ import { EntityIcon, type EntityKind } from '@/components/entity-icon';
 import { BASE_SPORT, type PoolseModule, type PoolseSport } from '@poolse/rules';
 import type { OrganizationKind } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
-import { LogoMark } from '@/components/logo-mark';
+import { LogoMark, Wordmark } from '@/components/logo-mark';
 import { ScrollArrows } from '@/components/scroll-arrows';
 import { SiteIcon, SportIcon } from '@/components/sport-icon';
 import { cn } from '@/lib/utils';
@@ -115,7 +115,7 @@ export function AppSidebar({
         </SectionFade>
         <p className="mt-4 flex shrink-0 items-center gap-2 px-3 pt-3 shadow-hairline-t">
           <LogoMark />
-          <span className="font-heading text-[15px] font-semibold">{t('app.name')}</span>
+          <Wordmark alt={t('app.name')} className="h-3.5 w-auto" />
         </p>
       </div>
     </aside>

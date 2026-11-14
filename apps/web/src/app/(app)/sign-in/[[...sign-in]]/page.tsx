@@ -1,12 +1,21 @@
 import { SignIn } from '@clerk/nextjs';
+import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
+import { LogoMark, Wordmark } from '@/components/logo-mark';
 
 /**
  * Catch-all segment because Clerk routes its own sub-steps (factor two, password
  * reset, SSO callback) underneath this path.
  */
-export default function SignInPage(): React.ReactElement {
+export default async function SignInPage(): Promise<React.ReactElement> {
+  const t = await getTranslations();
   return (
-    <main className="flex min-h-dvh items-center justify-center px-6 py-12">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 py-12">
+      {/* The brand above Clerk's card (Rui, 14-11-2026), home on a click. */}
+      <Link href="/" className="flex items-center gap-2.5 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
+        <LogoMark />
+        <Wordmark alt={t('app.name')} className="h-5 w-auto" />
+      </Link>
       {/*
         `fallbackRedirectUrl`, not `forceRedirectUrl` — POOLSE-37 AC4.
         
