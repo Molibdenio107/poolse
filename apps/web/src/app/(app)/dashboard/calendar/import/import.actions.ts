@@ -435,3 +435,42 @@ export async function clearCalendarAction(
     return { ok: false };
   }
 }
+
+/** *Distribuir pelas pistas* (Rui, 16-11-2026): one class the plan places, or cannot. */
+export interface DistributionItem {
+  scheduleId: string;
+  name: string;
+  weekday: number;
+  startTime: string;
+  lanes?: string[];
+}
+
+/** What distributing a pool would do. `undefined` = the read failed. */
+export async function distributionPlanAction(
+  facilityId: string,
+  poolId: string,
+): Promise<{ placeable: DistributionItem[]; unplaceable: DistributionItem[] } | undefined> {
+  try {
+    return await apiFetch(`/bookings/distribute/${encodeURIComponent(facilityId)}/${encodeURIComponent(poolId)}`);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Does it: each class moved to its free lanes, as a drag would. */
+export async function distributeAction(
+  facilityId: string,
+  poolId: string,
+): Promise<{ ok: boolean; placed?: number; unplaced?: number }> {
+  try {
+    const done = await apiPost<{ placed: number; unplaced: number }>(
+      `/bookings/distribute/${encodeURIComponent(facilityId)}/${encodeURIComponent(poolId)}`,
+      {},
+    );
+    revalidatePath('/dashboard/calendar');
+    revalidatePath('/dashboard/classes');
+    return { ok: true, placed: done.placed, unplaced: done.unplaced };
+  } catch {
+    return { ok: false };
+  }
+}

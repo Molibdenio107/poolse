@@ -29,6 +29,7 @@ import { NoPoolDrop } from './no-pool-drop';
 import { NothingYet } from '@/components/nothing-yet';
 import { ImportGate } from './import-gate';
 import { ClearCalendar } from './clear-calendar';
+import { DistributeLanes } from './distribute-lanes';
 import { LessonRequests } from './lesson-requests';
 import { CalendarAgenda } from './calendar-agenda';
 import { bookingKey, slotKey } from '@/lib/slot-key';
@@ -725,6 +726,13 @@ export default async function CalendarPage({
               >
                 {t('calendar.manageClosures')}
               </FromLink>
+
+              {/* Distribuir pelas pistas, asked and listed (Rui, 16-11-2026). */}
+              <DistributeLanes
+                pools={importPools
+                  .filter((pool) => pool.bookable)
+                  .map((pool) => ({ id: pool.id, name: pool.name, facilityId: pool.facilityId }))}
+              />
 
               {/* Limpar calendário, quiet and asked (Rui, 14-11-2026). */}
               <ClearCalendar

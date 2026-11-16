@@ -14,9 +14,9 @@ import {
 } from '../../../lib/api';
 import { readTheme } from '../../../lib/preferences';
 import { PreferenceSync } from './preference-sync';
-import { Waves } from 'lucide-react';
 import { CreateOrganizationForm } from './create-organization-form';
 import { WaterBanner } from './water-banner';
+import { LogoLockIn } from '@/components/logo-lock-in';
 import { PageError, PageShell } from '@/components/page-shell';
 import { NewNoteButton } from '@/components/staff-board-forms';
 import { MyPoolPanel } from './my-pool-panel';
@@ -231,10 +231,9 @@ export default async function DashboardPage({
             // The first screen of a new account (Rui, 10-11-2026): water across the
             // top, then the form as three short numbered steps.
             <section className="overflow-hidden rounded bg-surface shadow-card">
-              <WaterBanner>
-                <span className="onboard-check-circle inline-flex size-14 items-center justify-center rounded-full bg-surface text-primary shadow-card">
-                  <Waves aria-hidden className="size-7" />
-                </span>
+              {/* The Poolse icon locking into place, as on Início (Rui, 16-11-2026). */}
+              <WaterBanner tall>
+                <LogoLockIn />
               </WaterBanner>
               <div className="flex flex-col gap-6 p-5 sm:p-8">
                 <div className="flex flex-col gap-1">

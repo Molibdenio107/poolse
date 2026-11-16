@@ -47,3 +47,9 @@ export function translator(locale: MarketingLocale): (key: string) => string {
     return typeof value === 'string' ? value : key;
   };
 }
+
+/**
+ * Who to write to, in every public page's footer (Rui, 16-11-2026): support,
+ * and Rui's own address while the pilot runs. Visible text, never a tooltip.
+ */
+export const CONTACT_EMAILS: readonly string[] = ['suporte@poolse.pt', 'rui.fonseca.107@gmail.com'];

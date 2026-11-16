@@ -8,6 +8,8 @@ import {
   type TimetableImportRecord,
 } from './timetable-imports.repository.js';
 
+import { applyDistribution, planDistribution, type DistributionPlan } from './lane-distribution.repository.js';
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import {
   BadRequestException,
@@ -266,6 +268,37 @@ export class BookingsController {
     const found = await calendarToClear(currentTenant().organizationId, facilityId, poolId);
     if (found === null) throw new NotFoundException('No such pool, or no published season');
     return { calendar: found === 'empty' ? null : found };
+  }
+
+  /**
+   * *Distribuir pelas pistas* (Rui, 16-11-2026): which classes of one pool can go
+   * onto free lanes at their own hour, and which cannot — for the question.
+   */
+  @Get('distribute/:facilityId/:poolId')
+  async distributionPlan(
+    @Param('facilityId') facilityId: string,
+    @Param('poolId') poolId: string,
+  ): Promise<DistributionPlan> {
+    requireRole('owner', 'admin');
+    if (!UUID_RE.test(facilityId) || !UUID_RE.test(poolId)) throw new BadRequestException('ids must be uuids');
+    const plan = await planDistribution(currentTenant().organizationId, facilityId, poolId);
+    if (plan === null) throw new NotFoundException('No such pool, or no published season');
+    return plan;
+  }
+
+  /** Does it: each class moved as a drag would move it. */
+  @Post('distribute/:facilityId/:poolId')
+  async distribute(
+    @Param('facilityId') facilityId: string,
+    @Param('poolId') poolId: string,
+  ): Promise<{ placed: number; unplaced: number }> {
+    requireRole('owner', 'admin');
+    if (!UUID_RE.test(facilityId) || !UUID_RE.test(poolId)) throw new BadRequestException('ids must be uuids');
+    const { organizationId } = currentTenant();
+    const done = await applyDistribution(organizationId, facilityId, poolId);
+    if (done === null) throw new NotFoundException('No such pool, or no published season');
+    if (done.placed > 0) await syncSeasonLessons(organizationId);
+    return done;
   }
 
   /** Clears it, restorably, as an import's *Substituir* does. Turmas with students stay unless named. */

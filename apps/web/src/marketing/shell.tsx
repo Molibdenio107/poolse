@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { LogoMark, Wordmark } from '@/components/logo-mark';
-import { LEGAL_HREF, OTHER, translator, type MarketingLocale } from './content';
+import { CONTACT_EMAILS, LEGAL_HREF, OTHER, translator, type MarketingLocale } from './content';
 import { MarketingThemeToggle } from './theme-toggle';
 
 /**
@@ -79,6 +79,15 @@ export function MarketingShell({
       <main className="flex-1">{children}</main>
 
       <footer className="border-t border-border">
+        {/* Contactos (Rui, 16-11-2026): each address a mailto, in plain sight. */}
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-6 pt-6 text-sm">
+          <span className="font-medium text-foreground">{t('marketing.contactTitle')}</span>
+          {CONTACT_EMAILS.map((email) => (
+            <a key={email} href={`mailto:${email}`} className="text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+              {email}
+            </a>
+          ))}
+        </div>
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-6 text-sm text-foreground-muted">
           <span>{t('marketing.footerNote')}</span>
           <div className="flex flex-wrap items-center gap-4">

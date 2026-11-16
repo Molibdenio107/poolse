@@ -657,6 +657,9 @@ test('operational reads refuse non-staff (403)', async () => {
     await refused('POST bookings/timetable-imports/:id/undo', 403, () => new BookingsController().undoTimetableImport(NO_SUCH_ID, {}));
     await refused('GET bookings/calendar-clear/:f/:p', 403, () => new BookingsController().calendarToClear(fac, NO_SUCH_ID));
     await refused('POST bookings/calendar-clear/:f/:p', 403, () => new BookingsController().clearCalendar(fac, NO_SUCH_ID, {}));
+    // 16-11-2026: Distribuir pelas pistas is owner and admin's.
+    await refused('GET bookings/distribute/:f/:p', 403, () => new BookingsController().distributionPlan(fac, NO_SUCH_ID));
+    await refused('POST bookings/distribute/:f/:p', 403, () => new BookingsController().distribute(fac, NO_SUCH_ID));
     // 14-11-2026: Juntar turmas is owner and admin's.
     await refused('POST class-groups/:id/merge', 403, () => new ClassesController().merge(NO_SUCH_ID, { from: [NO_SUCH_ID] }));
     // 12-11-2026: a gas meter's conversion factor is owner and admin's, as a tariff.

@@ -923,3 +923,44 @@ test('14-11-2026: Limpar calendário can take only the hours, leaving every turm
     });
   });
 });
+
+test('16-11-2026: Distribuir pelas pistas puts Sem pista classes on free lanes and leaves the rest, said', async () => {
+  await withScratchTenant(async (tenant) => {
+    await sixLanes(tenant);
+    const poolId = await poolOf(tenant);
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      const api = new BookingsController();
+      // One class holds Pista 1 at Tuesday 19:15; seven more arrive with no lane at the same hour.
+      await api.importTimetable(tenant.facilityId, {
+        poolId,
+        rows: [
+          row({ name: 'Golfinhos', kind: 'turma', laneNames: ['Pista 1'], line: 1 }),
+          ...['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((n, i) => row({ name: `Turma ${n}`, kind: 'turma', laneNames: [], line: i + 2 })),
+        ],
+        commit: true,
+      });
+
+      const plan = await api.distributionPlan(tenant.facilityId, poolId);
+      assert.equal(plan.placeable.length, 5, 'five lanes are free at that hour');
+      assert.equal(plan.unplaceable.length, 2);
+      assert.deepEqual(plan.placeable.map((one) => one.lanes[0]), ['Pista 2', 'Pista 3', 'Pista 4', 'Pista 5', 'Pista 6']);
+
+      assert.deepEqual(await api.distribute(tenant.facilityId, poolId), { placed: 5, unplaced: 2 });
+      const [laneless] = await tenant.sql<{ n: number }>(
+        `SELECT count(*)::int AS n FROM class_schedule cs
+          WHERE cs.archived_at IS NULL AND NOT EXISTS (SELECT 1 FROM booking_lane bl WHERE bl.schedule_id = cs.id)`,
+      );
+      assert.equal(laneless!.n, 2, 'the two with no free lane stay in Sem pista');
+      const [shared] = await tenant.sql<{ n: number }>(
+        `SELECT count(*)::int AS n FROM booking_lane a JOIN booking_lane b ON a.lane_id = b.lane_id AND a.schedule_id < b.schedule_id`,
+      );
+      assert.equal(shared!.n, 0, 'no lane holds two classes');
+
+      // Again: nothing more can move, and nothing breaks.
+      assert.deepEqual(await api.distribute(tenant.facilityId, poolId), { placed: 0, unplaced: 2 });
+    });
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      await expectStatus(() => new BookingsController().distribute(tenant.facilityId, poolId), 403);
+    });
+  });
+});
