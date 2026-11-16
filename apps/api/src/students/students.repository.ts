@@ -136,6 +136,11 @@ export interface GuardianInput {
   kind: GuardianKind;
   /** An adult student picked as guardian who has no person yet (14-11-2026). */
   studentId?: string | null;
+  /**
+   * Set by the save, not the caller (16-11-2026): that student's email belongs to
+   * another person, so her person was made without it. The controller says so.
+   */
+  emailWithheld?: boolean;
 }
 
 export type GuardianKind = 'parental' | 'accompanying';
@@ -302,6 +307,13 @@ export class DuplicateNameError extends Error {}
  * guardian's number typed into the child's row.
  */
 export class DuplicateTaxNumberError extends Error {}
+
+/**
+ * An adult student picked as guardian whose email is another person's and who
+ * has no NIF (security review, 16-11-2026): she cannot be linked by that email,
+ * and an encarregado with neither key is refused by the database.
+ */
+export class GuardianEmailTakenError extends Error {}
 
 /** Two living students of this club given the same FPN licence — POOLSE-81. */
 export class DuplicateLicenceError extends Error {}
@@ -2314,16 +2326,18 @@ export async function findPerson(
  * A student enrolled without a login has no membership, and a guardian link
  * needs one. This makes it from the student's own details and points the
  * student at it, so she is one human in two roles rather than two records. If
- * the club already holds somebody with her NIF or email, that is her, and she
- * is linked to it instead. Null for a student who is not this club's, archived,
- * a minor, or the child being saved; the caller then treats the row as typed.
+ * the club already holds somebody with her NIF, that is her, and she is linked
+ * to it instead — never by email (security review, 16-11-2026). Null for a
+ * student who is not this club's, archived, a minor, or the child being saved;
+ * the caller then treats the row as typed. `emailWithheld`: her email is another
+ * person's, so her person was made without it.
  */
 async function personOfAdultStudent(
   tx: Tx,
   organizationId: string,
   guardian: GuardianInput,
   childId: string,
-): Promise<string | null> {
+): Promise<{ membershipId: string; emailWithheld: boolean } | null> {
   const pickedStudentId = guardian.studentId;
   if (pickedStudentId == null || pickedStudentId === childId) return null;
   // The office's, as the search that offers her is (an instructor sees only their sports).
@@ -2352,14 +2366,36 @@ async function personOfAdultStudent(
   );
   const student = rows[0];
   if (student === undefined) return null;
-  if (student.membership_id !== null) return student.membership_id;
+  if (student.membership_id !== null) return { membershipId: student.membership_id, emailWithheld: false };
 
   // Her file may hold no NIF and no email; then the office typed one here.
   const taxNumber = student.tax_number ?? guardian.taxNumber;
-  const email = student.email ?? guardian.email;
+  let email = student.email ?? guardian.email;
   const phone = student.phone ?? guardian.phone;
-  let membershipId = await findPerson(tx, taxNumber, email);
+  /*
+   * Security review, 16-11-2026: matched by NIF only, never by email. A family
+   * shares one address, so an email match linked Sara's student record to her
+   * mother's person, whose login then read Sara's consents and invoices as her
+   * own. One NIF is one human; one email is often a household.
+   */
+  let membershipId = await findPerson(tx, taxNumber, null);
+  let emailWithheld = false;
   if (membershipId === null) {
+    // An email is one person's in a club (`membership_email_uq`). Somebody else's
+    // stays theirs: she is made without it, and the save says so (Rui, 16-11-2026).
+    if (email !== null) {
+      const { rowCount } = await tx.query(
+        `SELECT 1 FROM membership m LEFT JOIN app_user u ON u.id = m.app_user_id
+          WHERE m.archived_at IS NULL AND (m.email = $1::citext OR u.cached_email = $1::citext)`,
+        [email],
+      );
+      if ((rowCount ?? 0) > 0) {
+        // With no NIF either, she would be an encarregado nobody can tell apart.
+        if (taxNumber === null) throw new GuardianEmailTakenError();
+        email = null;
+        emailWithheld = true;
+      }
+    }
     const { rows: made } = await tx.query<{ id: string }>(
       `INSERT INTO membership (organization_id, status, first_name, last_name,
                                email, phone, tax_number, birth_date)
@@ -2382,9 +2418,9 @@ async function personOfAdultStudent(
     action: 'student.person_linked',
     entityType: 'student',
     entityId: pickedStudentId,
-    data: { membershipId, asGuardianOf: childId },
+    data: { membershipId, asGuardianOf: childId, emailWithheld },
   });
-  return membershipId;
+  return { membershipId, emailWithheld };
 }
 
 /**
@@ -2407,11 +2443,20 @@ async function syncGuardians(
 ): Promise<void> {
   const kept: string[] = [];
 
-  for (const guardian of guardians) {
+  for (const asked of guardians) {
+    let guardian = asked;
     let membershipId = guardian.membershipId;
 
     if (membershipId === null && guardian.studentId != null) {
-      membershipId = await personOfAdultStudent(tx, organizationId, guardian, studentId);
+      const person = await personOfAdultStudent(tx, organizationId, guardian, studentId);
+      if (person !== null) {
+        membershipId = person.membershipId;
+        if (person.emailWithheld) {
+          // The household's email stays its owner's: not filled onto her below either.
+          guardian = { ...guardian, email: null };
+          asked.emailWithheld = true;
+        }
+      }
     }
 
     if (membershipId === null) {

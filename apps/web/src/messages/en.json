@@ -3079,6 +3079,8 @@
     "guardianNameRequired": "Give the guardian's name.",
     "guardianRelationshipRequired": "Give the relationship to the student.",
     "guardianContactRequired": "Give a phone number or an email address.",
+    "guardianEmailTaken": "This student's email already belongs to someone else. Add their NIF or their own email to save them as a guardian.",
+    "guardianEmailWithheld": "Saved. This student's email already belongs to someone else, so the guardian was saved without an email. Give them their own before inviting them to the app.",
     "guardianKeyRequired": "A guardian needs a tax number or an email address. It is what keeps them from being duplicated later.",
     "levelName": "Level name",
     "levelPlaceholder": "e.g. Beginners",

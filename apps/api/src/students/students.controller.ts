@@ -66,6 +66,7 @@ import {
   DuplicateRangeError,
   DuplicateLicenceError,
   DuplicateTaxNumberError,
+  GuardianEmailTakenError,
   findStudent,
   ageOfMajority,
   findDuplicate,
@@ -702,7 +703,7 @@ export class StudentsController {
   }
 
   @Post()
-  async create(@Body() body: Record<string, unknown>): Promise<{ id: string }> {
+  async create(@Body() body: Record<string, unknown>): Promise<{ id: string; guardianEmailWithheld: boolean }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
@@ -711,10 +712,13 @@ export class StudentsController {
     const majority = await ageOfMajority(organizationId);
 
     let id: string | null;
+    let input: ReturnType<typeof parseStudent> | undefined;
     try {
-      id = await createStudent(organizationId, parseStudent(body, majority));
+      input = parseStudent(body, majority);
+      id = await createStudent(organizationId, input);
     } catch (error) {
       if (error instanceof DuplicateTaxNumberError) throw taxNumberConflict();
+      if (error instanceof GuardianEmailTakenError) throw guardianEmailTaken();
       if (error instanceof DuplicateLicenceError) throw licenceConflict();
       // POOLSE-148: the form's level is the swimming level; another sport's is
       // refused by the database, said under the field rather than as a 500.
@@ -723,24 +727,27 @@ export class StudentsController {
     }
 
     if (id === null) throw new BadRequestException('No such level');
-    return { id };
+    return { id, guardianEmailWithheld: emailWithheld(input) };
   }
 
   @Patch(':id')
   async update(
     @Param('id') id: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ updated: true }> {
+  ): Promise<{ updated: true; guardianEmailWithheld: boolean }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
     const majority = await ageOfMajority(organizationId);
 
     let outcome: Awaited<ReturnType<typeof updateStudent>>;
+    let input: ReturnType<typeof parseStudent> | undefined;
     try {
-      outcome = await updateStudent(organizationId, id, parseStudent(body, majority));
+      input = parseStudent(body, majority);
+      outcome = await updateStudent(organizationId, id, input);
     } catch (error) {
       if (error instanceof DuplicateTaxNumberError) throw taxNumberConflict();
+      if (error instanceof GuardianEmailTakenError) throw guardianEmailTaken();
       if (error instanceof DuplicateLicenceError) throw licenceConflict();
       // POOLSE-148: the form's level is the swimming level; another sport's is
       // refused by the database, said under the field rather than as a 500.
@@ -756,7 +763,7 @@ export class StudentsController {
         message: 'This student manages their name and email in the app',
       });
     }
-    return { updated: true };
+    return { updated: true, guardianEmailWithheld: emailWithheld(input) };
   }
 
   @Post(':id/archive')
@@ -1095,6 +1102,15 @@ export function licenceConflict(): ConflictException {
   });
 }
 
+/** Security review, 16-11-2026: a chosen adult student's email is another person's, and she has no NIF. */
+function guardianEmailTaken(): ConflictException {
+  return new ConflictException({
+    code: 'guardian_email_taken',
+    message: "This student's email belongs to another person; add a NIF or their own email",
+    fields: { guardianTaxNumber: 'students.guardianEmailTaken' },
+  });
+}
+
 export function taxNumberConflict(): ConflictException {
   return new ConflictException({
     code: 'duplicate_tax_number',
@@ -1265,6 +1281,14 @@ function readGuardianKind(value: unknown): GuardianKind {
   throw new BadRequestException({ code: 'bad_guardian_kind', message: 'kind must be parental or accompanying' });
 }
 
+/**
+ * An adult student chosen as guardian whose email is another person's was given
+ * her own person without it (security review, 16-11-2026); the save says so.
+ */
+function emailWithheld(input: { guardians: GuardianInput[] } | undefined): boolean {
+  return input?.guardians.some((guardian) => guardian.emailWithheld === true) ?? false;
+}
+
 /** Null for an entry that names nobody — an untouched row in the form. */
 function readGuardian(
   entry: Record<string, unknown>,
@@ -1286,6 +1310,11 @@ function readGuardian(
     // An adult student picked from the search with no person yet (14-11-2026).
     studentId: optionalText(entry['studentId'], 'guardianStudentId', 64),
   };
+
+  // Security review, 16-11-2026: a malformed id reached SQL as a uuid and was a 500.
+  for (const id of [guardian.membershipId, guardian.studentId]) {
+    if (id != null && !UUID_PATTERN.test(id)) throw new BadRequestException('A guardian id must be a uuid');
+  }
 
   if (guardian.membershipId === null && guardian.name === null && guardian.studentId == null) return null;
   return guardian;

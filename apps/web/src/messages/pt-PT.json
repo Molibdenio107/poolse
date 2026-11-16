@@ -3079,6 +3079,8 @@
     "guardianNameRequired": "Indique o nome do encarregado de educação.",
     "guardianRelationshipRequired": "Indique o parentesco.",
     "guardianContactRequired": "Indique um telefone ou um email.",
+    "guardianEmailTaken": "O e-mail deste aluno já pertence a outra pessoa. Para o guardar como encarregado de educação, indique o NIF do aluno ou um e-mail próprio.",
+    "guardianEmailWithheld": "Guardado. O e-mail deste aluno já pertence a outra pessoa, por isso o encarregado ficou sem e-mail. Dê-lhe um e-mail próprio antes de o convidar para a aplicação.",
     "guardianKeyRequired": "Um encarregado de educação precisa de NIF ou de e-mail. É o que permite não o duplicar mais tarde.",
     "levelName": "Nome do nível",
     "levelPlaceholder": "Ex.: Adaptação",

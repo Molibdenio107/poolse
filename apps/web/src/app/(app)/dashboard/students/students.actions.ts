@@ -152,9 +152,9 @@ export async function createStudentAction(
   const unacknowledged = unacknowledgedAgeMismatch(formData);
   if (unacknowledged !== null) return unacknowledged;
 
-  let created: { id: string };
+  let created: { id: string; guardianEmailWithheld?: boolean };
   try {
-    created = await apiPost<{ id: string }>('/students', body, { organizationId });
+    created = await apiPost<{ id: string; guardianEmailWithheld?: boolean }>('/students', body, { organizationId });
   } catch (error) {
     return withFields(error, 'students.createFailed');
   }
@@ -164,7 +164,12 @@ export async function createStudentAction(
   // record is not finished at their name — the photograph, the consents and the
   // level are all on that page, and it is where you were going anyway.
   // `redirectTo` rather than redirect(), which swallowed the save's toast.
-  return { ok: true, redirectTo: `/dashboard/students/${created.id}` };
+  return {
+    ok: true,
+    redirectTo: `/dashboard/students/${created.id}`,
+    // A chosen adult student's email was another person's (security review, 16-11-2026).
+    ...(created.guardianEmailWithheld === true ? { warningKey: 'students.guardianEmailWithheld' } : {}),
+  };
 }
 
 export async function updateStudentAction(
@@ -183,8 +188,9 @@ export async function updateStudentAction(
   const unacknowledged = unacknowledgedAgeMismatch(formData);
   if (unacknowledged !== null) return unacknowledged;
 
+  let saved: { guardianEmailWithheld?: boolean };
   try {
-    await apiPatch(`/students/${studentId}`, body, { organizationId });
+    saved = await apiPatch<{ guardianEmailWithheld?: boolean }>(`/students/${studentId}`, body, { organizationId });
   } catch (error) {
     if (error instanceof ApiError && error.code === 'field_owned_by_app_user') {
       return { ok: false, errorKey: 'students.ownedByLogin' };
@@ -226,7 +232,8 @@ export async function updateStudentAction(
 
   revalidatePath('/dashboard/students');
   revalidatePath(`/dashboard/students/${studentId}`);
-  return { ok: true };
+  // A chosen adult student's email was another person's (security review, 16-11-2026).
+  return saved.guardianEmailWithheld === true ? { ok: true, warningKey: 'students.guardianEmailWithheld' } : { ok: true };
 }
 
 export async function archiveStudentAction(
