@@ -10,6 +10,7 @@ import {
   type ReportFile,
   type ReportResult,
 } from './analysis-report';
+import { UNTRUSTED_INPUT } from './ai-untrusted';
 
 /**
  * The import agent that reads an analysis report — round 6, ticket 1.
@@ -110,7 +111,7 @@ const SYSTEM = [
   '- staphylococcus_total: estafilococos totais',
   'Put the name of the laboratory in "laboratory" and the report or bulletin number',
   'in "reportReference" when the document shows them.',
-].join('\n');
+].join('\n') + UNTRUSTED_INPUT;
 
 export class ClaudeAnalysisReportParser implements AnalysisReportParser {
   available(): boolean {

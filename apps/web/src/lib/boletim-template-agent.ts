@@ -4,6 +4,7 @@ import { checkedSchema } from './ai-schema';
 import { classifyAiError, stopFailure, type AiFailure } from './ai-failure';
 import { fieldsFor, placementsFromGrid, type BoletimField, type BoletimPlacement, type TemplateKind } from '@poolse/rules';
 import { anthropicKeyConfigured, metered } from './ai-meter';
+import { UNTRUSTED_INPUT } from './ai-untrusted';
 
 /**
  * Proposes where each Poolse field goes on a club's own form — POOLSE-142
@@ -91,7 +92,7 @@ function systemFor(kind: TemplateKind): string {
     'A field may appear twice only if the form asks for it twice.',
     'The fields:',
     ...fields.map((field) => `- ${field}: ${MEANING[field]}`),
-  ].join('\n');
+  ].join('\n') + UNTRUSTED_INPUT;
 }
 
 function schema(kind: TemplateKind): Record<string, unknown> {

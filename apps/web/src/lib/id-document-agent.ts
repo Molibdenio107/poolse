@@ -4,6 +4,7 @@ import { checkedSchema } from './ai-schema';
 import { classifyAiError, stopFailure, type AiFailure } from './ai-failure';
 import type { Me } from './api';
 import { aiReaderGate, anthropicKeyConfigured, metered } from './ai-meter';
+import { UNTRUSTED_INPUT } from './ai-untrusted';
 
 /**
  * Reads an identification document's photograph — Rui, 30-10-2026: after the
@@ -39,7 +40,7 @@ const SYSTEM = [
   'type: "cc" for a Portuguese Cartão de Cidadão, "bi" for a Bilhete de Identidade, "passport" for a passport, "other" otherwise.',
   'number: the document number as printed. For a Cartão de Cidadão, the civil identification number with its check digit and the two letters and final digit (e.g. 12345678 9 ZZ1) — write it without spaces.',
   'issuedOn and validUntil: dates as YYYY-MM-DD. A Cartão de Cidadão prints only the expiry ("Data de validade"); its issue date is then null.',
-].join('\n');
+].join('\n') + UNTRUSTED_INPUT;
 
 function schema(): Record<string, unknown> {
   const text = { type: ['string', 'null'] };

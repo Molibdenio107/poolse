@@ -15,6 +15,7 @@ import {
   type InvoiceParseResult,
   type ReportFile,
 } from './energy-invoice';
+import { UNTRUSTED_INPUT } from './ai-untrusted';
 
 /**
  * The import agent that reads an electricity bill — slice 5.3.
@@ -159,7 +160,7 @@ const SYSTEM = [
   `"notes" stays empty unless something on the bill needs a person's attention`,
   '(an estimated reading, a correction, a debt); then write it briefly in',
   'European Portuguese (pt-PT), never in English.',
-].join('\n');
+].join('\n') + UNTRUSTED_INPUT;
 
 const HEADER_PROPERTIES = Object.fromEntries(
   INVOICE_HEADER_FIELDS.map((field) =>

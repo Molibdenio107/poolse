@@ -4,6 +4,7 @@ import { checkedSchema } from '@/lib/ai-schema';
 import { classifyAiError } from '@/lib/ai-failure';
 import { anthropicKeyConfigured, metered } from '@/lib/ai-meter';
 import type { ColumnMatch, ColumnShape, ImportField } from '@/lib/sheet';
+import { UNTRUSTED_INPUT } from '@/lib/ai-untrusted';
 
 /**
  * The columns the heuristic could not place, handed to Claude.
@@ -84,7 +85,7 @@ const SYSTEM = [
   'A column may be assigned to at most one field, and a field to at most one',
   'column. Assign nothing to a column that is administrative rather than about the',
   'student — fees paid, kit size, a register mark.',
-].join('\n');
+].join('\n') + UNTRUSTED_INPUT;
 
 function describe(column: ColumnShape): string {
   const looks = column.looks.length === 0 ? 'empty' : column.looks.join(', then ');

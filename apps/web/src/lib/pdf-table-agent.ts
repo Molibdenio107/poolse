@@ -3,6 +3,7 @@ import { classifyAiError, stopFailure, type AiFailure } from './ai-failure';
 import Anthropic from '@anthropic-ai/sdk';
 import { checkedSchema } from './ai-schema';
 import { anthropicKeyConfigured, metered } from './ai-meter';
+import { UNTRUSTED_INPUT } from './ai-untrusted';
 
 /**
  * A list in a PDF, read as a spreadsheet — Rui, 12 October 2026.
@@ -55,7 +56,7 @@ const SYSTEM = [
   '',
   'Name each table with its printed title if it has one, otherwise "Tabela 1",',
   '"Tabela 2", in document order.',
-].join('\n');
+].join('\n') + UNTRUSTED_INPUT;
 
 const SCHEMA = {
   type: 'object',

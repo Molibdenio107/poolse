@@ -6,6 +6,8 @@
  * recorded run of the corpus.
  */
 
+import { UNTRUSTED_INPUT } from './ai-untrusted.ts';
+
 export const SYSTEM = [
   'You read swimming-pool timetables (horários) published by clubs and municipal pools',
   'in Portugal, and return what they mean as rows. You see the rendered page: use merged',
@@ -40,7 +42,7 @@ export const SYSTEM = [
   '',
   'validity: the period the timetable is in force, copied as printed (for example "em',
   'vigor de 14 de setembro a 30 de junho"), or an empty string when none is printed.',
-].join('\n');
+].join('\n') + UNTRUSTED_INPUT;
 
 const NULLABLE_INT = { anyOf: [{ type: 'integer' }, { type: 'null' }] } as const;
 

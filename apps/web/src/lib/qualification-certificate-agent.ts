@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { checkedSchema } from './ai-schema';
 import { classifyAiError, stopFailure, type AiFailure } from './ai-failure';
 import { anthropicKeyConfigured, metered } from './ai-meter';
+import { UNTRUSTED_INPUT } from './ai-untrusted';
 
 /**
  * Reads a dropped qualification certificate — POOLSE-149 slice D (Rui,
@@ -46,7 +47,7 @@ function system(types: readonly string[]): string {
     'issuingBody: the organisation that issued it, as printed (e.g. an institute, a federation, a training school).',
     'issuedOn: the date it was issued or the course was completed, as YYYY-MM-DD.',
     'expiresOn: the date it stops being valid ("válido até", "validade"), as YYYY-MM-DD; null when none is printed.',
-  ].join('\n');
+  ].join('\n') + UNTRUSTED_INPUT;
 }
 
 function schema(types: readonly string[]): Record<string, unknown> {
