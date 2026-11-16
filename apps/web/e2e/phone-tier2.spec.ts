@@ -69,7 +69,9 @@ async function plainly(page: Page, path: string): Promise<void> {
         "main input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']), main textarea, main select",
       ),
     )
-      .filter((el) => el.getBoundingClientRect().width > 0 && el.closest('details:not([open])') === null)
+      // Wider than 2px: ListSelect (12-11-2026) carries its value for the form in a
+      // 1px visually hidden input, which is nobody's field to type in.
+      .filter((el) => el.getBoundingClientRect().width > 2 && el.closest('details:not([open])') === null)
       // The frame a person sees: a search box's input sits inside a styled shell.
       .map((el) => ({ el, frame: el.closest<HTMLElement>('label > span, .h-control') ?? el }))
       // A select may be sized to its options ("Mensal") on purpose, and a short

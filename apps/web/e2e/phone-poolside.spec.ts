@@ -338,6 +338,7 @@ test.describe('the lesson, as the owner', () => {
     await openRegister(page, lesson.sessionId);
 
     const picker = page.getByLabel(/professor desta aula|teacher for this lesson/i);
+    await expect(picker).toHaveJSProperty('tagName', 'SELECT', { timeout: 15_000 });
     await expect(picker).toBeEnabled();
     await expectTouchSized(picker);
     // Somebody free: a busy or absent candidate carries its reason after " · ",
@@ -359,10 +360,12 @@ test.describe('the lesson, as the owner', () => {
     await expect(page.getByText(/não foi possível alterar o professor|já tem uma aula/i)).toHaveCount(0);
     await expect(async () => {
       await openRegister(page, lesson.sessionId);
-      await expect(page.getByLabel(/professor desta aula|teacher for this lesson/i)).toHaveValue(someone!, {
-        timeout: 2_000,
-      });
-    }).toPass({ timeout: 15_000 });
+      const reread = page.getByLabel(/professor desta aula|teacher for this lesson/i);
+      // A coarse pointer swaps the list for the native picker once hydrated (SelectList,
+      // 12-11-2026); WebKit on a dev server can take a while, so wait for the <select>.
+      await expect(reread).toHaveJSProperty('tagName', 'SELECT', { timeout: 10_000 });
+      await expect(reread).toHaveValue(someone!, { timeout: 2_000 });
+    }).toPass({ timeout: 40_000 });
   });
 
   test('flow 4 — the owner calls the lesson off and puts it back from the toast', async ({ page }) => {

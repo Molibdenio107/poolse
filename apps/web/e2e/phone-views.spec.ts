@@ -175,8 +175,20 @@ test.describe('on a desk, the same pages are unchanged', () => {
     // The lane grid draws once a pool is chosen — a client choice, so it is
     // made again until React has hydrated the select and the grid is drawn.
     const pills = page.locator('[data-today-pill]');
+    // Any pool will do (16-11-2026: the club's tanks were renamed by the dev reset, and
+    // the calendar may already have one chosen). SelectList: the native <select> under a
+    // finger, its own list under a mouse.
     await expect(async () => {
-      await page.getByRole('combobox', { name: /^(piscina|pool)$/i }).selectOption({ label: 'Tanque Grande' });
+      if ((await pills.count()) !== 1) {
+        const pool = page.getByRole('combobox', { name: /^(piscina|pool)$/i });
+        if ((await pool.evaluate((el) => el.tagName, undefined, { timeout: 3_000 })) === 'SELECT') {
+          const first = await pool.locator('option:not([disabled])').first().textContent();
+          await pool.selectOption({ label: (first ?? '').trim() });
+        } else {
+          await pool.click();
+          await page.getByRole('listbox').getByRole('option').first().click();
+        }
+      }
       await expect(pills).toHaveCount(1, { timeout: 3_000 });
     }).toPass({ timeout: 30_000 });
     await expect(pills).toHaveText(/^(hoje|today)$/i);

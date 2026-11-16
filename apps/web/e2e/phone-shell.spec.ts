@@ -28,7 +28,16 @@ const PAGES_WITH_FIELDS = [
 ];
 
 async function open(page: Page, path: string): Promise<void> {
-  await page.goto(path, { waitUntil: 'domcontentloaded' });
+  // A redirect still settling from the page before can interrupt the visit on a
+  // dev server (16-11-2026, WebKit): that is a retry, not a failure.
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await page.goto(path, { waitUntil: 'domcontentloaded' });
+      break;
+    } catch (error) {
+      if (attempt >= 2 || !String(error).includes('interrupted by another navigation')) throw error;
+    }
+  }
   await page.locator('main').first().waitFor();
 }
 

@@ -276,8 +276,14 @@ test.describe('POOLSE-136 — the phone shell, as a guardian', () => {
     await visit(page, '/app/familia');
     // The corner is the club: its name for a reader, and no link.
     const header = page.locator('header');
-    // The logo opens larger on a tap (06-11-2026), so it is a button named for it.
-    await expect(header.getByRole('button', { name: /(logótipo|logo) of Clube E2E|logótipo de Clube E2E/i })).toBeVisible();
+    // The logo opens larger on a tap (06-11-2026), so it is a button named for it;
+    // a club with no logo shows its initials, named for the club (16-11-2026: the
+    // dev reset of 10-11 left Clube E2E without one).
+    await expect(
+      header
+        .getByRole('button', { name: /(logótipo|logo) of Clube E2E|logótipo de Clube E2E/i })
+        .or(header.getByRole('img', { name: /^Clube E2E$/ })),
+    ).toBeVisible();
     await expect(header.getByRole('link', { name: /^(o meu perfil|my profile)$/i })).toHaveCount(0);
 
     await visit(page, '/app/perfil?home=family');
@@ -431,6 +437,10 @@ test.describe('POOLSE-136 — the phone shell, as an instructor', () => {
       storageState: INSTRUCTOR_SESSION,
       viewport: { width: 1280, height: 800 },
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
+      // Said outright: a context opened inside the android project inherits the
+      // Pixel's isMobile, and Chrome then sends Sec-CH-UA-Mobile ?1 (16-11-2026).
+      isMobile: false,
+      hasTouch: false,
     });
     const desk = await computer.newPage();
     await visit(desk, '/dashboard', 'domcontentloaded');

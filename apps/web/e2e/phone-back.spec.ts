@@ -256,6 +256,9 @@ for (const [width, viewport] of [['desk', DESK], ['phone', PHONE]] as const) {
     // dashboard on 28-10-2026 (Rui); Subscrição is reached from the profile only.
 
     test('2 · Profile → subscription, and Voltar returns to Profile', async ({ page }) => {
+      // Subscrição is a slow first compile on a dev server, and WebKit at desk size
+      // waited past 30 s for it (16-11-2026); the page itself was fine.
+      test.setTimeout(75_000);
       await visit(page, '/dashboard/profile');
       await follow(page, 'main a[href^="/dashboard/profile/subscription"]');
       await goBack(page, '/dashboard/profile');
@@ -290,7 +293,8 @@ for (const [width, viewport] of [['desk', DESK], ['phone', PHONE]] as const) {
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(voltar(page)).toHaveCount(0);
 
-      const site = `/dashboard/facilities/${at.facilityId}`;
+      // The site opens on Geral › Detalhes since 10-11-2026; the people, with their links, are its Pessoas.
+      const site = `/dashboard/facilities/${at.facilityId}?tab=general&section=people`;
       await visit(page, site);
       await follow(page, 'main a[href^="/dashboard/facilities/staff"]');
       await goBack(page, site);

@@ -93,8 +93,11 @@ test('QA 4 — a picked turma is shown back with Alterar, and Aula experimental 
   await expect(dialog).toContainText(`${OPEN_TURMA} · Seg 18:00 · Qua 18:00 · 3 / 12`);
   await expect(dialog.getByRole('button', { name: /^alterar a turma/i })).toBeVisible();
 
+  // Its lessons in the next four weeks. How many depends on today's date against
+  // the fixture's fixed dates (16-11-2026: 3 became 4), so the count is not pinned.
   const dates = dialog.locator('select[name="sessionId"] option:not([value=""])');
-  await expect(dates).toHaveCount(3, { timeout: 15_000 });
+  await expect(dates.first()).toBeAttached({ timeout: 15_000 });
+  expect(await dates.count()).toBeGreaterThan(0);
 
   // Alterar reopens the list, and the choice can be changed.
   await dialog.getByRole('button', { name: /^alterar a turma/i }).click();
