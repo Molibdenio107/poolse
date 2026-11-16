@@ -64,7 +64,7 @@ provider, sanitary register, POS.
 - **Tenant isolation lives in the schema**: composite keys, RLS, SQL tests. Use the
   `write-migration` skill for any SQL.
 - **Server-side enforcement**; hiding a control is never the control.
-- **Soft delete, audit, pagination at 15, tooltips explain and never inform** — see
+- **Soft delete, audit, pagination at 10, tooltips explain and never inform** — see
   `docs/backlog/CONVENTIONS.md`.
 - **Excel import is the primary data-entry path**: upload → parse → mapping → validate →
   commit, mapping swappable for an AI matcher later; a dropzone over the whole page.
