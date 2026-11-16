@@ -107,9 +107,11 @@ development, staging and production instances.
 
 ## 2. Vercel — the web app
 
-1. Import the repository. Framework preset **Next.js**;
-   [`vercel.json`](../vercel.json) sets the build to the workspace filter, so pnpm resolves
-   the monorepo correctly.
+1. Import the repository. Framework preset **Next.js**, **Root Directory `apps/web`**, with
+   *Include files outside the root directory* on. [`vercel.json`](../vercel.json) sets the build
+   (`pnpm --filter @poolse/web... build` — the `...` builds `@poolse/rules` first, which a fresh
+   clone has not compiled) and the install; leave Output Directory at its default (`.next`, relative
+   to the root directory). `vercel.json` overrides the dashboard's build settings (16-11-2026).
 2. Environment variables, per environment (Vercel's Preview maps to staging, Production to
    production):
 

@@ -104,7 +104,7 @@ unpaid pilot**: `STRIPE_*` — absent, the Subscrição page says so and the web
 
 ## 4. Vercel — the web app
 
-1. [ ] Import the repo (Next.js; `vercel.json` sets the workspace build).
+1. [ ] Import the repo (Next.js, **Root Directory `apps/web`**; `vercel.json` sets the workspace build — see `deploy.md`).
 2. [ ] Set the variables below for **Production**, then deploy, then attach the domain (e.g. `app.<domain>`).
 3. [ ] Read the build log for `Failed to download … Using fallback font` (POOLSE-138). Absent is correct.
 4. [ ] Go back to Railway and make sure `CLERK_AUTHORIZED_PARTIES` and `WEB_ORIGIN` name this exact URL.
