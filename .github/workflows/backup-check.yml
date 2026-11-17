@@ -2,7 +2,7 @@
 #
 # Separate from the backup on purpose: if the nightly run fails, is skipped or
 # stops being scheduled, this one still runs and says "no backup since <date>".
-# The backup itself runs on Railway since 17-11-2026 (packages/db/railway.backup.json):
+# The backup itself runs on Railway since 17-11-2026 (docs/deploy.md, "Backups and restoring"):
 # production Postgres has no public network. This check stays here on purpose,
 # outside Railway, so a Railway that stops running the backup is noticed.
 # It needs no key — freshness (36 h), the dump's checksum against its

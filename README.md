@@ -202,8 +202,8 @@ function; there is no general escape hatch. See `docs/data-model.md`, decision 2
 
 `docs/deploy.md` is the runbook: Vercel for the web app, Railway for the API and
 Postgres, staging and production separate from day one. The repository side is
-done — `Dockerfile`, `railway.json`, `vercel.json`, migrations as a pre-deploy
-step, and a `/health` that returns 503 when the database is unreachable so a
+done — `Dockerfile`, `vercel.json`, migrations as a pre-deploy step (Railway's
+settings are entered by hand, listed in `docs/deploy.md`), and a `/health` that returns 503 when the database is unreachable so a
 broken release rolls back instead of going live.
 
 ## A trap worth knowing

@@ -59,8 +59,11 @@ into a dashboard. The first three cannot be changed later without consequences.
 1. [ ] Add **Postgres** to `production`. Note its major version (for `PG_TOOLS_IMAGE`).
 2. [ ] Check TimescaleDB: `CREATE EXTENSION IF NOT EXISTS timescaledb;`. If refused, nothing breaks
        (energy readings and request stats fall back to plain tables, `deploy.md`); write down which.
-3. [ ] Add the **service from the GitHub repo**, root directory the repository root (`railway.json` does the rest:
-       Dockerfile, migrations before each deploy, `/health`).
+3. [ ] Add the **service from the GitHub repo**, named `api`, root directory the repository root. Enter **every row**
+       of the `api` table in `deploy.md` (*Railway service settings*): `RAILWAY_DOCKERFILE_PATH=apps/api/Dockerfile`,
+       start `node apps/api/dist/main.js`, pre-deploy `node packages/db/dist/migrate.js up`, health check `/health`
+       (`RAILWAY_HEALTHCHECK_TIMEOUT_SEC=60`), restart on failure ×3. No config file in the repo sets them
+       (config as code is deprecated). The build log must name `apps/api/Dockerfile`.
 4. [ ] Set the API variables below, then **bootstrap the roles from Rui's machine** against the public database URL:
        `DATABASE_URL='<owner>' DATABASE_APP_URL='<poolse_app>' DATABASE_PLATFORM_URL='<poolse_platform>' pnpm db:bootstrap`.
        Read every line it prints.
@@ -167,10 +170,13 @@ Set it back to `console` before running the test suites, so they never mail anyb
 - [ ] R2: `poolse-backups-production`, and its three tokens: backup (read & write, that bucket
       only), uploads (read only, `poolse-production` only), check (read only, the backups bucket).
       QA 7 by hand: the backup token cannot list `poolse-production`.
-- [ ] Railway: the `backup` service, **empty first**; config file
-      `/packages/db/railway.backup.json`; no public domain; its variables (the table in `deploy.md`,
+- [ ] Railway: the `backup` service, **empty first**. Its dashboard settings (the `backup` table in
+      `deploy.md`, *Railway service settings*): `RAILWAY_DOCKERFILE_PATH=packages/db/backup.Dockerfile`,
+      start `sh packages/db/scripts/railway-backup.sh`, **no** pre-deploy command, cron `30 2 * * *`,
+      restart *Never*, the watch paths; no public domain. Its variables (the table in `deploy.md`,
       `BACKUP_SOURCE_URL=${{Postgres.DATABASE_URL}}`, `PG_TOOLS_IMAGE=postgres:16`); then connect the
-      repo. Nothing that opens a backup goes on it; the job refuses to run if it finds one.
+      repo, and check the build log names `packages/db/backup.Dockerfile`. Nothing that opens a
+      backup goes on it; the job refuses to run if it finds one.
 - [ ] GitHub `production`: only the check's secrets (the read-only check token, the alert's three);
       `BACKUPS_ENABLED=true`. Delete any old `BACKUP_SOURCE_URL`, `BACKUP_AGE_RECIPIENT`, `FILES_S3_*`.
 - [ ] The first night: the `backup` log ends `Backup job done.`; the next *Backup check* passes.

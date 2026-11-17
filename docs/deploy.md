@@ -65,10 +65,10 @@ development, staging and production instances.
 1. Create a project called **poolse**. Railway gives you a `production` environment; add a
    second one called **staging**.
 2. In each environment, add a **Postgres** database.
-3. In each environment, add a **service from your GitHub repo**. Railway reads
-   [`railway.json`](../railway.json) at the repo root, so the Dockerfile, the start command,
-   the health check and the pre-deploy migration are already configured. Leave the service
-   root directory as the repository root — the Dockerfile expects that as its build context.
+3. In each environment, add a **service from your GitHub repo**, named `api`. Enter its
+   Dockerfile, start command, health check and pre-deploy migration by hand, from
+   *Railway service settings* below. Nothing in the repository sets them. Leave the service root
+   directory as the repository root: the Dockerfile expects that as its build context.
 4. Set the service variables in **each** environment. **The complete list, production's, is in
    [`go-live-runbook.md`](./go-live-runbook.md)** — the table below is the minimum that boots, and
    the API also refuses to start without `SENSITIVE_DATA_KEY` (added 02-11-2026):
@@ -104,6 +104,48 @@ development, staging and production instances.
    live broken.
 
 7. Generate a public domain for the service and note it — the web app needs it.
+
+### Railway service settings — in the dashboard, per service
+
+Railway deprecated config as code (17-11-2026: new services cannot use it, existing
+`railway.json` files stop working on 01-12-2026), so the repository holds **no Railway config
+file**. Every setting below is entered by hand in the service's *Settings* and *Variables*, and
+this table is the only record of them: change one in Railway, change it here. A service with
+nothing set builds with Railway's defaults, and the repo has no root Dockerfile, so a blank
+service never builds the right thing.
+
+**`api`** (production; staging the same):
+
+| Where | Setting | Value |
+|---|---|---|
+| Settings → Source | Repository, branch, root directory | the Poolse repo, `main`, root directory **empty** (the Dockerfile builds from the repo root) |
+| Settings → Build | Builder | Dockerfile |
+| Variables | `RAILWAY_DOCKERFILE_PATH` | `apps/api/Dockerfile` |
+| Settings → Deploy | Custom start command | `node apps/api/dist/main.js` |
+| Settings → Deploy | Pre-deploy command | `node packages/db/dist/migrate.js up` (the migrations; a failure keeps the previous version serving) |
+| Settings → Deploy | Healthcheck path | `/health` |
+| Variables | `RAILWAY_HEALTHCHECK_TIMEOUT_SEC` | `60` |
+| Settings → Deploy | Restart policy | On failure, max retries `3` |
+| Settings → Deploy | Cron schedule | none |
+| Settings → Networking | Public domain | yes (`api.<domain>`) |
+
+**`backup`** (production only):
+
+| Where | Setting | Value |
+|---|---|---|
+| Settings → Source | Repository, branch, root directory | the Poolse repo, `main`, root directory **empty**; connected **last** (below) |
+| Settings → Build | Builder | Dockerfile |
+| Variables | `RAILWAY_DOCKERFILE_PATH` | `packages/db/backup.Dockerfile` |
+| Settings → Build | Watch paths | `packages/db/**`, `packages/rules/**`, `apps/api/src/notifications/**`, `apps/api/package.json`, `pnpm-lock.yaml` |
+| Settings → Deploy | Custom start command | `sh packages/db/scripts/railway-backup.sh` |
+| Settings → Deploy | Pre-deploy command | **none**. Never the API's: the backup does not migrate |
+| Settings → Deploy | Healthcheck path | none (it runs and exits) |
+| Settings → Deploy | Restart policy | **Never**, so a failed night is not retried in a loop |
+| Settings → Deploy | Cron schedule | `30 2 * * *` (UTC) |
+| Settings → Networking | Public domain | **none**; private networking reaches `postgres.railway.internal` |
+
+After entering them, read the next deploy's build log: the first line names the Dockerfile it
+used. `api` must build `apps/api/Dockerfile` and `backup` must build `packages/db/backup.Dockerfile`.
 
 ## 2. Vercel — the web app
 
@@ -413,8 +455,9 @@ or anything shaped like an age secret key.
 (`postgres:16`), so `pg_dump` is the matching client and runs natively, with Node copied in. It
 runs `packages/db/scripts/railway-backup.sh` once and exits: refuse a key, then `backup`,
 `check-backups` and `mirror-files`, stopping and alerting at the first failure. Its Railway
-settings are code, in `packages/db/railway.backup.json`: the Dockerfile, the start command, the
-cron `30 2 * * *` (UTC) and the restart policy *Never*, so a failed night is not retried in a loop.
+settings are entered in the dashboard (*Railway service settings*, in §1): the Dockerfile, the
+start command, the cron `30 2 * * *` (UTC) and the restart policy *Never*, so a failed night is not
+retried in a loop.
 
 Local runs use `PG_TOOLS=docker`, so `pg_dump`/`pg_restore` come from the `postgres:16` image and
 no Postgres client is needed. `PG_TOOLS_IMAGE` must match production's major version.
@@ -440,12 +483,11 @@ S3Mock.
      daily check only reads, so GitHub holds no token that can write or delete a backup.
 4. **Railway: the `backup` service**, in the production project, beside `Postgres` and the API.
    Create it **empty first** and connect the repo last: a service connected straight to the repo
-   deploys at once with the root `railway.json`, which is the API's (its start command and its
-   pre-deploy migration).
+   builds and runs at once with whatever it holds, before its schedule and Dockerfile are set.
    1. *New → Empty Service*; name it `backup`.
-   2. *Settings → Config-as-code → Railway Config File*: `/packages/db/railway.backup.json`.
-      That file sets the Dockerfile, the start command, the cron schedule `30 2 * * *` (UTC) and the
-      restart policy *Never*; check the settings page shows them.
+   2. *Settings*: every row of the `backup` table in *Railway service settings* (§1): Dockerfile
+      (`RAILWAY_DOCKERFILE_PATH=packages/db/backup.Dockerfile`), start command, no pre-deploy
+      command, cron `30 2 * * *`, restart policy *Never*, watch paths.
    3. *Settings → Networking*: **no public domain**. It needs none; private networking is on by
       default, and that is how it reaches `postgres.railway.internal`.
    4. *Variables*: on this service only, never as shared variables, and none of them on the API.
@@ -454,6 +496,7 @@ S3Mock.
       |---|---|
       | `BACKUP_SOURCE_URL` | `${{Postgres.DATABASE_URL}}`: the reference, so it is the owner login on the **private** host. Never `DATABASE_PUBLIC_URL`, never the app's URL. (`Postgres` is the database service's name; use yours.) |
       | `PG_TOOLS_IMAGE` | `postgres:16`: production's major (`SELECT version();`). Read at build time. |
+      | `RAILWAY_DOCKERFILE_PATH` | `packages/db/backup.Dockerfile` |
       | `BACKUP_AGE_RECIPIENT` | the `age1…` public key |
       | `BACKUP_S3_ENDPOINT` | `https://<account id>.r2.cloudflarestorage.com` |
       | `BACKUP_S3_BUCKET` | `poolse-backups-production` |
@@ -470,6 +513,8 @@ S3Mock.
       three; the rest it simply does not need.
    5. *Settings → Source → Connect Repo*: the Poolse repo, branch `main`, root directory empty (the
       Dockerfile builds from the repo root). It builds; a cron service then waits for its schedule.
+      Its build log must name `packages/db/backup.Dockerfile`. If it names `apps/api/Dockerfile`,
+      `RAILWAY_DOCKERFILE_PATH` is missing.
 5. **GitHub, for the daily check.** In the `production` environment keep only
    `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, the **check token** as `BACKUP_S3_ACCESS_KEY_ID` /
    `BACKUP_S3_SECRET_ACCESS_KEY`, and `PLATFORM_ALERT_EMAIL`, `RESEND_API_KEY`, `EMAIL_FROM`.

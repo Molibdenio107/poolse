@@ -22,7 +22,7 @@ The only horizontal phase. Everything after this is vertical.
 | 0.7 | i18n scaffolding, `pt-PT` + `en`, locale switch | ✅ No user-facing literal strings exist anywhere; `pnpm i18n:check` proves it |
 | 0.8 | Theme tokens, light and dark, palette applied | ✅ Toggle works; no hex literals in components |
 | 0.9 | `audit_log` table and the write helper | ✅ Any mutation can record who and what in one call |
-| 0.10 | Staging + production deploys, both environments green | Repo side done — Dockerfile, `railway.json`, `vercel.json`, migrations as a pre-deploy step. Waiting on hosting accounts; see `docs/deploy.md` |
+| 0.10 | Staging + production deploys, both environments green | Repo side done — Dockerfile, `vercel.json`, Railway's settings listed in `docs/deploy.md`, migrations as a pre-deploy step. Waiting on hosting accounts; see `docs/deploy.md` |
 
 **0.3 is the slice to get right, and it is not the same slice as 0.4.** Auth answers "who
 are you"; isolation answers "and what can this query possibly see". The cross-tenant test
