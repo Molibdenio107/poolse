@@ -19,6 +19,7 @@ import {
 } from '../common/pagination.js';
 import { searchPredicate } from '../common/search.js';
 import { deliverAlert, recordAlert } from './platform-alert.js';
+import { deliverSuspensionNotice } from './owner-notices.js';
 import {
   deriveHealth,
   HEALTH_WINDOW_HOURS,
@@ -1322,17 +1323,60 @@ export async function setSuspension(
   organizationId: string,
   suspension: { reason: string; confirmName: string | undefined } | null,
 ): Promise<TenantChangeResult | null> {
-  return changeTenant(
+  /*
+   * POOLSE-225: the Owners' notice is written inside the same transaction as the
+   * change, and only on a real transition, then sent after the commit. The id
+   * leaves through this variable rather than through `changeTenant`'s return, so
+   * the one write path every other platform action uses is left as it is.
+   */
+  let noticeId: string | null = null;
+
+  const result = await changeTenant(
     organizationId,
     suspension === null ? 'tenant.restored' : 'tenant.suspended',
-    suspension === null
-      ? { suspended_at: null, suspension_reason: null }
-      : { suspended_at: new Date().toISOString(), suspension_reason: suspension.reason },
+    async (before, tx) => {
+      const change: TenantChange =
+        suspension === null
+          ? { suspended_at: null, suspension_reason: null }
+          : { suspended_at: new Date().toISOString(), suspension_reason: suspension.reason };
+      const wasSuspended = before['suspended_at'] !== null && before['suspended_at'] !== undefined;
+      if (wasSuspended === (suspension !== null)) return { change };
+
+      // Who the notice is owed to, snapshotted now — the query openOverride uses.
+      const { rows: owners } = await tx.query<{ email: string }>(
+        `SELECT DISTINCT coalesce(u.cached_email::text, m.email::text) AS email
+           FROM membership m
+           JOIN membership_role r ON r.membership_id = m.id AND r.organization_id = m.organization_id
+                                 AND r.role = 'owner' AND r.archived_at IS NULL
+           LEFT JOIN app_user u ON u.id = m.app_user_id
+          WHERE m.organization_id = $1 AND m.archived_at IS NULL
+            AND coalesce(u.cached_email::text, m.email::text) IS NOT NULL`,
+        [organizationId],
+      );
+      const { rows } = await tx.query<{ id: string }>(
+        `INSERT INTO suspension_notice (organization_id, kind, reason, occurred_at, recipients)
+         VALUES ($1, $2, $3, now(), $4::text[])
+         RETURNING id`,
+        [
+          organizationId,
+          suspension === null ? 'restored' : 'suspended',
+          suspension?.reason ?? null,
+          owners.map((row) => row.email),
+        ],
+      );
+      noticeId = rows[0]!.id;
+      return { change, detail: { noticeId, noticeRecipients: owners.length } };
+    },
     // Typed only in the direction that shuts the door — POOLSE-64 AC 3. Passing
     // it on a restore would be harmless and meaningless; `changeTenant` decides
     // from the columns, not from here.
     { ...(suspension === null ? {} : { confirmName: suspension.confirmName }) },
   );
+
+  // After the commit, never inside it: a provider's bad minute must not undo a
+  // suspension. Never throws; a failed send is the hourly retry's.
+  if (result !== null && noticeId !== null) await deliverSuspensionNotice(noticeId);
+  return result;
 }
 
 /**

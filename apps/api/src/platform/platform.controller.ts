@@ -344,6 +344,11 @@ export class PlatformController {
     @Param('id') id: string,
     @Body() body: { suspended?: unknown; reason?: unknown; confirmName?: unknown },
   ): Promise<TenantChangeResult> {
+    // Security review 17-11-2026: a malformed id reached SQL and came back a 500.
+    // Checked here rather than by ParseUUIDPipe so a test of the handler sees it.
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new BadRequestException('A tenant id must be a uuid');
+    }
     const suspended = body.suspended === true || body.suspended === 'true';
     return found(
       await setSuspension(

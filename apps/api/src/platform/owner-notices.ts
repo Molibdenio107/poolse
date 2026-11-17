@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { withPlatform } from '@poolse/db';
 import { sendEmail, type Email } from '../notifications/notifier.js';
 import { supportNoticeEmail } from '../notifications/support-notice-email.js';
+import { suspensionNoticeEmail } from '../notifications/suspension-notice-email.js';
 import { trialNoticeEmail, type TrialNoticeKind } from '../notifications/trial-notice-email.js';
 
 /**
@@ -150,6 +151,75 @@ export async function deliverSupportNotice(
     return delivered;
   } catch (error) {
     logger.warn(`Could not send support notice ${grantId}: ${String(error)}`);
+    return false;
+  }
+}
+
+/**
+ * Where a club writes when its door is shut — the suspended screen's fallback
+ * (decided 12-09-2026), so the email and the screen never name two addresses.
+ */
+export function supportAddress(): string {
+  const configured = (process.env['SUPPORT_EMAIL'] ?? process.env['NEXT_PUBLIC_SUPPORT_EMAIL'] ?? '').trim();
+  return configured === '' ? 'suporte@poolse.pt' : configured;
+}
+
+/**
+ * Tell a club's Owners it was suspended or restored — POOLSE-225.
+ *
+ * Rendered from the row, which snapshots the reason (a restore clears it from
+ * the club) and the recipients, so the hourly retry sends exactly what the first
+ * attempt would have. Never throws.
+ */
+export async function deliverSuspensionNotice(
+  noticeId: string,
+  send: (email: Email) => Promise<boolean> = sendEmail,
+): Promise<boolean> {
+  try {
+    const notice = await withPlatform(async (tx) => {
+      const { rows } = await tx.query<{
+        kind: 'suspended' | 'restored';
+        reason: string | null;
+        recipients: string[];
+        delivered: boolean;
+        name: string;
+        locale: string;
+        occurred_at: string;
+      }>(
+        `SELECT n.kind::text AS kind, n.reason, n.recipients, n.delivered_at IS NOT NULL AS delivered,
+                o.name, o.locale,
+                to_char(n.occurred_at AT TIME ZONE 'Europe/Lisbon', 'DD-MM-YYYY HH24:MI') AS occurred_at
+           FROM suspension_notice n
+           JOIN organization o ON o.id = n.organization_id
+          WHERE n.id = $1`,
+        [noticeId],
+      );
+      return rows[0] ?? null;
+    });
+    if (notice === null || notice.delivered || notice.recipients.length === 0) return false;
+
+    let delivered = false;
+    for (const to of notice.recipients) {
+      const sent = await send(
+        suspensionNoticeEmail({
+          to,
+          kind: notice.kind,
+          organizationName: notice.name,
+          reason: notice.reason,
+          occurredAt: notice.occurred_at,
+          supportEmail: supportAddress(),
+          link: webLink('/dashboard'),
+          locale: notice.locale,
+        }),
+      );
+      delivered = delivered || sent;
+    }
+    if (delivered) {
+      await withPlatform((tx) => tx.query('UPDATE suspension_notice SET delivered_at = now() WHERE id = $1', [noticeId]));
+    }
+    return delivered;
+  } catch (error) {
+    logger.warn(`Could not send suspension notice ${noticeId}: ${String(error)}`);
     return false;
   }
 }

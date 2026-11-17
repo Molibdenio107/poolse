@@ -1670,4 +1670,45 @@ BEGIN
   RAISE NOTICE 'PASS test 30: an import record cannot cross the tenant boundary';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 31 — a suspension notice is the platform's alone (POOLSE-225, 17-11-2026)
+-- ---------------------------------------------------------------------------
+--
+-- Like `trial_notice`: who was told a club was shut, and why, is about a tenant
+-- rather than a tenant's. A club must not read it nor write itself one. No grant
+-- and no policy naming poolse_app; both asserted.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_seen int;
+  ok boolean;
+BEGIN
+  RESET ROLE;
+  INSERT INTO suspension_notice (organization_id, kind, reason, occurred_at)
+  VALUES (v_a, 'suspended', 'Teste', now());
+
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_a::text, true);
+
+  ok := false;
+  BEGIN
+    SELECT count(*) INTO v_seen FROM suspension_notice;
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN
+    RAISE EXCEPTION 'FAIL test 31a: a tenant read suspension_notice (% rows)', v_seen;
+  END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO suspension_notice (organization_id, kind, occurred_at) VALUES (v_a, 'restored', now());
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 31b: a tenant wrote itself a suspension notice'; END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'PASS test 31: a suspension notice is the platform''s alone';
+END $$;
+
 ROLLBACK;

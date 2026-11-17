@@ -7,7 +7,7 @@ import { deliverPaymentChangeNotice } from '../billing/payment-change-delivery.j
 import { deliverLevelChangeNotice } from '../students/level-change-delivery.js';
 import { deliverMajorityNotice } from '../students/majority-notice.service.js';
 import { deliverMessage } from '../messages/delivery.js';
-import { deliverSupportNotice, deliverTrialNotice } from '../platform/owner-notices.js';
+import { deliverSupportNotice, deliverSuspensionNotice, deliverTrialNotice } from '../platform/owner-notices.js';
 import { alertRecipients, redeliverAlert } from '../platform/platform-alert.js';
 import { redeliverQualificationAlert } from '../staff/qualification-alerts.js';
 import { emailIsConfigured, sendEmail, type Email } from './notifier.js';
@@ -155,6 +155,15 @@ const PLATFORM_KINDS: PlatformKind[] = [
               SET notice_delivery_attempts = notice_delivery_attempts + 1, notice_last_attempt_at = now()
             WHERE id = $1 AND source = 'override'`,
     deliver: deliverSupportNotice,
+  },
+  {
+    // POOLSE-225: a club's Owners told it was suspended or restored.
+    key: 'suspension_notice',
+    pending: `SELECT id FROM suspension_notice
+               WHERE delivered_at IS NULL AND cardinality(recipients) > 0
+                 AND ($1::uuid IS NULL OR organization_id = $1) AND ${due('created_at')}`,
+    bump: `UPDATE suspension_notice SET delivery_attempts = delivery_attempts + 1, last_attempt_at = now() WHERE id = $1`,
+    deliver: deliverSuspensionNotice,
   },
   {
     key: 'platform_alert',

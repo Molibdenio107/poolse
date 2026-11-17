@@ -38,7 +38,8 @@ having to try it.
 4. **Only an operator's act records a notice.** The trial clock's suspension (`trial-clock.service.ts`)
    records none, because it has `access_closed`. An operator who restores a club the clock closed
    does record a `restored` notice: that restore is an operator's act.
-5. **The recipients are every live Owner who has an address**, snapshotted when the notice is
+5. **The recipients are every live Owner who has an address** (a club has exactly one, by
+   `membership_role_one_owner`; the query takes them all anyway), snapshotted when the notice is
    recorded: `app_user.cached_email`, falling back to `membership.email`. This is the same query
    as `openOverride` in `support.repository.ts`. If no Owner has an address, the notice is still
    recorded, with no recipients, and nothing is sent.
@@ -119,9 +120,10 @@ retry is a no-op. The notice is still recorded, which is what the tests check.
 
 ### QA
 
-1. **Suspend.** Given a club with two Owners, one signed in with a `cached_email` and one with
-   only `membership.email`, when an operator suspends it with the reason
-   `Falta de pagamento <b>desde março</b>`, then one `suspended` notice exists with both addresses
+1. **Suspend.** Given a club whose Owner signed in with a `cached_email` (a club has one Owner,
+   and a signed-in Owner's membership holds no address of its own —
+   `membership_identity_belongs_to_one_owner`), when an operator suspends it with the reason
+   `Falta de pagamento <b>desde março</b>`, then one `suspended` notice exists with that address
    and the reason byte for byte. Both emails are sent after the commit. The HTML part shows the
    tags as text, and both parts carry the support address.
 2. **Restore.** Given that suspended club, when an operator restores it, then a `restored`

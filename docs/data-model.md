@@ -2796,6 +2796,21 @@ naming `poolse_app`, two independent reasons — and `trial_event` is insert-onl
 `delivered_at` when it is eventually sent and a transition is never touched again. Both are
 in `TENANT_TABLES` for teardown, for the reason `platform_audit_log` is.
 
+### A suspension notice — POOLSE-225, 17 November 2026
+
+```
+suspension_notice  id, organization_id, kind (suspended | restored), reason,
+                   occurred_at, recipients, delivered_at, delivery_attempts,
+                   last_attempt_at, created_at, updated_at
+```
+
+Platform-scoped like `trial_notice`, with the same pair of refusals for `poolse_app` (asserted in
+`tenant-isolation.sql` test 31), the same `SELECT, INSERT, UPDATE` for `poolse_platform`, and in
+`TENANT_TABLES`. `reason` is a snapshot, because a restore clears `organization.suspension_reason`
+and a retry must still say what the first attempt said; a CHECK keeps it present exactly on a
+`suspended` row. Not new kinds on `trial_notice`: that key is (tenant, kind, `due_on`), so two
+suspensions in a day would collide, and it has no place for a reason.
+
 **A machine is not a person.** `platform_audit_log.clerk_user_id` is `NOT NULL` and names a
 Clerk user; a cron has nobody behind it, so its transitions go here instead. It is also what
 makes a machine-set suspension distinguishable from an operator's six weeks later — on the

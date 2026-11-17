@@ -141,6 +141,8 @@ const TENANT_TABLES = [
    */
   'trial_event',
   'trial_notice',
+  // POOLSE-225: platform-scoped like trial_notice, and a real key to `organization`.
+  'suspension_notice',
   /*
    * The operator's own revenue — POOLSE-63 — and here for the fourth time for
    * the third reason. It belongs to no tenant, carries no RLS policy for

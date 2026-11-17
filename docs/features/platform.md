@@ -234,6 +234,18 @@ reason on the body. Three things stay open on purpose:
 Suspending is behind a confirmation dialog that spells out what it does. Restoring is one
 click: nothing is made safer by slowing down the safe direction.
 
+**The Owner is told, both ways** (POOLSE-225). An operator's suspend or restore records a
+`suspension_notice` in the same transaction, only on a real transition, with the Owner's
+address and, for a suspension, the reason exactly as typed. Once the change commits it is
+emailed in the club's language: what happened, from when (`dd-MM-yyyy HH:mm`, Lisbon), the
+reason (escaped in HTML, untouched in text), that nothing was deleted, Poolse support's
+address (`SUPPORT_EMAIL`, else `NEXT_PUBLIC_SUPPORT_EMAIL`, else `suporte@poolse.pt`, the
+suspended screen's fallback) and a link to `/dashboard`. A restore quotes no reason. A
+failed send never undoes the change; the hourly retry sends it from the row. The trial
+clock's own closing records none, because its `access_closed` trial notice already tells
+the Owner. While email is `console`, as in the pilot, the notice is recorded and nothing
+leaves.
+
 ### Validation
 
 At the edge, in `platform-actions.ts`, and every refusal names its field so the web app can
