@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hoursLabel, withinHours } from './opening-hours.ts';
+import { addMinutes, hoursLabel, hoursUnset, withinHours } from './opening-hours.ts';
 import type { FacilityDay } from './api.ts';
 
 /**
@@ -86,4 +86,29 @@ test('the label names the hours the refusal is about', () => {
   assert.equal(hoursLabel(CLUB, 2), '12:30\u201322:00');
   assert.equal(hoursLabel(CLUB, 1), '06:30\u201322:00');
   assert.equal(hoursLabel([], 1), null);
+});
+
+// Rui, 17-11-2026: the turma's Horário tab warns when a site's hours were never set.
+const dayOf = (weekday: number, opensAt: string, closesAt: string, available = true): FacilityDay => ({
+  weekday,
+  available,
+  opensAt,
+  closesAt,
+  scheduledClasses: 0,
+});
+
+test('a site still open 00:00–24:00 every day has never had its hours set', () => {
+  const born = [1, 2, 3, 4, 5, 6, 7].map((weekday) => dayOf(weekday, '00:00:00', '24:00:00'));
+  assert.equal(hoursUnset(born), true);
+  assert.equal(hoursUnset([]), true, 'no rows at all is unset too');
+  assert.equal(hoursUnset([...born.slice(0, 6), dayOf(7, '00:00', '24:00', false)]), false, 'a closed Sunday is a decision');
+  assert.equal(hoursUnset([dayOf(1, '07:00', '22:00'), ...born.slice(1)]), false, 'one narrowed day is a decision');
+});
+
+test('a slot end is the start plus its minutes, and may run past midnight', () => {
+  assert.equal(addMinutes('18:30', 45), '19:15');
+  assert.equal(addMinutes('21:45:00', 45), '22:30');
+  assert.equal(addMinutes('23:30', 60), '24:30');
+  // 21:30 + 45 against a 22:00 close is outside; the form says so before the API does.
+  assert.equal(withinHours([dayOf(2, '07:00', '22:00')], 2, '21:30', addMinutes('21:30', 45)), false);
 });

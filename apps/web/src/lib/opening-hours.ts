@@ -51,3 +51,25 @@ export function hoursLabel(
   if (day === undefined) return null;
   return `${day.opensAt.slice(0, 5)}\u2013${day.closesAt.slice(0, 5)}`;
 }
+
+/**
+ * Has anybody set this site's opening hours yet (Rui, 17-11-2026)?
+ *
+ * A site is born with seven days open 00:00–24:00, which the schema means as
+ * "nobody has narrowed this yet" (`facility_hours`, its default). So "never
+ * set" is exactly that: no rows, or every day still open all day. A club that
+ * truly opens round the clock reads as unset too, and the warning that follows
+ * only invites it to say so.
+ */
+export function hoursUnset(hours: readonly FacilityDay[]): boolean {
+  return hours.every(
+    (day) => day.available && day.opensAt.slice(0, 5) === '00:00' && day.closesAt.slice(0, 5) === '24:00',
+  );
+}
+
+/** "HH:MM" plus minutes, as wall-clock text that may run past 24:00 (it compares as later). */
+export function addMinutes(startTime: string, minutes: number): string {
+  const [hours, mins] = startTime.slice(0, 5).split(':').map(Number) as [number, number];
+  const total = hours * 60 + mins + minutes;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}

@@ -39,8 +39,11 @@ phone on, as before.
 
 It shows:
 
-- a tick that draws itself inside two ripples, over the water banner;
+- the Poolse mark locking in (`LogoLockIn`), over the water banner;
 - the club's name, and for a club the trial's last day as visible text (`dd-MM-yyyy`);
+- for a club, *Configurar o clube* (Rui, 17-11-2026): a button straight to the site's own page
+  (opening hours, pools, lanes and the club's details under Geral), or to the Instalações list
+  when the club has several sites or none yet;
 - *Por onde começar*: for a club, four links (Instalações, Turmas, the student importer, the
   staff page); for a personal pool, one link to the dashboard for the first reading;
 - *Ir para o painel*.
@@ -59,4 +62,4 @@ everything is visible from the first frame. `WaterBanner`
 
 ## Joining by invitation
 
-*Já faz parte de {clube}* (`app/(app)/join/joined.tsx`) uses the same water banner, tick and ripples as Início (`WaterBanner`, `CheckPulse`), then the sentence and an *Entrar* button to `/app`. It shows right after accepting and when a used link is opened again. The accept is `quiet`, so no *Guardado.* pulse plays over it.
+*Já faz parte de {clube}* (`app/(app)/join/joined.tsx`) uses the same water banner and Poolse mark as Início (`WaterBanner`, `LogoLockIn`; the tick it had until 17-11-2026 was replaced at Rui's request), then the sentence and an *Entrar* button to `/app`. It shows right after accepting and when a used link is opened again. The accept is `quiet`, so no *Guardado.* pulse plays over it.

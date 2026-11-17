@@ -5,12 +5,13 @@ import {
   CalendarDays,
   Droplets,
   FileSpreadsheet,
+  Settings,
   Users,
   type LucideIcon,
 } from 'lucide-react';
 import { PageShell } from '@/components/page-shell';
 import { FromLink } from '@/components/from-link';
-import { apiFetch, type Me } from '@/lib/api';
+import { apiFetch, type Facilities, type Me } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { WaterBanner } from '../water-banner';
 import { ScrollToTop } from './scroll-to-top';
@@ -53,6 +54,17 @@ export default async function WelcomePage({
   }
 
   const personal = membership.organizationKind === 'personal';
+
+  /*
+   * *Configurar o clube* — Rui, 17-11-2026. Straight to the site's own page
+   * (opening hours, pools, lanes, the club's details under Geral), because that
+   * is where a new club's first evening goes. With several sites, or none yet,
+   * the Instalações list is the honest place to start. Only an Owner or Admin
+   * reaches this far (above), and the site's page answers only them anyway.
+   */
+  const sites = personal ? null : await apiFetch<Facilities>('/facilities').catch(() => null);
+  const live = sites?.facilities ?? [];
+  const configureHref = live.length === 1 ? `/dashboard/facilities/${live[0]!.id}` : '/dashboard/facilities';
   const steps: Step[] = personal
     ? [
         {
@@ -107,6 +119,18 @@ export default async function WelcomePage({
               <p className="text-sm text-foreground-muted">
                 {t('welcome.trial', { date: formatDate(membership.trialEndsAt) })}
               </p>
+            )}
+            {!personal && (
+              <div className="mt-3 flex flex-col items-center gap-1.5">
+                <FromLink
+                  href={configureHref}
+                  className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-5 text-control font-semibold text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  <Settings className="size-4" aria-hidden />
+                  {t('welcome.configureClub')}
+                </FromLink>
+                <p className="text-sm text-foreground-muted">{t('welcome.configureClubHint')}</p>
+              </div>
             )}
           </div>
 

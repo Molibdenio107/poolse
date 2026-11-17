@@ -7,7 +7,9 @@ import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, SelectField, TextField, useSee
 import { ColourSwatches } from '@/components/ui/colour-swatches';
 import { fitsLevel, type AgeFit } from '@/lib/ages';
 import { cn } from '@/lib/utils';
-import type { ClassGroup, ClassOptions } from '@/lib/api';
+import type { ClassGroup, ClassOptions, FacilityDay } from '@/lib/api';
+import { addMinutes, hoursLabel, hoursUnset, withinHours } from '@/lib/opening-hours';
+import { FromLink } from '@/components/from-link';
 import { createLevelInline } from '../students/students.actions';
 import type { FormState } from '../actions';
 import {
@@ -21,7 +23,7 @@ import {
 } from './classes.actions';
 import { Dialog } from '@/components/ui/dialog';
 import { ConfirmButton } from '@/components/confirm-action';
-import { Archive } from 'lucide-react';
+import { Archive, TriangleAlert } from 'lucide-react';
 import { ARCHIVE_TRIGGER, ARCHIVE_ICON } from '@/lib/archive-trigger';
 import { SelectList } from '@/components/ui/list-select';
 
@@ -255,10 +257,13 @@ export function AddSlotForm({
   organizationId,
   groupId,
   dayNames,
+  site,
 }: {
   organizationId: string;
   groupId: string;
   dayNames: Record<number, string>;
+  /** The turma's site and its weekly hours, for the two warnings below; null when it has none. */
+  site: { id: string; name: string; hours: FacilityDay[] } | null;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(addSlotAction, INITIAL);
@@ -268,10 +273,32 @@ export function AddSlotForm({
   const [startTimeField, setStartTimeField] = useSeeded<string>('', added);
   const [durationMinutesField, setDurationMinutesField] = useSeeded<string>('45', added);
 
+  /*
+   * Two warnings, neither of which blocks the form (Rui, 17-11-2026): the site
+   * never had its opening hours set, or the time chosen falls outside them. The
+   * API stays the authority — it refuses a slot outside the hours — and this is
+   * the screen saying so before the button rather than after it.
+   */
+  const unset = site !== null && hoursUnset(site.hours);
+  const weekday = Number(weekdayField);
+  const minutes = Number(durationMinutesField);
+  const typed = site !== null && !unset && weekday >= 1 && /^\d{2}:\d{2}/.test(startTimeField) && minutes > 0;
+  const day = typed ? site.hours.find((entry) => entry.weekday === weekday) : undefined;
+  const outside = typed && !withinHours(site.hours, weekday, startTimeField, addMinutes(startTimeField, minutes));
+  const hoursHref = site === null ? null : `/dashboard/facilities/${site.id}?section=hours`;
+
   return (
     <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="groupId" value={groupId} />
+
+      {unset && hoursHref !== null && (
+        <HoursWarning
+          message={t('classes.hoursUnset', { site: site.name })}
+          href={hoursHref}
+          link={t('classes.hoursUnsetLink')}
+        />
+      )}
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
@@ -347,8 +374,40 @@ export function AddSlotForm({
         </button>
       </div>
 
+      {outside && hoursHref !== null && (
+        <HoursWarning
+          message={
+            day !== undefined && !day.available
+              ? t('classes.dayClosed', { site: site.name, day: dayNames[weekday] ?? '' })
+              : t('classes.outsideHours', {
+                  site: site.name,
+                  day: dayNames[weekday] ?? '',
+                  hours: hoursLabel(site.hours, weekday) ?? '',
+                })
+          }
+          href={hoursHref}
+          link={t('classes.hoursSeeLink')}
+        />
+      )}
+
       <Problem state={state} />
     </form>
+  );
+}
+
+/** A warning in words, with an icon and the way to fix it; colour only helps. */
+function HoursWarning({ message, href, link }: { message: string; href: string; link: string }): React.ReactElement {
+  return (
+    <p
+      role="status"
+      className="flex flex-wrap items-start gap-2 rounded border border-warning/40 bg-warning/10 p-3 text-sm"
+    >
+      <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+      <span className="min-w-0 flex-1">{message}</span>
+      <FromLink href={href} className="font-medium text-primary underline underline-offset-2">
+        {link}
+      </FromLink>
+    </p>
   );
 }
 

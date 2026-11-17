@@ -56,6 +56,15 @@ export default async function ClassPage({
     else failure = describeLoad(error);
   }
 
+  /*
+   * The turma's site and its hours, for the Horário tab's warnings (Rui,
+   * 17-11-2026). A turma with no site of its own uses the club's only one; with
+   * several and none chosen there is no single set of hours to warn against.
+   */
+  const sites = all?.facilities ?? [];
+  const turmaSite =
+    sites.find((site) => site.id === group?.facilityId) ?? (sites.length === 1 ? sites[0]! : null);
+
   const dayNames = Object.fromEntries(
     [1, 2, 3, 4, 5, 6, 7].map((day) => [day, t(`week.${day}`)]),
   );
@@ -200,6 +209,7 @@ export default async function ClassPage({
                     organizationId={options.organizationId}
                     groupId={loaded.id}
                     dayNames={dayNames}
+                    site={turmaSite}
                   />
                 </div>
               )}

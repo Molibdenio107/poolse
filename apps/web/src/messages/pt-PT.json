@@ -854,6 +854,8 @@
     "changeLater": "Tudo isto pode ser alterado mais tarde."
   },
   "welcome": {
+    "configureClub": "Configurar o clube",
+    "configureClubHint": "Horário de funcionamento, tanques, pistas e os dados do clube.",
     "title": "Tudo pronto",
     "subtitle": "{club} já está no Poolse.",
     "trial": "O período experimental vai até {date}. Até lá, tem acesso a tudo.",
@@ -2012,6 +2014,11 @@
     }
   },
   "classes": {
+    "hoursUnset": "{site} ainda não tem horário de funcionamento definido. Até o definir, as turmas podem ser marcadas a qualquer hora.",
+    "hoursUnsetLink": "Definir o horário",
+    "outsideHours": "Fora do horário de {site} ({day}: {hours}).",
+    "dayClosed": "{day}: dia fechado em {site}.",
+    "hoursSeeLink": "Ver o horário",
     "laneOverlapWarning": "Guardado, mas fica sobreposta a {count, plural, one {outra turma} other {outras turmas}} na mesma pista ou sem pista: {when}. Distribua as pistas no calendário.",
     "withTurma": "com {name}",
     "poolOverWarning": "Guardado. O tanque fica acima da lotação em {count, plural, one {# hora} other {# horas}} ({when}): as turmas prometem {places} lugares para {max}. Ajuste no calendário; as inscrições param quando o tanque estiver cheio.",

@@ -854,6 +854,8 @@
     "changeLater": "All of this can be changed later."
   },
   "welcome": {
+    "configureClub": "Set up the club",
+    "configureClubHint": "Opening hours, pools, lanes and the club's details.",
     "title": "All set",
     "subtitle": "{club} is now on Poolse.",
     "trial": "The trial runs until {date}. Until then, everything is available.",
@@ -2012,6 +2014,11 @@
     }
   },
   "classes": {
+    "hoursUnset": "{site} has no opening hours set yet. Until they are, class groups can be scheduled at any time.",
+    "hoursUnsetLink": "Set the opening hours",
+    "outsideHours": "Outside the opening hours of {site} ({day}: {hours}).",
+    "dayClosed": "{day}: closed at {site}.",
+    "hoursSeeLink": "See the opening hours",
     "laneOverlapWarning": "Saved, but it overlaps {count, plural, one {another class} other {other classes}} on the same lane or with no lane: {when}. Spread the lanes on the calendar.",
     "withTurma": "with {name}",
     "poolOverWarning": "Saved. The pool is over its capacity at {count, plural, one {# hour} other {# hours}} ({when}): the classes promise {places} places for {max}. Adjust it on the calendar; enrolling stops once the pool is full.",

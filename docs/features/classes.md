@@ -123,3 +123,19 @@ gets the new slots instead. While an import waits, Turmas lists what it would cr
 ## Juntar turmas (Rui, 14-11-2026)
 
 Owner and admin, from a folded set on *Lista*: tick the turmas that are really the same students, choose the one that stays (its teacher, level and capacity are kept) and its name. Its slots, lessons (taught ones too, with their registers), students, plans, challenges, leads and transfer proposals move into the one kept; the others are archived, empty. A student in two of them keeps one enrolment. Where two have a plan or challenge on the same day, the kept turma's wins. Refused with nothing written when two meet on the same weekday and hour, when the students exceed the kept turma's capacity (with the numbers), when the name belongs to another live turma, or when a student would clash (POOLSE-144). Not undone from Arquivados; audited as `class_group.merged`. `POST /class-groups/:id/merge { from, name }`.
+
+## Horário semanal warns about the site's hours (Rui, 17-11-2026)
+
+The turma's *Horário semanal* tab checks the slot being added against its site's opening hours,
+and neither warning blocks the form; the API still refuses a slot outside the hours.
+
+- **Hours never set.** A site is created open 00:00–24:00 every day, which means nobody has set
+  them (`hoursUnset` in `lib/opening-hours.ts`). The tab then says *{site} ainda não tem horário de
+  funcionamento definido* with *Definir o horário*, a link to the site's hours section.
+- **Outside the hours.** Once hours are set, a day, time and duration that fall outside them say
+  *Fora do horário de {site} ({dia}: 07:00–22:00).*, or *{dia}: dia fechado em {site}.*, as soon as
+  they are typed, with *Ver o horário*.
+
+The site is the turma's own; a turma with none uses the club's only site, and with several there is
+nothing to warn against.
+
