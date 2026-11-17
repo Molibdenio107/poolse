@@ -20,6 +20,7 @@ import type { Paginated } from '@/lib/pagination';
 import { timeAgo } from '@/lib/relative-time';
 import { cn } from '@/lib/utils';
 import { BillingPanel } from './billing-panel';
+import { AccessCell } from './access-badge';
 import { HealthBadge } from './health-badge';
 import { StatusStrip } from './status-strip';
 import { SubscriptionBadge } from './subscription-badge';
@@ -50,13 +51,15 @@ export default async function AdminPage({
     search?: string;
     sort?: string;
     filter?: string;
+    /** POOLSE-226: by access state; combines with `filter`. */
+    access?: string;
     section?: string;
   }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
 
-  const { page: pageParam, search = '', sort, filter, section } = await searchParams;
+  const { page: pageParam, search = '', sort, filter, access, section } = await searchParams;
   /*
    * One section at a time — 12 October 2026. Clientes is the table with its
    * search, filter and sort, all of which keep `section` absent and so stay in
@@ -85,6 +88,8 @@ export default async function AdminPage({
           // An unknown one is no filter, decided by the API — this is a link in
           // a URL and a mistyped one should show everything, not an error page.
           ...(filter === undefined || filter === '' ? {} : { filter }),
+          // POOLSE-226, decided by the API in the same way.
+          ...(access === undefined || access === '' ? {} : { access }),
         })}`,
       ),
       current !== 'billing' ? null : apiFetch<BillingOverview>('/platform/billing'),
@@ -113,7 +118,7 @@ export default async function AdminPage({
     redirect(
       pageHref(
         '/admin',
-        { search: term, filter: filter || undefined },
+        { search: term, filter: filter || undefined, access: access || undefined },
         lastPage(tenants.total, tenants.limit),
       ),
     );
@@ -155,8 +160,9 @@ export default async function AdminPage({
             filters are already a plain GET, so an anchor is linkable, survives a
             refresh and works before any JavaScript has loaded.
           */}
-          <FilterLinks current={filter} search={term} t={t} />
-          <SortLinks current={sort} search={term} t={t} />
+          <FilterLinks current={filter} keep={{ search: term, access, sort }} t={t} />
+          <AccessLinks current={access} keep={{ search: term, filter, sort }} t={t} />
+          <SortLinks current={sort} keep={{ search: term, filter, access }} t={t} />
         </>
         )
       }
@@ -175,7 +181,7 @@ export default async function AdminPage({
           {
             key: 'tenants',
             label: t('admin.section.tenants'),
-            href: sectionHref('/admin', { search: term || undefined, filter: filter || undefined, sort }, 'tenants'),
+            href: sectionHref('/admin', { search: term || undefined, filter: filter || undefined, access: access || undefined, sort }, 'tenants'),
           },
           { key: 'billing', label: t('admin.section.billing'), href: sectionHref('/admin', {}, 'billing') },
           { key: 'support', label: t('admin.section.support'), href: sectionHref('/admin', {}, 'support') },
@@ -227,7 +233,7 @@ export default async function AdminPage({
           <Pagination
             page={tenants}
             basePath="/admin"
-            query={{ search: term || undefined, filter: filter || undefined }}
+            query={{ search: term || undefined, filter: filter || undefined, access: access || undefined }}
           />
         </>
       )}
@@ -310,12 +316,6 @@ function tenantColumns(
               {tenant.slug}
             </div>
           </div>
-
-          {tenant.archivedAt !== null && (
-            <span className="shrink-0 rounded bg-surface-muted px-2 py-0.5 text-xs text-foreground-muted">
-              {t('admin.archived')}
-            </span>
-          )}
         </div>
       ),
     },
@@ -351,6 +351,16 @@ function tenantColumns(
           )}
         </div>
       ),
+    },
+    {
+      /*
+        Whether the door is open — POOLSE-226. Beside what they pay, because the
+        two are different facts: a paying club can be suspended and a lapsed
+        trial is open read-only.
+      */
+      key: 'access',
+      header: t('admin.column.access'),
+      render: (tenant) => <AccessCell tenant={tenant} />,
     },
     {
       key: 'plan',
@@ -476,21 +486,31 @@ function byHealth(a: PlatformTenant, b: PlatformTenant): number {
  * The state is carried in the URL and the page is a server render, so "todos"
  * is the absence of the parameter rather than a fourth value.
  */
+/**
+ * The other parameters a link on this page carries along — POOLSE-226. Each
+ * control used to rebuild its own href and drop what it did not know about, so
+ * choosing a sort lost the filter; now every link starts from what is on screen.
+ */
+type Keep = Partial<Record<'search' | 'filter' | 'access' | 'sort', string | undefined>>;
+
+function adminHref(keep: Keep, name: keyof Keep, value: string | undefined): string {
+  const query = new URLSearchParams();
+  for (const [key, kept] of Object.entries({ ...keep, [name]: value })) {
+    if (kept !== undefined && kept !== '') query.set(key, kept);
+  }
+  return query.size > 0 ? `/admin?${query}` : '/admin';
+}
+
 function FilterLinks({
   current,
-  search,
+  keep,
   t,
 }: {
   current: string | undefined;
-  search: string;
+  keep: Keep;
   t: Awaited<ReturnType<typeof getTranslations>>;
 }): React.ReactElement {
-  const href = (filter?: string): string => {
-    const query = new URLSearchParams();
-    if (search !== '') query.set('search', search);
-    if (filter !== undefined) query.set('filter', filter);
-    return query.size > 0 ? `/admin?${query}` : '/admin';
-  };
+  const href = (filter?: string): string => adminHref(keep, 'filter', filter);
 
   const link = (filter: string | undefined, label: string): React.ReactElement => {
     const active = (current === '' ? undefined : current) === filter;
@@ -514,7 +534,50 @@ function FilterLinks({
         {link(undefined, t('admin.filter.all'))}
         {link('trialing', t('admin.filter.trialing'))}
         {link('expired', t('admin.filter.expired'))}
-        {link('pending_delete', t('admin.filter.pendingDelete'))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Whether the door is open — POOLSE-226. Its own row beside *Mostrar*, so
+ * "trials an operator has shut" is two clicks. *Dados a apagar* moved here from
+ * *Mostrar*: a deletion date is about access, and it cuts across the states.
+ */
+function AccessLinks({
+  current,
+  keep,
+  t,
+}: {
+  current: string | undefined;
+  keep: Keep;
+  t: Awaited<ReturnType<typeof getTranslations>>;
+}): React.ReactElement {
+  const link = (access: string | undefined, label: string): React.ReactElement => {
+    const active = (current === '' ? undefined : current) === access;
+    return (
+      <Link
+        key={label}
+        href={adminHref(keep, 'access', access)}
+        aria-current={active ? 'true' : undefined}
+        className={subMenuPillClass(active)}
+      >
+        {label}
+        <LinkBusy />
+      </Link>
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm text-foreground-muted">{t('admin.accessFilter.label')}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        {link(undefined, t('admin.accessFilter.all'))}
+        {link('active', t('admin.access.active'))}
+        {link('read_only', t('admin.access.read_only'))}
+        {link('suspended', t('admin.access.suspended'))}
+        {link('pending_delete', t('admin.accessFilter.pendingDelete'))}
+        {link('archived', t('admin.access.archived'))}
       </div>
     </div>
   );
@@ -522,19 +585,14 @@ function FilterLinks({
 
 function SortLinks({
   current,
-  search,
+  keep,
   t,
 }: {
   current: string | undefined;
-  search: string;
+  keep: Keep;
   t: Awaited<ReturnType<typeof getTranslations>>;
 }): React.ReactElement {
-  const href = (sort?: string): string => {
-    const query = new URLSearchParams();
-    if (search !== '') query.set('search', search);
-    if (sort !== undefined) query.set('sort', sort);
-    return query.size > 0 ? `/admin?${query}` : '/admin';
-  };
+  const href = (sort?: string): string => adminHref(keep, 'sort', sort);
 
   const link = (sort: string | undefined, label: string): React.ReactElement => {
     const active = (current === 'health' ? 'health' : undefined) === sort;

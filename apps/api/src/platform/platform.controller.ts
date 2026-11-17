@@ -37,6 +37,8 @@ import {
   setSubscriptionStatus,
   setSuspension,
   TENANT_FILTERS,
+  ACCESS_FILTERS,
+  type AccessFilter,
   type BillingOverview,
   type TenantFilter,
   type ManualPaymentRow,
@@ -93,6 +95,7 @@ export class PlatformController {
     @Query('limit') limit?: string,
     @Query('search') search?: string,
     @Query('filter') filter?: string,
+    @Query('access') access?: string,
   ): Promise<Paginated<TenantRow>> {
     // The same two helpers every other list in the API uses. A broken `page`
     // gives page 1 rather than a 400, and a one-letter search is no search —
@@ -105,8 +108,11 @@ export class PlatformController {
       ? (filter as TenantFilter)
       : null;
 
+    // POOLSE-226, by the same rule: only a value from the list reaches SQL.
+    const door = ACCESS_FILTERS.includes(access as AccessFilter) ? (access as AccessFilter) : null;
+
     return listTenants(
-      { search: readSearch(search), filter: named },
+      { search: readSearch(search), filter: named, access: door },
       readPageQuery(page, limit),
     );
   }

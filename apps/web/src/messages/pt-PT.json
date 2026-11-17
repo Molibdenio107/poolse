@@ -5524,7 +5524,6 @@
     "searchPlaceholder": "Nome da organização",
     "empty": "Ainda não há nenhuma organização.",
     "noMatches": "Nenhuma organização corresponde a \"{term}\".",
-    "archived": "Eliminada",
     "noPlan": "Sem plano",
     "neverActive": "Sem atividade",
     "activeAgo": "{ago}",
@@ -5534,6 +5533,7 @@
     "column": {
       "tenant": "Organização",
       "status": "Subscrição",
+      "access": "Acesso",
       "plan": "Plano",
       "seats": "Lugares de gestão",
       "facilities": "Instalações",
@@ -5746,12 +5746,24 @@
     "flagIp": "{count, plural, =0 {Nenhuma outra organização com a mesma origem} one {Mais # organização com a mesma origem} other {Mais # organizações com a mesma origem}}",
     "flagIpUnknown": "Origem não registada — não está configurado o sal.",
     "flagsHint": "Sinais, não provas: clubes partilham escritórios e uma câmara tem várias piscinas. Não bloqueiam nada.",
+    "access": {
+      "active": "Ativo",
+      "read_only": "Só leitura",
+      "suspended": "Suspenso",
+      "archived": "Arquivado",
+      "since": "desde {date}",
+      "pendingDelete": "Dados a apagar em {date}"
+    },
+    "accessFilter": {
+      "label": "Acesso",
+      "all": "Todos",
+      "pendingDelete": "Dados a apagar"
+    },
     "filterLabel": "Mostrar",
     "filter": {
       "all": "Todas",
       "trialing": "Em avaliação",
-      "expired": "Terminadas",
-      "pendingDelete": "A caminho de eliminação"
+      "expired": "Terminadas"
     },
     "section": {
       "nav": "Secções da administração",

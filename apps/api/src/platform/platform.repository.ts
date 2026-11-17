@@ -156,6 +156,11 @@ export interface TenantRow {
   pendingDeleteAt: string | null;
   /** Non-null exactly when suspended. Shown to the club verbatim. */
   suspensionReason: string | null;
+  /**
+   * The one door state the list shows — POOLSE-226. Decided in SQL by
+   * `ACCESS_STATE`, the same expression the `access` filter reads.
+   */
+  accessState: AccessState;
 
   /**
    * Is this tenant's API behaving — slice 2.
@@ -184,10 +189,43 @@ export type TenantFilter = 'trialing' | 'expired' | 'pending_delete';
 
 export const TENANT_FILTERS: readonly TenantFilter[] = ['trialing', 'expired', 'pending_delete'];
 
+/**
+ * Whether a club's door is open — POOLSE-226.
+ *
+ * Archived beats suspended beats read-only beats open: the middleware's
+ * precedence (14-09-2026), with an archive above it because a club filed away
+ * is not one anybody is about to reopen by mistake.
+ */
+export type AccessState = 'active' | 'read_only' | 'suspended' | 'archived';
+
+/**
+ * The access filter: the four states, plus a deletion date being set, which
+ * cuts across them — a read-only club and a suspended one can both be on their
+ * way out. Its own parameter beside `TenantFilter`, so the two combine.
+ */
+export type AccessFilter = AccessState | 'pending_delete';
+
+export const ACCESS_FILTERS: readonly AccessFilter[] = [
+  'active',
+  'read_only',
+  'suspended',
+  'archived',
+  'pending_delete',
+];
+
+/** Written once, and read by both the column and the filter so they cannot drift. */
+const ACCESS_STATE = `
+  CASE WHEN o.archived_at  IS NOT NULL THEN 'archived'
+       WHEN o.suspended_at IS NOT NULL THEN 'suspended'
+       WHEN o.read_only_at IS NOT NULL THEN 'read_only'
+       ELSE 'active' END`;
+
 export interface TenantQuery {
   search: string | null;
   /** Null is every tenant, which is what the page opens on. */
   filter?: TenantFilter | null;
+  /** POOLSE-226. Null is every state. */
+  access?: AccessFilter | null;
   /**
    * One tenant, by id — slice 3.
    *
@@ -202,7 +240,7 @@ export interface TenantQuery {
 /** One tenant, or null. Same row shape as the list, from the same statement. */
 export async function readTenant(organizationId: string): Promise<TenantRow | null> {
   const page = await listTenants(
-    { search: null, organizationId, filter: null },
+    { search: null, organizationId, filter: null, access: null },
     { page: 1, limit: 1, offset: 0 },
   );
   return page.items[0] ?? null;
@@ -238,6 +276,7 @@ export async function listTenants(
       read_only_at: Date | null;
       pending_delete_at: Date | null;
       suspension_reason: string | null;
+      access_state: AccessState;
       request_count_24h: number;
       count_4xx_24h: number;
       count_5xx_24h: number;
@@ -288,6 +327,7 @@ export async function listTenants(
              o.read_only_at,
              o.pending_delete_at,
              o.suspension_reason,
+             ${ACCESS_STATE} AS access_state,
 
              /*
               * Seats in use = active management memberships + invitations still
@@ -387,6 +427,10 @@ export async function listTenants(
               OR ($7 = 'trialing'       AND o.subscription_status = 'trialing')
               OR ($7 = 'expired'        AND o.subscription_status = 'expired')
               OR ($7 = 'pending_delete' AND o.pending_delete_at IS NOT NULL))
+         -- POOLSE-226: by access state, or by a deletion date in any state.
+         AND ($8::text IS NULL
+              OR ($8 = 'pending_delete' AND o.pending_delete_at IS NOT NULL)
+              OR ($8 <> 'pending_delete' AND ${ACCESS_STATE} = $8))
          AND ${searchPredicate('o.name', '$2')}
        /*
         * Newest first. An operator opens this to see who signed up, and the
@@ -404,6 +448,7 @@ export async function listTenants(
       HEALTH_WINDOW_HOURS,
       query.organizationId ?? null,
       query.filter ?? null,
+      query.access ?? null,
     ]);
 
     return windowed(page, run, (row) => ({
@@ -432,6 +477,7 @@ export async function listTenants(
       readOnlyAt: row.read_only_at?.toISOString() ?? null,
       pendingDeleteAt: row.pending_delete_at?.toISOString() ?? null,
       suspensionReason: row.suspension_reason,
+      accessState: row.access_state,
 
       health: deriveHealth({
         requestCount: row.request_count_24h,

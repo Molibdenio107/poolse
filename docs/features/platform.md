@@ -95,13 +95,14 @@ permission problem.
 
 ## The tenants table
 
-`GET /platform/tenants?page=&limit=&search=` — the standard paginated envelope, the same
+`GET /platform/tenants?page=&limit=&search=&filter=&access=` — the standard paginated envelope, the same
 page size and the same two-character search floor as every list in the tenant app.
 
 | Column | Definition |
 |---|---|
-| Organização | Name, slug, and an icon separating a `business` tenant from a `personal` one. An archived tenant is listed and marked, because churn is worth seeing. |
+| Organização | Name, slug, and an icon separating a `business` tenant from a `personal` one. An archived tenant is still listed, because churn is worth seeing; the *Acesso* column says so. |
 | Subscrição | `trialing`, `active`, `past_due`, `canceled` or `comped`, with the trial's end date under it. |
+| Acesso | POOLSE-226. One state, `accessState`, decided in SQL: *Arquivado* beats *Suspenso* beats *Só leitura* beats *Ativo*. Each is a word with its own icon, never colour alone, and every state but *Ativo* carries *desde dd-MM-yyyy*. A suspended club shows its reason cut to one line ending in "…"; the suspension card on the club's page quotes it in full. A second line, *Dados a apagar em dd-MM-yyyy*, appears whenever `pending_delete_at` is set, in any state. |
 | Plano | Always empty for now. Plan tiers are indicative in `docs/decisions.md` and modelled nowhere; the cell says "sem plano" rather than leaving a blank that reads as a failed load. |
 | Lugares de gestão | Active management memberships **plus** invitations still outstanding, against `max_management_users`. |
 | Instalações | Live facilities against `max_facilities`. |
@@ -128,6 +129,16 @@ retention policy.
 column simply is not drawn. A tenant *over* its ceiling is marked in red rather than hidden:
 `max_management_users` is a soft quota that nothing enforces yet, so a club genuinely can
 sit above it, and that is the row an operator opened this screen to find.
+
+**Two filters, and they combine** (POOLSE-226). *Mostrar* (`filter`) is about the
+subscription: *Em avaliação*, *Terminadas*. *Acesso* (`access`) is about the door: *Ativo*,
+*Só leitura*, *Suspenso*, *Dados a apagar*, *Arquivado*. *Em avaliação* plus *Suspenso* is the
+trials an operator has shut. *Dados a apagar* matches a deletion date in any state, and it
+moved here from *Mostrar*; `filter=pending_delete` is still accepted so a saved link keeps
+working. The access state is one SQL expression read by both the column and the filter, so
+the two cannot disagree. An unknown value in either parameter is no filter rather than a 400,
+because these arrive in a URL. Every link on the page — filters, sort, sections, pagination —
+carries the others along.
 
 ## The audit trail
 

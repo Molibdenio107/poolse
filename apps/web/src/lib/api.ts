@@ -4579,6 +4579,9 @@ export interface PlatformTenantSport {
   addonMonthlyCents: number | null;
 }
 
+/** POOLSE-226. */
+export type PlatformAccessState = 'active' | 'read_only' | 'suspended' | 'archived';
+
 export interface PlatformTenant {
   id: string;
   /** POOLSE-87: the modules switched off; empty is the full product. */
@@ -4627,6 +4630,8 @@ export interface PlatformTenant {
   pendingDeleteAt: string | null;
   /** Non-null exactly when suspended. Shown to the club verbatim. */
   suspensionReason: string | null;
+  /** POOLSE-226: archived beats suspended beats read-only beats open, decided by the API. */
+  accessState: PlatformAccessState;
 
   /** Request health over the last 24 hours — slice 2. */
   health: TenantHealth;

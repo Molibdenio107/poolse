@@ -5524,7 +5524,6 @@
     "searchPlaceholder": "Organization name",
     "empty": "There are no organizations yet.",
     "noMatches": "No organization matches \"{term}\".",
-    "archived": "Deleted",
     "noPlan": "No plan",
     "neverActive": "No activity",
     "activeAgo": "{ago}",
@@ -5534,6 +5533,7 @@
     "column": {
       "tenant": "Organization",
       "status": "Subscription",
+      "access": "Access",
       "plan": "Plan",
       "seats": "Management seats",
       "facilities": "Facilities",
@@ -5746,12 +5746,24 @@
     "flagIp": "{count, plural, =0 {No other organization from the same origin} one {# other organization from the same origin} other {# other organizations from the same origin}}",
     "flagIpUnknown": "Origin not recorded — no salt is configured.",
     "flagsHint": "Signals, not evidence: clubs share offices and a council has several pools. They block nothing.",
+    "access": {
+      "active": "Active",
+      "read_only": "Read-only",
+      "suspended": "Suspended",
+      "archived": "Archived",
+      "since": "since {date}",
+      "pendingDelete": "Data to be deleted on {date}"
+    },
+    "accessFilter": {
+      "label": "Access",
+      "all": "All",
+      "pendingDelete": "Data to be deleted"
+    },
     "filterLabel": "Show",
     "filter": {
       "all": "All",
       "trialing": "On trial",
-      "expired": "Expired",
-      "pendingDelete": "Pending deletion"
+      "expired": "Expired"
     },
     "section": {
       "nav": "Administration sections",
