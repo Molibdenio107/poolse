@@ -526,6 +526,8 @@ S3Mock.
    hand from the Actions tab as well, then the drill below. Write the date of the first passing
    drill here.
 
+   **First passing drill: 17-11-2026**, all six checks PASS.
+
 GitHub stops scheduled workflows in a repository with no commits for 60 days. If the Actions tab
 says so, re-enable *Backup check*: it is what notices a stopped backup the next day.
 
