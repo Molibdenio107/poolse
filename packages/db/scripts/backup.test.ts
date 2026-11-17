@@ -19,6 +19,7 @@ import { runBackup, type BackupResult } from './backup.js';
 import { fetchBackup, restoreInto } from './restore.js';
 import { tenantTablesFromHarness, verifyRestore } from './verify-restore.js';
 import { checkBackups } from './check-backups.js';
+import { runMirror } from './mirror-files.js';
 import { startScratchPostgres, type ScratchPostgres } from './scratch-postgres.js';
 import { S3Client } from '@aws-sdk/client-s3';
 
@@ -171,3 +172,68 @@ test('a damaged object is refused before anything is decrypted', async () => {
   const checked = await checkBackups(bucket);
   assert.equal(checked.ok, false, 'the keyless check sees the damage too');
 });
+
+/*
+ * The files mirror (moved from the workflow's bash to mirror-files.ts, 17-11-2026).
+ * Two buckets of the test's own in S3Mock; the two-token rule is R2's and is the
+ * runbook's hand check (QA 7), as above.
+ */
+test('the files mirror copies new and changed files, mirrors deletions, and leaves the dumps alone', async () => {
+  const uploads = { client: bucket.client, name: `poolse-uploads-test-${randomBytes(3).toString('hex')}` };
+  const copy: Bucket = { ...bucket, name: `poolse-mirror-test-${randomBytes(3).toString('hex')}` };
+  await ensureBucket({ ...copy, name: uploads.name });
+  await ensureBucket(copy);
+  const up = { ...copy, name: uploads.name };
+  try {
+    await put(up, 'org-a/photo.jpg', Buffer.from('photo'), 'image/jpeg');
+    await put(up, 'org-a/contract.pdf', Buffer.from('contract'), 'application/pdf');
+    await put(copy, 'nightly/2026-11-17T023000Z/manifest.json', Buffer.from('{}'), 'application/json');
+
+    const first = await runMirror({ source: uploads, copy });
+    assert.deepEqual([first.source, first.copied, first.deleted, first.mirrored], [2, 2, 0, 2]);
+    assert.equal(Buffer.from(await get(copy, 'files/org-a/photo.jpg')).toString(), 'photo');
+
+    // A re-sealed photo: the plaintext is deleted and replaced; the copy follows.
+    await remove(up, 'org-a/photo.jpg');
+    await put(up, 'org-a/photo.sealed', Buffer.from('ciphertext'), 'application/octet-stream');
+    await put(up, 'org-a/contract.pdf', Buffer.from('contract v2'), 'application/pdf');
+    const second = await runMirror({ source: uploads, copy });
+    assert.deepEqual([second.copied, second.deleted, second.mirrored], [2, 1, 2]);
+    assert.equal(Buffer.from(await get(copy, 'files/org-a/contract.pdf')).toString(), 'contract v2');
+    await assert.rejects(() => get(copy, 'files/org-a/photo.jpg'), 'the replaced plaintext left the copy too');
+    assert.ok(await get(copy, 'nightly/2026-11-17T023000Z/manifest.json'), 'the dumps are not the mirror’s');
+
+    // Nothing to do is nothing done.
+    const third = await runMirror({ source: uploads, copy });
+    assert.deepEqual([third.copied, third.deleted], [0, 0]);
+  } finally {
+    for (const target of [up, copy]) {
+      const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+      const page = await target.client.send(new ListObjectsV2Command({ Bucket: target.name }));
+      for (const item of page.Contents ?? []) if (item.Key) await remove(target, item.Key);
+    }
+  }
+});
+
+test('the files mirror refuses an uploads bucket that suddenly holds over 10% fewer files', async () => {
+  const uploads = { client: bucket.client, name: `poolse-uploads-test-${randomBytes(3).toString('hex')}` };
+  const copy: Bucket = { ...bucket, name: `poolse-mirror-test-${randomBytes(3).toString('hex')}` };
+  const up = { ...copy, name: uploads.name };
+  await ensureBucket(up);
+  await ensureBucket(copy);
+  try {
+    for (let i = 0; i < 30; i += 1) await put(up, `org-a/file-${i}.pdf`, Buffer.from(`f${i}`), 'application/pdf');
+    await runMirror({ source: uploads, copy });
+    // 26 of 30 left: over 10% fewer than a copy of more than 20.
+    for (let i = 0; i < 4; i += 1) await remove(up, `org-a/file-${i}.pdf`);
+    await assert.rejects(() => runMirror({ source: uploads, copy }), /over 10% fewer/);
+    assert.ok(await get(copy, 'files/org-a/file-0.pdf'), 'nothing was deleted from the copy');
+  } finally {
+    for (const target of [up, copy]) {
+      const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+      const page = await target.client.send(new ListObjectsV2Command({ Bucket: target.name }));
+      for (const item of page.Contents ?? []) if (item.Key) await remove(target, item.Key);
+    }
+  }
+});
+

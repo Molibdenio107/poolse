@@ -30,6 +30,7 @@
     "verify-restore": "node --env-file-if-exists=../../.env --import tsx scripts/verify-restore.ts",
     "restore-drill": "node --env-file-if-exists=../../.env --import tsx scripts/restore-drill.ts",
     "check-backups": "node --env-file-if-exists=../../.env --import tsx scripts/check-backups.ts",
+    "mirror-files": "node --env-file-if-exists=../../.env --import tsx scripts/mirror-files.ts",
     "backup:alert": "node --env-file-if-exists=../../.env --import tsx scripts/backup-alert.ts",
     "backup:keygen": "node --env-file-if-exists=../../.env --import tsx scripts/backup-keygen.ts",
     "backup:test": "node --env-file-if-exists=../../.env --import tsx --test scripts/backup.test.ts",

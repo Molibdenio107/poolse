@@ -238,9 +238,9 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       the domain the Competição dialog says receiving is off. `INBOUND_DEV_SECRET` is for staging
       only (`POST /webhooks/inbound-dev`) and **never set in production**.
 - [ ] **Backups** (POOLSE-89), before the pilot preview: the age key pair (two copies, offline),
-      the `poolse-backups-production` bucket and its write-only-there token, the GitHub
-      `production` environment's secrets, `PG_TOOLS_IMAGE`, then `BACKUPS_ENABLED=true`; one
-      manual run of each workflow and one passing drill. *Backups and restoring*, below.
+      the `poolse-backups-production` bucket and its three tokens, the Railway `backup` cron
+      service and its variables, the GitHub check's secrets, then `BACKUPS_ENABLED=true`; one
+      night's run, one *Backup check* and one passing drill. *Backups and restoring*, below.
 - [ ] **`DATABASE_PLATFORM_URL` audited**: API environment only, never the web app's, never
       `NEXT_PUBLIC_`. The rotation procedure is below; a test now fails if a `NEXT_PUBLIC_`
       variable ever looks like a database URL — POOLSE-64.
@@ -385,23 +385,41 @@ credential ever needs to be set in two places, that is the change to argue about
 
 ## Backups and restoring
 
-POOLSE-89. **What runs:** every night at 02:30 UTC GitHub Actions (`.github/workflows/backup.yml`)
-takes one `pg_dump` of production. The row counts, migrations, RLS tables and app grants are read
-from the same snapshot. The dump is encrypted with `age` to a public key, and it is uploaded with
-its manifest to the backups' own bucket. Backups older than 30 days are deleted. At midday UTC,
-`backup-check.yml` checks, without any key, that the newest backup is under 36 hours old and whole.
+POOLSE-89. **What runs:** every night at 02:30 UTC a **Railway cron service**, `backup`, in the
+production project (since 17-11-2026; until then a GitHub workflow, which cannot reach a Postgres
+with no public network). It reaches Postgres over Railway's private network and takes one
+`pg_dump` of production. The row counts, migrations, RLS tables and app grants are read from the
+same snapshot. The dump is encrypted with `age` to a public key, and it is uploaded with its
+manifest to the backups' own bucket. Backups older than 30 days are deleted. The job then checks
+what it wrote, and mirrors the uploaded files. At midday UTC, `backup-check.yml` **on GitHub**
+checks, without any key, that the newest backup is under 36 hours old and whole. It stays outside
+Railway on purpose: if Railway stops running the backup, something that is not Railway notices.
+
 **The uploaded files** (atestados, ID photos, contracts) are mirrored into `files/` of the same
-bucket by the same job (10-11-2026). Deletions are mirrored, because the only thing the app deletes
-is a plaintext ID photo the re-seal replaced; a source with over 10% fewer files than its copy is
-refused and alerts instead, so an emptied bucket never empties its backup. Health files are
-ciphertext in both places; the rest is private to the bucket, not age-encrypted, so the backup
-token in GitHub can read a non-health file there (a photo, a contract) — never a database backup.
-Either failure emails `PLATFORM_ALERT_EMAIL`. **Nothing in GitHub can open a backup** (Rui,
-28-10-2026). Opening one takes the age secret key and `SENSITIVE_DATA_KEY`, which live in Rui's
-password manager, so the restore drill runs on Rui's machine.
+bucket by the same job (10-11-2026; `scripts/mirror-files.ts` since 17-11-2026). Deletions are
+mirrored, because the only thing the app deletes is a plaintext ID photo the re-seal replaced; a
+source with over 10% fewer files than a copy of more than 20 is refused and alerts instead, so an
+emptied bucket never empties its backup. Health files are ciphertext in both places; the rest is
+private to the bucket, not age-encrypted, so the backup token can read a non-health file there (a
+photo, a contract) — never a database backup.
+
+Any failure emails `PLATFORM_ALERT_EMAIL`. **Nothing on Railway or in GitHub can open a backup**
+(Rui, 28-10-2026). Opening one takes the age secret key and `SENSITIVE_DATA_KEY`, which live in
+Rui's password manager, so the restore drill runs on Rui's machine. The job refuses to start, and
+alerts, if its service holds `SENSITIVE_DATA_KEY`, `BACKUP_AGE_IDENTITY`, `BACKUP_AGE_IDENTITY_FILE`
+or anything shaped like an age secret key.
+
+**How it is built.** `packages/db/backup.Dockerfile`: the runtime image *is* `PG_TOOLS_IMAGE`
+(`postgres:16`), so `pg_dump` is the matching client and runs natively, with Node copied in. It
+runs `packages/db/scripts/railway-backup.sh` once and exits: refuse a key, then `backup`,
+`check-backups` and `mirror-files`, stopping and alerting at the first failure. Its Railway
+settings are code, in `packages/db/railway.backup.json`: the Dockerfile, the start command, the
+cron `30 2 * * *` (UTC) and the restart policy *Never*, so a failed night is not retried in a loop.
 
 Local runs use `PG_TOOLS=docker`, so `pg_dump`/`pg_restore` come from the `postgres:16` image and
 no Postgres client is needed. `PG_TOOLS_IMAGE` must match production's major version.
+`pnpm --filter @poolse/db backup:test` runs the backup, the drill and the mirror against Docker and
+S3Mock.
 
 ### Setting it up (once, when production exists)
 
@@ -409,30 +427,62 @@ no Postgres client is needed. `PG_TOOLS_IMAGE` must match production's major ver
    the public key (`age1…`). Put the file in the password manager. **Make a second copy**, printed
    or on a USB stick kept somewhere other than the laptop. Then delete the file. A backup with no
    key is a file nobody can open.
-2. **`SENSITIVE_DATA_KEY`.** The same value as on Railway, also in the password manager. Without
-   it a restore brings back every child except their medical notes.
-3. **The bucket.** In Cloudflare R2, create `poolse-backups-production`, private, separate from
-   the uploads bucket. Create an API token with **Object Read & Write on that bucket only**.
-   Check it by hand (QA 7): with that token, listing the uploads bucket must be refused.
-   **A second token for the uploaded files** (10-11-2026): **Object Read only, on the uploads
-   bucket only** (`poolse-production`). The nightly job reads the uploads with it and writes them
-   with the first token into `files/` of the backups bucket, so neither token reaches both.
-4. **GitHub.** Add a `production` environment with these secrets:
-   - `BACKUP_SOURCE_URL`: the owner connection string, never the app's.
-   - `BACKUP_AGE_RECIPIENT`: the `age1…` public key.
-   - `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`.
-   - `FILES_S3_BUCKET`, `FILES_S3_ACCESS_KEY_ID`, `FILES_S3_SECRET_ACCESS_KEY`: the uploads bucket
-     and its read-only token. Without them the job fails and alerts, rather than quietly backing up
-     the database alone.
-   - `PLATFORM_ALERT_EMAIL`, `RESEND_API_KEY`, `EMAIL_FROM`, for the alerts.
+2. **`SENSITIVE_DATA_KEY`.** The same value as on Railway's API service, also in the password
+   manager. Without it a restore brings back every child except their medical notes.
+3. **The bucket and its three tokens**, in Cloudflare R2. Create `poolse-backups-production`,
+   private, separate from the uploads bucket. Then:
+   - **The backup token:** Object Read & Write on `poolse-backups-production` only. Check it by
+     hand (QA 7): with that token, listing the uploads bucket must be refused.
+   - **The uploads token:** Object Read only, on `poolse-production` only. The job reads the
+     uploads with it and writes them with the backup token into `files/`, so neither token reaches
+     both.
+   - **The check token:** Object Read only, on `poolse-backups-production` only, for GitHub. The
+     daily check only reads, so GitHub holds no token that can write or delete a backup.
+4. **Railway: the `backup` service**, in the production project, beside `Postgres` and the API.
+   Create it **empty first** and connect the repo last: a service connected straight to the repo
+   deploys at once with the root `railway.json`, which is the API's (its start command and its
+   pre-deploy migration).
+   1. *New → Empty Service*; name it `backup`.
+   2. *Settings → Config-as-code → Railway Config File*: `/packages/db/railway.backup.json`.
+      That file sets the Dockerfile, the start command, the cron schedule `30 2 * * *` (UTC) and the
+      restart policy *Never*; check the settings page shows them.
+   3. *Settings → Networking*: **no public domain**. It needs none; private networking is on by
+      default, and that is how it reaches `postgres.railway.internal`.
+   4. *Variables*: on this service only, never as shared variables, and none of them on the API.
 
-   Set the repository variables `PG_TOOLS_IMAGE=postgres:<production major>` and, last,
-   `BACKUPS_ENABLED=true`. Until that variable is set, both workflows skip.
-5. **Prove it.** Run *Nightly backup* by hand from the Actions tab, then *Backup check*, then the
-   drill below. Write the date of the first passing drill here.
+      | Variable | Value |
+      |---|---|
+      | `BACKUP_SOURCE_URL` | `${{Postgres.DATABASE_URL}}`: the reference, so it is the owner login on the **private** host. Never `DATABASE_PUBLIC_URL`, never the app's URL. (`Postgres` is the database service's name; use yours.) |
+      | `PG_TOOLS_IMAGE` | `postgres:16`: production's major (`SELECT version();`). Read at build time. |
+      | `BACKUP_AGE_RECIPIENT` | the `age1…` public key |
+      | `BACKUP_S3_ENDPOINT` | `https://<account id>.r2.cloudflarestorage.com` |
+      | `BACKUP_S3_BUCKET` | `poolse-backups-production` |
+      | `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY` | the backup token |
+      | `FILES_S3_BUCKET` | `poolse-production` |
+      | `FILES_S3_ACCESS_KEY_ID`, `FILES_S3_SECRET_ACCESS_KEY` | the uploads token (read only) |
+      | `EMAIL_PROVIDER` | `resend` |
+      | `RESEND_API_KEY` | `${{<api service>.RESEND_API_KEY}}`, or its value |
+      | `EMAIL_FROM` | as on the API |
+      | `PLATFORM_ALERT_EMAIL` | where a failure is sent |
+
+      **Never on this service:** `SENSITIVE_DATA_KEY`, `BACKUP_AGE_IDENTITY`, the key file,
+      `DATABASE_APP_URL`, `DATABASE_PLATFORM_URL`, Clerk or Stripe keys. The job refuses the first
+      three; the rest it simply does not need.
+   5. *Settings → Source → Connect Repo*: the Poolse repo, branch `main`, root directory empty (the
+      Dockerfile builds from the repo root). It builds; a cron service then waits for its schedule.
+5. **GitHub, for the daily check.** In the `production` environment keep only
+   `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, the **check token** as `BACKUP_S3_ACCESS_KEY_ID` /
+   `BACKUP_S3_SECRET_ACCESS_KEY`, and `PLATFORM_ALERT_EMAIL`, `RESEND_API_KEY`, `EMAIL_FROM`.
+   Delete `BACKUP_SOURCE_URL`, `BACKUP_AGE_RECIPIENT` and the `FILES_S3_*` secrets if they were
+   added: nothing in GitHub uses them since the backup left. Set the repository variable
+   `BACKUPS_ENABLED=true`; until it is set, the check skips.
+6. **Prove it.** The first night's run is in the `backup` service's deployment logs (it ends
+   `Backup job done.`), and the next midday *Backup check* on GitHub passes. Run *Backup check* by
+   hand from the Actions tab as well, then the drill below. Write the date of the first passing
+   drill here.
 
 GitHub stops scheduled workflows in a repository with no commits for 60 days. If the Actions tab
-says so, re-enable both. The daily check exists so that a stopped backup is noticed the next day.
+says so, re-enable *Backup check*: it is what notices a stopped backup the next day.
 
 ### The restore drill (monthly, and before any risky migration)
 
@@ -481,7 +531,8 @@ Never over the existing one. `restore.ts` refuses a database that already has ta
 6. **Point the API at it.** On Railway, set `DATABASE_URL`, `DATABASE_APP_URL` and
    `DATABASE_PLATFORM_URL` to the new database. Leave `SENSITIVE_DATA_KEY` **unchanged**.
    Redeploy, then check `/health`, sign in, open a student with medical notes, and open `/admin`.
-7. **Then** update `BACKUP_SOURCE_URL` in GitHub, or tonight's backup dumps the old database.
+7. **Then** point the `backup` service's `BACKUP_SOURCE_URL` at the new database
+   (`${{<new Postgres>.DATABASE_URL}}`), or tonight's backup dumps the old one.
 
 Up to one day of writes is lost: a nightly dump has no point-in-time recovery, by decision.
 

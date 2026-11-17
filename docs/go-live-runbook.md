@@ -161,9 +161,20 @@ Set it back to `console` before running the test suites, so they never mail anyb
 
 ## 7. Backups — before the pilot club enters a single child
 
-`deploy.md`, *Backups and restoring → Setting it up*: the GitHub `production` environment's secrets,
-`PG_TOOLS_IMAGE=postgres:<major>`, then `BACKUPS_ENABLED=true`; run *Nightly backup* and *Backup check*
-by hand, then one restore drill on Rui's machine. Write the drill's date in `deploy.md`.
+`deploy.md`, *Backups and restoring → Setting it up*. In order:
+
+- [ ] The age key pair (two copies) and `SENSITIVE_DATA_KEY` in the password manager.
+- [ ] R2: `poolse-backups-production`, and its three tokens: backup (read & write, that bucket
+      only), uploads (read only, `poolse-production` only), check (read only, the backups bucket).
+      QA 7 by hand: the backup token cannot list `poolse-production`.
+- [ ] Railway: the `backup` service, **empty first**; config file
+      `/packages/db/railway.backup.json`; no public domain; its variables (the table in `deploy.md`,
+      `BACKUP_SOURCE_URL=${{Postgres.DATABASE_URL}}`, `PG_TOOLS_IMAGE=postgres:16`); then connect the
+      repo. Nothing that opens a backup goes on it; the job refuses to run if it finds one.
+- [ ] GitHub `production`: only the check's secrets (the read-only check token, the alert's three);
+      `BACKUPS_ENABLED=true`. Delete any old `BACKUP_SOURCE_URL`, `BACKUP_AGE_RECIPIENT`, `FILES_S3_*`.
+- [ ] The first night: the `backup` log ends `Backup job done.`; the next *Backup check* passes.
+- [ ] One restore drill on Rui's machine. Write its date in `deploy.md`.
 
 ## 8. The pilot club
 

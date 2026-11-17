@@ -1,0 +1,19 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "packages/db/backup.Dockerfile",
+    "watchPatterns": [
+      "packages/db/**",
+      "packages/rules/**",
+      "apps/api/src/notifications/**",
+      "apps/api/package.json",
+      "pnpm-lock.yaml"
+    ]
+  },
+  "deploy": {
+    "startCommand": "sh packages/db/scripts/railway-backup.sh",
+    "cronSchedule": "30 2 * * *",
+    "restartPolicyType": "NEVER"
+  }
+}

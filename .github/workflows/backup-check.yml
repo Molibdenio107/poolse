@@ -2,6 +2,9 @@
 #
 # Separate from the backup on purpose: if the nightly run fails, is skipped or
 # stops being scheduled, this one still runs and says "no backup since <date>".
+# The backup itself runs on Railway since 17-11-2026 (packages/db/railway.backup.json):
+# production Postgres has no public network. This check stays here on purpose,
+# outside Railway, so a Railway that stops running the backup is noticed.
 # It needs no key — freshness (36 h), the dump's checksum against its
 # manifest, and a manifest that describes a real database. Whether the backup
 # restores is the drill on Rui's machine.
@@ -39,6 +42,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The alert imports the API's notifier, which imports @poolse/db and
+      # @poolse/rules from their dist — not committed, so built here (17-11-2026:
+      # without this the alert step could not load, and a failure went unsent).
+      - run: pnpm --filter @poolse/db --filter @poolse/rules build
       - name: Check the newest backup
         run: pnpm --filter @poolse/db check-backups
       - name: Alert
