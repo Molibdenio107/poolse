@@ -43,6 +43,7 @@ import { AppViewController } from './app-view/app-view.controller.js';
 import { CoverRequestsController, LessonRequestsController } from './classes/lesson-requests.controller.js';
 import { AppAvisosController, AvisosController } from './messages/avisos.controller.js';
 import { StaffNotesController } from './staff-notes/staff-notes.controller.js';
+import { OnboardingController } from './onboarding/onboarding.controller.js';
 import { QualificationsController } from './staff/qualifications.controller.js';
 import { QualificationAlertService } from './staff/qualification-alerts.js';
 import { DeliveryRetryService } from './notifications/delivery-retry.service.js';
@@ -210,6 +211,7 @@ export const IDENTITY_ONLY_ROUTES = [
     CoverRequestsController,
     LessonRequestsController,
     StaffNotesController,
+    OnboardingController,
     QualificationsController,
     PoolPublicLinkController,
     PublicWaterController,

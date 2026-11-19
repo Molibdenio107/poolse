@@ -8812,5 +8812,45 @@
     "noClubContact": "O clube ainda não indicou um contacto. Fale com a secretaria na próxima aula.",
     "saved": "Dados confirmados.",
     "failed": "Não foi possível guardar. Tente de novo."
+  },
+  "setup": {
+    "title": "Configurar o clube",
+    "progress": "Passo {n} de {total}",
+    "stepsLabel": "Passos da configuração",
+    "skipped": "para mais tarde",
+    "next": "Seguinte",
+    "later": "Configurar mais tarde",
+    "finishLater": "Terminar mais tarde",
+    "failed": "Não foi possível avançar. Tente de novo.",
+    "loadFailed": "Não foi possível carregar este passo.",
+    "backTo": "Voltar à configuração",
+    "resume": "Continuar a configuração",
+    "resumeHint": "Retome onde ficou. Cada passo pode ficar para mais tarde.",
+    "step": {
+      "club": {
+        "title": "Clube",
+        "hint": "O NIPC, a morada, os contactos e o logótipo. Cada cartão guarda o seu.",
+        "address": "Morada"
+      },
+      "places": {
+        "title": "Recintos e horário",
+        "hint": "As piscinas desta instalação e o horário de funcionamento.",
+        "pools": "Piscinas",
+        "noPools": "Ainda não há piscinas nesta instalação."
+      },
+      "team": {
+        "title": "Convidar equipa",
+        "hint": "Convide quem trabalha consigo: administração, professores e manutenção. As famílias são convidadas a partir de cada aluno."
+      },
+      "import": {
+        "title": "Já tem alunos ou horários numa folha?",
+        "hint": "Importe o que já tem. No fim, volta aqui.",
+        "students": "Importar alunos",
+        "studentsHint": "Um ficheiro Excel ou CSV com os seus alunos.",
+        "timetable": "Importar horário",
+        "timetableHint": "O horário das aulas, em Excel, PDF ou fotografia, no Calendário.",
+        "none": "Não, começar do zero"
+      }
+    }
   }
 }

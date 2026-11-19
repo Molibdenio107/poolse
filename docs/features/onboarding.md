@@ -55,6 +55,36 @@ The creator is always the Owner, and none of the links depends on a module a clu
 switch off. The page scrolls the window to the top on mount: the redirect is a soft
 navigation, and Next would otherwise leave the title under the sticky app bar.
 
+## The setup after creating (POOLSE-228)
+
+A business club made from now on opens on `/dashboard/setup`, the Owner's four steps, after
+*Confirmar os seus dados* if the Owner has gaps. This **partly reverses** "one screen, never a
+wizard" (Rui, 19-11-2026): the creation form stays one screen, and the guide comes after it.
+
+1. **Clube.** The NIPC (`TaxPanel`), the site's morada (`SiteDetailsForm`), the contacts
+   (`ClubContactsPanel`) and the logo (`LogoPanel`). The name was asked at creation.
+2. **Recintos e horário.** The first site's pools, with *Novo tanque* to the existing
+   new-pool page, and its opening hours (`HoursPanel`).
+3. **Convidar equipa.** The Staff page's `InviteForm`, with admin, instructor and maintenance only.
+4. **Já tem alunos ou horários numa folha?** The students importer and the calendar (which
+   holds the timetable import), each stamped with this step as their way back. *Não, começar
+   do zero* finishes.
+
+No season step (Rui, 19-11-2026): the season provisioning opens stands, and *Épocas* changes it.
+
+- **Every step can be left.** *Seguinte* marks it done, *Configurar mais tarde* skips it,
+  *Voltar* reopens the one before, *Terminar mais tarde* goes to Início with the pointer kept.
+  Each panel keeps its own *Guardar*: the wizard holds no setting, so nothing it saves can
+  disagree with the page that owns it.
+- **The pointer is `onboarding_progress`** (`GET /onboarding`, `PUT /onboarding/step`, Owner
+  only, the session's own row). `wizard_started_at` is written only by `POST /organizations`
+  for a business club, so the pilot and every older club never see the wizard; a failure there
+  costs the guide, never the club.
+- **Resumable.** While it is under way, Início's *Configurar o clube* becomes *Continuar a
+  configuração*, to the saved step. Finishing lands on *Tudo pronto* (`/dashboard/welcome?new=1`).
+- `/dashboard/setup` for anybody without a wizard (an Admin, a finished one, an older club) is
+  handed on to Início.
+
 ## Confirmar os seus dados (POOLSE-227)
 
 Before the first screen, everybody confirms the details their club needs from them, once, and

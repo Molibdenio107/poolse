@@ -4659,3 +4659,20 @@ timetable_import
   RLS on organization_id; composite keys to facility, season, membership
 class_group.timetable_import_id, class_schedule.timetable_import_id  -- what an import wrote
 ```
+
+#### onboarding_progress — 19-11-2026 (POOLSE-228)
+
+```
+onboarding_step  enum: club, places, team, import
+onboarding_progress
+  id, organization_id, membership_id,
+  wizard_started_at, wizard_step onboarding_step, wizard_skipped onboarding_step[] (read ::text[]),
+  wizard_finished_at, created_at, updated_at
+  unique (organization_id, membership_id); composite key to membership; RLS on organization_id
+  check: a step or a finish only once wizard_started_at is set
+```
+
+Where one person is in their club's onboarding. **`wizard_started_at` is the wizard's only
+switch**, written once by `POST /organizations` for a business club it has just made, so a club
+from before (the pilot) never has one. No `archived_at`: a pointer, not history, so the unique
+key is plain. POOLSE-229 and -230 add their columns to this row rather than a table each.

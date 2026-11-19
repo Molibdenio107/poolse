@@ -17,6 +17,7 @@ import type { Request } from 'express';
 import { currentAuth } from '../auth/auth.context.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
+import { startWizard } from '../onboarding/onboarding.repository.js';
 import { ensureAppUser } from '../identity/identity.service.js';
 import type { OrganizationKind } from '../identity/identity.repository.js';
 import { isValidNif } from '@poolse/rules';
@@ -160,6 +161,12 @@ export class OrganizationsController {
       // After the club exists, inside its own context, as the owner it now has.
       if (replyEmail !== '') await setInitialReplyEmail(made.organizationId, replyEmail);
       if (contactPhone !== null) await setInitialContactPhone(made.organizationId, contactPhone);
+      /*
+       * POOLSE-228: a club made from now on opens on the Owner's setup steps. A
+       * failure here costs the guide, never the club, so it does not fail the
+       * request: the club is made, and Início still offers *Configurar o clube*.
+       */
+      if (kind === 'business') await startWizard(made.organizationId, made.membershipId).catch(() => undefined);
       return made;
     } catch (error) {
       if (error instanceof TrialAlreadyClaimedError) {

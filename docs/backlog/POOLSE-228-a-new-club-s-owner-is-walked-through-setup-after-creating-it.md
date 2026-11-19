@@ -17,6 +17,20 @@ Today Início's *Configurar o clube* (17-11-2026) sends an owner to a site page 
 - A wizard for admins, for a second site, or for existing clubs.
 - Building a new importer. Step 5 opens the existing ones.
 
+### As built (19-11-2026) — wins over the rules below where they differ
+
+- **Pools are added on the existing new-pool page**, linked from step 2 (*Novo tanque*), not
+  mounted inside it: that form leaves for the new pool's own page on save, so mounting it would
+  take the Owner out of the wizard mid-step. The step lists the site's pools and mounts the
+  opening hours whole.
+- **The timetable import is the calendar's**, so step 4 links to `/dashboard/calendar` (there is
+  no `/dashboard/calendar/import` page). `FromLink` stamps the step as the way back.
+- **No Ctrl+K entry.** The page only means something while a wizard is under way, and a palette
+  line that opens Início for every other club would read as broken. Início's *Continuar a
+  configuração* is the way back in.
+- **The progress row is written after provisioning**, in its own transaction, never by
+  restating `provision_organization`. A failure costs the wizard, never the club.
+
 ### BA — rules
 
 1. **When.** Right after `createOrganizationAction` (and POOLSE-227's gate, if the owner has gaps), the owner lands on `/dashboard/setup`, not `/dashboard/welcome?new=1`. Finishing or skipping the last step goes to `/dashboard/welcome?new=1`, so *Tudo pronto* still shows once.
@@ -59,10 +73,10 @@ Today Início's *Configurar o clube* (17-11-2026) sends an owner to a site page 
 11. Phone and desk, both themes. *Passo n de 4* is text.
 
 ### Acceptance criteria
-- [ ] `onboarding_progress` + enum, RLS, composite FK, in `TENANT_TABLES`, `docs/data-model.md`, with a SQL test.
-- [ ] Wizard only for clubs created after this ships. The pilot never sees it.
-- [ ] Four steps, all on existing endpoints. No season step and no season endpoint.
-- [ ] Every step skippable, progress resumable, *Continuar a configuração* on Início while unfinished.
-- [ ] Logo through the existing sniffed upload, read only through the app.
-- [ ] Role-probe and cross-tenant tests green. `poolse-security-review` run.
-- [ ] `create-organization-form.tsx` comment and `docs/features/onboarding.md` say what the form and the wizard are now.
+- [x] `onboarding_progress` + enum, RLS, composite FK, in `TENANT_TABLES`, `docs/data-model.md`, with a SQL test.
+- [x] Wizard only for clubs created after this ships. The pilot never sees it.
+- [x] Four steps, all on existing endpoints. No season step and no season endpoint.
+- [x] Every step skippable, progress resumable, *Continuar a configuração* on Início while unfinished.
+- [x] Logo through the existing sniffed upload, read only through the app.
+- [x] Role-probe and cross-tenant tests green. `poolse-security-review` run.
+- [x] `create-organization-form.tsx` comment and `docs/features/onboarding.md` say what the form and the wizard are now.

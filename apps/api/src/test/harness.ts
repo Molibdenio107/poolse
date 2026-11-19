@@ -93,6 +93,8 @@ const TENANT_TABLES = [
   'message',
   // POOLSE-169. A post-it names its author's membership.
   'staff_note',
+  // POOLSE-228: one row per person per club, before the membership it names.
+  'onboarding_progress',
   // POOLSE-27. An alert points at a record, a record at its type and its
   // person's membership; every business tenant is seeded with types.
   'qualification_alert',

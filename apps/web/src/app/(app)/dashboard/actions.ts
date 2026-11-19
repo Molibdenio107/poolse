@@ -139,11 +139,13 @@ export async function createOrganizationAction(
   }
 
   /*
-   * Straight to the welcome (Rui, 10-11-2026). No `revalidatePath` first: it
-   * would re-render the dashboard under this form, which unmounts it before the
-   * redirect runs. `/dashboard` reads `/me` on every request, so nothing is stale.
+   * To the Owner's setup steps (POOLSE-228, Rui 19-11-2026), which end on the
+   * welcome's *Tudo pronto*; a club with no wizard is handed on to Início by the
+   * setup page itself. No `revalidatePath` first: it would re-render the
+   * dashboard under this form, which unmounts it before the redirect runs.
+   * `/dashboard` reads `/me` on every request, so nothing is stale.
    */
-  redirect('/dashboard/welcome?new=1');
+  redirect('/dashboard/setup');
 }
 
 /**

@@ -8812,5 +8812,45 @@
     "noClubContact": "The club has not given a contact yet. Speak to the office at the next lesson.",
     "saved": "Details confirmed.",
     "failed": "Could not save. Please try again."
+  },
+  "setup": {
+    "title": "Set up the club",
+    "progress": "Step {n} of {total}",
+    "stepsLabel": "Setup steps",
+    "skipped": "for later",
+    "next": "Next",
+    "later": "Set up later",
+    "finishLater": "Finish later",
+    "failed": "Could not move on. Please try again.",
+    "loadFailed": "Could not load this step.",
+    "backTo": "Back to setup",
+    "resume": "Continue setting up",
+    "resumeHint": "Pick up where you left off. Any step can wait.",
+    "step": {
+      "club": {
+        "title": "Club",
+        "hint": "The tax number, the address, the contacts and the logo. Each card saves its own.",
+        "address": "Address"
+      },
+      "places": {
+        "title": "Venues and opening hours",
+        "hint": "This site's pools and when it opens.",
+        "pools": "Pools",
+        "noPools": "This site has no pools yet."
+      },
+      "team": {
+        "title": "Invite your team",
+        "hint": "Invite the people you work with: office, instructors and maintenance. Families are invited from each student."
+      },
+      "import": {
+        "title": "Already have students or a timetable in a spreadsheet?",
+        "hint": "Import what you have. You come back here at the end.",
+        "students": "Import students",
+        "studentsHint": "An Excel or CSV file with your students.",
+        "timetable": "Import timetable",
+        "timetableHint": "The class timetable, as Excel, PDF or a photo, on the Calendar.",
+        "none": "No, start from scratch"
+      }
+    }
   }
 }

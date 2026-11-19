@@ -17,6 +17,7 @@ import { WaterBanner } from '../water-banner';
 import { ScrollToTop } from './scroll-to-top';
 import { LandOn } from './land-on';
 import { LogoLockIn } from '@/components/logo-lock-in';
+import type { WizardState } from '../setup/steps';
 
 type Step = { href: string; icon: LucideIcon; title: string; body: string };
 
@@ -65,6 +66,17 @@ export default async function WelcomePage({
   const sites = personal ? null : await apiFetch<Facilities>('/facilities').catch(() => null);
   const live = sites?.facilities ?? [];
   const configureHref = live.length === 1 ? `/dashboard/facilities/${live[0]!.id}` : '/dashboard/facilities';
+  /*
+   * POOLSE-228: an Owner whose setup steps are under way continues them, in
+   * place of *Configurar o clube*. Anybody else, or any failure, reads no wizard.
+   */
+  const wizard =
+    personal || !membership.roles.includes('owner')
+      ? null
+      : await apiFetch<{ wizard: WizardState | null }>('/onboarding')
+          .then((answer) => answer.wizard)
+          .catch(() => null);
+  const resume = wizard !== null && wizard.step !== null ? `/dashboard/setup?step=${wizard.step}` : null;
   const steps: Step[] = personal
     ? [
         {
@@ -123,13 +135,15 @@ export default async function WelcomePage({
             {!personal && (
               <div className="mt-3 flex flex-col items-center gap-1.5">
                 <FromLink
-                  href={configureHref}
+                  href={resume ?? configureHref}
                   className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-5 text-control font-semibold text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   <Settings className="size-4" aria-hidden />
-                  {t('welcome.configureClub')}
+                  {resume === null ? t('welcome.configureClub') : t('setup.resume')}
                 </FromLink>
-                <p className="text-sm text-foreground-muted">{t('welcome.configureClubHint')}</p>
+                <p className="text-sm text-foreground-muted">
+                  {resume === null ? t('welcome.configureClubHint') : t('setup.resumeHint')}
+                </p>
               </div>
             )}
           </div>

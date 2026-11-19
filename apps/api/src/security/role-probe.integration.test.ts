@@ -99,6 +99,7 @@ import { AppAvisosController, AvisosController } from '../messages/avisos.contro
 import { StudentMessagesController } from '../messages/student-messages.controller.js';
 import { MedicalExamScheduleController } from '../students/medical-exam-schedule.controller.js';
 import { StaffNotesController } from '../staff-notes/staff-notes.controller.js';
+import { OnboardingController } from '../onboarding/onboarding.controller.js';
 import { PersonCategoriesController } from '../billing/person-categories.controller.js';
 import { PassProductsController, ReceptionController } from '../reception/passes.controller.js';
 import { FeeCategoriesController } from '../billing/categories.controller.js';
@@ -1962,6 +1963,23 @@ test('POOLSE-169: the staff board — a guardian and a student cannot read, pin 
     await refused(`POST staff-notes as ${label}`, 403, () => new StaffNotesController().pin({ body: 'x' }));
     await refused(`DELETE staff-notes/:id as ${label}`, 403, () => new StaffNotesController().remove(NO_SUCH_ID));
   });
+});
+
+test('POOLSE-228: the setup steps are the Owner’s — a family, an instructor and maintenance are refused', async () => {
+  await asEach(async ({ label }) => {
+    await refused(`GET onboarding as ${label}`, 403, () => new OnboardingController().read());
+    await refused(`PUT onboarding/step as ${label}`, 403, () =>
+      new OnboardingController().step({ step: 'club', outcome: 'skipped' }),
+    );
+  });
+  for (const [id, role] of [[fixture.instructorId, 'instructor'], [fixture.maintenanceId, 'maintenance']] as const) {
+    await as(id, [role], async () => {
+      await refused(`GET onboarding as ${role}`, 403, () => new OnboardingController().read());
+      await refused(`PUT onboarding/step as ${role}`, 403, () =>
+        new OnboardingController().step({ step: 'club', outcome: 'skipped' }),
+      );
+    });
+  }
 });
 
 test('person categories are the office’s; a family reads only its own — POOLSE-202', async () => {
