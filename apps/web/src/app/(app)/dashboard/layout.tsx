@@ -138,7 +138,8 @@ async function currentViewer(): Promise<Viewer> {
             }
           : null,
       gate: (me.detailsMissing ?? []).length > 0 && membership !== undefined && membership.view === null ? me : null,
-      guided: me.guidedSetup === true,
+      // No club yet: the welcome's creation form alone, no menu to wander off to (Rui, 19-11-2026).
+      guided: me.guidedSetup === true || membership === undefined,
     };
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;

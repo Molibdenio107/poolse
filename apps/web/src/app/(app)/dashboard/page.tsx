@@ -236,10 +236,6 @@ export default async function DashboardPage({
                 <LogoLockIn />
               </WaterBanner>
               <div className="flex flex-col gap-6 p-5 sm:p-8">
-                <div className="flex flex-col gap-1">
-                  <h2 className="text-lg font-semibold">{t('onboarding.formTitle')}</h2>
-                  <p className="text-sm text-foreground-muted">{t('account.noOrganizationsHint')}</p>
-                </div>
                 <CreateOrganizationForm ownerEmail={me?.user.email ?? ''} />
               </div>
             </section>

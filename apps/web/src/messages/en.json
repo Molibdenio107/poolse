@@ -805,7 +805,6 @@
     "appUserId": "Internal ID",
     "organizations": "Organizations",
     "noOrganizations": "You do not belong to an organization yet.",
-    "noOrganizationsHint": "Create your organization, or ask whoever runs it for an invitation.",
     "noRoles": "No roles assigned",
     "unavailable": "Could not reach the API.",
     "signedInAs": "Signed in as {name}"
@@ -821,10 +820,8 @@
     "endFailed": "Could not end that session."
   },
   "organization": {
-    "replyEmailLabel": "Club's email (for families' replies)",
+    "replyEmailLabel": "Club's email",
     "contactPhoneLabel": "Club phone (optional)",
-    "contactPhoneHint": "Shown to families so they can call or message on WhatsApp. You can leave it blank and add it later in Club details.",
-    "replyEmailHint": "When a family replies to a club email, the reply arrives here. You can change it later in Club details.",
     "nameLabel": "Organization name",
     "namePlaceholder": "e.g. Aveiro Municipal Pools",
     "create": "Create organization",
@@ -846,7 +843,6 @@
   "onboarding": {
     "title": "Welcome to Poolse, {name}",
     "titleNoName": "Welcome to Poolse",
-    "formTitle": "Three quick steps",
     "stepClub": "The club",
     "stepPool": "The pool",
     "stepContacts": "Contacts",

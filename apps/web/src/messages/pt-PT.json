@@ -805,7 +805,6 @@
     "appUserId": "ID interno",
     "organizations": "Organizações",
     "noOrganizations": "Ainda não pertence a nenhuma organização.",
-    "noOrganizationsHint": "Crie a sua organização, ou peça um convite a quem já a gere.",
     "noRoles": "Sem funções atribuídas",
     "unavailable": "Não foi possível contactar a API.",
     "signedInAs": "Sessão iniciada como {name}"
@@ -821,10 +820,8 @@
     "endFailed": "Não foi possível terminar a sessão."
   },
   "organization": {
-    "replyEmailLabel": "Email do clube (para respostas das famílias)",
+    "replyEmailLabel": "Email do clube",
     "contactPhoneLabel": "Telefone do clube (opcional)",
-    "contactPhoneHint": "Aparece às famílias para ligarem ou escreverem pelo WhatsApp. Pode deixar em branco e acrescentar depois em Dados do clube.",
-    "replyEmailHint": "Quando uma família responde a um email do clube, a resposta chega aqui. Pode mudar depois em Dados do clube.",
     "nameLabel": "Nome da organização",
     "namePlaceholder": "Ex.: Piscinas Municipais de Aveiro",
     "create": "Criar organização",
@@ -846,7 +843,6 @@
   "onboarding": {
     "title": "Bem-vindo ao Poolse, {name}",
     "titleNoName": "Bem-vindo ao Poolse",
-    "formTitle": "Três passos rápidos",
     "stepClub": "O clube",
     "stepPool": "A piscina",
     "stepContacts": "Contactos",

@@ -138,11 +138,7 @@ export function CreateOrganizationForm({ ownerEmail }: { ownerEmail: string }): 
             onChange={(event) => setReplyEmail(event.target.value)}
             maxLength={254}
             className={CONTROL_LINE}
-            aria-describedby="organization-reply-email-hint"
           />
-          <p id="organization-reply-email-hint" className="text-sm text-foreground-muted">
-            {t('organization.replyEmailHint')}
-          </p>
           {state.fields?.['replyEmail'] !== undefined && (
             <p className="text-sm text-danger" role="alert">
               {t(state.fields['replyEmail'])}
@@ -162,11 +158,7 @@ export function CreateOrganizationForm({ ownerEmail }: { ownerEmail: string }): 
             onChange={(event) => setContactPhone(event.target.value)}
             maxLength={32}
             className={CONTROL_LINE}
-            aria-describedby="organization-contact-phone-hint"
           />
-          <p id="organization-contact-phone-hint" className="text-sm text-foreground-muted">
-            {t('organization.contactPhoneHint')}
-          </p>
           {state.fields?.['contactPhone'] !== undefined && (
             <p className="text-sm text-danger" role="alert">
               {t(state.fields['contactPhone'])}
