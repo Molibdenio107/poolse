@@ -16,6 +16,9 @@ import { DetailPage } from '@/components/detail-page';
 import { formatStamp } from '@/lib/date-format';
 import { subscriptionAlertSentence, type SubscriptionAlertView } from '@/lib/subscription-alert';
 import { AlertTriangle } from 'lucide-react';
+import { StartTourButton } from '@/components/tour/start-tour-button';
+import { ChecklistToggle } from '../welcome/checklist-toggle';
+import type { ChecklistAnswer } from '../welcome/vamos-comecar';
 
 /**
  * "O meu perfil" — backlog round 3, story 1.
@@ -94,6 +97,13 @@ export default async function ProfilePage({
    * client could have asked for.
    */
   const isOwner = membership?.roles.includes('owner') === true;
+  // POOLSE-229: a dismissed *Vamos começar* comes back from here, the Owner's to restore.
+  const checklistDismissed =
+    isOwner && membership?.organizationKind === 'business'
+      ? await apiFetch<ChecklistAnswer>('/onboarding/checklist')
+          .then((answer) => answer.checklist?.dismissed === true)
+          .catch(() => false)
+      : false;
   // The avatar's warning, said again on the card it leads to (Rui, 28-10-2026).
   const subscriptionWarning = isOwner
     ? await apiFetch<SubscriptionAlertView>('/subscription/alert').catch(() => null)
@@ -155,6 +165,24 @@ export default async function ProfilePage({
               </section>
 
               {membership !== null && <MessagePreferenceCard clubName={membership.organizationName} />}
+
+              {/*
+                Getting started — POOLSE-229/230: the guided tour replays from here
+                (it never starts on its own), and a dismissed *Vamos começar*
+                comes back.
+              */}
+              {membership !== null && (
+                <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
+                  <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                    {t('tour.settingsTitle')}
+                  </h2>
+                  <p className="text-sm text-foreground-muted">{t('tour.settingsHint')}</p>
+                  <div className="flex flex-wrap gap-3">
+                    <StartTourButton labelKey="tour.replay" />
+                    {checklistDismissed && <ChecklistToggle dismiss={false} />}
+                  </div>
+                </section>
+              )}
 
               {/*
                 Subscrição lives here — 13 September 2026. What Poolse charges

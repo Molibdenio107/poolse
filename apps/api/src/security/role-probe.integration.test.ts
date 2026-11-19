@@ -1971,12 +1971,23 @@ test('POOLSE-228: the setup steps are the Owner’s — a family, an instructor 
     await refused(`PUT onboarding/step as ${label}`, 403, () =>
       new OnboardingController().step({ step: 'club', outcome: 'skipped' }),
     );
+    // POOLSE-230: the tour is every member's own — a family records theirs.
+    assert.deepEqual(await new OnboardingController().tour({ outcome: 'dismissed' }), { recorded: true });
+    // POOLSE-229: Vamos começar is the office's.
+    await refused(`GET onboarding/checklist as ${label}`, 403, () => new OnboardingController().checklist());
+    await refused(`PUT onboarding/checklist as ${label}`, 403, () =>
+      new OnboardingController().dismissChecklist({ dismissed: true }),
+    );
   });
   for (const [id, role] of [[fixture.instructorId, 'instructor'], [fixture.maintenanceId, 'maintenance']] as const) {
     await as(id, [role], async () => {
       await refused(`GET onboarding as ${role}`, 403, () => new OnboardingController().read());
       await refused(`PUT onboarding/step as ${role}`, 403, () =>
         new OnboardingController().step({ step: 'club', outcome: 'skipped' }),
+      );
+      await refused(`GET onboarding/checklist as ${role}`, 403, () => new OnboardingController().checklist());
+      await refused(`PUT onboarding/checklist as ${role}`, 403, () =>
+        new OnboardingController().dismissChecklist({ dismissed: true }),
       );
     });
   }

@@ -56,7 +56,9 @@ const SYNONYMS: Record<string, Synonyms> = {
 };
 
 /** A thing the palette can do rather than a page it can open. */
-export type CommandRun = { href: string } | { handler: 'toggleTheme' | 'toggleLocale' | 'openNotifications' };
+export type CommandRun =
+  | { href: string }
+  | { handler: 'toggleTheme' | 'toggleLocale' | 'openNotifications' | 'startTour' };
 
 export interface Command {
   id: string;
@@ -377,6 +379,13 @@ const ACTIONS: Omit<Command, 'kind'>[] = [
     run: { handler: 'openNotifications' },
     roles: ['owner', 'admin', 'instructor', 'maintenance'],
     synonyms: { 'pt-PT': ['notificacoes', 'avisos', 'por tratar', 'alertas', 'sino'], en: ['notifications', 'alerts', 'to do', 'bell'] },
+  },
+  {
+    // POOLSE-230: the guided tour, never started on its own.
+    id: 'tour',
+    labelKey: 'tour.replay',
+    run: { handler: 'startTour' },
+    synonyms: { 'pt-PT': ['visita guiada', 'tutorial', 'ajuda', 'como funciona'], en: ['guided tour', 'tutorial', 'help', 'how it works'] },
   },
   {
     id: 'theme',

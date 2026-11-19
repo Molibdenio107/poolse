@@ -165,7 +165,7 @@ function TabBar({ homes, placement }: { homes: AppHat[]; placement: 'top' | 'bot
 
   if (placement === 'top') {
     return (
-      <nav aria-label={t('app.tabs.label')} className="mx-auto hidden w-full max-w-2xl px-4 pb-2 md:block print:hidden">
+      <nav aria-label={t('app.tabs.label')} data-tour="tabs" className="mx-auto hidden w-full max-w-2xl px-4 pb-2 md:block print:hidden">
         <div className="flex gap-1 rounded-sm bg-surface-muted p-1">{tabs}</div>
       </nav>
     );
@@ -173,6 +173,8 @@ function TabBar({ homes, placement }: { homes: AppHat[]; placement: 'top' | 'bot
   return (
     <nav
       aria-label={t('app.tabs.label')}
+      // POOLSE-230: the guided tour points at these tabs, never at a link that shares their address.
+      data-tour="tabs"
       className="fixed inset-x-0 bottom-0 z-30 print:hidden px-2 pb-[calc(0.5rem+var(--safe-bottom))] pl-[calc(0.5rem+var(--safe-left))] pr-[calc(0.5rem+var(--safe-right))] md:hidden"
       data-bottom-bar
     >

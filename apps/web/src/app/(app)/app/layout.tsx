@@ -9,6 +9,7 @@ import { SuspendedNotice } from '../dashboard/suspended-notice';
 import { AppFrame } from './app-frame';
 import { ViewBanner } from './view-banner';
 import { ConfirmDetails } from '@/components/confirm-details/confirm-details';
+import { GuidedTour } from '@/components/tour/guided-tour';
 
 /**
  * App mode's shell — POOLSE-90; its frame since POOLSE-136 (`app-frame.tsx`).
@@ -78,6 +79,8 @@ export default async function AppModeLayout({
       {children}
       {/* What other people did reaches a screen left open (Rui, 11-11-2026). */}
       <KeepFresh />
+      {/* POOLSE-230: the guided tour, started only from Perfil → Definições. */}
+      <GuidedTour />
     </AppFrame>
   );
 }

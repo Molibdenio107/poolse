@@ -13,6 +13,21 @@ Rui, 19-11-2026: small in-house coach marks, *"NO new dependency"*, three to six
 - Tours per sport, or per module beyond hiding a step whose entry the reader cannot see.
 - Auto-start, nagging, or a dot on Perfil.
 
+### As built (19-11-2026) — wins over the rules below where they differ
+
+- **Selectors, not `data-tour` on every entry**: each step names the real link
+  (`aside a[href=…]`, `header [data-section="pool"]`, `[data-tour="tabs"] a[href=…]`). Only two
+  hooks were added: the phone menu button (`data-tour="menu"`) and the app's tab bars
+  (`data-tour="tabs"`, after a bare `nav a[href]` ringed the family's *Todos* filter).
+- **Its own small focus trap, not `Dialog`'s**: `Dialog` is a centred panel with a backdrop
+  that closes on click, and a coach mark is neither. The behaviour matches it: Tab stays
+  inside, Escape closes, and focus returns. The keys are handled on the window while open,
+  because the first build put the handler on the card, which mounts a render later, so the
+  keyboard did nothing until a click.
+- **Definições has no tab bar**, so its *Rever visita guiada* opens the home with `?tour=1`
+  and the tour starts there. That is still a person's tap, never an automatic start.
+- The columns were added by POOLSE-229's migration.
+
 ### BA — rules
 
 1. **Steps per role, from the real menus** (checked against `lib/nav-entries.ts` and `TABS` in `lib/app-hats.ts`, 19-11-2026). The ticket's first list is corrected as follows.
@@ -50,9 +65,9 @@ Rui, 19-11-2026: small in-house coach marks, *"NO new dependency"*, three to six
 10. Both themes, desk and phone, contrast checked (the ring is a fill in `contrast:check`'s `PAIRS`).
 
 ### Acceptance criteria
-- [ ] In-house coach marks, no new package in any `package.json`.
-- [ ] Step lists per hat as rule 1, filtered by the menu's own filter.
-- [ ] Launched only from *Vamos começar* and *Rever visita guiada* (desk and `/app`) and Ctrl+K. Never automatic.
-- [ ] Focus trapped and restored, Esc, arrows, reduced motion, both themes, phone shell.
-- [ ] Finished/dismissed stored per person per club and ticking POOLSE-229.
-- [ ] Role-probe, cross-tenant and phone specs green.
+- [x] In-house coach marks, no new package in any `package.json`.
+- [x] Step lists per hat as rule 1, filtered by the menu's own filter.
+- [x] Launched only from *Vamos começar* and *Rever visita guiada* (desk and `/app`) and Ctrl+K. Never automatic.
+- [x] Focus trapped and restored, Esc, arrows, reduced motion, both themes, phone shell.
+- [x] Finished/dismissed stored per person per club and ticking POOLSE-229.
+- [x] Role-probe, cross-tenant and phone specs green.

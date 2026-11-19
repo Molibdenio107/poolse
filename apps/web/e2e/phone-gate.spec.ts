@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { Client } from 'pg';
 import { E2E_GUARDIAN_EMAIL, E2E_GUARDIAN_PASSWORD, GUARDIAN_SESSION, NO_GUARDIAN } from './session';
 
@@ -15,6 +15,16 @@ test.skip(E2E_GUARDIAN_EMAIL === undefined || E2E_GUARDIAN_PASSWORD === undefine
 test.skip(process.env['DATABASE_URL'] === undefined, 'needs DATABASE_URL to blank a field');
 
 test.use({ storageState: GUARDIAN_SESSION, viewport: { width: 360, height: 740 } });
+
+/** `/app` hands a family on to `/app/familia` mid-load; that is not a failure. */
+async function visit(page: Page, path: string): Promise<void> {
+  try {
+    await page.goto(path, { waitUntil: 'load' });
+  } catch (error) {
+    if (!String(error).includes('interrupted by another navigation')) throw error;
+    await page.waitForLoadState('load');
+  }
+}
 
 async function setPhone(phone: string | null): Promise<string | null> {
   const db = new Client({ connectionString: process.env['DATABASE_URL'] });
@@ -36,7 +46,7 @@ async function setPhone(phone: string | null): Promise<string | null> {
 test('a guardian with no mobile confirms it once, and goes on to their home', async ({ page }) => {
   const was = await setPhone(null);
   try {
-    await page.goto('/app', { waitUntil: 'load' });
+    await visit(page, '/app');
     await expect(page.getByRole('heading', { level: 1, name: /confirmar os seus dados|confirm your details/i })).toBeVisible();
 
     // Only the mobile is missing, and it has the focus; the name is prefilled.
@@ -57,7 +67,7 @@ test('a guardian with no mobile confirms it once, and goes on to their home', as
     await expect(page.getByRole('heading', { level: 1, name: /confirmar os seus dados|confirm your details/i })).toHaveCount(0);
 
     // Shown once: the next page is the home, not the gate.
-    await page.goto('/app', { waitUntil: 'load' });
+    await visit(page, '/app');
     await expect(page).toHaveURL(/\/app\/familia/);
   } finally {
     await setPhone(was);

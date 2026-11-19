@@ -567,6 +567,8 @@ export function MobileMenu({
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t('nav.openMenu')}
+        // POOLSE-230: below `md` the tour points here for an entry behind the menu.
+        data-tour="menu"
         aria-expanded={open}
         className="inline-flex h-control w-control shrink-0 items-center justify-center rounded-sm bg-surface text-foreground hover:bg-surface-muted md:hidden shadow-card"
       >

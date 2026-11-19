@@ -19,6 +19,7 @@ import { PhoneLanding } from './phone-landing';
 import { familyOnly, landsInTeaching } from '@/lib/app-hats';
 import { ClubSupportStrip, SupportEndedNotice, SupportSessionBanner } from './support-strip';
 import { ConfirmDetails } from '@/components/confirm-details/confirm-details';
+import { GuidedTour } from '@/components/tour/guided-tour';
 
 /**
  * The backoffice shell.
@@ -272,6 +273,8 @@ export default async function DashboardLayout({
           <NotificationBell badges={badges} places={places} lessons={lessons} />
           {/* What other people did reaches a page left open (Rui, 11-11-2026). */}
           <KeepFresh />
+          {/* POOLSE-230: the guided tour, started only by a button or Ctrl+K. */}
+          <GuidedTour />
           <CommandPalette roles={roles} kind={kind} modules={modules} sports={sports} />
           <PreferenceControls languageOnPhone={false} />
           <UserMenu canArchive={roles.includes('owner') || roles.includes('admin')} subscription={subscription} />

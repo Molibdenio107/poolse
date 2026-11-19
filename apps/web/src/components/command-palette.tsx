@@ -1,4 +1,5 @@
 'use client';
+import { START_TOUR_EVENT } from '@/components/tour/start-tour-button';
 import { OPEN_NOTIFICATIONS } from '@/components/notification-bell';
 
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
@@ -150,6 +151,11 @@ export function CommandPalette({
     setOpen(false);
     if (command.run.handler === 'openNotifications') {
       window.dispatchEvent(new Event(OPEN_NOTIFICATIONS));
+      return;
+    }
+    if (command.run.handler === 'startTour') {
+      // After the palette has closed, so the tour's focus is not taken back by it.
+      window.setTimeout(() => window.dispatchEvent(new CustomEvent(START_TOUR_EVENT)), 0);
       return;
     }
     if (command.run.handler === 'toggleTheme') {

@@ -18,6 +18,7 @@ import { ScrollToTop } from './scroll-to-top';
 import { LandOn } from './land-on';
 import { LogoLockIn } from '@/components/logo-lock-in';
 import type { WizardState } from '../setup/steps';
+import { VamosComecar, type ChecklistAnswer } from './vamos-comecar';
 
 type Step = { href: string; icon: LucideIcon; title: string; body: string };
 
@@ -77,6 +78,10 @@ export default async function WelcomePage({
           .then((answer) => answer.wizard)
           .catch(() => null);
   const resume = wizard !== null && wizard.step !== null ? `/dashboard/setup?step=${wizard.step}` : null;
+  // POOLSE-229: *Vamos começar*, for a club's Owner and Admins. A failed read draws nothing, never "all done".
+  const checklist = personal
+    ? null
+    : await apiFetch<ChecklistAnswer>('/onboarding/checklist').catch(() => null);
   const steps: Step[] = personal
     ? [
         {
@@ -147,6 +152,14 @@ export default async function WelcomePage({
               </div>
             )}
           </div>
+
+          {checklist !== null && (
+            <VamosComecar
+              answer={checklist}
+              siteHref={configureHref}
+              isOwner={membership.roles.includes('owner')}
+            />
+          )}
 
           <div className="flex flex-col gap-3">
             <div className="onboard-rise flex flex-col gap-0.5" style={{ '--i': 1 } as React.CSSProperties}>

@@ -85,6 +85,63 @@ No season step (Rui, 19-11-2026): the season provisioning opens stands, and *Ép
 - `/dashboard/setup` for anybody without a wizard (an Admin, a finished one, an older club) is
   handed on to Início.
 
+## Vamos começar (POOLSE-229)
+
+A card on Início for a club's Owner and Admins: what the club still needs, each line ticked by
+the API from the club's own data (`readChecklist`, one statement) and linked to its screen.
+
+| Line | Shown | Done when |
+|---|---|---|
+| Dados do clube | setup step *Clube* skipped | the NIPC and a live site's morada are set |
+| Recintos e horário | step skipped | a live pool, and a day's hours changed from the seeded 00:00–24:00 |
+| Equipa | step skipped | an invitation sent, or a second working person |
+| Alunos | step skipped | a live student |
+| Criar as primeiras turmas | always | a live turma in the published shared season |
+| Definir preços | always | a live `fee_plan` |
+| Abrir a pré-inscrição | always | `public_registration_open` |
+| Fazer a visita guiada | always | the reader's tour finished or closed — the one stored tick |
+
+- **Live, never stored**: archive the only turma and its line opens again.
+- Open lines first. A done line shows a tick **and** *Feito*.
+- The card disappears when all are done or the Owner dismisses it (*Dispensar*, which asks
+  first). It comes back from *O meu perfil* → *Ajuda para começar*.
+- **An Admin reads it and cannot dismiss it** (Rui's default, 19-11-2026). The public form's
+  line says *Só o titular pode abrir o formulário* instead of linking to a switch that would
+  refuse them.
+- An older club, the pilot included, sees the four standing lines. A dismissal makes a progress
+  row with no `wizard_started_at`, so it never opens the setup wizard.
+
+## The guided tour (POOLSE-230)
+
+Small in-house coach marks (`components/tour/guided-tour.tsx`, steps in `lib/tours.ts`), no
+dependency. **It never starts on its own.** The ways in are *Fazer a visita guiada* on *Vamos
+começar*, *Rever visita guiada* on *O meu perfil* (desk) and on Perfil → Definições (`/app`),
+and Ctrl+K.
+
+- **Steps point at the real menu by selector, and a step whose entry is not on screen is
+  skipped.** Modules, roles and sports need no second list, because the menu already decided.
+  - **Backoffice:** Início, the sport's tab (*Natação*: Calendário, Turmas, Piscinas),
+    Alunos, Faturação, Instalações → *Staff*.
+  - **Family:** Início, Aulas (or *Modalidades*), Progressos, Perfil. Pagamentos is a card on
+    Início, not a tab.
+  - **Teacher:** Início, Aulas, Alunos, Perfil. The register opens from a lesson.
+  - **Maintenance:** Hoje, Registar, Perfil.
+- **Below `md` in the backoffice** the sidebar is behind the menu, so the step rings the menu
+  button (`data-tour="menu"`) and says the entry is in the menu. The sport tab is drawn only
+  once the menu opens, so its step is `inMenu`.
+- **The app's tabs are `[data-tour="tabs"]`.** A selector on `nav a[href]` alone ringed the
+  family's *Todos* filter, a link to the same address.
+- Definições has no tab bar, so its button opens the home with `?tour=1`. The tour starts there
+  and takes the flag off the address. A tap still started it.
+- **Keyboard:** focus moves to the card's main button once the card is drawn, Tab stays inside,
+  the arrows move between steps, Escape closes, and focus goes back to the button that started
+  it. These keys are handled on the window while the tour is open. The card is a labelled
+  `role="dialog"`. Nothing glides under reduced motion. The dim is the dialog's (black at 40%),
+  and the ring is the primary token.
+- `PUT /onboarding/tour` (`finished` | `dismissed`) answers any member, for the session's own
+  row. The first of each is kept, so a replay changes nothing. Under *Ver como* the write is
+  refused and the tour plays anyway.
+
 ## Confirmar os seus dados (POOLSE-227)
 
 Before the first screen, everybody confirms the details their club needs from them, once, and

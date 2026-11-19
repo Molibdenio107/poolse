@@ -10,6 +10,8 @@ import { readTheme } from '@/lib/preferences';
 import { MessagePreferenceCard } from '../../../dashboard/profile/message-preference-card';
 import { PushCard } from '../../push-card';
 import { PreferenceRows } from '../preference-rows';
+import { StartTourButton } from '@/components/tour/start-tour-button';
+import { TABS } from '@/lib/app-hats';
 
 /**
  * *Definições* — POOLSE-176 (Rui, 05-11-2026: "'idiom' 'tema' 'mensagens do
@@ -38,6 +40,8 @@ export default async function AppSettingsPage({
 
   const [locale, theme] = await Promise.all([getLocale(), readTheme()]);
   const back = isHat(home) ? `/app/perfil?home=${home}` : '/app/perfil';
+  // POOLSE-230: the tour plays on the home's tab bar, which this screen has none of.
+  const tourHome = home === 'teaching' || home === 'maintenance' ? TABS[home][0]!.href : TABS.family[0]!.href;
 
   return (
     <>
@@ -59,6 +63,11 @@ export default async function AppSettingsPage({
       <div className="flex flex-col gap-3">
         <PushCard />
         <MessagePreferenceCard clubName={membership.organizationName} />
+        <section className="flex flex-col gap-2 rounded bg-surface p-4 shadow-card">
+          <h2 className="font-medium">{t('tour.settingsTitle')}</h2>
+          <p className="text-sm text-foreground-muted">{t('tour.settingsHint')}</p>
+          <StartTourButton labelKey="tour.replay" home={tourHome} />
+        </section>
       </div>
     </>
   );

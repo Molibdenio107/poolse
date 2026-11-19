@@ -13,6 +13,19 @@ Rui, 19-11-2026: a skipped wizard step *"becomes a checklist item"*, joined by t
 - Building the tour (POOLSE-230). This ticket adds its item and the launch button.
 - Any item for families or teaching staff.
 
+### As built (19-11-2026) — wins over the rules below where they differ
+
+- **Rule 2 took its default**: an Admin reads the card and cannot dismiss it.
+- **Rule 6's *Tudo pronto* moment is not drawn**: once every line is done the card is simply
+  absent. A second celebration under Início's own Poolse mark would say it twice.
+- **"Hours set" means a day changed from the seeded 00:00–24:00**, because every site is
+  created with seven open-all-day rows (`docs/data-model.md`, *A site's opening hours*), so
+  "a row exists" would always be true.
+- **The migration also carries POOLSE-230's two tour columns**: one migration for two tickets
+  that ship together.
+- The restore is *Mostrar «Vamos começar»* under *O meu perfil* → *Ajuda para começar*, beside
+  the tour's replay.
+
 ### BA — rules
 
 1. **Where.** A card *Vamos começar* on Início (`/dashboard/welcome`), under the club's name, for a `business` club. Never on a personal tenant.
@@ -56,8 +69,8 @@ Rui, 19-11-2026: a skipped wizard step *"becomes a checklist item"*, joined by t
 9. Both themes. *Feito* readable without colour. Phone width shows the card as a single column.
 
 ### Acceptance criteria
-- [ ] Eight item predicates in one statement, each with an integration test that ticks and un-ticks it.
-- [ ] Skipped-step items only for wizard clubs. Always-items for every business club, the pilot included.
-- [ ] Owner dismisses, and restores from Perfil. Admin read-only (rule 2 settled).
-- [ ] Lazy row never opens the wizard (test).
-- [ ] Role-probe and cross-tenant tests green. Both themes checked.
+- [x] Eight item predicates in one statement, each with an integration test that ticks and un-ticks it.
+- [x] Skipped-step items only for wizard clubs. Always-items for every business club, the pilot included.
+- [x] Owner dismisses, and restores from Perfil. Admin read-only (rule 2 settled).
+- [x] Lazy row never opens the wizard (test).
+- [x] Role-probe and cross-tenant tests green. Both themes checked.

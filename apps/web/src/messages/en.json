@@ -8852,5 +8852,136 @@
         "none": "No, start from scratch"
       }
     }
+  },
+  "checklist": {
+    "title": "Getting started",
+    "progress": "{done, plural, =0 {None done} one {# of {total} done} other {# of {total} done}}",
+    "done": "Done",
+    "dismiss": "Dismiss",
+    "dismissTitle": "Dismiss “Getting started”?",
+    "dismissMessage": "The list stops showing on Home. You can bring it back from My profile.",
+    "restore": "Show “Getting started”",
+    "dismissedToast": "List dismissed.",
+    "restoredToast": "The list is back on Home.",
+    "failed": "Could not save. Please try again.",
+    "ownerOnly": "Only the owner can open the form.",
+    "item": {
+      "club_details": {
+        "title": "Club details",
+        "hint": "The tax number and the address."
+      },
+      "places": {
+        "title": "Venues and opening hours",
+        "hint": "A pool and the opening hours."
+      },
+      "team": {
+        "title": "Team",
+        "hint": "Invite the people you work with."
+      },
+      "students": {
+        "title": "Students",
+        "hint": "Import your students from a spreadsheet."
+      },
+      "turmas": {
+        "title": "Create the first classes",
+        "hint": "A class in the published season."
+      },
+      "prices": {
+        "title": "Set prices",
+        "hint": "The site's price list."
+      },
+      "public_form": {
+        "title": "Open pre-registration",
+        "hint": "The public form, closed until you open it."
+      },
+      "tour": {
+        "title": "Take the guided tour",
+        "hint": "A quick tour of the menu."
+      }
+    }
+  },
+  "tour": {
+    "start": "Start the tour",
+    "replay": "Replay the guided tour",
+    "settingsTitle": "Help getting started",
+    "settingsHint": "A quick tour of the menu, to replay whenever you like.",
+    "progress": "Step {n} of {total}",
+    "next": "Next",
+    "previous": "Previous",
+    "finish": "Finish",
+    "close": "Close the tour",
+    "viaMenu": "On a phone, it is in the menu.",
+    "backoffice": {
+      "home": {
+        "title": "Home",
+        "body": "Where you start: what is left to set up and the everyday shortcuts."
+      },
+      "sport": {
+        "title": "Swimming",
+        "body": "The sport's Calendar, Classes and Pools are here."
+      },
+      "students": {
+        "title": "Students",
+        "body": "The student register, guardians, registration requests and messages."
+      },
+      "billing": {
+        "title": "Billing",
+        "body": "Monthly fees, invoices, payments and what is owed."
+      },
+      "staff": {
+        "title": "Staff",
+        "body": "Under Sites: your team, invitations, holidays and qualifications."
+      }
+    },
+    "family": {
+      "home": {
+        "title": "Home",
+        "body": "The club's notices, the next lesson and payments."
+      },
+      "lessons": {
+        "title": "Lessons",
+        "body": "The week's lessons. Say whether you are going to each one."
+      },
+      "progress": {
+        "title": "Progress",
+        "body": "Each child's level, skills and times."
+      },
+      "profile": {
+        "title": "Profile",
+        "body": "Your details, documents and settings."
+      }
+    },
+    "teaching": {
+      "home": {
+        "title": "Home",
+        "body": "Today's lessons. Open one to take the register."
+      },
+      "lessons": {
+        "title": "Lessons",
+        "body": "Your week of lessons, day by day."
+      },
+      "students": {
+        "title": "Students",
+        "body": "The students in your classes and how to reach each one."
+      },
+      "profile": {
+        "title": "Profile",
+        "body": "Your details, qualifications and settings."
+      }
+    },
+    "maintenance": {
+      "today": {
+        "title": "Today",
+        "body": "The day's tasks and cleaning still to do."
+      },
+      "record": {
+        "title": "Record",
+        "body": "A water test, a meter reading or a fault."
+      },
+      "profile": {
+        "title": "Profile",
+        "body": "Your details and settings."
+      }
+    }
   }
 }

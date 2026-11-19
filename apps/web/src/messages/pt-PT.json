@@ -8852,5 +8852,136 @@
         "none": "Não, começar do zero"
       }
     }
+  },
+  "checklist": {
+    "title": "Vamos começar",
+    "progress": "{done, plural, =0 {Nenhum feito} one {# de {total} feito} other {# de {total} feitos}}",
+    "done": "Feito",
+    "dismiss": "Dispensar",
+    "dismissTitle": "Dispensar «Vamos começar»?",
+    "dismissMessage": "A lista deixa de aparecer no Início. Pode voltar a mostrá-la em O meu perfil.",
+    "restore": "Mostrar «Vamos começar»",
+    "dismissedToast": "Lista dispensada.",
+    "restoredToast": "A lista voltou ao Início.",
+    "failed": "Não foi possível guardar. Tente de novo.",
+    "ownerOnly": "Só o titular pode abrir o formulário.",
+    "item": {
+      "club_details": {
+        "title": "Dados do clube",
+        "hint": "O NIPC e a morada."
+      },
+      "places": {
+        "title": "Recintos e horário",
+        "hint": "Uma piscina e o horário de funcionamento."
+      },
+      "team": {
+        "title": "Equipa",
+        "hint": "Convide quem trabalha consigo."
+      },
+      "students": {
+        "title": "Alunos",
+        "hint": "Importe os seus alunos de uma folha."
+      },
+      "turmas": {
+        "title": "Criar as primeiras turmas",
+        "hint": "Uma turma na época publicada."
+      },
+      "prices": {
+        "title": "Definir preços",
+        "hint": "A tabela de preços da instalação."
+      },
+      "public_form": {
+        "title": "Abrir a pré-inscrição",
+        "hint": "O formulário público, fechado até o abrir."
+      },
+      "tour": {
+        "title": "Fazer a visita guiada",
+        "hint": "Uma volta rápida pelo menu."
+      }
+    }
+  },
+  "tour": {
+    "start": "Começar a visita",
+    "replay": "Rever visita guiada",
+    "settingsTitle": "Ajuda para começar",
+    "settingsHint": "Uma volta rápida pelo menu, que pode rever quando quiser.",
+    "progress": "Passo {n} de {total}",
+    "next": "Seguinte",
+    "previous": "Anterior",
+    "finish": "Concluir",
+    "close": "Fechar a visita",
+    "viaMenu": "Num telemóvel, está no menu.",
+    "backoffice": {
+      "home": {
+        "title": "Início",
+        "body": "O ponto de partida: o que falta configurar e os atalhos do dia a dia."
+      },
+      "sport": {
+        "title": "Natação",
+        "body": "Aqui estão o Calendário, as Turmas e as Piscinas da modalidade."
+      },
+      "students": {
+        "title": "Alunos",
+        "body": "O registo dos alunos, os encarregados, os pedidos de inscrição e as mensagens."
+      },
+      "billing": {
+        "title": "Faturação",
+        "body": "Mensalidades, faturas, pagamentos e o que está em dívida."
+      },
+      "staff": {
+        "title": "Staff",
+        "body": "Em Instalações: a sua equipa, os convites, as férias e as qualificações."
+      }
+    },
+    "family": {
+      "home": {
+        "title": "Início",
+        "body": "Os avisos do clube, a próxima aula e os pagamentos."
+      },
+      "lessons": {
+        "title": "Aulas",
+        "body": "A semana de aulas. Diga se vai ou não vai a cada uma."
+      },
+      "progress": {
+        "title": "Progressos",
+        "body": "O nível, as competências e os tempos de cada educando."
+      },
+      "profile": {
+        "title": "Perfil",
+        "body": "Os seus dados, os documentos e as definições."
+      }
+    },
+    "teaching": {
+      "home": {
+        "title": "Início",
+        "body": "As aulas de hoje. Abra uma para fazer o registo de presenças."
+      },
+      "lessons": {
+        "title": "Aulas",
+        "body": "A sua semana de aulas, dia a dia."
+      },
+      "students": {
+        "title": "Alunos",
+        "body": "Os alunos das suas turmas e os contactos de cada um."
+      },
+      "profile": {
+        "title": "Perfil",
+        "body": "Os seus dados, as qualificações e as definições."
+      }
+    },
+    "maintenance": {
+      "today": {
+        "title": "Hoje",
+        "body": "As tarefas e as limpezas do dia, por fazer."
+      },
+      "record": {
+        "title": "Registar",
+        "body": "Uma análise da água, uma leitura ou uma avaria."
+      },
+      "profile": {
+        "title": "Perfil",
+        "body": "Os seus dados e as definições."
+      }
+    }
   }
 }

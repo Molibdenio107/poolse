@@ -4675,4 +4675,12 @@ onboarding_progress
 Where one person is in their club's onboarding. **`wizard_started_at` is the wizard's only
 switch**, written once by `POST /organizations` for a business club it has just made, so a club
 from before (the pilot) never has one. No `archived_at`: a pointer, not history, so the unique
-key is plain. POOLSE-229 and -230 add their columns to this row rather than a table each.
+key is plain. POOLSE-229 and -230 add their columns to this row rather than a table each:
+
+```
+onboarding_progress (19-11-2026, POOLSE-229/230, one migration)
+  + checklist_dismissed_at   -- Vamos começar hidden by its Owner; null shows it
+  + tour_finished_at, tour_dismissed_at   -- the first of each is kept; a replay changes neither
+```
+
+A row made by a dismissal or a tour never sets `wizard_started_at`.
