@@ -203,8 +203,12 @@ function Header({
         )}
       </div>
 
+      {/*
+        On a phone the actions may shrink, so two of them (POOLSE-232's add +
+        Importar) wrap inside the screen instead of pushing it sideways.
+      */}
       {actions !== undefined && (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2 max-md:shrink">{actions}</div>
       )}
     </header>
   );

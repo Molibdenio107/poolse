@@ -154,6 +154,9 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
   const formId = useId();
   const [confirming, setConfirming] = useState(false);
   const confirmRef = useRef<HTMLButtonElement>(null);
+  // Focus goes back here when the dialog closes: Safari never focuses a tapped
+  // button, so the dialog's own return-to-what-was-focused finds nothing.
+  const floatRef = useRef<HTMLButtonElement>(null);
   // A request that went through closes the dialog and clears the draft.
   useEffect(() => {
     if (state.ok) {
@@ -284,7 +287,7 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
             >
               {t('vacations.clearSelection')}
             </button>
-            <Button icon={CalendarCheck} onClick={() => setConfirming(true)}>
+            <Button ref={floatRef} icon={CalendarCheck} onClick={() => setConfirming(true)}>
               {t('vacations.floating', { count: chosen.length })}
             </Button>
           </div>
@@ -293,7 +296,10 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
 
       <Dialog
         open={confirming}
-        onClose={() => setConfirming(false)}
+        onClose={() => {
+          setConfirming(false);
+          requestAnimationFrame(() => floatRef.current?.focus());
+        }}
         title={t('vacations.confirmTitle', { count: chosen.length })}
         description={t('vacations.confirmHint')}
         closeLabel={t('common.close')}

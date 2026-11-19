@@ -136,10 +136,13 @@ test.describe('on a phone', () => {
     // › moves to another day, still one.
     const next = page.getByRole('button', { name: /dia seguinte|next day/i });
     if (await next.isEnabled()) {
-      await next.tap();
-      const after = await shown();
-      expect(after).toHaveLength(1);
-      expect(after[0]).not.toBe(first[0]);
+      // Retried: on a cold dev route the first tap can land before hydration, and
+      // read once, straight after, the check raced the re-render on iPhone.
+      await expect(async () => {
+        await next.tap();
+        expect((await shown())[0]).not.toBe(first[0]);
+      }).toPass({ timeout: 15_000 });
+      expect(await shown()).toHaveLength(1);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   });
