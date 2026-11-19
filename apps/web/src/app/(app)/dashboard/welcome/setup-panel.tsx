@@ -76,7 +76,7 @@ function WizardProgress({
           {t('setup.title')}
         </h2>
         <p className="text-sm text-foreground-muted">
-          {t('setup.progress', { n: at + 1, total: SETUP_STEPS.length })} · {t('setup.panelHint')}
+          {t('setup.progress', { n: at + 1, total: SETUP_STEPS.length })}
         </p>
       </div>
 
@@ -135,7 +135,6 @@ function WizardProgress({
           {at === 0 && wizard.skipped.length === 0 ? t('setup.begin') : t('setup.resume')}
           <ArrowRight className="size-4" aria-hidden />
         </FromLink>
-        <p className="text-sm text-foreground-muted">{t('setup.resumeHint')}</p>
       </div>
     </>
   );

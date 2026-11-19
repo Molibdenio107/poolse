@@ -877,8 +877,7 @@
       "setup": "Set up the club",
       "start": "Where to start"
     },
-    "setupWaiting": "Steps still to do",
-    "menusHint": "Shows the full menu. The setup stays waiting for you on Home."
+    "setupWaiting": "Steps still to do"
   },
   "profile": {
     "title": "My profile",
@@ -8844,7 +8843,6 @@
     "loadFailed": "Could not load this step.",
     "backTo": "Back to setup",
     "resume": "Continue setting up",
-    "resumeHint": "Pick up where you left off. Any step can wait.",
     "step": {
       "club": {
         "short": "Club",
@@ -8875,7 +8873,6 @@
         "none": "No, start from scratch"
       }
     },
-    "panelHint": "Any step can wait.",
     "skippedLong": "Left for later.",
     "toCome": "Coming up.",
     "begin": "Start setting up"

@@ -109,6 +109,9 @@ behind pills (`?section=setup|start`):
   end, *Configurar o clube*, the four cards and *Ir para o painel*.
 - The setup page exists while there is something to set up, and Início opens on it until then.
   Its pill carries the attention dot. With nothing left, Início is the second page alone.
+- **While the Owner's setup steps are under way, Início is the setup page alone** (Rui,
+  19-11-2026): titled *Vamos começar*, no pills, no *Por onde começar*, with *Ir para o painel* at
+  its foot. *Por onde começar* joins once the steps are done.
 
 ## Vamos começar (POOLSE-229)
 

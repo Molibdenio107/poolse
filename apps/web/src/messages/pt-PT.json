@@ -877,8 +877,7 @@
       "setup": "Configurar o clube",
       "start": "Por onde começar"
     },
-    "setupWaiting": "Há passos por fazer",
-    "menusHint": "Mostra o menu completo. A configuração continua à sua espera no Início."
+    "setupWaiting": "Há passos por fazer"
   },
   "profile": {
     "title": "O meu perfil",
@@ -8844,7 +8843,6 @@
     "loadFailed": "Não foi possível carregar este passo.",
     "backTo": "Voltar à configuração",
     "resume": "Continuar a configuração",
-    "resumeHint": "Retome onde ficou. Cada passo pode ficar para mais tarde.",
     "step": {
       "club": {
         "short": "Clube",
@@ -8875,7 +8873,6 @@
         "none": "Não, começar do zero"
       }
     },
-    "panelHint": "Cada passo pode ficar para mais tarde.",
     "skippedLong": "Ficou para mais tarde.",
     "toCome": "A seguir.",
     "begin": "Começar a configuração"

@@ -97,7 +97,17 @@ export default async function WelcomePage({
     !checklist.checklist.dismissed &&
     checklist.checklist.items.some((item) => !item.done);
   const hasSetupPage = !personal && (resume !== null || checklistOpen);
-  const offered = hasSetupPage ? (['setup', 'start'] as const) : (['start'] as const);
+  /*
+   * While the Owner's setup steps are under way, Início is the setup page alone:
+   * *Por onde começar* appears once they are done (Rui, 19-11-2026), so the guide
+   * is the one thing on offer until then.
+   */
+  const offered =
+    resume !== null
+      ? (['setup'] as const)
+      : hasSetupPage
+        ? (['setup', 'start'] as const)
+        : (['start'] as const);
   const section = pickSection<'setup' | 'start'>(offered, params.section, 'start');
   const steps: Step[] = personal
     ? [
@@ -137,7 +147,8 @@ export default async function WelcomePage({
 
   return (
     <PageShell
-      title={fresh ? t('welcome.title') : t('nav.home')}
+      // Mid-setup, Início is the setup alone, and says so (Rui, 19-11-2026).
+      title={fresh ? t('welcome.title') : resume !== null ? t('checklist.title') : t('nav.home')}
       subtitle={fresh ? t('welcome.subtitle', { club: membership.organizationName }) : undefined}
     >
       <ScrollToTop />
@@ -159,6 +170,21 @@ export default async function WelcomePage({
           siteHref={configureHref}
           isOwner={membership.roles.includes('owner')}
         />
+      )}
+
+      {/*
+        Mid-setup, with *Por onde começar* not offered, *Ir para o painel* lives
+        here: the Owner's way to bring the menus back before the setup is done.
+      */}
+      {section === 'setup' && resume !== null && me?.guidedSetup === true && (
+        <form action={showMenusAction} className="flex flex-col items-center gap-1.5">
+          <button
+            type="submit"
+            className="inline-flex h-control items-center justify-center rounded-sm bg-surface px-5 text-control shadow-card hover:bg-surface-muted"
+          >
+            {t('welcome.goToDashboard')}
+          </button>
+        </form>
       )}
 
       {section === 'start' && (
@@ -184,9 +210,7 @@ export default async function WelcomePage({
                   <Settings className="size-4" aria-hidden />
                   {resume === null ? t('welcome.configureClub') : t('setup.resume')}
                 </FromLink>
-                <p className="text-sm text-foreground-muted">
-                  {resume === null ? t('welcome.configureClubHint') : t('setup.resumeHint')}
-                </p>
+                {resume === null && <p className="text-sm text-foreground-muted">{t('welcome.configureClubHint')}</p>}
               </div>
             )}
           </div>
@@ -236,7 +260,6 @@ export default async function WelcomePage({
                 >
                   {t('welcome.goToDashboard')}
                 </button>
-                <p className="text-sm text-foreground-muted">{t('welcome.menusHint')}</p>
               </form>
             ) : (
               <FromLink
