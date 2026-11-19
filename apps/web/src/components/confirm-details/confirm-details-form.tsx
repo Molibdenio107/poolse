@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { SignOutButton } from '@clerk/nextjs';
-import { ArrowRight, Landmark, LogOut, Mail, Phone, UserRound, Users, type LucideIcon } from 'lucide-react';
+import { ArrowRight, LogOut, Mail, Phone, UserRound, Users, type LucideIcon } from 'lucide-react';
 import type { DetailField } from '@poolse/rules';
 import { TextField } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
@@ -55,6 +55,7 @@ export function ConfirmDetailsForm({
   birthDate,
   then,
   formId,
+  payroll,
 }: {
   /**
    * The setup's step 1 (Rui, 19-11-2026): an optional date of birth, the same
@@ -71,6 +72,8 @@ export function ConfirmDetailsForm({
   formId?: string;
   /** What the button says: *Continuar* when this is a step of creating a club. */
   confirmLabelKey?: string;
+  /** Staff: the NIF and the morada are offered, optional (`asksPayrollDetails`). */
+  payroll: boolean;
   required: DetailField[];
   missing: DetailField[];
   initial: Values;
@@ -123,7 +126,7 @@ export function ConfirmDetailsForm({
           />
         </div>
         {/* With a date of birth beside it, the mobile takes the name's grid (Rui, 19-11-2026). */}
-        <div className={birthDate === undefined ? 'contents' : 'grid grid-cols-1 gap-3 sm:grid-cols-2'}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <TextField
           name="contactPhone"
           type="tel"
@@ -150,20 +153,23 @@ export function ConfirmDetailsForm({
         </fieldset>
         {then !== undefined && <input type="hidden" name="then" value={then} />}
 
-        {asks('taxNumber') && (
+        {/*
+          Staff: the NIF and the morada, optional and with no heading of their own
+          (Rui, 19-11-2026), on the same two columns as the fields above.
+        */}
+        {payroll && (
           <fieldset className="onboard-rise flex flex-col gap-3" style={{ '--i': 2 } as React.CSSProperties}>
-            <GroupLegend icon={Landmark} label={t('confirmDetails.groupPayroll')} />
             {staffUnreadable && (
               <p className="text-sm text-danger" role="alert">
                 {t('staffDetails.loadFailed')}
               </p>
             )}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <TextField
               name="taxNumber"
               inputMode="numeric"
               label={t('staffDetails.taxNumber')}
               initial={initial.taxNumber}
-              required
               readOnly={taxNumberLocked}
               maxLength={11}
               hint={taxNumberLocked ? t('staffDetails.errors.clubsToSet') : undefined}
@@ -173,17 +179,14 @@ export function ConfirmDetailsForm({
               name="address"
               label={t('staffDetails.address')}
               initial={initial.address}
-              required
               autoComplete="street-address"
               maxLength={500}
               error={error('address')}
             />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextField
                 name="postalCode"
                 label={t('staffDetails.postalCode')}
                 initial={initial.postalCode}
-                required
                 autoComplete="postal-code"
                 placeholder="0000-000"
                 maxLength={8}
@@ -193,7 +196,6 @@ export function ConfirmDetailsForm({
                 name="locality"
                 label={t('staffDetails.locality')}
                 initial={initial.locality}
-                required
                 autoComplete="address-level2"
                 maxLength={120}
                 error={error('locality')}
@@ -207,7 +209,7 @@ export function ConfirmDetailsForm({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control w-full items-center justify-center gap-2 rounded-sm bg-primary px-6 text-control font-semibold text-primary-foreground transition-transform disabled:opacity-60 sm:w-auto sm:self-start motion-safe:hover:-translate-y-px"
+          className="inline-flex h-control w-full items-center justify-center gap-2 rounded-sm bg-primary px-6 text-control font-semibold text-primary-foreground transition-transform disabled:opacity-60 sm:w-auto sm:self-center motion-safe:hover:-translate-y-px"
         >
           {pending ? t('common.working') : t(confirmLabelKey as never)}
           {/* In the setup it is that wizard's Seguinte, with its arrow (Rui, 19-11-2026). */}

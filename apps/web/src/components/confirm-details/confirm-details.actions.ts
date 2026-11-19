@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { requiredDetails, type DetailField } from '@poolse/rules';
+import { asksPayrollDetails, requiredDetails, type DetailField } from '@poolse/rules';
 import { ApiError, apiFetch, apiPatch, apiPut, type Me } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
 
@@ -67,7 +67,9 @@ export async function confirmDetailsAction(_previous: FormState, form: FormData)
       theme: me.user.theme,
     });
 
-    if (required.some((field) => STAFF_FIELDS.includes(field))) {
+    // Staff: the NIF and morada are optional (Rui, 19-11-2026). Saved when something was
+    // typed, so a record this screen could not read is never overwritten with blanks.
+    if (asksPayrollDetails(membership.roles) && STAFF_FIELDS.some((field) => value(field) !== '')) {
       await apiPatch(`/staff/${membership.membershipId}/details`, {
         taxNumber: value('taxNumber'),
         address: value('address'),

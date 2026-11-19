@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { missingDetails, requiredDetails } from './required-details.js';
+import { asksPayrollDetails, missingDetails, requiredDetails } from './required-details.js';
 
 const minor = { adultPathStudent: false };
 const adult = { adultPathStudent: true };
@@ -17,10 +17,14 @@ test('the owner and admins give a name; their mobile is optional (Rui, 19-11-202
   assert.deepEqual(requiredDetails(['admin', 'guardian'], minor), ['firstName', 'lastName', 'mobile']);
 });
 
-test('instructor and maintenance also give a NIF and a morada', () => {
-  const staff = ['firstName', 'lastName', 'mobile', 'taxNumber', 'address', 'postalCode', 'locality'];
+test('instructor and maintenance give a name and a mobile; the NIF and morada are only offered (Rui, 19-11-2026)', () => {
+  const staff = ['firstName', 'lastName', 'mobile'];
   assert.deepEqual(requiredDetails(['instructor'], minor), staff);
   assert.deepEqual(requiredDetails(['maintenance'], minor), staff);
+  assert.equal(asksPayrollDetails(['instructor']), true);
+  assert.equal(asksPayrollDetails(['maintenance']), true);
+  assert.equal(asksPayrollDetails(['owner']), false);
+  assert.equal(asksPayrollDetails(['guardian']), false);
 });
 
 test('a student is asked only on the adult path', () => {
@@ -50,7 +54,9 @@ test('blank, whitespace and absent are missing; a value is not', () => {
       address: 'Rua A',
       postalCode: '1000-001',
     }),
-    ['lastName', 'mobile', 'locality'],
+    ['lastName', 'mobile'],
   );
+  // Absent is missing too, whatever the field.
+  assert.deepEqual(missingDetails(['locality'], { postalCode: '1000-001' }), ['locality']);
   assert.deepEqual(missingDetails(['firstName'], { firstName: 'Ana' }), []);
 });

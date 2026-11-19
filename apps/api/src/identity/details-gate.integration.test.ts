@@ -56,15 +56,9 @@ test('POOLSE-227 — each role is asked only for its own missing details', async
     await owner.query(`UPDATE app_user SET cached_last_name = NULL WHERE clerk_user_id = $1`, [adminLogin]);
     assert.deepEqual(await gapsOf(tenant, adminLogin), ['lastName']);
 
-    // An instructor also needs the NIF and the morada, read from their membership.
+    // An instructor gives a name and a mobile; no NIF or morada is required (Rui, 19-11-2026).
     const coach = await addMember(tenant, 'Rui', 'Coach', ['instructor']);
     const coachLogin = await withLogin(coach, { first: 'Rui', last: 'Coach', phone: '913000000' });
-    assert.deepEqual(await gapsOf(tenant, coachLogin), ['taxNumber', 'address', 'postalCode', 'locality']);
-    await tenant.sql(
-      `UPDATE membership SET tax_number = '234567899', address = 'Rua A, 1', postal_code = '1000-001', locality = 'Lisboa'
-        WHERE id = $1`,
-      [coach],
-    );
     assert.deepEqual(await gapsOf(tenant, coachLogin), []);
 
     // A guardian with no name on Clerk and no mobile.

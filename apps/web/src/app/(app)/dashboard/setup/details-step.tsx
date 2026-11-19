@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { requiredDetails } from '@poolse/rules';
+import { asksPayrollDetails, requiredDetails } from '@poolse/rules';
 import { PageShell } from '@/components/page-shell';
 import { ConfirmDetailsForm } from '@/components/confirm-details/confirm-details-form';
 import { apiFetch, type Me, type StaffDetails } from '@/lib/api';
@@ -22,7 +22,8 @@ export async function DetailsStep({ me }: { me: Me }): Promise<React.ReactElemen
   const membership = me.memberships[0]!;
   const required = requiredDetails(membership.roles, { adultPathStudent: true });
   // An Owner who also teaches gives the payroll details too, prefilled from their record.
-  const known = required.includes('taxNumber')
+  const payroll = asksPayrollDetails(membership.roles);
+  const known = payroll
     ? await apiFetch<StaffDetails>(`/staff/${membership.membershipId}/details`).catch(() => null)
     : null;
   return (
@@ -41,7 +42,8 @@ export async function DetailsStep({ me }: { me: Me }): Promise<React.ReactElemen
             locality: known?.locality ?? '',
           }}
           taxNumberLocked={(known?.taxNumber ?? null) !== null}
-          staffUnreadable={required.includes('taxNumber') && known === null}
+          staffUnreadable={payroll && known === null}
+          payroll={payroll}
           children={null}
           contact={null}
           confirmLabelKey="setup.next"

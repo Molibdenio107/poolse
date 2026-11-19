@@ -201,14 +201,13 @@ only if something is missing. `requiredDetails(roles, …)` in `@poolse/rules` i
 |---|---|
 | owner, admin | first and last name; the mobile is offered, never required (Rui, 19-11-2026) |
 | guardian, a student on the adult path | first and last name, mobile |
-| instructor, maintenance | the above, plus NIF and morada (address, código postal, localidade) |
+| instructor, maintenance | first and last name, mobile; the NIF and morada are offered, optional (`asksPayrollDetails`; Rui, 19-11-2026, which **reverses** "required at every club") |
 
 A minor student with a login is not asked. Several roles ask for the union.
 
 - **Decided by the data, never by a "seen" flag.** `GET /me` returns `detailsMissing` for the
   active club (`identity/details-gate.ts`): the name from Clerk's cache, the mobile from the
-  login, the NIF and morada from the person's own `membership`. Clear one later and the gate
-  comes back.
+  login. Clear one later and the gate comes back. The NIF and morada never open it.
 - **Rendered, not redirected.** The `(app)` layouts (`dashboard/layout.tsx`, `app/layout.tsx`)
   draw `ConfirmDetails` (`components/confirm-details/`) in place of the page whenever the list
   is not empty, after a suspension or an ended support window. A server redirect after Clerk's
@@ -216,8 +215,9 @@ A minor student with a login is not asked. Several roles ask for the union.
 - **Never under a borrowed identity.** Under *Ver como* (POOLSE-188) or a Poolse support
   membership (POOLSE-79) the list is empty; `/admin`, `/join` and the create form have no gate.
 - **No new write path.** `confirmDetailsAction` re-reads `/me`, refuses blanks in the required
-  fields, then saves through `PUT /me/profile` (name to Clerk, mobile to `app_user`) and, for
-  staff, `PATCH /staff/:id/details` on the session's own membership. Two calls are not one
+  fields, then saves through `PUT /me/profile` (name, mobile and the optional date of birth) and,
+  for staff who typed a NIF or morada, `PATCH /staff/:id/details` on the session's own membership
+  (nothing typed, nothing sent, so a record the screen could not read is never blanked). Two calls are not one
   transaction; a failure in the second leaves the first saved and the gate asks for the rest.
 - **Prefilled, so nothing is typed twice.** A NIF the office already typed is shown read-only:
   changing it is the Owner's (POOLSE-149); a blank one the person fills (`docs/features/staff.md`).
@@ -225,7 +225,9 @@ A minor student with a login is not asked. Several roles ask for the union.
   *Avisar a secretaria*: the club's reply email with the child named in the subject, and its
   published phone (`GET /app/club-contact`). No queue of its own.
 - **It looks like the screen that created the club** (Rui, 19-11-2026): the water banner and the
-  Poolse mark, then the fields in headed groups (*Como o contactamos*, *Para os salários*). For an
+  Poolse mark, then *Como o contactamos* and, for staff, the optional NIF and morada with no heading
+  of their own, all on two aligned columns; an optional *Data de nascimento* for everybody; the
+  button centred (Rui, 19-11-2026). For an
   Owner whose club was made a moment ago (setup not yet moved), it is that creation's step 2. It
   shows *O clube* ✓ → *Os seus dados* → *Configurar o clube* and the button says *Continuar*.
 - **On the phone** it is a full screen on the app palette with no tab bar; **on the desk** the

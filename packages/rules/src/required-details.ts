@@ -32,8 +32,21 @@ const CONTACT: readonly DetailField[] = ['firstName', 'lastName', 'mobile'];
  */
 const OFFICE: readonly DetailField[] = ['firstName', 'lastName'];
 
-/** Staff also give a NIF and a morada — the club's payroll (rule 7). */
-const STAFF: readonly DetailField[] = [...CONTACT, 'taxNumber', 'address', 'postalCode', 'locality'];
+/**
+ * Staff give a name and a mobile, like a family. Their NIF and morada are
+ * *offered*, never required (Rui, 19-11-2026, which **reverses** POOLSE-227's
+ * "required of instructors and maintenance at every club"): see
+ * `asksPayrollDetails`.
+ */
+const STAFF: readonly DetailField[] = CONTACT;
+
+/** The details offered to staff as optional: the NIF and the morada. */
+export const PAYROLL_DETAILS: readonly DetailField[] = ['taxNumber', 'address', 'postalCode', 'locality'];
+
+/** Whether the details screen offers the NIF and the morada (optional) to this reader. */
+export function asksPayrollDetails(roles: readonly string[]): boolean {
+  return roles.includes('instructor') || roles.includes('maintenance');
+}
 
 export interface RequiredDetailsContext {
   /**

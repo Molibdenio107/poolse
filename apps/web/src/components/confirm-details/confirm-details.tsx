@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { requiredDetails } from '@poolse/rules';
+import { asksPayrollDetails, requiredDetails } from '@poolse/rules';
 import { Check } from 'lucide-react';
 import { PageShell } from '@/components/page-shell';
 import { LogoLockIn } from '@/components/logo-lock-in';
@@ -36,7 +36,7 @@ export async function ConfirmDetails({ me, surface }: { me: Me; surface: 'desk' 
   const membership = me.memberships[0]!;
   const roles = membership.roles;
   const required = requiredDetails(roles, { adultPathStudent: true });
-  const staff = required.includes('taxNumber');
+  const staff = asksPayrollDetails(roles);
   const guardian = roles.includes('guardian');
 
   // A club made a moment ago: its Owner's setup steps have not moved yet.
@@ -81,6 +81,9 @@ export async function ConfirmDetails({ me, surface }: { me: Me; surface: 'desk' 
       staffUnreadable={staff && details?.state !== 'ok'}
       children={children}
       contact={contact?.state === 'ok' ? contact.data : null}
+      payroll={staff}
+      // Everybody who meets this screen may give a date of birth, optional (Rui, 19-11-2026).
+      birthDate={me.user.birthDate ?? ''}
       {...(creating ? { confirmLabelKey: 'confirmDetails.continue' } : {})}
     />
   );
