@@ -4,6 +4,7 @@ import { Building2, Check, FileSpreadsheet, Users, Waves, type LucideIcon } from
 import { LinkBusy } from '@/components/link-busy';
 import { cn } from '@/lib/utils';
 import { WaterBanner } from '../water-banner';
+import { LogoLockIn } from '@/components/logo-lock-in';
 import { SETUP_STEPS, type SetupStep } from './steps';
 
 /** Each step's picture, used on the banner and nowhere it would be the only sign. */
@@ -29,10 +30,9 @@ export async function SetupHeader({ step, behind }: { step: SetupStep; behind: n
 
   return (
     <section className="overflow-hidden rounded bg-surface shadow-card ring-2 ring-primary/40">
-      <WaterBanner>
-        <span className="onboard-rise inline-flex size-16 items-center justify-center rounded-full bg-surface text-primary shadow-card">
-          <Icon className="size-8" aria-hidden />
-        </span>
+      {/* The Poolse mark, as on the creation screen and Início (Rui, 19-11-2026). */}
+      <WaterBanner tall>
+        <LogoLockIn />
       </WaterBanner>
 
       <div className="flex flex-col gap-6 px-4 pb-6 pt-2 sm:px-8">
@@ -89,7 +89,12 @@ export async function SetupHeader({ step, behind }: { step: SetupStep; behind: n
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">
             {t('setup.progress', { n: at + 1, total: SETUP_STEPS.length })}
           </p>
-          <h2 className="text-xl font-semibold">{t(`setup.step.${step}.title`)}</h2>
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
+            <span aria-hidden className="inline-flex size-8 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Icon className="size-4" />
+            </span>
+            {t(`setup.step.${step}.title`)}
+          </h2>
           <p className="max-w-xl text-sm text-foreground-muted">{t(`setup.step.${step}.hint`)}</p>
         </div>
       </div>

@@ -1,8 +1,9 @@
 import { getTranslations } from 'next-intl/server';
-import { ArrowRight, Check, Clock, Settings } from 'lucide-react';
+import { ArrowRight, Check, Clock } from 'lucide-react';
 import { FromLink } from '@/components/from-link';
 import { cn } from '@/lib/utils';
 import { WaterBanner } from '../water-banner';
+import { LogoLockIn } from '@/components/logo-lock-in';
 import { SETUP_STEPS, type WizardState } from '../setup/steps';
 import { VamosComecar, type ChecklistAnswer } from './vamos-comecar';
 
@@ -38,10 +39,9 @@ export async function SetupPanel({
       aria-labelledby="setup-panel-title"
       className="overflow-hidden rounded bg-surface shadow-card ring-2 ring-primary/50"
     >
-      <WaterBanner>
-        <span className="inline-flex size-14 items-center justify-center rounded-full bg-surface/90 text-primary shadow-card">
-          <Settings className="size-7" aria-hidden />
-        </span>
+      {/* The Poolse mark, as on the creation screen and the setup itself (Rui, 19-11-2026). */}
+      <WaterBanner tall>
+        <LogoLockIn />
       </WaterBanner>
 
       <div className="flex flex-col gap-5 p-5 sm:p-8">
