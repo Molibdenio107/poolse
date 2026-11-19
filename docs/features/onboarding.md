@@ -63,8 +63,10 @@ wizard" (Rui, 19-11-2026): the creation form stays one screen, and the guide com
 
 1. **Clube.** The NIPC (`TaxPanel`), the site's morada (`SiteDetailsForm`), the contacts
    (`ClubContactsPanel`) and the logo (`LogoPanel`). The name was asked at creation.
-2. **Recintos e horário.** The first site's pools, with *Novo tanque* to the existing
-   new-pool page, and its opening hours (`HoursPanel`).
+2. **Recintos e horário.** The first site's pools, each with *Abrir* to its own page, and
+   *Adicionar tanque* in the step itself (name, length, lanes; `addSetupPoolAction`), which
+   lists the new tank at once and never leaves the setup (Rui, 19-11-2026). Then the opening
+   hours (`HoursPanel`).
 3. **Convidar equipa.** The Staff page's `InviteForm`, with admin, instructor and maintenance only.
 4. **Já tem alunos ou horários numa folha?** The students importer and the calendar (which
    holds the timetable import), each stamped with this step as their way back. *Não, começar

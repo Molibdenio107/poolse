@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
+import { AddPoolForm } from './add-pool-form';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { CalendarDays, FileSpreadsheet, Plus, Waves } from 'lucide-react';
+import { CalendarDays, FileSpreadsheet, Waves } from 'lucide-react';
 import { COUNTRY_CODES } from '@poolse/rules';
 import { PageError, PageShell } from '@/components/page-shell';
 import { FromLink } from '@/components/from-link';
@@ -178,19 +179,22 @@ async function PlacesStep(): Promise<React.ReactElement> {
           <ul className="flex flex-col gap-2">
             {site.pools.map((pool) => (
               <li key={pool.id} className="flex items-center gap-2">
-                <Waves className="size-4 text-primary" aria-hidden />
-                {pool.name}
+                <Waves className="size-4 shrink-0 text-primary" aria-hidden />
+                <span className="min-w-0 flex-1 truncate">{pool.name}</span>
+                {/* The rest of the tank (photos, volume, depths) is on its own page. */}
+                <FromLink
+                  href={`/dashboard/facilities/pools/${pool.id}`}
+                  aria-label={t('setup.step.places.openPool', { name: pool.name })}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {t('setup.step.places.open')}
+                </FromLink>
               </li>
             ))}
           </ul>
         )}
-        <FromLink
-          href={`/dashboard/facilities/pools/new?facilityId=${site.id}`}
-          className="inline-flex h-control items-center justify-center gap-2 self-start rounded-sm bg-surface px-4 text-control shadow-card"
-        >
-          <Plus className="size-4" aria-hidden />
-          {t('facilities.newPool')}
-        </FromLink>
+        {/* Rui, 19-11-2026: a tank is added here, without leaving the setup. */}
+        {site.canManage && <AddPoolForm organizationId={site.organizationId} facilityId={site.id} />}
         </div>
       </section>
       <section className={CARD}>

@@ -145,6 +145,27 @@ export async function createPoolAction(
   return { ok: true, redirectTo: `/dashboard/facilities/pools/${created.id}` };
 }
 
+/**
+ * A tank added from the setup's step 2 — Rui, 19-11-2026: the Owner stays in the
+ * setup instead of leaving for the full form. The same API call as
+ * `createPoolAction`, with only name, length and lanes filled; the step lists it
+ * at once, and *Abrir* takes the rest (photos, volume, depths) to its own page.
+ */
+export async function addSetupPoolAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const facilityId = String(formData.get('facilityId') ?? '');
+  const body = poolBody(formData);
+  if (!body['name']) return { ok: false, errorKey: 'facilities.poolNameRequired' };
+  try {
+    await apiPost<{ id: string }>(`/facilities/${facilityId}/pools`, body, { organizationId });
+  } catch (error) {
+    return lanesInUse(error) ?? failure(error, 'facilities.poolFailed');
+  }
+  revalidatePath('/dashboard/setup');
+  revalidatePath('/dashboard/facilities');
+  return { ok: true };
+}
+
 export async function updatePoolAction(
   _previous: FormState,
   formData: FormData,

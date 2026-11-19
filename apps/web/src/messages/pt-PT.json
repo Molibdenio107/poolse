@@ -8876,7 +8876,11 @@
         "title": "Recintos e horário",
         "hint": "As piscinas desta instalação e o horário de funcionamento.",
         "pools": "Piscinas",
-        "noPools": "Ainda não há piscinas nesta instalação."
+        "noPools": "Ainda não há piscinas nesta instalação.",
+        "addPool": "Adicionar tanque",
+        "poolHint": "Basta o nome. Fotografias, volume, profundidades e lotação ficam na página do tanque, em Abrir.",
+        "open": "Abrir",
+        "openPool": "Abrir o tanque {name}"
       },
       "team": {
         "short": "Equipa",

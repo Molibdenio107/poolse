@@ -8876,7 +8876,11 @@
         "title": "Venues and opening hours",
         "hint": "This site's pools and when it opens.",
         "pools": "Pools",
-        "noPools": "This site has no pools yet."
+        "noPools": "This site has no pools yet.",
+        "addPool": "Add tank",
+        "poolHint": "The name is enough. Photos, volume, depths and capacity are on the tank's page, under Open.",
+        "open": "Open",
+        "openPool": "Open the tank {name}"
       },
       "team": {
         "short": "Team",
