@@ -36,24 +36,30 @@ export function StepControls({
   const [, action, pending] = useSavedAction(moveStepAction, INITIAL);
 
   return (
-    <div className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card sm:flex-row sm:flex-wrap sm:items-center">
-      <form action={action} className="contents">
-        <input type="hidden" name="step" value={step} />
-        <button type="submit" name="outcome" value="done" disabled={pending} className={PRIMARY}>
-          {t(nextLabelKey as never)}
-        </button>
-      </form>
-      {previous !== null && (
-        <form action={action} className="contents">
-          <input type="hidden" name="step" value={previous} />
-          <button type="submit" name="outcome" value="open" disabled={pending} className={SECONDARY}>
-            {t('common.back')}
+    <div className="flex flex-col items-center gap-3">
+      {/* Voltar on the left, Seguinte on the right (Rui, 19-11-2026). */}
+      <div className="flex w-full flex-wrap items-center justify-between gap-3 rounded bg-surface p-4 shadow-card">
+        {previous !== null ? (
+          <form action={action}>
+            <input type="hidden" name="step" value={previous} />
+            <button type="submit" name="outcome" value="open" disabled={pending} className={SECONDARY}>
+              {t('common.back')}
+            </button>
+          </form>
+        ) : (
+          <span aria-hidden />
+        )}
+        <form action={action}>
+          <input type="hidden" name="step" value={step} />
+          <button type="submit" name="outcome" value="done" disabled={pending} className={PRIMARY}>
+            {t(nextLabelKey as never)}
           </button>
         </form>
-      )}
+      </div>
+      {/* Leaving for later is the quiet way out: below the card, centred, smaller. */}
       <Link
         href="/dashboard/welcome"
-        className="inline-flex min-h-control items-center text-sm text-foreground-muted hover:text-foreground sm:ml-auto"
+        className="inline-flex min-h-control items-center text-xs text-foreground-muted hover:text-foreground"
       >
         {t('setup.finishLater')}
         <LinkBusy />

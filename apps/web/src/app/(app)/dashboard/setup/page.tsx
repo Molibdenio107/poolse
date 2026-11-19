@@ -20,6 +20,8 @@ import { isSetupStep, SETUP_STEPS, type SetupStep, type WizardState } from './st
 const TEAM_ROLES = ['admin', 'instructor', 'maintenance'];
 
 const CARD = 'flex flex-col gap-4 rounded bg-surface p-5 shadow-card';
+/** The card keeps the page's width; what is in it sits in a centred column (Rui, 19-11-2026). */
+const INNER = 'mx-auto flex w-full max-w-2xl flex-col gap-4';
 const HEADING = 'text-sm font-medium uppercase tracking-wider text-foreground-muted';
 
 /**
@@ -91,11 +93,14 @@ async function ClubStep(): Promise<React.ReactElement> {
   return (
     <div className="flex flex-col gap-4">
       <section className={CARD}>
+        <div className={INNER}>
         <h3 className={HEADING}>{t('settings.tax.title')}</h3>
         <TaxPanel settings={tax.data} />
+        </div>
       </section>
       {site !== null && (
         <section className={CARD}>
+        <div className={INNER}>
           <h3 className={HEADING}>{t('setup.step.club.address')}</h3>
           <SiteDetailsForm
             facilityId={site.id}
@@ -117,13 +122,16 @@ async function ClubStep(): Promise<React.ReactElement> {
               />
             }
           />
-        </section>
+          </div>
+      </section>
       )}
       <section className={CARD}>
+        <div className={INNER}>
         <h3 className={HEADING}>{t('clubData.contacts.title')}</h3>
         <ClubContactsPanel settings={tax.data} />
+        </div>
       </section>
-      <LogoPanel />
+      <LogoPanel centered />
     </div>
   );
 }
@@ -137,6 +145,7 @@ async function PlacesStep(): Promise<React.ReactElement> {
   return (
     <div className="flex flex-col gap-4">
       <section className={CARD}>
+        <div className={INNER}>
         <h3 className={HEADING}>{t('setup.step.places.pools')}</h3>
         {site.pools.length === 0 ? (
           <p className="text-sm text-foreground-muted">{t('setup.step.places.noPools')}</p>
@@ -157,10 +166,13 @@ async function PlacesStep(): Promise<React.ReactElement> {
           <Plus className="size-4" aria-hidden />
           {t('facilities.newPool')}
         </FromLink>
+        </div>
       </section>
       <section className={CARD}>
+        <div className={INNER}>
         <h3 className={HEADING}>{t('facilities.hours')}</h3>
         <HoursPanel organizationId={site.organizationId} facilityId={site.id} hours={site.hours} canManage={site.canManage} />
+        </div>
       </section>
     </div>
   );
@@ -175,8 +187,10 @@ async function TeamStep(): Promise<React.ReactElement> {
 
   return (
     <section className={CARD}>
+        <div className={INNER}>
       <InviteForm organizationId={people.organizationId} grantableRoles={roles} />
-    </section>
+      </div>
+      </section>
   );
 }
 

@@ -14,7 +14,12 @@ import { storageConfigured } from '@/lib/storage-status';
  * document. It is the club's, not the site's, and the hint says so. Owner and
  * admin, as the rest of the page.
  */
-export async function LogoPanel(): Promise<React.ReactElement> {
+export async function LogoPanel({
+  centered = false,
+}: {
+  /** The setup wizard's look: the card full width, its content in a centred column. */
+  centered?: boolean;
+} = {}): Promise<React.ReactElement> {
   const t = await getTranslations();
   const [{ fileId }, ready] = await Promise.all([
     apiFetch<{ fileId: string | null }>('/settings/logo'),
@@ -24,6 +29,7 @@ export async function LogoPanel(): Promise<React.ReactElement> {
 
   return (
     <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
+      <div className={centered ? 'mx-auto flex w-full max-w-2xl flex-col gap-3' : 'contents'}>
       <div>
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('files.logoTitle')}
@@ -42,6 +48,7 @@ export async function LogoPanel(): Promise<React.ReactElement> {
           unavailable={ready ? null : t('files.notConfigured')}
         />
         {url !== null && <DetachFileButton target="logo" label={t('files.logoRemove')} />}
+      </div>
       </div>
     </section>
   );
