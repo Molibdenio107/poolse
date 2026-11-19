@@ -13,6 +13,8 @@ import { Pagination } from '@/components/pagination';
 import { listIncidents } from './incidents.actions';
 import { SiteLinks } from './site-links';
 import { buttonClass } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 
 /**
  * Ocorrências — POOLSE-70, slice 1.
@@ -109,6 +111,12 @@ export default async function IncidentsPage({
             icon={ShieldCheck}
             message={t('incidents.empty', { site: chosen.name })}
             hint={t('incidents.emptyHint')}
+            // POOLSE-233: the same way in as the header's, for the same readers.
+            action={
+              <Button href={newHref} icon={Plus}>
+                {t('incidents.new')}
+              </Button>
+            }
           />
         )}
 

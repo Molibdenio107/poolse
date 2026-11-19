@@ -14,6 +14,9 @@ import { createMeter } from './energy.actions';
 import { DIAL_SETS, UNITS_OF_CARRIER } from '@poolse/rules';
 import { buttonClass } from '@/components/ui/button';
 import { usePageAction } from '@/components/ui/page-action';
+import { Button } from '@/components/ui/button';
+import { PageEmpty } from '@/components/page-shell';
+import { Upload } from 'lucide-react';
 
 /**
  * Energy — slices 5.1 and 5.2, on the site's page.
@@ -53,12 +56,36 @@ export function EnergyPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* POOLSE-233: a site with no meter offers its first two steps, to who may take them. */}
+      {list.meters.length === 0 && (
+        <PageEmpty
+          icon={Gauge}
+          message={t('energy.emptyTitle')}
+          hint={t('energy.hint')}
+          action={
+            list.canPlan ? (
+              <Button icon={Plus} onClick={() => setAdding(true)}>
+                {t('energy.add')}
+              </Button>
+            ) : undefined
+          }
+          secondaryAction={
+            list.canRecord ? (
+              <Button
+                variant="secondary"
+                icon={Upload}
+                onClick={() => window.dispatchEvent(new CustomEvent('poolse:energy-import'))}
+              >
+                {t('energy.dashboard.importIt')}
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
+
+      {list.meters.length > 0 && (
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-foreground-muted">
-          {list.meters.length === 0
-            ? t('energy.hint')
-            : t('energy.summary', { count: list.meters.length })}
-        </p>
+        <p className="text-sm text-foreground-muted">{t('energy.summary', { count: list.meters.length })}</p>
 
         {list.canPlan && (
           <button type="button" onClick={() => setAdding(true)} className={buttonClass('primary')}>
@@ -67,6 +94,7 @@ export function EnergyPanel({
           </button>
         )}
       </div>
+      )}
 
       {list.meters.length > 0 && (
         <ul className="flex flex-col divide-y divide-border rounded border border-border">

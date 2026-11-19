@@ -20,6 +20,9 @@ import { Reveal } from '@/components/ui/reveal';
 import { SelectList } from '@/components/ui/list-select';
 import { buttonClass } from '@/components/ui/button';
 import { scrollToId, usePageAction } from '@/components/ui/page-action';
+import { Button } from '@/components/ui/button';
+import { PageEmpty } from '@/components/page-shell';
+import { Package, Plus } from 'lucide-react';
 
 /**
  * What the club owns, at one site — round 6.
@@ -518,10 +521,43 @@ export function InventoryPanel({
           empty when it holds four hundred things — and the fix for one is to add
           an item while the fix for the other is to clear the box.
         */}
-        {items.length === 0 ? (
-          <p className="text-sm text-foreground-muted">
-            {search === '' ? t('inventory.empty') : t('inventory.noMatches', { term: search })}
-          </p>
+        {items.length === 0 && search === '' ? (
+          // POOLSE-233: an empty store room offers its first two steps, to who may take them.
+          <PageEmpty
+            icon={Package}
+            message={t('inventory.empty')}
+            hint={canManage ? t('inventory.emptyHint') : undefined}
+            action={
+              canManage ? (
+                <Button
+                  icon={Plus}
+                  onClick={() => {
+                    setAdding(true);
+                    scrollToId('inventory-add');
+                  }}
+                >
+                  {t('inventory.add')}
+                </Button>
+              ) : undefined
+            }
+            secondaryAction={
+              canManage ? (
+                <Button
+                  variant="secondary"
+                  icon={Upload}
+                  onClick={() => {
+                    setAccepted(null);
+                    setOpen(true);
+                    reveal();
+                  }}
+                >
+                  {t('inventory.import.action')}
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : items.length === 0 ? (
+          <p className="text-sm text-foreground-muted">{t('inventory.noMatches', { term: search })}</p>
         ) : (
           /*
             A table, since the counts needed a heading.

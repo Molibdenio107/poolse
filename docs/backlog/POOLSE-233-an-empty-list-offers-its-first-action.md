@@ -12,6 +12,12 @@ Rui, 19-11-2026: an empty list should say what to do and offer it. *Ocorrências
 - Empty states on other pages (they follow when touched, with the same pattern).
 - A new importer. *Importar* appears only where one exists.
 
+### As built (19-11-2026)
+
+- Walked in a browser on a fresh throwaway club (all three lists empty): each card shows its buttons, and Inventário's *Adicionar artigo* opens the add form. Energia's card sits under the cost summary, with the same two actions in the header.
+- **The e2e line for an empty state is not written.** The E2E club has data in all three lists, and making one empty means a site the suite would have to create and archive each run. Left for a later pass; the walk above stands in for it.
+- An empty Inventário now shows *Importar de ficheiro* three times (header, the search card's own, the empty card). Both tickets asked for it; worth a look when Rui walks it.
+
 ### BA — rules
 
 1. **Inventário**, empty for the chosen site: `PageEmpty` with `action` = *Adicionar artigo* (primary `<Button>`) and `secondaryAction` = *Importar de ficheiro* (secondary), both opening what the header's buttons open.
@@ -39,6 +45,6 @@ Rui, 19-11-2026: an empty list should say what to do and offer it. *Ocorrências
 8. Cross-tenant: no new route.
 
 ### Acceptance criteria
-- [ ] Three empty states with their actions, role-gated by existing flags.
-- [ ] Perdidos e achados label and aria-label.
-- [ ] e2e line for one empty state; both themes checked.
+- [x] Three empty states with their actions, role-gated by existing flags.
+- [x] Perdidos e achados label and aria-label.
+- [ ] e2e line for one empty state (not written, see *As built*); light theme walked.

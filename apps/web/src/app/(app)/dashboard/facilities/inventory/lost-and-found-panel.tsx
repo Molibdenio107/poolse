@@ -131,7 +131,13 @@ export function LostAndFoundPanel({
                   onDone={() => setAdding(false)}
                 />
               ) : (
-                <button type="button" className={BUTTON} onClick={() => setAdding(true)}>
+                <button
+                  type="button"
+                  className={BUTTON}
+                  onClick={() => setAdding(true)}
+                  // POOLSE-233: the button says *Registar*; a screen reader hears what is registered.
+                  aria-label={t('inventory.lostAndFound.addAria')}
+                >
                   <Plus aria-hidden className="size-4" />
                   {t('inventory.lostAndFound.add')}
                 </button>
