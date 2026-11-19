@@ -65,8 +65,9 @@ wizard" (Rui, 19-11-2026): the creation form stays one screen, and the guide com
 0. **Os seus dados.** The details form (`ConfirmDetailsForm`) with an optional *Data de
    nascimento*, saved through `PUT /me/profile`, the same date *O meu perfil* holds. It is the
    web's own step (`WIZARD_STEPS`; the API's pointer starts at `club`): a setup that has not
-   moved opens on it, and while a required detail is missing it is the only step. The layout does
-   not draw the separate details screen for an Owner mid-setup (`guided`). Its *Seguinte* saves
+   moved opens on it. While a required detail is missing, the layout draws this step in place
+   of any page (`SetupDetailsGate`, menus hidden) for an Owner whose club has a setup, at any
+   stage; the old details screen is left to staff, families and clubs without one. Its *Seguinte* saves
    and opens *Clube*; *Voltar* from *Clube* is a link back.
 1. **Clube.** The NIPC (`TaxPanel`), the site's morada (`SiteDetailsForm`), the contacts
    (`ClubContactsPanel`) and the logo (`LogoPanel`). The name was asked at creation.

@@ -2,11 +2,10 @@ import { redirect } from 'next/navigation';
 import { AddPoolForm } from './add-pool-form';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { CalendarDays, FileSpreadsheet, Waves } from 'lucide-react';
-import { COUNTRY_CODES, requiredDetails } from '@poolse/rules';
+import { COUNTRY_CODES } from '@poolse/rules';
 import { PageError, PageShell } from '@/components/page-shell';
 import { FromLink } from '@/components/from-link';
-import { ApiError, apiFetch, type Facilities, type FacilityDetail, type Me, type People, type StaffDetails } from '@/lib/api';
-import { ConfirmDetailsForm } from '@/components/confirm-details/confirm-details-form';
+import { ApiError, apiFetch, type Facilities, type FacilityDetail, type Me, type People } from '@/lib/api';
 import { ClubContactsPanel, TaxPanel } from '../facilities/[facilityId]/tax-panel';
 import { LogoPanel } from '../facilities/[facilityId]/logo-panel';
 import { SiteDetailsForm } from '../facilities/[facilityId]/address-field';
@@ -15,9 +14,7 @@ import { HoursPanel } from '../facilities/[facilityId]/hours-panel';
 import { readTaxSettings } from '../facilities/[facilityId]/club.actions';
 import { InviteForm } from '../facilities/staff/invite-form';
 import { DetailsNext, FinishLater, StepControls } from './step-controls';
-
-/** Step 1's form, submitted by the wizard's own bottom bar. */
-const DETAILS_FORM = 'setup-details';
+import { DETAILS_FORM, DetailsStep } from './details-step';
 import { SetupHeader } from './stepper';
 import { isWizardStep, WIZARD_STEPS, type WizardState, type WizardStep } from './steps';
 
@@ -104,47 +101,6 @@ export default async function SetupPage({
       </SetupHeader>
       <FinishLater />
     </PageShell>
-  );
-}
-
-/**
- * 1 · Os seus dados: the details form of *Confirmar os seus dados*, with the
- * optional date of birth of *O meu perfil* (Rui, 19-11-2026). Its own button is
- * *Seguinte*: it saves through the profile and opens the next step.
- */
-async function DetailsStep({ me }: { me: Me }): Promise<React.ReactElement> {
-  const membership = me.memberships[0]!;
-  const required = requiredDetails(membership.roles, { adultPathStudent: true });
-  // An Owner who also teaches gives the payroll details too, prefilled from their record.
-  const known = required.includes('taxNumber')
-    ? await apiFetch<StaffDetails>(`/staff/${membership.membershipId}/details`).catch(() => null)
-    : null;
-  return (
-    <section className={CARD}>
-      <div className={INNER}>
-        <ConfirmDetailsForm
-          required={required}
-          missing={me.detailsMissing ?? []}
-          initial={{
-            firstName: me.user.firstName ?? '',
-            lastName: me.user.lastName ?? '',
-            contactPhone: me.user.contactPhone ?? '',
-            taxNumber: known?.taxNumber ?? '',
-            address: known?.address ?? '',
-            postalCode: known?.postalCode ?? '',
-            locality: known?.locality ?? '',
-          }}
-          taxNumberLocked={(known?.taxNumber ?? null) !== null}
-          staffUnreadable={required.includes('taxNumber') && known === null}
-          children={null}
-          contact={null}
-          confirmLabelKey="setup.next"
-          birthDate={me.user.birthDate ?? ''}
-          then="/dashboard/setup?step=club"
-          formId={DETAILS_FORM}
-        />
-      </div>
-    </section>
   );
 }
 

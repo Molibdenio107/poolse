@@ -16,6 +16,15 @@ import { readAttention } from '@/lib/attention';
 import { readShell } from '@/lib/shell';
 import { SuspendedNotice } from './suspended-notice';
 import { PhoneLanding } from './phone-landing';
+import { SetupDetailsGate } from './setup/details-step';
+import type { WizardState } from './setup/steps';
+
+/** The Owner's setup, when their club has one (`GET /onboarding`); null for none or any failure. */
+async function ownerWizard(): Promise<WizardState | null> {
+  return apiFetch<{ wizard: WizardState | null }>('/onboarding')
+    .then(({ wizard }) => wizard)
+    .catch(() => null);
+}
 import { familyOnly, landsInTeaching } from '@/lib/app-hats';
 import { ClubSupportStrip, SupportEndedNotice, SupportSessionBanner } from './support-strip';
 import { ConfirmDetails } from '@/components/confirm-details/confirm-details';
@@ -232,9 +241,13 @@ export default async function DashboardLayout({
   }
 
   // POOLSE-227: the details the club still needs, in place of the page and never
-  // a redirect (a redirect after Clerk's sign-in leaves a blank page). Not for an
-  // Owner mid-setup: there they are the wizard's step 1 (Rui, 19-11-2026).
-  if (gate !== null && !guided) return <ConfirmDetails me={gate} surface="desk" />;
+  // a redirect (a redirect after Clerk's sign-in leaves a blank page). An Owner
+  // whose club has a setup meets them as that wizard's step 1, inside the shell
+  // with the menus hidden — the only wizard (Rui, 19-11-2026). Anybody else, and
+  // an Owner of a club with no setup, keeps *Confirmar os seus dados*.
+  const ownerSetup = gate !== null && roles.includes('owner') ? await ownerWizard() : null;
+  if (gate !== null && ownerSetup === null) return <ConfirmDetails me={gate} surface="desk" />;
+  const menusHidden = guided || ownerSetup !== null;
 
   return (
     // POOLSE-88: clear of a landscape phone's rounded corners and notch.
@@ -262,7 +275,7 @@ export default async function DashboardLayout({
             finished or *Ir para o painel* on Início. The search, the bell and the
             account stay, so nobody is stranded.
           */}
-          {guided ? (
+          {menusHidden ? (
             <span className="flex min-w-0 items-center gap-2 font-semibold">
               {logoFileId !== null && (
                 // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id
@@ -320,7 +333,7 @@ export default async function DashboardLayout({
           printed today; when something is, it inherits this for free.
         */}
         <div className="contents print:hidden">
-          {!guided && <AppSidebar roles={roles} kind={kind} modules={modules} sports={sports} badges={badges} />}
+          {!menusHidden && <AppSidebar roles={roles} kind={kind} modules={modules} sports={sports} badges={badges} />}
         </div>
 
         {/*
@@ -357,7 +370,7 @@ export default async function DashboardLayout({
 
           {/* Nothing under the home bar — POOLSE-88. */}
           <SportShell roles={roles} kind={kind} modules={modules} sports={sports} className="min-w-0 flex-1 pb-safe-bottom">
-            {children}
+            {gate !== null && ownerSetup !== null ? <SetupDetailsGate me={gate} wizard={ownerSetup} /> : children}
           </SportShell>
         </div>
       </div>

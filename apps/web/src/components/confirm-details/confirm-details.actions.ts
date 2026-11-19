@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { requiredDetails, type DetailField } from '@poolse/rules';
 import { ApiError, apiFetch, apiPatch, apiPut, type Me } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
@@ -87,6 +88,8 @@ export async function confirmDetailsAction(_previous: FormState, form: FormData)
   revalidatePath('/', 'layout');
   // The setup's step 1 goes on to the next step; only a setup address, never an open redirect.
   const then = String(form.get('then') ?? '');
-  if (/^\/dashboard\/setup\?step=[a-z]+$/.test(then)) return { ok: true, quiet: true, redirectTo: then };
+  // A server redirect, not `redirectTo`: as the wizard's step 1 in place of a page, the
+  // layout's refresh unmounts this form before a client-side hand-off could run.
+  if (/^\/dashboard\/setup\?step=[a-z]+$/.test(then)) redirect(then);
   return { ok: true, toastKey: 'confirmDetails.saved' };
 }
