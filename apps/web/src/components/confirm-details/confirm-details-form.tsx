@@ -54,6 +54,7 @@ export function ConfirmDetailsForm({
   confirmLabelKey = 'confirmDetails.confirm',
   birthDate,
   then,
+  formId,
 }: {
   /**
    * The setup's step 1 (Rui, 19-11-2026): an optional date of birth, the same
@@ -63,6 +64,11 @@ export function ConfirmDetailsForm({
   birthDate?: string;
   /** Where to go once saved — the setup's next step. Only a setup address is honoured. */
   then?: string;
+  /**
+   * The form's id, for the setup: its *Seguinte* sits in the wizard's bottom bar
+   * like every other step's (`DetailsNext`), and submits this form by `form=`.
+   */
+  formId?: string;
   /** What the button says: *Continuar* when this is a step of creating a club. */
   confirmLabelKey?: string;
   required: DetailField[];
@@ -93,7 +99,7 @@ export function ConfirmDetailsForm({
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <form ref={formRef} action={action} className="flex flex-col gap-6">
+      <form ref={formRef} id={formId} action={action} className="flex flex-col gap-6">
         <fieldset className="onboard-rise flex flex-col gap-3" style={{ '--i': 1 } as React.CSSProperties}>
           <GroupLegend icon={UserRound} label={t('confirmDetails.groupContact')} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -116,6 +122,8 @@ export function ConfirmDetailsForm({
             error={error('lastName')}
           />
         </div>
+        {/* With a date of birth beside it, the mobile takes the name's grid (Rui, 19-11-2026). */}
+        <div className={birthDate === undefined ? 'contents' : 'grid grid-cols-1 gap-3 sm:grid-cols-2'}>
         <TextField
           name="contactPhone"
           type="tel"
@@ -138,6 +146,7 @@ export function ConfirmDetailsForm({
             error={state.fields?.['birthDate'] === undefined ? undefined : t(state.fields['birthDate'] as never)}
           />
         )}
+        </div>
         </fieldset>
         {then !== undefined && <input type="hidden" name="then" value={then} />}
 
@@ -194,6 +203,7 @@ export function ConfirmDetailsForm({
           </fieldset>
         )}
 
+        {formId === undefined && (
         <button
           type="submit"
           disabled={pending}
@@ -203,6 +213,7 @@ export function ConfirmDetailsForm({
           {/* In the setup it is that wizard's Seguinte, with its arrow (Rui, 19-11-2026). */}
           {then !== undefined && !pending && <ArrowRight className="size-4" aria-hidden />}
         </button>
+        )}
       </form>
 
       {children !== null && children.length > 0 && (

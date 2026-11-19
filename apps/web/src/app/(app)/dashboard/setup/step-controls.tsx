@@ -94,6 +94,24 @@ export function StepControls({
   );
 }
 
+/**
+ * Step 1's way on (Rui, 19-11-2026): the same bar and *Seguinte* as every other
+ * step, submitting the details form by `form=` — the form saves through the
+ * profile and opens *Clube* itself.
+ */
+export function DetailsNext({ formId }: { formId: string }): React.ReactElement {
+  const t = useTranslations();
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-8">
+      <span aria-hidden />
+      <button type="submit" form={formId} className={PRIMARY}>
+        {t('setup.next')}
+        <ArrowRight className="size-4" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
 /** Leaving for later, the quiet way out: under the card, centred, smaller. */
 export function FinishLater(): React.ReactElement {
   const t = useTranslations();

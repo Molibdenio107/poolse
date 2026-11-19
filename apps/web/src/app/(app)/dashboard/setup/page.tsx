@@ -14,7 +14,10 @@ import { CityPicker } from '../facilities/[facilityId]/city-picker';
 import { HoursPanel } from '../facilities/[facilityId]/hours-panel';
 import { readTaxSettings } from '../facilities/[facilityId]/club.actions';
 import { InviteForm } from '../facilities/staff/invite-form';
-import { FinishLater, StepControls } from './step-controls';
+import { DetailsNext, FinishLater, StepControls } from './step-controls';
+
+/** Step 1's form, submitted by the wizard's own bottom bar. */
+const DETAILS_FORM = 'setup-details';
 import { SetupHeader } from './stepper';
 import { isWizardStep, WIZARD_STEPS, type WizardState, type WizardStep } from './steps';
 
@@ -83,7 +86,7 @@ export default async function SetupPage({
         step={step}
         behind={wizard.step === null ? WIZARD_STEPS.length : WIZARD_STEPS.indexOf(wizard.step)}
         footer={
-          step === 'details' ? undefined : (
+          step === 'details' ? <DetailsNext formId={DETAILS_FORM} /> : (
           <StepControls
             step={step}
             previous={previous}
@@ -138,6 +141,7 @@ async function DetailsStep({ me }: { me: Me }): Promise<React.ReactElement> {
           confirmLabelKey="setup.next"
           birthDate={me.user.birthDate ?? ''}
           then="/dashboard/setup?step=club"
+          formId={DETAILS_FORM}
         />
       </div>
     </section>
