@@ -8823,7 +8823,7 @@
     "continue": "Continue",
     "cardTitle": "{club}: a few details from you",
     "creatingTitle": "Now, your details",
-    "creatingIntro": "The club is created. Confirm your name and mobile, the club owner's contact. Next, we set up the club.",
+    "creatingIntro": "The club is created. Confirm your name; the mobile is optional. Next, we set up the club.",
     "creatingSteps": "Creating the club",
     "creating": {
       "club": "The club",

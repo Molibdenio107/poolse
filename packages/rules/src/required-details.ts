@@ -22,8 +22,15 @@ export const DETAIL_FIELDS = [
 
 export type DetailField = (typeof DETAIL_FIELDS)[number];
 
-/** A name and a mobile: what every club needs to reach anybody. */
+/** A name and a mobile: what a club needs to reach a family or a member of staff. */
 const CONTACT: readonly DetailField[] = ['firstName', 'lastName', 'mobile'];
+
+/**
+ * The owner and admins give a name; their mobile is offered, never required
+ * (Rui, 19-11-2026): nothing in Poolse sends to it, so asking for it at the door
+ * was a requirement with no use.
+ */
+const OFFICE: readonly DetailField[] = ['firstName', 'lastName'];
 
 /** Staff also give a NIF and a morada — the club's payroll (rule 7). */
 const STAFF: readonly DetailField[] = [...CONTACT, 'taxNumber', 'address', 'postalCode', 'locality'];
@@ -41,7 +48,8 @@ export function requiredDetails(roles: readonly string[], context: RequiredDetai
   const wanted = new Set<DetailField>();
   for (const role of roles) {
     if (role === 'instructor' || role === 'maintenance') STAFF.forEach((field) => wanted.add(field));
-    else if (role === 'owner' || role === 'admin' || role === 'guardian') CONTACT.forEach((field) => wanted.add(field));
+    else if (role === 'guardian') CONTACT.forEach((field) => wanted.add(field));
+    else if (role === 'owner' || role === 'admin') OFFICE.forEach((field) => wanted.add(field));
     else if (role === 'student' && context.adultPathStudent) CONTACT.forEach((field) => wanted.add(field));
   }
   return DETAIL_FIELDS.filter((field) => wanted.has(field));

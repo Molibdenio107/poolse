@@ -5,10 +5,16 @@ import { missingDetails, requiredDetails } from './required-details.js';
 const minor = { adultPathStudent: false };
 const adult = { adultPathStudent: true };
 
-test('owner, admin and guardian give a name and a mobile', () => {
-  for (const role of ['owner', 'admin', 'guardian']) {
-    assert.deepEqual(requiredDetails([role], minor), ['firstName', 'lastName', 'mobile'], role);
+test('a guardian gives a name and a mobile', () => {
+  assert.deepEqual(requiredDetails(['guardian'], minor), ['firstName', 'lastName', 'mobile']);
+});
+
+test('the owner and admins give a name; their mobile is optional (Rui, 19-11-2026)', () => {
+  for (const role of ['owner', 'admin']) {
+    assert.deepEqual(requiredDetails([role], minor), ['firstName', 'lastName'], role);
   }
+  // An admin who is also a guardian is asked as a guardian.
+  assert.deepEqual(requiredDetails(['admin', 'guardian'], minor), ['firstName', 'lastName', 'mobile']);
 });
 
 test('instructor and maintenance also give a NIF and a morada', () => {
@@ -25,6 +31,7 @@ test('a student is asked only on the adult path', () => {
 test('several roles ask for the union, in form order', () => {
   assert.deepEqual(requiredDetails(['guardian', 'instructor'], minor), requiredDetails(['instructor'], minor));
   assert.deepEqual(requiredDetails(['admin', 'student'], adult), ['firstName', 'lastName', 'mobile']);
+  assert.deepEqual(requiredDetails(['owner', 'student'], minor), ['firstName', 'lastName']);
 });
 
 test('an unknown role asks for nothing', () => {

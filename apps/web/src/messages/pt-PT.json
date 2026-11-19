@@ -8823,7 +8823,7 @@
     "continue": "Continuar",
     "cardTitle": "{club}: faltam alguns dados seus",
     "creatingTitle": "Agora, os seus dados",
-    "creatingIntro": "O clube está criado. Confirme o seu nome e telemóvel, que são o contacto do titular do clube. A seguir, configuramos o clube.",
+    "creatingIntro": "O clube está criado. Confirme o seu nome; o telemóvel é opcional. A seguir, configuramos o clube.",
     "creatingSteps": "Criar o clube",
     "creating": {
       "club": "O clube",

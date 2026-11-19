@@ -188,7 +188,8 @@ only if something is missing. `requiredDetails(roles, …)` in `@poolse/rules` i
 
 | Role | Required |
 |---|---|
-| owner, admin, guardian, a student on the adult path | first and last name, mobile |
+| owner, admin | first and last name; the mobile is offered, never required (Rui, 19-11-2026) |
+| guardian, a student on the adult path | first and last name, mobile |
 | instructor, maintenance | the above, plus NIF and morada (address, código postal, localidade) |
 
 A minor student with a login is not asked. Several roles ask for the union.

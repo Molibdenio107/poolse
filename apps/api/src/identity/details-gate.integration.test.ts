@@ -49,12 +49,12 @@ async function gapsOf(tenant: ScratchTenant, clerkUserId: string): Promise<strin
 
 test('POOLSE-227 — each role is asked only for its own missing details', async () => {
   await withScratchTenant(async (tenant) => {
-    // An admin with a name and a mobile is complete; without the mobile, asked for it alone.
+    // An admin needs a name; the mobile is optional (Rui, 19-11-2026), so none is still complete.
     const admin = await addMember(tenant, 'Ana', 'Admin', ['admin']);
-    const adminLogin = await withLogin(admin, { first: 'Ana', last: 'Admin', phone: '912345678' });
+    const adminLogin = await withLogin(admin, { first: 'Ana', last: 'Admin' });
     assert.deepEqual(await gapsOf(tenant, adminLogin), []);
-    await owner.query(`UPDATE app_user SET contact_phone = NULL WHERE clerk_user_id = $1`, [adminLogin]);
-    assert.deepEqual(await gapsOf(tenant, adminLogin), ['mobile']);
+    await owner.query(`UPDATE app_user SET cached_last_name = NULL WHERE clerk_user_id = $1`, [adminLogin]);
+    assert.deepEqual(await gapsOf(tenant, adminLogin), ['lastName']);
 
     // An instructor also needs the NIF and the morada, read from their membership.
     const coach = await addMember(tenant, 'Rui', 'Coach', ['instructor']);

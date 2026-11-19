@@ -17,6 +17,10 @@ The second half is small: the create-club form stops offering *A minha piscina*.
 - Changing what Clerk owns (name, email, photo) or how it is saved (`updateClerkName` → `refreshFromClerk`).
 - Asking for NISS, ID document, emergency contact or bank details. Those stay where POOLSE-100/149 put them.
 
+### Changed after build (19-11-2026)
+
+- **The owner's and admins' mobile is optional** (Rui): shown and prefilled on the gate, never required. Nothing in Poolse sends to it, so it was a requirement with no use. An owner whose name is on file goes straight from creating the club to the setup steps. Guardians, adult students and staff keep it required.
+
 ### BA — rules
 
 1. **Who is asked what** (Rui, 19-11-2026). The required set is a function of the reader's roles in the active club, `requiredDetails(roles, …)` in `@poolse/rules`, with one definition for the API and the form. A person with several roles is asked for the union.
