@@ -1973,6 +1973,7 @@ test('POOLSE-228: the setup steps are the Owner’s — a family, an instructor 
     );
     // POOLSE-230: the tour is every member's own — a family records theirs.
     assert.deepEqual(await new OnboardingController().tour({ outcome: 'dismissed' }), { recorded: true });
+    await refused(`PUT onboarding/menus as ${label}`, 403, () => new OnboardingController().menus());
     // POOLSE-229: Vamos começar is the office's.
     await refused(`GET onboarding/checklist as ${label}`, 403, () => new OnboardingController().checklist());
     await refused(`PUT onboarding/checklist as ${label}`, 403, () =>

@@ -81,6 +81,8 @@ interface Viewer {
   suspended: { name: string; reason: string | null; at: string } | null;
   /** POOLSE-227: `/me`, when the active club still needs details from this person. */
   gate: Me | null;
+  /** POOLSE-228: a new club's Owner mid-setup — no sidebar and no section tabs (Rui, 19-11-2026). */
+  guided: boolean;
 }
 
 async function currentViewer(): Promise<Viewer> {
@@ -130,6 +132,7 @@ async function currentViewer(): Promise<Viewer> {
             }
           : null,
       gate: (me.detailsMissing ?? []).length > 0 && membership !== undefined && membership.view === null ? me : null,
+      guided: me.guidedSetup === true,
     };
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;
@@ -152,6 +155,7 @@ async function currentViewer(): Promise<Viewer> {
       organizationName: null,
       suspended: null,
       gate: null,
+      guided: false,
     };
   }
 }
@@ -178,7 +182,7 @@ export default async function DashboardLayout({
    * parts is `null` when there is nothing to draw: the logo, the subscription
    * warning on the avatar (owner and admin, Rui 28-10-2026), the support status.
    */
-  const [{ viewing, roles, support, clubGone, kind, modules, sports, organizationName, suspended, gate }, shell] =
+  const [{ viewing, roles, support, clubGone, kind, modules, sports, organizationName, suspended, gate, guided }, shell] =
     await Promise.all([currentViewer(), readShell()]);
   if (viewing) redirect('/app');
   // A family and nothing else lives in the app (POOLSE-90). Here and not only in
@@ -243,6 +247,22 @@ export default async function DashboardLayout({
           the customer. The logo is set under Faturação → Definições (12 October 2026).
         */}
         <div className="flex min-w-0 flex-1 items-center gap-2 self-stretch">
+          {/*
+            A new club's Owner mid-setup sees the club's name and nothing to wander
+            off to (Rui, 19-11-2026): no menu, no section tabs, until the setup is
+            finished or *Ir para o painel* on Início. The search, the bell and the
+            account stay, so nobody is stranded.
+          */}
+          {guided ? (
+            <span className="flex min-w-0 items-center gap-2 font-semibold">
+              {logoFileId !== null && (
+                // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id
+                <img src={`/files/${logoFileId}`} alt="" className="size-6 shrink-0 rounded-sm object-contain" />
+              )}
+              <span className="truncate">{organizationName}</span>
+            </span>
+          ) : (
+          <>
           <MobileMenu
             roles={roles}
             kind={kind}
@@ -265,6 +285,8 @@ export default async function DashboardLayout({
             badges={badges}
             club={{ name: organizationName, logoFileId }}
           />
+          </>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -289,7 +311,7 @@ export default async function DashboardLayout({
           printed today; when something is, it inherits this for free.
         */}
         <div className="contents print:hidden">
-          <AppSidebar roles={roles} kind={kind} modules={modules} sports={sports} badges={badges} />
+          {!guided && <AppSidebar roles={roles} kind={kind} modules={modules} sports={sports} badges={badges} />}
         </div>
 
         {/*

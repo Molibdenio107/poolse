@@ -205,3 +205,15 @@ test('POOLSE-230 — any member records their own tour; a replay changes nothing
     assert.ok(rows[0]!.closed !== null);
   });
 });
+
+test('POOLSE-229 second pass — a club that had the setup lists its four setup lines, skipped or not', async () => {
+  await withScratchTenant(async (tenant) => {
+    await startWizard(tenant.organizationId, tenant.ownerMembershipId);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const onboarding = new OnboardingController();
+      for (const step of ['club', 'places', 'team', 'import'] as const) await onboarding.step({ step, outcome: 'done' });
+    });
+    const lines = await done(tenant);
+    for (const key of ['club_details', 'places', 'team', 'students']) assert.equal(lines[key], false, key);
+  });
+});

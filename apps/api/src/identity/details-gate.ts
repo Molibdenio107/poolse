@@ -61,3 +61,25 @@ export async function detailsMissingFor(
       : {}),
   });
 }
+
+/**
+ * Whether this person is in a new club's guided setup — POOLSE-228's second
+ * pass (Rui, 19-11-2026). True for an Owner whose setup steps are under way and
+ * who has not chosen *Ir para o painel*: the backoffice then hides its sidebar
+ * and section tabs. Never under a view or support, and false on any failure —
+ * a menu shown by mistake costs nothing, a menu hidden by mistake strands
+ * somebody.
+ */
+export async function guidedSetupFor(membership: MembershipSummary | undefined): Promise<boolean> {
+  if (membership === undefined || membership.view !== null || membership.supportExpiresAt !== null) return false;
+  if (!membership.roles.includes('owner')) return false;
+  return withOrg(membership.organizationId, async (tx) => {
+    const { rows } = await tx.query<{ guided: boolean }>(
+      `SELECT (wizard_started_at IS NOT NULL AND wizard_finished_at IS NULL AND menus_shown_at IS NULL) AS guided
+         FROM onboarding_progress
+        WHERE organization_id = $1 AND membership_id = $2`,
+      [membership.organizationId, membership.membershipId],
+    );
+    return rows[0]?.guided === true;
+  });
+}

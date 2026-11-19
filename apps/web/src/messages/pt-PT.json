@@ -877,7 +877,8 @@
       "setup": "Configurar o clube",
       "start": "Por onde começar"
     },
-    "setupWaiting": "Há passos por fazer"
+    "setupWaiting": "Há passos por fazer",
+    "menusHint": "Mostra o menu completo. A configuração continua à sua espera no Início."
   },
   "profile": {
     "title": "O meu perfil",
@@ -8846,21 +8847,25 @@
     "resumeHint": "Retome onde ficou. Cada passo pode ficar para mais tarde.",
     "step": {
       "club": {
+        "short": "Clube",
         "title": "Clube",
         "hint": "O NIPC, a morada, os contactos e o logótipo. Cada cartão guarda o seu.",
         "address": "Morada"
       },
       "places": {
+        "short": "Recintos e horário",
         "title": "Recintos e horário",
         "hint": "As piscinas desta instalação e o horário de funcionamento.",
         "pools": "Piscinas",
         "noPools": "Ainda não há piscinas nesta instalação."
       },
       "team": {
+        "short": "Equipa",
         "title": "Convidar equipa",
         "hint": "Convide quem trabalha consigo: administração, professores e manutenção. As famílias são convidadas a partir de cada aluno."
       },
       "import": {
+        "short": "Importar",
         "title": "Já tem alunos ou horários numa folha?",
         "hint": "Importe o que já tem. No fim, volta aqui.",
         "students": "Importar alunos",

@@ -13,6 +13,7 @@ import { HoursPanel } from '../facilities/[facilityId]/hours-panel';
 import { readTaxSettings } from '../facilities/[facilityId]/club.actions';
 import { InviteForm } from '../facilities/staff/invite-form';
 import { StepControls } from './step-controls';
+import { SetupHeader } from './stepper';
 import { isSetupStep, SETUP_STEPS, type SetupStep, type WizardState } from './steps';
 
 /** The staff roles an Owner invites here; family roles come from the student (POOLSE-129). */
@@ -52,26 +53,8 @@ export default async function SetupPage({
   const previous = index > 0 ? SETUP_STEPS[index - 1]! : null;
 
   return (
-    <PageShell title={t('setup.title')} subtitle={t('setup.progress', { n: index + 1, total: SETUP_STEPS.length })}>
-      <ol className="flex flex-wrap gap-x-4 gap-y-1 text-sm" aria-label={t('setup.stepsLabel')}>
-        {SETUP_STEPS.map((key, at) => (
-          <li
-            key={key}
-            aria-current={key === step ? 'step' : undefined}
-            className={key === step ? 'font-semibold text-foreground' : 'text-foreground-muted'}
-          >
-            {at + 1}. {t(`setup.step.${key}.title`)}
-            {wizard.skipped.includes(key) && key !== step && (
-              <span className="ml-1 text-foreground-muted">({t('setup.skipped')})</span>
-            )}
-          </li>
-        ))}
-      </ol>
-
-      <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold">{t(`setup.step.${step}.title`)}</h2>
-        <p className="text-sm text-foreground-muted">{t(`setup.step.${step}.hint`)}</p>
-      </div>
+    <PageShell title={t('setup.title')}>
+      <SetupHeader step={step} behind={SETUP_STEPS.indexOf(wizard.step)} />
 
       {step === 'club' && <ClubStep />}
       {step === 'places' && <PlacesStep />}

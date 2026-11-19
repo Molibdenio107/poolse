@@ -72,8 +72,19 @@ wizard" (Rui, 19-11-2026): the creation form stays one screen, and the guide com
 
 No season step (Rui, 19-11-2026): the season provisioning opens stands, and *Épocas* changes it.
 
-- **Every step can be left.** *Seguinte* marks it done, *Configurar mais tarde* skips it,
-  *Voltar* reopens the one before, *Terminar mais tarde* goes to Início with the pointer kept.
+- **The page has the creation screen's look** (Rui, 19-11-2026): a highlighted head with the water
+  banner and the step's picture, the four steps as numbered circles on a line (ticked behind,
+  filled and ringed now, muted ahead, each a link), then the step's cards.
+- **One way to leave for later.** *Seguinte* moves on, *Voltar* reopens the one before, and
+  *Terminar mais tarde* goes to Início with the pointer kept. *Configurar mais tarde* was removed
+  the same day. A step left blank still shows on *Vamos começar*, which for a club that had the
+  setup lists the four setup lines and ticks them by data.
+- **The menus wait for the setup** (Rui, 19-11-2026). While an Owner's setup is under way, the
+  backoffice hides the sidebar, the phone's menu button and the club/sport tabs; the top bar
+  keeps the club's name, search, the bell, language and the account. `GET /me` says so
+  (`guidedSetup`, from `onboarding_progress`). *Ir para o painel* on Início
+  (`PUT /onboarding/menus`, Owner, own row) brings them back on the account, for every
+  device (`menus_shown_at`), and so does finishing the setup. Nobody else is ever guided.
   Each panel keeps its own *Guardar*: the wizard holds no setting, so nothing it saves can
   disagree with the page that owns it.
 - **The pointer is `onboarding_progress`** (`GET /onboarding`, `PUT /onboarding/step`, Owner

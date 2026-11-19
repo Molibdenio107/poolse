@@ -4684,3 +4684,8 @@ onboarding_progress (19-11-2026, POOLSE-229/230, one migration)
 ```
 
 A row made by a dismissal or a tour never sets `wizard_started_at`.
+
+```
+onboarding_progress (19-11-2026, POOLSE-228 second pass)
+  + menus_shown_at   -- the Owner chose Ir para o painel mid-setup: the menus show again
+```

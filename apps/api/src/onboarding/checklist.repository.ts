@@ -86,8 +86,10 @@ export async function readChecklist(organizationId: string, membershipId: string
          EXISTS (SELECT 1 FROM fee_plan fp WHERE fp.organization_id = o.id AND fp.archived_at IS NULL) AS prices,
          o.public_registration_open AS public_form,
          coalesce(op.tour_finished_at IS NOT NULL OR op.tour_dismissed_at IS NOT NULL, false) AS tour,
-         -- Only a wizard that was offered has skipped steps; an older club's row has none.
-         CASE WHEN op.wizard_started_at IS NULL THEN NULL ELSE op.wizard_skipped::text[] END AS skipped,
+         -- A club whose setup was offered lists the four setup lines (ticked by data);
+         -- an older club's row has none. Since the second pass (Rui, 19-11-2026) a step
+         -- cannot be skipped, so the lines no longer wait for a skip to appear.
+         CASE WHEN op.wizard_started_at IS NULL THEN NULL ELSE ARRAY['club', 'places', 'team', 'import'] END AS skipped,
          coalesce(op.checklist_dismissed_at IS NOT NULL, false) AS dismissed
        FROM organization o
        LEFT JOIN onboarding_progress op ON op.organization_id = o.id AND op.membership_id = $2

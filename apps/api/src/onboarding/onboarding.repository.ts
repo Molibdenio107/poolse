@@ -105,3 +105,17 @@ export async function moveWizard(
     return toState(saved[0]);
   });
 }
+
+/**
+ * *Ir para o painel* during the setup — the Owner's own row, the menus back on
+ * every device. Only a row with a wizard has anything to show again.
+ */
+export async function showMenus(organizationId: string, membershipId: string): Promise<void> {
+  await withOrg(organizationId, (tx) =>
+    tx.query(
+      `UPDATE onboarding_progress SET menus_shown_at = coalesce(menus_shown_at, now())
+        WHERE organization_id = $1 AND membership_id = $2`,
+      [organizationId, membershipId],
+    ),
+  );
+}

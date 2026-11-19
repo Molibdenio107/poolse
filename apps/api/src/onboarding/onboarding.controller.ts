@@ -6,6 +6,7 @@ import {
   moveWizard,
   ONBOARDING_STEPS,
   readWizard,
+  showMenus,
   type OnboardingStep,
   type StepOutcome,
   type WizardState,
@@ -54,6 +55,19 @@ export class OnboardingController {
     const wizard = await moveWizard(organizationId, membershipId, step as OnboardingStep, outcome as StepOutcome);
     if (wizard === null) throw new NotFoundException({ code: 'no_wizard', message: 'There is no setup to continue' });
     return { wizard };
+  }
+
+  /**
+   * *Ir para o painel* while the setup is under way — the Owner's choice to see
+   * the menus again (Rui, 19-11-2026). Their own row; idempotent.
+   */
+  @Put('menus')
+  async menus(): Promise<{ menusShown: true }> {
+    requireRole('owner');
+    const { organizationId, membershipId } = currentTenant();
+    if (!membershipId) throw new ForbiddenException();
+    await showMenus(organizationId, membershipId);
+    return { menusShown: true };
   }
 
   /**

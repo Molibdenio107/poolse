@@ -16,9 +16,11 @@ const SECONDARY =
   'inline-flex h-control items-center justify-center rounded-sm bg-surface px-4 text-control shadow-card disabled:opacity-60';
 
 /**
- * A step's way on — POOLSE-228. *Seguinte* (or the last step's own word) marks
- * it done, *Configurar mais tarde* skips it, *Voltar* reopens the one before,
- * and *Terminar mais tarde* leaves for Início with the pointer where it is.
+ * A step's way on — POOLSE-228. *Seguinte* (or the last step's own word) moves
+ * on, *Voltar* reopens the one before, and *Terminar mais tarde* leaves for
+ * Início with the pointer where it is. *Configurar mais tarde* is gone (Rui,
+ * 19-11-2026): two ways to leave a step for later was one too many, and what a
+ * step left blank still shows on *Vamos começar*, ticked by the club's data.
  * Each is one tap: moving through a guide is not a decision to ask about.
  */
 export function StepControls({
@@ -34,14 +36,11 @@ export function StepControls({
   const [, action, pending] = useSavedAction(moveStepAction, INITIAL);
 
   return (
-    <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:flex-wrap sm:items-center">
+    <div className="flex flex-col gap-3 rounded bg-surface p-4 shadow-card sm:flex-row sm:flex-wrap sm:items-center">
       <form action={action} className="contents">
         <input type="hidden" name="step" value={step} />
         <button type="submit" name="outcome" value="done" disabled={pending} className={PRIMARY}>
           {t(nextLabelKey as never)}
-        </button>
-        <button type="submit" name="outcome" value="skipped" disabled={pending} className={SECONDARY}>
-          {t('setup.later')}
         </button>
       </form>
       {previous !== null && (

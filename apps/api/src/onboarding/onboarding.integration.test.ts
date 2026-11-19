@@ -145,3 +145,48 @@ test('POOLSE-228 — only the Owner, only their own row, only known steps', asyn
     assert.deepEqual(rows, [{ membership_id: tenant.ownerMembershipId, skipped: ['club'] }]);
   });
 });
+
+test('POOLSE-228 second pass — the menus wait for the setup, and Ir para o painel brings them back', async () => {
+  const { guidedSetupFor } = await import('../identity/details-gate.js');
+  await withScratchTenant(async (tenant) => {
+    const admin = await addMember(tenant, 'Alda', 'Admin', ['admin']);
+    const summary = (membershipId: string, roles: string[]): never =>
+      ({ organizationId: tenant.organizationId, membershipId, roles, view: null, supportExpiresAt: null }) as never;
+    const onboarding = new OnboardingController();
+
+    // An older club: no setup, menus as always.
+    assert.equal(await guidedSetupFor(summary(tenant.ownerMembershipId, ['owner'])), false);
+
+    await startWizard(tenant.organizationId, tenant.ownerMembershipId);
+    assert.equal(await guidedSetupFor(summary(tenant.ownerMembershipId, ['owner'])), true);
+    // Only the Owner is guided; an Admin keeps the menus and cannot hide or show them.
+    assert.equal(await guidedSetupFor(summary(admin, ['admin'])), false);
+    await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, async () => {
+      await expectStatus(() => onboarding.menus(), 403);
+    });
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      assert.deepEqual(await onboarding.menus(), { menusShown: true });
+    });
+    assert.equal(await guidedSetupFor(summary(tenant.ownerMembershipId, ['owner'])), false);
+  });
+
+  // Finishing the setup brings them back without the button.
+  await withScratchTenant(async (tenant) => {
+    await startWizard(tenant.organizationId, tenant.ownerMembershipId);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const onboarding = new OnboardingController();
+      for (const step of ['club', 'places', 'team', 'import'] as const) await onboarding.step({ step, outcome: 'done' });
+    });
+    assert.equal(
+      await guidedSetupFor({
+        organizationId: tenant.organizationId,
+        membershipId: tenant.ownerMembershipId,
+        roles: ['owner'],
+        view: null,
+        supportExpiresAt: null,
+      } as never),
+      false,
+    );
+  });
+});

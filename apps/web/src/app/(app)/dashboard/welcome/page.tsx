@@ -20,6 +20,7 @@ import { LogoLockIn } from '@/components/logo-lock-in';
 import type { WizardState } from '../setup/steps';
 import type { ChecklistAnswer } from './vamos-comecar';
 import { SetupPanel } from './setup-panel';
+import { showMenusAction } from './menus.actions';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 
 type Step = { href: string; icon: LucideIcon; title: string; body: string };
@@ -226,12 +227,25 @@ export default async function WelcomePage({
             className="onboard-rise flex justify-center"
             style={{ '--i': steps.length + 2 } as React.CSSProperties}
           >
-            <FromLink
-              href="/dashboard"
-              className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-6 text-control font-semibold text-primary-foreground"
-            >
-              {t('welcome.goToDashboard')}
-            </FromLink>
+            {me?.guidedSetup === true ? (
+              // Mid-setup the menus are hidden; this is the Owner's way to bring them back.
+              <form action={showMenusAction} className="flex flex-col items-center gap-1.5">
+                <button
+                  type="submit"
+                  className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-6 text-control font-semibold text-primary-foreground"
+                >
+                  {t('welcome.goToDashboard')}
+                </button>
+                <p className="text-sm text-foreground-muted">{t('welcome.menusHint')}</p>
+              </form>
+            ) : (
+              <FromLink
+                href="/dashboard"
+                className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-6 text-control font-semibold text-primary-foreground"
+              >
+                {t('welcome.goToDashboard')}
+              </FromLink>
+            )}
           </div>
         </div>
       </section>

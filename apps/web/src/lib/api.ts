@@ -370,6 +370,8 @@ export interface Me {
   requestedOrganizationMissing?: boolean;
   /** POOLSE-227: what the active club still needs from this person; not empty draws the gate. */
   detailsMissing?: DetailField[];
+  /** POOLSE-228: the Owner is in the club's guided setup; the backoffice hides its menus. */
+  guidedSetup?: boolean;
   /**
    * Platform-wide switches set from /admin (Rui, 30-10-2026). Absent, or a
    * switch missing from it, is off.

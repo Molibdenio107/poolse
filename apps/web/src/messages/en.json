@@ -877,7 +877,8 @@
       "setup": "Set up the club",
       "start": "Where to start"
     },
-    "setupWaiting": "Steps still to do"
+    "setupWaiting": "Steps still to do",
+    "menusHint": "Shows the full menu. The setup stays waiting for you on Home."
   },
   "profile": {
     "title": "My profile",
@@ -8846,21 +8847,25 @@
     "resumeHint": "Pick up where you left off. Any step can wait.",
     "step": {
       "club": {
+        "short": "Club",
         "title": "Club",
         "hint": "The tax number, the address, the contacts and the logo. Each card saves its own.",
         "address": "Address"
       },
       "places": {
+        "short": "Venues and hours",
         "title": "Venues and opening hours",
         "hint": "This site's pools and when it opens.",
         "pools": "Pools",
         "noPools": "This site has no pools yet."
       },
       "team": {
+        "short": "Team",
         "title": "Invite your team",
         "hint": "Invite the people you work with: office, instructors and maintenance. Families are invited from each student."
       },
       "import": {
+        "short": "Import",
         "title": "Already have students or a timetable in a spreadsheet?",
         "hint": "Import what you have. You come back here at the end.",
         "students": "Import students",

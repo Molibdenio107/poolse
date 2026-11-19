@@ -15,7 +15,7 @@ import { clubToday } from '../common/club-day.js';
 import { readSwitchesForClubs, type PlatformSwitchName } from '../platform/platform-switch.js';
 import { effectiveReadersFor } from '../ai/ai-reads.repository.js';
 import type { AiReader, DetailField } from '@poolse/rules';
-import { detailsMissingFor } from './details-gate.js';
+import { detailsMissingFor, guidedSetupFor } from './details-gate.js';
 
 interface MeResponse {
   user: AppUserSummary;
@@ -49,6 +49,8 @@ interface MeResponse {
    * the page. Empty under a view or a support membership.
    */
   detailsMissing?: DetailField[];
+  /** POOLSE-228: the Owner is in the club's guided setup; the backoffice hides its menus. */
+  guidedSetup?: boolean;
 }
 
 /** The requested club first; the rest in their usual order. */
@@ -140,9 +142,11 @@ export class MeController {
     const aiReaders = active === undefined ? [] : await effectiveReadersFor(active.organizationId).catch(() => []);
     const view = active?.view ?? null;
     const detailsMissing = await detailsMissingFor(user, active).catch(() => []);
+    const guidedSetup = await guidedSetupFor(active).catch(() => false);
     return {
       user,
       detailsMissing,
+      guidedSetup,
       ...ordered,
       switches: await readSwitchesForClubs(),
       aiReaders,
