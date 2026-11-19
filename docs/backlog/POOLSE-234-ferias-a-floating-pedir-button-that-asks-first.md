@@ -44,6 +44,6 @@ Rui, 19-11-2026: on *As minhas férias* (`facilities/staff/vacations/my-vacation
 10. Cross-tenant: unchanged action, existing tests.
 
 ### Acceptance criteria
-- [ ] Top submit removed; floating button with ICU plural, safe-area aware.
-- [ ] Confirm dialog with days grouped by month in the facility's time zone; nothing sent before confirm.
-- [ ] Limpar in both places; keyboard, focus and reduced motion as rule 6; phone spec line.
+- [x] Top submit removed; floating button with ICU plural, safe-area aware.
+- [x] Confirm dialog with days grouped by month in the facility's time zone; nothing sent before confirm.
+- [x] Limpar in both places; keyboard, focus and reduced motion as rule 6; phone spec line.

@@ -1528,6 +1528,13 @@ details.group[open][data-closing] > summary .group-open\:rotate-90 {
     transform: translateX(-50%);
   }
 }
+/* POOLSE-234: Férias' floating *Pedir* bar rises in once; still under reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .vacation-float {
+    animation: onboard-rise 300ms ease-out both;
+  }
+}
+
 @keyframes onboard-rise {
   from {
     opacity: 0;

@@ -2,12 +2,15 @@
 
 import { Badge } from '@/components/ui/badge';
 import { today } from '@/lib/dates';
-import { useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
 import type { MyVacations, VacationRequest } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { ConfirmButton } from '@/components/confirm-action';
+import { Dialog } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { CalendarCheck } from 'lucide-react';
 import { YearGrid, type DayState } from '@/components/year-grid';
 import { useSeeded, useSuccessKey } from '@/components/ui/field';
 import { requestVacationAction, withdrawVacationAction } from './vacations.actions';
@@ -142,6 +145,36 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
 
   const chosen = [...selected].sort();
 
+  /*
+   * POOLSE-234 (Rui, 19-11-2026): the request is confirmed in a dialog that
+   * lists the days, opened from a button that follows the scroll. Nothing is
+   * sent before the dialog's *Pedir estes dias*, which submits this same form
+   * (through `form=`, the dialog being portalled out of it) to the same action.
+   */
+  const formId = useId();
+  const [confirming, setConfirming] = useState(false);
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  // A request that went through closes the dialog and clears the draft.
+  useEffect(() => {
+    if (state.ok) {
+      setConfirming(false);
+      setSelected(new Set());
+    }
+  }, [state]);
+
+  // The chosen days by month, in the year's order: "Março: 3, 4, 5". Days are
+  // dates, not instants, so no time zone can move one.
+  const byMonth = useMemo(() => {
+    const groups = new Map<number, number[]>();
+    for (const day of chosen) {
+      const month = Number(day.slice(5, 7)) - 1;
+      groups.set(month, [...(groups.get(month) ?? []), Number(day.slice(8, 10))]);
+    }
+    return [...groups.entries()];
+    // `chosen` is derived from `selected` on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+
   return (
     <div className="flex flex-col gap-6">
       {/*
@@ -164,7 +197,7 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
         <p className="text-sm text-foreground-muted">{t('vacations.noCarryOver')}</p>
       </section>
 
-      <form action={submit} className="flex flex-col gap-4">
+      <form id={formId} action={submit} className={chosen.length > 0 ? 'flex flex-col gap-4 pb-24' : 'flex flex-col gap-4'}>
         <input type="hidden" name="organizationId" value={data.organizationId} />
         <input type="hidden" name="days" value={chosen.join(',')} />
 
@@ -208,13 +241,6 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
               className="h-control min-w-48 flex-1 rounded-sm border border-border-strong bg-background px-2.5 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             />
           )}
-          <button
-            type="submit"
-            disabled={pending || chosen.length === 0}
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 font-semibold"
-          >
-            {pending ? t('common.working') : t('vacations.submit')}
-          </button>
           {chosen.length > 0 && (
             <button
               type="button"
@@ -239,6 +265,73 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
           pastBefore={today()}
         />
       </form>
+
+      {/*
+        The floating bar: it follows the scroll, so October's last pick is never
+        a long way from its button. A bottom bar, so it adds the safe area to its
+        own padding and the form above makes room for it (`pb-24`).
+      */}
+      {chosen.length > 0 && (
+        <div
+          data-bottom-bar
+          className="vacation-float fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[calc(1rem+var(--safe-bottom))] md:justify-end md:px-8 print:hidden"
+        >
+          <div className="flex items-center gap-3 rounded bg-surface p-2 pl-4 shadow-card">
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="min-h-control text-sm text-foreground-muted hover:text-foreground"
+            >
+              {t('vacations.clearSelection')}
+            </button>
+            <Button icon={CalendarCheck} onClick={() => setConfirming(true)}>
+              {t('vacations.floating', { count: chosen.length })}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <Dialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={t('vacations.confirmTitle', { count: chosen.length })}
+        description={t('vacations.confirmHint')}
+        closeLabel={t('common.close')}
+        placement="sheet"
+        initialFocus={confirmRef}
+      >
+        <div className="flex flex-col gap-4">
+          <ul className="flex flex-col gap-2">
+            {byMonth.map(([month, days]) => (
+              <li key={month} className="flex flex-wrap gap-x-2 text-sm">
+                <span className="font-semibold capitalize">{monthNames[month]}:</span>
+                <span>{days.join(', ')}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm text-foreground-muted">
+            {t('vacations.chosen', { count: chosen.length })} · {t(`vacations.kinds.${kind}` as never)}
+          </p>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setSelected(new Set());
+                setConfirming(false);
+              }}
+              className="mr-auto min-h-control text-sm text-foreground-muted hover:text-foreground"
+            >
+              {t('vacations.clearSelection')}
+            </button>
+            <Button variant="secondary" onClick={() => setConfirming(false)}>
+              {t('vacations.chooseMore')}
+            </Button>
+            <Button ref={confirmRef} type="submit" form={formId} disabled={pending || chosen.length === 0}>
+              {pending ? t('common.working') : t('vacations.submit')}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
 
       <RequestList data={data} />
     </div>

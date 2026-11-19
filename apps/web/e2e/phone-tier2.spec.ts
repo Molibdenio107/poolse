@@ -152,3 +152,29 @@ test('the advancement queue — a turma picked on a phone leaves Confirmar on sc
   await expect(confirm).toBeInViewport();
   expect((await confirm.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });
+
+test('POOLSE-234 — Férias asks with a floating button and a dialog, and sends nothing before it', async ({ page }) => {
+  await page.goto('/dashboard/facilities/staff/vacations', { waitUntil: 'load' });
+  // The old top-of-page submit is gone.
+  await expect(page.getByRole('button', { name: /^(pedir estes dias|request these days)$/i })).toHaveCount(0);
+
+  const cells = page.locator('button[aria-pressed]:not([disabled])');
+  await expect(cells.first()).toBeVisible();
+  await cells.last().click();
+
+  const floating = page.getByRole('button', { name: /^(pedir 1 dia|request 1 day)$/i });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(floating).toBeInViewport();
+  await floating.click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(pedir estes dias|request these days)$/i })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(floating).toBeFocused();
+
+  // Limpar: the draft and its button go, and no request was sent.
+  await page.getByRole('button', { name: /^(limpar|clear)$/i }).last().click();
+  await expect(floating).toHaveCount(0);
+});

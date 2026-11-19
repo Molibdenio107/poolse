@@ -3574,7 +3574,11 @@
     "approveTitle": "Approve {name}'s leave?",
     "approveConfirm": "{count, plural, one {The day is marked as leave} other {The # days are marked as leave}} and the person is told by email.",
     "rejectTitle": "Refuse {name}'s request?",
-    "rejectConfirm": "The person is told by email, with the reason you write here."
+    "rejectConfirm": "The person is told by email, with the reason you write here.",
+    "floating": "Request {count, plural, one {# day} other {# days}}",
+    "confirmTitle": "Request {count, plural, one {this day} other {these # days}}?",
+    "confirmHint": "Check the days before sending. Nothing is sent until you confirm.",
+    "chooseMore": "Choose more days"
   },
   "weather": {
     "title": "Weather",

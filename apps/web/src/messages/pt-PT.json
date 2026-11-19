@@ -3574,7 +3574,11 @@
     "approveTitle": "Aprovar as férias de {name}?",
     "approveConfirm": "{count, plural, one {O dia fica marcado como férias} other {Os # dias ficam marcados como férias}} e a pessoa é avisada por email.",
     "rejectTitle": "Recusar o pedido de {name}?",
-    "rejectConfirm": "A pessoa é avisada por email com o motivo que escrever aqui."
+    "rejectConfirm": "A pessoa é avisada por email com o motivo que escrever aqui.",
+    "floating": "Pedir {count, plural, one {# dia} other {# dias}}",
+    "confirmTitle": "Pedir {count, plural, one {este dia} other {estes # dias}}?",
+    "confirmHint": "Confira os dias antes de enviar. Nada é enviado até confirmar.",
+    "chooseMore": "Escolher mais dias"
   },
   "weather": {
     "title": "Meteorologia",
