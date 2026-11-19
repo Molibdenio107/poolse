@@ -100,6 +100,7 @@ import { StudentMessagesController } from '../messages/student-messages.controll
 import { MedicalExamScheduleController } from '../students/medical-exam-schedule.controller.js';
 import { StaffNotesController } from '../staff-notes/staff-notes.controller.js';
 import { OnboardingController } from '../onboarding/onboarding.controller.js';
+import { SearchController } from '../search/search.controller.js';
 import { PersonCategoriesController } from '../billing/person-categories.controller.js';
 import { PassProductsController, ReceptionController } from '../reception/passes.controller.js';
 import { FeeCategoriesController } from '../billing/categories.controller.js';
@@ -1992,6 +1993,15 @@ test('POOLSE-228: the setup steps are the Owner’s — a family, an instructor 
       );
     });
   }
+});
+
+test('POOLSE-235: Ctrl+K data search is the office’s and the instructors’ — families and maintenance are refused', async () => {
+  await asEach(async ({ label }) => {
+    await refused(`GET search as ${label}`, 403, () => new SearchController().find('ana'));
+  });
+  await as(fixture.maintenanceId, ['maintenance'], async () => {
+    await refused('GET search as maintenance', 403, () => new SearchController().find('ana'));
+  });
 });
 
 test('person categories are the office’s; a family reads only its own — POOLSE-202', async () => {

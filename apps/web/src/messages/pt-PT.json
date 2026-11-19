@@ -4853,6 +4853,18 @@
       "subscription": "Subscrição",
       "theme": "Mudar entre tema claro e escuro",
       "locale": "Mudar o idioma"
+    },
+    "data": {
+      "student": "Aluno",
+      "guardianOf": "Encarregado de educação de {name}",
+      "turma": "Turma",
+      "switchClub": "Mudar para este clube",
+      "group": {
+        "students": "Alunos e famílias",
+        "staff": "Equipa",
+        "turmas": "Turmas",
+        "clubs": "Clubes"
+      }
     }
   },
   "partnerDays": {

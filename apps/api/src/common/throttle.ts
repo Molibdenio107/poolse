@@ -124,6 +124,13 @@ export const STRICT = { default: { ttl: seconds(60), limit: STRICT_LIMIT } };
 export const FAMILY_UPLOAD = { default: { ttl: seconds(3600), limit: 10 } };
 
 /**
+ * Ctrl+K's data search — POOLSE-235: sixty a minute per person, under the
+ * global 300. The client debounces; this is the ceiling for a script walking
+ * the register one letter at a time.
+ */
+export const SEARCH = { default: { ttl: seconds(60), limit: 60 } };
+
+/**
  * What counts as "the same caller".
  *
  * **This is the part that matters, more than either number.** The stock guard

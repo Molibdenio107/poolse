@@ -14,6 +14,15 @@ Rui, 19-11-2026: the palette (POOLSE-118) finds pages and actions, but the thing
 - The family app (`/app` has no palette).
 - Full-text ranking or typo tolerance.
 
+### As built (19-11-2026)
+
+- **There was no general club switcher**, only support's, so *Clubes* got its own server action, `switchClubAction`. It re-reads `/me`, accepts only a club the reader belongs to, refuses under *Ver como*, sets the existing `poolse_org` cookie and opens Início. The API re-checks membership on every request.
+- **A guardian found by the office opens their child's record**, which is the record page that exists. The context line names the child.
+- **An instructor's staff results show the name and role without a link**: the staff pages answer the office only.
+- **A result is `{id, name}` plus one fact** (level, child, role, or level and instructor), and the web translates it. The API returns no context string of its own.
+- The cost per group wasn't measured with `countStatements`. Each group is one statement with its `LIMIT`.
+- Security review run: no S1–S3. One S4 is recorded and accepted (instructors see staff names and roles, by Rui's rule 1).
+
 ### BA — rules
 
 1. **Groups and who sees them** (Rui):
@@ -63,7 +72,7 @@ Rui, 19-11-2026: the palette (POOLSE-118) finds pages and actions, but the thing
 11. Phone width (backoffice under `md`): the palette's groups stack and are readable. Both themes are checked.
 
 ### Acceptance criteria
-- [ ] `GET /search` with role check first, RLS tenancy, `searchPredicate`, exact NIF, last-9 phone, ≤5 per group, throttle 60/min.
-- [ ] Results show name and context only; instructor scoped to own turmas and sports.
-- [ ] Palette groups; Clubes from `/me`; nothing personal in `localStorage`.
-- [ ] Role probe, cross-tenant and input tests green; `poolse-security-review` run.
+- [x] `GET /search` with role check first, RLS tenancy, `searchPredicate`, exact NIF, last-9 phone, ≤5 per group, throttle 60/min.
+- [x] Results show name and context only; instructor scoped to own turmas and sports.
+- [x] Palette groups; Clubes from `/me`; nothing personal in `localStorage`.
+- [x] Role probe, cross-tenant and input tests green; `poolse-security-review` run.

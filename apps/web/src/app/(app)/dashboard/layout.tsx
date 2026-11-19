@@ -83,6 +83,8 @@ interface Viewer {
   gate: Me | null;
   /** POOLSE-228: a new club's Owner mid-setup — no sidebar and no section tabs (Rui, 19-11-2026). */
   guided: boolean;
+  /** POOLSE-235: the other clubs this reader belongs to, for Ctrl+K's *Clubes*. */
+  clubs: { id: string; name: string }[];
 }
 
 async function currentViewer(): Promise<Viewer> {
@@ -123,6 +125,10 @@ async function currentViewer(): Promise<Viewer> {
       // the sports this reader may read, so an instructor sees only theirs.
       sports: membership === undefined ? [BASE_SPORT] : readableSports(membership),
       organizationName: membership?.organizationName ?? null,
+      clubs:
+        membership?.view != null
+          ? []
+          : me.memberships.slice(1).map((other) => ({ id: other.organizationId, name: other.organizationName })),
       suspended:
         membership?.suspendedAt != null
           ? {
@@ -156,6 +162,7 @@ async function currentViewer(): Promise<Viewer> {
       suspended: null,
       gate: null,
       guided: false,
+      clubs: [],
     };
   }
 }
@@ -182,7 +189,7 @@ export default async function DashboardLayout({
    * parts is `null` when there is nothing to draw: the logo, the subscription
    * warning on the avatar (owner and admin, Rui 28-10-2026), the support status.
    */
-  const [{ viewing, roles, support, clubGone, kind, modules, sports, organizationName, suspended, gate, guided }, shell] =
+  const [{ viewing, roles, support, clubGone, kind, modules, sports, organizationName, suspended, gate, guided, clubs }, shell] =
     await Promise.all([currentViewer(), readShell()]);
   if (viewing) redirect('/app');
   // A family and nothing else lives in the app (POOLSE-90). Here and not only in
@@ -297,7 +304,7 @@ export default async function DashboardLayout({
           <KeepFresh />
           {/* POOLSE-230: the guided tour, started only by a button or Ctrl+K. */}
           <GuidedTour />
-          <CommandPalette roles={roles} kind={kind} modules={modules} sports={sports} />
+          <CommandPalette roles={roles} kind={kind} modules={modules} sports={sports} clubs={clubs} />
           <PreferenceControls languageOnPhone={false} />
           <UserMenu canArchive={roles.includes('owner') || roles.includes('admin')} subscription={subscription} />
         </div>

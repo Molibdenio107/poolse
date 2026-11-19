@@ -1,8 +1,9 @@
 'use client';
 import { START_TOUR_EVENT } from '@/components/tour/start-tour-button';
+import { searchPaletteAction, switchClubAction, type PaletteSearch } from './command-palette.actions';
 import { OPEN_NOTIFICATIONS } from '@/components/notification-bell';
 
-import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { CornerDownLeft, Search, Zap } from 'lucide-react';
@@ -56,8 +57,11 @@ export function CommandPalette({
   modules,
   sports,
   place,
+  clubs = [],
 }: {
   roles: readonly string[];
+  /** POOLSE-235: the other clubs this reader belongs to, to switch to. */
+  clubs?: readonly { id: string; name: string }[];
   kind: OrganizationKind;
   modules: readonly PoolseModule[];
   sports?: readonly PoolseSport[];
@@ -73,6 +77,29 @@ export function CommandPalette({
   const [recent, setRecent] = useState<string[]>([]);
   const input = useRef<HTMLInputElement>(null);
   const links = useRef<Map<string, HTMLAnchorElement>>(new Map());
+
+  /*
+   * POOLSE-235: people, turmas and clubs below the pages. Asked of the API only
+   * for the roles it answers (the office and instructors), after a 250 ms pause,
+   * and an answer for an older term is dropped. A data result is never written
+   * to the recent list: `localStorage` keeps page ids and nothing personal.
+   */
+  const searchesData = roles.some((role) => role === 'owner' || role === 'admin' || role === 'instructor');
+  const office = roles.some((role) => role === 'owner' || role === 'admin');
+  const [data, setData] = useState<PaletteSearch | null>(null);
+  const asked = useRef(0);
+  useEffect(() => {
+    const term = query.trim();
+    setData(null);
+    if (!open || !searchesData || term.length < 2) return;
+    const ticket = ++asked.current;
+    const timer = setTimeout(() => {
+      void searchPaletteAction(term).then((answer) => {
+        if (ticket === asked.current) setData(answer);
+      });
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [query, open, searchesData]);
 
   const commands = useMemo(
     () => commandsFor({ roles, kind, modules, ...(sports === undefined ? {} : { sports }) }, place),
@@ -141,6 +168,85 @@ export function CommandPalette({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commands, query, recent, locale]);
 
+  type DataItem = {
+    key: string;
+    group: 'students' | 'staff' | 'turmas' | 'clubs';
+    label: string;
+    context: string;
+    href: string | null;
+    clubId?: string;
+  };
+  const fold = (text: string): string =>
+    text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const dataItems: DataItem[] = [];
+  if (data !== null) {
+    for (const row of data.students) {
+      dataItems.push({
+        key: `s:${row.id}`,
+        group: 'students',
+        label: row.name,
+        context: row.level ?? t('palette.data.student'),
+        href: `/dashboard/students/${row.id}`,
+      });
+    }
+    for (const row of data.guardians) {
+      dataItems.push({
+        key: `g:${row.id}`,
+        group: 'students',
+        label: row.name,
+        context: t('palette.data.guardianOf', { name: row.of }),
+        href: `/dashboard/students/${row.studentId}`,
+      });
+    }
+    for (const row of data.staff) {
+      dataItems.push({
+        key: `m:${row.id}`,
+        group: 'staff',
+        label: row.name,
+        context: t(`roles.${row.role}` as never),
+        // The staff pages answer the office only; an instructor sees the name.
+        href: office ? `/dashboard/facilities/staff/${row.id}` : null,
+      });
+    }
+    for (const row of data.turmas) {
+      dataItems.push({
+        key: `t:${row.id}`,
+        group: 'turmas',
+        label: row.name,
+        context:
+          [row.level, row.instructor].filter((part): part is string => part !== null).join(' · ') ||
+          t('palette.data.turma'),
+        href: `/dashboard/classes/${row.id}`,
+      });
+    }
+  }
+  if (query.trim().length >= 2) {
+    for (const club of clubs) {
+      if (!fold(club.name).includes(fold(query.trim()))) continue;
+      dataItems.push({
+        key: `c:${club.id}`,
+        group: 'clubs',
+        label: club.name,
+        context: t('palette.data.switchClub'),
+        href: null,
+        clubId: club.id,
+      });
+    }
+  }
+  const total = shown.length + dataItems.length;
+
+  function openData(item: DataItem): void {
+    const clubId = item.clubId;
+    if (clubId !== undefined) {
+      setOpen(false);
+      startTransition(() => switchClubAction(clubId));
+      return;
+    }
+    if (item.href === null) return;
+    links.current.get(item.key)?.click();
+    setOpen(false);
+  }
+
   function choose(command: Command): void {
     remember(command.id);
     if ('href' in command.run) {
@@ -179,7 +285,7 @@ export function CommandPalette({
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>): void {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setActive((at) => Math.min(shown.length - 1, at + 1));
+      setActive((at) => Math.min(total - 1, at + 1));
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       setActive((at) => Math.max(0, at - 1));
@@ -187,6 +293,10 @@ export function CommandPalette({
       event.preventDefault();
       const command = shown[active];
       if (command !== undefined) choose(command);
+      else {
+        const item = dataItems[active - shown.length];
+        if (item !== undefined) openData(item);
+      }
     }
   }
 
@@ -227,7 +337,7 @@ export function CommandPalette({
             role="combobox"
             aria-expanded="true"
             aria-controls="palette-list"
-            aria-activedescendant={shown.length > 0 ? `palette-option-${active}` : undefined}
+            aria-activedescendant={total > 0 ? `palette-option-${active}` : undefined}
             aria-label={t('palette.title')}
             placeholder={t('palette.placeholder')}
             value={query}
@@ -238,7 +348,7 @@ export function CommandPalette({
             onKeyDown={onKeyDown}
             className="h-control w-full rounded border border-border bg-surface px-3 text-control"
           />
-          {shown.length === 0 ? (
+          {total === 0 ? (
             <p className="text-sm text-foreground-muted">{t('palette.nothing')}</p>
           ) : (
             <ul id="palette-list" role="listbox" className="flex max-h-[min(24rem,60dvh)] flex-col overflow-y-auto">
@@ -293,6 +403,60 @@ export function CommandPalette({
                       </button>
                     )}
                   </li>
+                );
+              })}
+              {dataItems.map((item, at) => {
+                const index = shown.length + at;
+                const heading = at === 0 || dataItems[at - 1]!.group !== item.group;
+                const className = cn(
+                  'flex min-h-control w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
+                  index === active ? 'bg-primary/15 text-primary' : 'text-foreground hover:bg-surface-muted',
+                );
+                const inner = (
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate">{item.label}</span>
+                    <span className="truncate text-xs text-foreground-muted">{item.context}</span>
+                  </span>
+                );
+                return (
+                  <Fragment key={item.key}>
+                    {heading && (
+                      <li
+                        role="presentation"
+                        className="px-2 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted"
+                      >
+                        {t(`palette.data.group.${item.group}` as never)}
+                      </li>
+                    )}
+                    <li
+                      id={`palette-option-${index}`}
+                      role="option"
+                      aria-selected={index === active}
+                      onMouseEnter={() => setActive(index)}
+                    >
+                      {item.href !== null ? (
+                        <FromLink
+                          href={item.href}
+                          tabIndex={-1}
+                          ref={(element: HTMLAnchorElement | null) => {
+                            if (element === null) links.current.delete(item.key);
+                            else links.current.set(item.key, element);
+                          }}
+                          onClick={() => {
+                            leaving();
+                            setOpen(false);
+                          }}
+                          className={className}
+                        >
+                          {inner}
+                        </FromLink>
+                      ) : (
+                        <button type="button" tabIndex={-1} onClick={() => openData(item)} className={className}>
+                          {inner}
+                        </button>
+                      )}
+                    </li>
+                  </Fragment>
                 );
               })}
             </ul>

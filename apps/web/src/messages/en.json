@@ -4853,6 +4853,18 @@
       "subscription": "Subscription",
       "theme": "Switch between light and dark theme",
       "locale": "Change the language"
+    },
+    "data": {
+      "student": "Student",
+      "guardianOf": "Guardian of {name}",
+      "turma": "Class",
+      "switchClub": "Switch to this club",
+      "group": {
+        "students": "Students and families",
+        "staff": "Team",
+        "turmas": "Classes",
+        "clubs": "Clubs"
+      }
     }
   },
   "partnerDays": {
