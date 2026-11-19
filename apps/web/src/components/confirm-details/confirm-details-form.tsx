@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { SignOutButton } from '@clerk/nextjs';
-import { Landmark, LogOut, Mail, Phone, UserRound, Users, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Landmark, LogOut, Mail, Phone, UserRound, Users, type LucideIcon } from 'lucide-react';
 import type { DetailField } from '@poolse/rules';
 import { TextField } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
@@ -52,7 +52,17 @@ export function ConfirmDetailsForm({
   children,
   contact,
   confirmLabelKey = 'confirmDetails.confirm',
+  birthDate,
+  then,
 }: {
+  /**
+   * The setup's step 1 (Rui, 19-11-2026): an optional date of birth, the same
+   * one *O meu perfil* holds. Undefined, the field is not shown and the saved
+   * date is left as it is.
+   */
+  birthDate?: string;
+  /** Where to go once saved — the setup's next step. Only a setup address is honoured. */
+  then?: string;
   /** What the button says: *Continuar* when this is a step of creating a club. */
   confirmLabelKey?: string;
   required: DetailField[];
@@ -118,7 +128,18 @@ export function ConfirmDetailsForm({
           hint={t('confirmDetails.mobileHint')}
           error={error('contactPhone')}
         />
+        {birthDate !== undefined && (
+          <TextField
+            name="birthDate"
+            type="date"
+            label={t('profile.birthDate')}
+            initial={birthDate}
+            autoComplete="bday"
+            error={state.fields?.['birthDate'] === undefined ? undefined : t(state.fields['birthDate'] as never)}
+          />
+        )}
         </fieldset>
+        {then !== undefined && <input type="hidden" name="then" value={then} />}
 
         {asks('taxNumber') && (
           <fieldset className="onboard-rise flex flex-col gap-3" style={{ '--i': 2 } as React.CSSProperties}>
@@ -176,9 +197,11 @@ export function ConfirmDetailsForm({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control w-full items-center justify-center rounded-sm bg-primary px-6 text-control font-semibold text-primary-foreground transition-transform disabled:opacity-60 sm:w-auto sm:self-start motion-safe:hover:-translate-y-px"
+          className="inline-flex h-control w-full items-center justify-center gap-2 rounded-sm bg-primary px-6 text-control font-semibold text-primary-foreground transition-transform disabled:opacity-60 sm:w-auto sm:self-start motion-safe:hover:-translate-y-px"
         >
           {pending ? t('common.working') : t(confirmLabelKey as never)}
+          {/* In the setup it is that wizard's Seguinte, with its arrow (Rui, 19-11-2026). */}
+          {then !== undefined && !pending && <ArrowRight className="size-4" aria-hidden />}
         </button>
       </form>
 
@@ -207,7 +230,11 @@ export function ConfirmDetailsForm({
         </section>
       )}
 
-      {/* The one way out that is not the form: somebody signed in as the wrong person. */}
+      {/*
+        The one way out that is not the form: somebody signed in as the wrong
+        person. Not in the setup, where the account menu stays on screen.
+      */}
+      {then === undefined && (
       <SignOutButton redirectUrl="/">
         <button
           type="button"
@@ -217,6 +244,7 @@ export function ConfirmDetailsForm({
           {t('app.profile.signOut')}
         </button>
       </SignOutButton>
+      )}
     </div>
   );
 }

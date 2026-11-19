@@ -232,8 +232,9 @@ export default async function DashboardLayout({
   }
 
   // POOLSE-227: the details the club still needs, in place of the page and never
-  // a redirect (a redirect after Clerk's sign-in leaves a blank page).
-  if (gate !== null) return <ConfirmDetails me={gate} surface="desk" />;
+  // a redirect (a redirect after Clerk's sign-in leaves a blank page). Not for an
+  // Owner mid-setup: there they are the wizard's step 1 (Rui, 19-11-2026).
+  if (gate !== null && !guided) return <ConfirmDetails me={gate} surface="desk" />;
 
   return (
     // POOLSE-88: clear of a landscape phone's rounded corners and notch.

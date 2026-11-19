@@ -7,7 +7,7 @@ import { LinkBusy } from '@/components/link-busy';
 import { useSavedAction } from '@/lib/saved';
 import type { FormState } from '../actions';
 import { moveStepAction } from './setup.actions';
-import { SETUP_STEPS, type SetupStep } from './steps';
+import { WIZARD_STEPS, type SetupStep, type WizardStep } from './steps';
 
 const INITIAL: FormState = { ok: false };
 
@@ -31,7 +31,8 @@ export function StepControls({
   reviewing = false,
 }: {
   step: SetupStep;
-  previous: SetupStep | null;
+  /** `details` is the web's own step: going back to it is a link, not a pointer move. */
+  previous: WizardStep | null;
   nextLabelKey?: string;
   /** A finished setup opened again: the buttons only move between the steps. */
   reviewing?: boolean;
@@ -40,8 +41,8 @@ export function StepControls({
   const [, action, pending] = useSavedAction(moveStepAction, INITIAL);
 
   if (reviewing) {
-    const at = SETUP_STEPS.indexOf(step);
-    const next = SETUP_STEPS[at + 1];
+    const at = WIZARD_STEPS.indexOf(step);
+    const next = WIZARD_STEPS[at + 1];
     return (
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-8">
         {previous !== null ? (
@@ -65,7 +66,13 @@ export function StepControls({
   return (
     // Along the setup card's bottom edge: Voltar on the left, Seguinte on the right (Rui, 19-11-2026).
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-8">
-      {previous !== null ? (
+      {previous === 'details' ? (
+        <Link href="/dashboard/setup?step=details" className={SECONDARY}>
+          <ArrowLeft className="size-4" aria-hidden />
+          {t('common.back')}
+          <LinkBusy />
+        </Link>
+      ) : previous !== null ? (
         <form action={action}>
           <input type="hidden" name="step" value={previous} />
           <button type="submit" name="outcome" value="open" disabled={pending} className={SECONDARY}>

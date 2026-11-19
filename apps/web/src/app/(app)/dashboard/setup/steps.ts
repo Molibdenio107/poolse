@@ -15,3 +15,16 @@ export interface WizardState {
 export function isSetupStep(value: string | undefined): value is SetupStep {
   return value !== undefined && (SETUP_STEPS as readonly string[]).includes(value);
 }
+
+/**
+ * The wizard as the Owner sees it (Rui, 19-11-2026): *Os seus dados* first, then
+ * the four setup steps — one wizard, where the details used to be a screen of
+ * their own before it. `details` is the web's own step: the API's pointer starts
+ * at `club`, and the details are saved through the profile, never the pointer.
+ */
+export const WIZARD_STEPS = ['details', ...SETUP_STEPS] as const;
+export type WizardStep = (typeof WIZARD_STEPS)[number];
+
+export function isWizardStep(value: string | undefined): value is WizardStep {
+  return value !== undefined && (WIZARD_STEPS as readonly string[]).includes(value);
+}

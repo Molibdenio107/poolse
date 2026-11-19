@@ -57,10 +57,17 @@ navigation, and Next would otherwise leave the title under the sticky app bar.
 
 ## The setup after creating (POOLSE-228)
 
-A business club made from now on opens on `/dashboard/setup`, the Owner's four steps, after
-*Confirmar os seus dados* if the Owner has gaps. This **partly reverses** "one screen, never a
+A business club made from now on opens on `/dashboard/setup`: **one wizard of five steps**, the
+Owner's own details first (Rui, 19-11-2026, which replaced *Confirmar os seus dados* as a screen
+before the setup). This **partly reverses** "one screen, never a
 wizard" (Rui, 19-11-2026): the creation form stays one screen, and the guide comes after it.
 
+0. **Os seus dados.** The details form (`ConfirmDetailsForm`) with an optional *Data de
+   nascimento*, saved through `PUT /me/profile`, the same date *O meu perfil* holds. It is the
+   web's own step (`WIZARD_STEPS`; the API's pointer starts at `club`): a setup that has not
+   moved opens on it, and while a required detail is missing it is the only step. The layout does
+   not draw the separate details screen for an Owner mid-setup (`guided`). Its *Seguinte* saves
+   and opens *Clube*; *Voltar* from *Clube* is a link back.
 1. **Clube.** The NIPC (`TaxPanel`), the site's morada (`SiteDetailsForm`), the contacts
    (`ClubContactsPanel`) and the logo (`LogoPanel`). The name was asked at creation.
 2. **Recintos e horário.** The first site's pools, each with *Abrir* to its own page, and
@@ -76,7 +83,7 @@ wizard" (Rui, 19-11-2026): the creation form stays one screen, and the guide com
 No season step (Rui, 19-11-2026): the season provisioning opens stands, and *Épocas* changes it.
 
 - **The page has the creation screen's look** (Rui, 19-11-2026): a highlighted head with the water
-  banner and the step's picture, the four steps as numbered circles on a line (ticked behind,
+  banner and the step's picture, the five steps as numbered circles on a line (ticked behind,
   filled and ringed now, muted ahead, each a link), then the step's cards.
 - **One way to leave for later.** *Seguinte* moves on, *Voltar* reopens the one before, and
   *Terminar mais tarde* goes to Início with the pointer kept. *Configurar mais tarde* was removed

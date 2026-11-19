@@ -60,8 +60,8 @@ export async function confirmDetailsAction(_previous: FormState, form: FormData)
       firstName: value('firstName'),
       lastName: value('lastName'),
       contactPhone: value('mobile'),
-      // Not asked here, and a PUT: sent back as they are.
-      birthDate: me.user.birthDate ?? '',
+      // Asked only in the setup's step 1 (optional); elsewhere sent back as it is.
+      birthDate: form.has('birthDate') ? String(form.get('birthDate') ?? '').trim() : (me.user.birthDate ?? ''),
       locale: me.user.locale,
       theme: me.user.theme,
     });
@@ -85,5 +85,8 @@ export async function confirmDetailsAction(_previous: FormState, form: FormData)
 
   // Layout-deep: the gate is drawn by the layouts, which read `/me` again.
   revalidatePath('/', 'layout');
+  // The setup's step 1 goes on to the next step; only a setup address, never an open redirect.
+  const then = String(form.get('then') ?? '');
+  if (/^\/dashboard\/setup\?step=[a-z]+$/.test(then)) return { ok: true, quiet: true, redirectTo: then };
   return { ok: true, toastKey: 'confirmDetails.saved' };
 }

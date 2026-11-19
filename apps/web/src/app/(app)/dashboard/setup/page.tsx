@@ -2,10 +2,11 @@ import { redirect } from 'next/navigation';
 import { AddPoolForm } from './add-pool-form';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { CalendarDays, FileSpreadsheet, Waves } from 'lucide-react';
-import { COUNTRY_CODES } from '@poolse/rules';
+import { COUNTRY_CODES, requiredDetails } from '@poolse/rules';
 import { PageError, PageShell } from '@/components/page-shell';
 import { FromLink } from '@/components/from-link';
-import { ApiError, apiFetch, type Facilities, type FacilityDetail, type People } from '@/lib/api';
+import { ApiError, apiFetch, type Facilities, type FacilityDetail, type Me, type People, type StaffDetails } from '@/lib/api';
+import { ConfirmDetailsForm } from '@/components/confirm-details/confirm-details-form';
 import { ClubContactsPanel, TaxPanel } from '../facilities/[facilityId]/tax-panel';
 import { LogoPanel } from '../facilities/[facilityId]/logo-panel';
 import { SiteDetailsForm } from '../facilities/[facilityId]/address-field';
@@ -15,7 +16,7 @@ import { readTaxSettings } from '../facilities/[facilityId]/club.actions';
 import { InviteForm } from '../facilities/staff/invite-form';
 import { FinishLater, StepControls } from './step-controls';
 import { SetupHeader } from './stepper';
-import { isSetupStep, SETUP_STEPS, type SetupStep, type WizardState } from './steps';
+import { isWizardStep, WIZARD_STEPS, type WizardState, type WizardStep } from './steps';
 
 /** The staff roles an Owner invites here; family roles come from the student (POOLSE-129). */
 const TEAM_ROLES = ['admin', 'instructor', 'maintenance'];
@@ -56,10 +57,20 @@ export default async function SetupPage({
    */
   const reviewing = wizard.step === null;
 
+  /*
+   * One wizard (Rui, 19-11-2026): *Os seus dados* is step 1. A setup that has
+   * not moved opens on it; while a required detail is missing it is the only
+   * step, since the layout no longer draws the separate details screen for an
+   * Owner mid-setup.
+   */
+  const me = await apiFetch<Me>('/me');
+  const missing = me.detailsMissing ?? [];
   const asked = (await searchParams).step;
-  const step: SetupStep = isSetupStep(asked) ? asked : (wizard.step ?? 'club');
-  const index = SETUP_STEPS.indexOf(step);
-  const previous = index > 0 ? SETUP_STEPS[index - 1]! : null;
+  const fresh = wizard.step === 'club' && wizard.skipped.length === 0;
+  const step: WizardStep =
+    missing.length > 0 ? 'details' : isWizardStep(asked) ? asked : fresh ? 'details' : (wizard.step ?? 'details');
+  const index = WIZARD_STEPS.indexOf(step);
+  const previous = index > 0 ? WIZARD_STEPS[index - 1]! : null;
 
   return (
     <PageShell title={t('setup.title')}>
@@ -70,16 +81,19 @@ export default async function SetupPage({
       */}
       <SetupHeader
         step={step}
-        behind={wizard.step === null ? SETUP_STEPS.length : SETUP_STEPS.indexOf(wizard.step)}
+        behind={wizard.step === null ? WIZARD_STEPS.length : WIZARD_STEPS.indexOf(wizard.step)}
         footer={
+          step === 'details' ? undefined : (
           <StepControls
             step={step}
             previous={previous}
             reviewing={reviewing}
             {...(step === 'import' ? { nextLabelKey: 'setup.step.import.none' } : {})}
           />
+          )
         }
       >
+        {step === 'details' && <DetailsStep me={me} />}
         {step === 'club' && <ClubStep />}
         {step === 'places' && <PlacesStep />}
         {step === 'team' && <TeamStep />}
@@ -87,6 +101,46 @@ export default async function SetupPage({
       </SetupHeader>
       <FinishLater />
     </PageShell>
+  );
+}
+
+/**
+ * 1 · Os seus dados: the details form of *Confirmar os seus dados*, with the
+ * optional date of birth of *O meu perfil* (Rui, 19-11-2026). Its own button is
+ * *Seguinte*: it saves through the profile and opens the next step.
+ */
+async function DetailsStep({ me }: { me: Me }): Promise<React.ReactElement> {
+  const membership = me.memberships[0]!;
+  const required = requiredDetails(membership.roles, { adultPathStudent: true });
+  // An Owner who also teaches gives the payroll details too, prefilled from their record.
+  const known = required.includes('taxNumber')
+    ? await apiFetch<StaffDetails>(`/staff/${membership.membershipId}/details`).catch(() => null)
+    : null;
+  return (
+    <section className={CARD}>
+      <div className={INNER}>
+        <ConfirmDetailsForm
+          required={required}
+          missing={me.detailsMissing ?? []}
+          initial={{
+            firstName: me.user.firstName ?? '',
+            lastName: me.user.lastName ?? '',
+            contactPhone: me.user.contactPhone ?? '',
+            taxNumber: known?.taxNumber ?? '',
+            address: known?.address ?? '',
+            postalCode: known?.postalCode ?? '',
+            locality: known?.locality ?? '',
+          }}
+          taxNumberLocked={(known?.taxNumber ?? null) !== null}
+          staffUnreadable={required.includes('taxNumber') && known === null}
+          children={null}
+          contact={null}
+          confirmLabelKey="setup.next"
+          birthDate={me.user.birthDate ?? ''}
+          then="/dashboard/setup?step=club"
+        />
+      </div>
+    </section>
   );
 }
 

@@ -8861,6 +8861,11 @@
     "backTo": "Back to setup",
     "resume": "Continue setting up",
     "step": {
+      "details": {
+        "short": "Your details",
+        "title": "Your details",
+        "hint": "Who runs the club. The mobile and the date of birth are optional and live in My profile."
+      },
       "club": {
         "short": "Club",
         "title": "Club",

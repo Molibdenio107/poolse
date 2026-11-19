@@ -8861,6 +8861,11 @@
     "backTo": "Voltar à configuração",
     "resume": "Continuar a configuração",
     "step": {
+      "details": {
+        "short": "Os seus dados",
+        "title": "Os seus dados",
+        "hint": "Quem gere o clube. O telemóvel e a data de nascimento são opcionais e ficam em O meu perfil."
+      },
       "club": {
         "short": "Clube",
         "title": "Clube",

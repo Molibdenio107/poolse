@@ -1,14 +1,15 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { Building2, Check, FileSpreadsheet, Users, Waves, type LucideIcon } from 'lucide-react';
+import { Building2, Check, FileSpreadsheet, UserRound, Users, Waves, type LucideIcon } from 'lucide-react';
 import { LinkBusy } from '@/components/link-busy';
 import { cn } from '@/lib/utils';
 import { WaterBanner } from '../water-banner';
 import { LogoLockIn } from '@/components/logo-lock-in';
-import { SETUP_STEPS, type SetupStep } from './steps';
+import { WIZARD_STEPS, type WizardStep } from './steps';
 
 /** Each step's picture, used on the banner and nowhere it would be the only sign. */
-export const STEP_ICON: Record<SetupStep, LucideIcon> = {
+export const STEP_ICON: Record<WizardStep, LucideIcon> = {
+  details: UserRound,
   club: Building2,
   places: Waves,
   team: Users,
@@ -29,7 +30,7 @@ export async function SetupHeader({
   children,
   footer,
 }: {
-  step: SetupStep;
+  step: WizardStep;
   behind: number;
   /** The step's own sections, inside this same card (Rui, 19-11-2026). */
   children?: React.ReactNode;
@@ -38,7 +39,7 @@ export async function SetupHeader({
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const Icon = STEP_ICON[step];
-  const at = SETUP_STEPS.indexOf(step);
+  const at = WIZARD_STEPS.indexOf(step);
 
   return (
     <section className="overflow-hidden rounded bg-surface shadow-card ring-2 ring-primary/40">
@@ -48,14 +49,14 @@ export async function SetupHeader({
       </WaterBanner>
 
       <div className="flex flex-col gap-6 px-4 pb-6 pt-2 sm:px-8">
-        <ol aria-label={t('setup.stepsLabel')} className="grid grid-cols-4">
-          {SETUP_STEPS.map((key, index) => {
+        <ol aria-label={t('setup.stepsLabel')} className="grid grid-cols-5">
+          {WIZARD_STEPS.map((key, index) => {
             const done = index < behind && index !== at;
             const current = index === at;
             return (
               <li key={key} className="relative flex flex-col items-center gap-2 text-center">
                 {/* The line to the next circle, behind it. */}
-                {index < SETUP_STEPS.length - 1 && (
+                {index < WIZARD_STEPS.length - 1 && (
                   <span
                     aria-hidden
                     className={cn(
@@ -99,7 +100,7 @@ export async function SetupHeader({
 
         <div className="onboard-rise flex flex-col items-center gap-1 text-center" style={{ '--i': 1 } as React.CSSProperties}>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-            {t('setup.progress', { n: at + 1, total: SETUP_STEPS.length })}
+            {t('setup.progress', { n: at + 1, total: WIZARD_STEPS.length })}
           </p>
           <h2 className="flex items-center gap-2 text-xl font-semibold">
             <span aria-hidden className="inline-flex size-8 items-center justify-center rounded-full bg-primary/15 text-primary">
