@@ -1,4 +1,5 @@
 import { AppController } from './app/app.controller.js';
+import { AppFreeSwimController } from './app/app-free-swim.controller.js';
 import { AppConsentsController } from './app/app-consents.controller.js';
 import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -262,6 +263,7 @@ export const IDENTITY_ONLY_ROUTES = [
     FamilyController,
     AppConsentsController,
     AppController,
+    AppFreeSwimController,
     GuardiansController,
     PeopleDedupController,
     StudentImportController,

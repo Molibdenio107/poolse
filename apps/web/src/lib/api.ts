@@ -4333,6 +4333,34 @@ export interface AppPassProduct {
   prices: { personKey: string; amountCents: number; categoryNames: string | null }[];
 }
 
+/**
+ * `GET /app/free-swim` — POOLSE-237. The club's free-swim timetable for today and
+ * the next 7 days, and how full a tank is now: counts only, never a person.
+ * Days are `yyyy-MM-dd` and times `HH:mm`, both on the site's own clock.
+ */
+export interface AppFreeSwim {
+  sites: {
+    facilityId: string;
+    name: string;
+    /** `yyyy-MM-dd`, today on the site's clock. */
+    today: string;
+    days: {
+      date: string;
+      sessions: { from: string; to: string; poolName: string | null; lanes: number }[];
+      closed: { poolName: string; until: string }[];
+    }[];
+    now: {
+      poolName: string;
+      from: string;
+      to: string;
+      occupied: number;
+      capacity: number;
+      percent: number;
+      readAt: string;
+    }[];
+  }[];
+}
+
 export interface AppPasses {
   passes: AppPass[];
   forSale: AppPassProduct[];

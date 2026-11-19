@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ArrowLeft, CalendarPlus, ChevronRight, Waves } from 'lucide-react';
-import { apiFetch, type AppPasses } from '@/lib/api';
+import { apiFetch, type AppFreeSwim, type AppPasses } from '@/lib/api';
 import { withFrom } from '@/lib/back';
 import { outcome } from '@/lib/load-failure';
 import { LinkBusy } from '@/components/link-busy';
@@ -11,14 +11,19 @@ const HERE = '/app/perfil/mais-natacao';
 /**
  * *+ Natação* (Rui, 09-11-2026): more swimming than the lessons a family already
  * has, in one place on *Perfil*. *Natação livre* (POOLSE-204) where there is a
- * pass to see or a pack to buy, and *Pedir inscrição numa turma* (POOLSE-121),
+ * pass to see, a pack to buy or a free-swim timetable (POOLSE-237), and *Pedir inscrição numa turma* (POOLSE-121),
  * always. Each opens its own page, which comes back here.
  */
 export default async function MoreSwimming(): Promise<React.ReactElement> {
   const t = await getTranslations();
   // Best effort: the free-swim row is only offered when there is something in it.
-  const passes = await outcome(apiFetch<AppPasses>('/app/passes'));
-  const swims = passes.state === 'ok' && (passes.data.passes.length > 0 || passes.data.forSale.length > 0);
+  const [passes, timetable] = await Promise.all([
+    outcome(apiFetch<AppPasses>('/app/passes')),
+    outcome(apiFetch<AppFreeSwim>('/app/free-swim')),
+  ]);
+  const swims =
+    (passes.state === 'ok' && (passes.data.passes.length > 0 || passes.data.forSale.length > 0)) ||
+    (timetable.state === 'ok' && timetable.data.sites.length > 0);
   const row =
     'flex min-h-[52px] items-center justify-between gap-3 rounded bg-surface px-4 py-2 shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary';
 

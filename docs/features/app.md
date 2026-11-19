@@ -378,8 +378,15 @@ neither is drawn. A newcomer's request reaches the secretaria's queue; nobody is
 ## Family app changes, 09-11-2026 (Rui)
 
 - **Vou / Vem.** What a lesson's answer says, in few words: about oneself *Vou* / *Não vou*, about a child *Vem* / *Não vem* (`app.notice.saidGoing[Self]`). The teacher's app already said *Vem* / *Não vem*.
-- **+ Natação** on *Perfil* (`/app/perfil/mais-natacao`) holds *Natação livre* (only with a pass to see or a pack to buy) and *Pedir inscrição numa turma* (calendar-plus icon; a person-plus read as *add a friend*). Each comes back to *+ Natação*. On *Início* the join link shows only when no lesson is coming in the agenda's two weeks.
+- **+ Natação** on *Perfil* (`/app/perfil/mais-natacao`) holds *Natação livre* (only with a pass to see, a pack to buy or a free-swim timetable, POOLSE-237) and *Pedir inscrição numa turma* (calendar-plus icon; a person-plus read as *add a friend*). Each comes back to *+ Natação*. On *Início* the join link shows only when no lesson is coming in the agenda's two weeks.
 - **Desafio on Início.** The next lesson's Desafio is a light-blue band under its card. The agenda rows carry `challenge`; they are already the reader's own child in a turma they were in that day, `familyMayReadPlan`'s rule.
 - **Hoje.** On any other week, a small *Hoje* pill sits in the page's title row (family and teacher *Aulas*, `WeekToday`) and returns to this one: inside the card it squeezed the week, and on a row of its own it pushed the arrows down. **The card keeps one size every week:** the title has two lines' room, and a week across New Year uses short months (*28 dez. 2026 a 3 jan. 2027*).
 - **Distância nadada** opens: all time stays the figure on show; inside, this season (the published swimming season holding today), this month, and the average per calendar year since the first time. Summed in SQL in `progressSummary`, never typed.
 - **Classmates' photos** open large only where the club holds a photo **and** photo consent (POOLSE-194, unchanged by Rui's call): a login's own picture does not count.
+
+## Horário de nado livre — POOLSE-237 (19-11-2026)
+
+- **Where**: the top of *Natação livre*, above the passes, per site. `GET /app/free-swim` answers every member role; with `reception` off it answers no sites, as `/app/passes` does, and the page shows nothing.
+- **What**: today and the next 7 days of the calendar's free-swim sessions on the site's clock (*Hoje*, *Amanhã*, then the long date): hours, tank and lanes. A cancelled session is not shown; a tank shut for the whole day by a closure (holidays included) reads *{tanque}: encerrado até dd-MM-yyyy*.
+- **Now**: for a free-swim session running now, *Agora: 60 % ocupado (12 de 20) · {tanque} · às 18:42*, from `pool_occupancy()`, rounded down. No capacity on the tank: no number at all. The bar beside it is hidden from screen readers; the sentence carries it.
+- **Never a person**: the response's key set is pinned by `free-swim.integration.test.ts`. The figure is cached 30 s per club and tank in the API (`occupancyCache`), and the reading time is on screen so a stale number is never taken for live.

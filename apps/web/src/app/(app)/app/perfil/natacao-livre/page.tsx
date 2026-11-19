@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ArrowLeft } from 'lucide-react';
-import { apiFetch, type AppPasses } from '@/lib/api';
+import { apiFetch, type AppFreeSwim, type AppPasses } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { describeLoad } from '@/lib/load-failure';
 import { LinkBusy } from '@/components/link-busy';
 import { PageError } from '@/components/page-shell';
 import { BuyForm } from './buy-form';
+import { FreeSwimSchedule } from './free-swim-schedule';
 import { backTarget } from '@/lib/back';
 
 /**
@@ -22,6 +23,8 @@ export default async function FreeSwim({
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const back = backTarget((await searchParams).from, '/app/perfil?home=family');
+  // POOLSE-237: the timetable is a second read; failing, it is simply not shown.
+  const timetable = apiFetch<AppFreeSwim>('/app/free-swim').catch(() => ({ sites: [] }) as AppFreeSwim);
   let answer: AppPasses;
   try {
     answer = await apiFetch<AppPasses>('/app/passes');
@@ -42,6 +45,9 @@ export default async function FreeSwim({
         <LinkBusy />
       </Link>
       <h1 className="text-xl font-semibold tracking-tight">{t('app.passes.title')}</h1>
+
+      {/* What a swimmer checks first: when, and how full now (POOLSE-237). */}
+      <FreeSwimSchedule sites={(await timetable).sites} />
 
       {answer.passes.length === 0 ? (
         <p className="text-foreground-muted">{t('app.passes.none')}</p>

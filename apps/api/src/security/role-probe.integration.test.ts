@@ -101,6 +101,7 @@ import { MedicalExamScheduleController } from '../students/medical-exam-schedule
 import { StaffNotesController } from '../staff-notes/staff-notes.controller.js';
 import { OnboardingController } from '../onboarding/onboarding.controller.js';
 import { SearchController } from '../search/search.controller.js';
+import { AppFreeSwimController } from '../app/app-free-swim.controller.js';
 import { PersonCategoriesController } from '../billing/person-categories.controller.js';
 import { PassProductsController, ReceptionController } from '../reception/passes.controller.js';
 import { FeeCategoriesController } from '../billing/categories.controller.js';
@@ -2002,6 +2003,18 @@ test('POOLSE-235: Ctrl+K data search is the office’s and the instructors’ �
   await as(fixture.maintenanceId, ['maintenance'], async () => {
     await refused('GET search as maintenance', 403, () => new SearchController().find('ana'));
   });
+});
+
+test('POOLSE-237: the app’s free-swim timetable answers every member, families included, and carries no person', async () => {
+  await asEach(async ({ label }) => {
+    const answer = await new AppFreeSwimController().read();
+    assert.ok(Array.isArray(answer.sites), `GET app/free-swim as ${label}`);
+  });
+  for (const [id, role] of [[fixture.instructorId, 'instructor'], [fixture.maintenanceId, 'maintenance']] as const) {
+    await as(id, [role], async () => {
+      assert.ok(Array.isArray((await new AppFreeSwimController().read()).sites), `GET app/free-swim as ${role}`);
+    });
+  }
 });
 
 test('person categories are the office’s; a family reads only its own — POOLSE-202', async () => {
