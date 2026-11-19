@@ -33,6 +33,9 @@ test.describe('signed out', () => {
     expect(href).toContain(`email=${INVITED_EMAIL}`);
     await expect(page.getByRole('link', { name: /^entrar$|^sign in$/i })).toHaveAttribute('href', /redirect_url=/);
 
+    // POOLSE-238: the address to use, also with Google, before choosing an account.
+    await expect(page.getByText(/também se entrar com o google|also if you sign in with google/i)).toContainText(INVITED_EMAIL);
+
     await expect(page.getByRole('link', { name: /voltar|back/i })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /aceitar|accept/i })).toHaveCount(0);
   });
@@ -43,11 +46,12 @@ test.describe('signed in as somebody else', () => {
 
   test('the page names both addresses and offers to sign out first', async ({ page }) => {
     await page.goto(`/join?token=${encodeURIComponent(token)}`, { waitUntil: 'load' });
-    const warning = page.getByText(/foi enviado para|was sent to/i);
+    const warning = page.getByText(/o convite é para|the invitation is for/i);
     await expect(warning).toBeVisible({ timeout: 30_000 });
     await expect(warning).toContainText(INVITED_EMAIL);
     await expect(warning).toContainText(E2E_EMAIL!);
-    await expect(page.getByRole('button', { name: /^terminar sessão e continuar$|^sign out and continue$/i })).toBeVisible();
+    await expect(warning).toContainText(/saia e entre com essa conta|sign out and sign in with that account/i);
+    await expect(page.getByRole('button', { name: /^sair$|^sign out$/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /^aceitar com |^accept as /i })).toBeVisible();
   });
 });

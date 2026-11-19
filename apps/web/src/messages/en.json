@@ -3509,8 +3509,9 @@
       "unknown_account": "Your account is not ready yet. Refresh the page and try again."
     },
     "acceptingAs": "You will accept as {email}.",
-    "mismatch": "This invitation was sent to {invited}, but you're signed in as {current}. If you accept now, the account {current} receives these roles.",
-    "signOutAndContinue": "Sign out and continue",
+    "mismatch": "You're signed in as {current}. The invitation is for {invited}. Sign out and sign in with that account.",
+    "useInvitedEmail": "Use the email the invitation was sent to ({email}), also if you sign in with Google.",
+    "signOutAndContinue": "Sign out",
     "acceptAnyway": "Accept as {current}"
   },
   "vacations": {
@@ -8728,7 +8729,7 @@
     "footerPrivacy": "Privacy",
     "footerTerms": "Terms",
     "footerGuide": "Guide (in Portuguese)",
-    "updated": "Last updated: 10-11-2026",
+    "updated": "Last updated: 19-11-2026",
     "contact": "Contact",
     "signUpNotice": "By creating an account you accept the",
     "and": "and the",
@@ -8762,7 +8763,7 @@
         },
         "processors": {
           "title": "Who we share with (processors)",
-          "body": "- Clerk (US): accounts and sign-in — name and email.\n- Vercel (EU and US): hosting of the web app.\n- Railway (EU): server and database.\n- Cloudflare R2 (EU): files and encrypted backups.\n- GitHub (US): runs the nightly backup; the backup is encrypted before it leaves the server.\n- Resend (US): sending email, when switched on.\n- Stripe (EU and US): the club's subscription payment; it receives no student data.\n- Sentry (EU and US): error tracking, when switched on, with no personal data.\n- Anthropic (US): automatic reading of documents (energy bills, membership forms), only if the club switches it on; the document is sent to be read.\n- Open-Meteo (Europe): weather; it receives only the facility's town.\n\nTransfers outside the European Union rely on the European Commission's standard contractual clauses or the EU-US Data Privacy Framework."
+          "body": "- Clerk (US): accounts and sign-in — name and email.\n- Google (US), optional: if you choose \"Continue with Google\" to sign in, Poolse receives your name, email address and profile photo. Nothing is posted to your Google account, and you can always sign in with email and password instead.\n- Vercel (EU and US): hosting of the web app.\n- Railway (EU): server and database.\n- Cloudflare R2 (EU): files and encrypted backups.\n- GitHub (US): runs the nightly backup; the backup is encrypted before it leaves the server.\n- Resend (US): sending email, when switched on.\n- Stripe (EU and US): the club's subscription payment; it receives no student data.\n- Sentry (EU and US): error tracking, when switched on, with no personal data.\n- Anthropic (US): automatic reading of documents (energy bills, membership forms), only if the club switches it on; the document is sent to be read.\n- Open-Meteo (Europe): weather; it receives only the facility's town.\n\nTransfers outside the European Union rely on the European Commission's standard contractual clauses or the EU-US Data Privacy Framework."
         },
         "rights": {
           "title": "Your rights",

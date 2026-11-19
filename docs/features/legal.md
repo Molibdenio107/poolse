@@ -22,7 +22,7 @@ A change to any of these is a change to the policy, in the same commit:
   months then 5 y), `docs/features/trial.md` (60 days after a club stops), backups 30 days.
 - **Who sees what**: the role rules, instructors by sport (POOLSE-145), classmates (POOLSE-194),
   app views (POOLSE-188), support never reads health data or ID documents.
-- **Processors and regions**: Clerk, Vercel, Railway (EU), Cloudflare R2 (EU), GitHub, Resend,
+- **Processors and regions**: Clerk (and Google, optional, for *Continuar com Google*: name, email, photo; POOLSE-238), Vercel, Railway (EU), Cloudflare R2 (EU), GitHub, Resend,
   Stripe, Sentry, Anthropic, Open-Meteo. Railway and R2 say EU: production must be created in an
   EU region / EU jurisdiction, or the policy is wrong.
 - **Cookies**: necessary only (session, active club, locale, theme).

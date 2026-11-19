@@ -3509,8 +3509,9 @@
       "unknown_account": "A sua conta ainda não está pronta. Atualize a página e tente novamente."
     },
     "acceptingAs": "Vai aceitar com a conta {email}.",
-    "mismatch": "Este convite foi enviado para {invited}, mas tem sessão iniciada como {current}. Se aceitar assim, é a conta {current} que recebe estes papéis.",
-    "signOutAndContinue": "Terminar sessão e continuar",
+    "mismatch": "Está a entrar como {current}. O convite é para {invited}. Saia e entre com essa conta.",
+    "useInvitedEmail": "Use o email para onde foi enviado o convite ({email}), também se entrar com o Google.",
+    "signOutAndContinue": "Sair",
     "acceptAnyway": "Aceitar com {current}"
   },
   "vacations": {
@@ -8728,7 +8729,7 @@
     "footerPrivacy": "Privacidade",
     "footerTerms": "Termos",
     "footerGuide": "Guia",
-    "updated": "Última atualização: 10-11-2026",
+    "updated": "Última atualização: 19-11-2026",
     "contact": "Contacto",
     "signUpNotice": "Ao criar uma conta, aceita os",
     "and": "e a",
@@ -8762,7 +8763,7 @@
         },
         "processors": {
           "title": "Com quem partilhamos (subcontratantes)",
-          "body": "- Clerk (EUA): contas e início de sessão — nome e email.\n- Vercel (UE e EUA): alojamento da aplicação web.\n- Railway (UE): servidor e base de dados.\n- Cloudflare R2 (UE): ficheiros e cópias de segurança cifradas.\n- GitHub (EUA): executa a cópia de segurança noturna; a cópia é cifrada antes de sair do servidor.\n- Resend (EUA): envio de emails, quando ativado.\n- Stripe (UE e EUA): pagamento da subscrição do clube; não recebe dados de alunos.\n- Sentry (UE e EUA): registo de erros, quando ativado, sem dados pessoais.\n- Anthropic (EUA): leitura automática de documentos (faturas de energia, boletins), apenas se o clube a ativar; o documento é enviado para ser lido.\n- Open-Meteo (Europa): meteorologia; recebe apenas a localidade das instalações.\n\nAs transferências para fora da União Europeia seguem as cláusulas contratuais-tipo da Comissão Europeia ou o Quadro de Privacidade de Dados UE-EUA."
+          "body": "- Clerk (EUA): contas e início de sessão — nome e email.\n- Google (EUA), opcional: se escolher «Continuar com Google» para entrar, o Poolse recebe o seu nome, endereço de email e fotografia de perfil. Nada é publicado na sua conta Google, e pode sempre entrar com email e palavra-passe.\n- Vercel (UE e EUA): alojamento da aplicação web.\n- Railway (UE): servidor e base de dados.\n- Cloudflare R2 (UE): ficheiros e cópias de segurança cifradas.\n- GitHub (EUA): executa a cópia de segurança noturna; a cópia é cifrada antes de sair do servidor.\n- Resend (EUA): envio de emails, quando ativado.\n- Stripe (UE e EUA): pagamento da subscrição do clube; não recebe dados de alunos.\n- Sentry (UE e EUA): registo de erros, quando ativado, sem dados pessoais.\n- Anthropic (EUA): leitura automática de documentos (faturas de energia, boletins), apenas se o clube a ativar; o documento é enviado para ser lido.\n- Open-Meteo (Europa): meteorologia; recebe apenas a localidade das instalações.\n\nAs transferências para fora da União Europeia seguem as cláusulas contratuais-tipo da Comissão Europeia ou o Quadro de Privacidade de Dados UE-EUA."
         },
         "rights": {
           "title": "Os seus direitos",

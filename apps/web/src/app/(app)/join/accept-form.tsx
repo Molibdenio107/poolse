@@ -65,6 +65,13 @@ export function AcceptForm({
     return (
       <div className="flex flex-col gap-3">
         <p className="text-sm text-foreground-muted">{t('join.accountNeeded')}</p>
+        {/*
+          POOLSE-238 (Rui, 19-11-2026): with Google sign-in on, a person can arrive
+          as a different Gmail; the address to use is said before they choose.
+        */}
+        {invitedEmail !== null && (
+          <p className="text-sm font-medium">{t('join.useInvitedEmail', { email: invitedEmail })}</p>
+        )}
         <div className="flex flex-wrap gap-2">
           <Link
             href={accountHref('sign-up', token, invitedEmail)}
