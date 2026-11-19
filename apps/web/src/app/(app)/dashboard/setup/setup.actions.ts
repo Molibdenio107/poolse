@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { ApiError, apiPut } from '@/lib/api';
 import type { FormState } from '../actions';
 import { SETUP_STEPS, type SetupStep, type WizardState } from './steps';
@@ -31,6 +32,15 @@ export async function moveStepAction(_previous: FormState, form: FormData): Prom
   }
 
   // The last step finishes it: *Tudo pronto* once, as creation used to land on.
-  if (wizard.finished || wizard.step === null) return { ok: true, quiet: true, redirectTo: '/dashboard/welcome?new=1' };
+  if (wizard.finished || wizard.step === null) {
+    /*
+     * Finishing brings the menus back, and they live in the layout, which a soft
+     * navigation does not redraw: without this the sidebar stayed hidden until a
+     * reload, and the guided tour found only the search and the bell (Rui,
+     * 19-11-2026).
+     */
+    revalidatePath('/', 'layout');
+    return { ok: true, quiet: true, redirectTo: '/dashboard/welcome?new=1' };
+  }
   return { ok: true, quiet: true, redirectTo: `/dashboard/setup?step=${wizard.step}` };
 }
