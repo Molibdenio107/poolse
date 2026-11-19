@@ -18,6 +18,7 @@ import { SuspendedNotice } from './suspended-notice';
 import { PhoneLanding } from './phone-landing';
 import { familyOnly, landsInTeaching } from '@/lib/app-hats';
 import { ClubSupportStrip, SupportEndedNotice, SupportSessionBanner } from './support-strip';
+import { ConfirmDetails } from '@/components/confirm-details/confirm-details';
 
 /**
  * The backoffice shell.
@@ -77,6 +78,8 @@ interface Viewer {
    * with no explanation among them.
    */
   suspended: { name: string; reason: string | null; at: string } | null;
+  /** POOLSE-227: `/me`, when the active club still needs details from this person. */
+  gate: Me | null;
 }
 
 async function currentViewer(): Promise<Viewer> {
@@ -125,6 +128,7 @@ async function currentViewer(): Promise<Viewer> {
               at: membership.suspendedAt,
             }
           : null,
+      gate: (me.detailsMissing ?? []).length > 0 && membership !== undefined && membership.view === null ? me : null,
     };
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;
@@ -146,6 +150,7 @@ async function currentViewer(): Promise<Viewer> {
       sports: [BASE_SPORT],
       organizationName: null,
       suspended: null,
+      gate: null,
     };
   }
 }
@@ -172,7 +177,7 @@ export default async function DashboardLayout({
    * parts is `null` when there is nothing to draw: the logo, the subscription
    * warning on the avatar (owner and admin, Rui 28-10-2026), the support status.
    */
-  const [{ viewing, roles, support, clubGone, kind, modules, sports, organizationName, suspended }, shell] =
+  const [{ viewing, roles, support, clubGone, kind, modules, sports, organizationName, suspended, gate }, shell] =
     await Promise.all([currentViewer(), readShell()]);
   if (viewing) redirect('/app');
   // A family and nothing else lives in the app (POOLSE-90). Here and not only in
@@ -212,6 +217,10 @@ export default async function DashboardLayout({
       />
     );
   }
+
+  // POOLSE-227: the details the club still needs, in place of the page and never
+  // a redirect (a redirect after Clerk's sign-in leaves a blank page).
+  if (gate !== null) return <ConfirmDetails me={gate} surface="desk" />;
 
   return (
     // POOLSE-88: clear of a landscape phone's rounded corners and notch.

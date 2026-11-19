@@ -1,0 +1,245 @@
+'use client';
+
+import { useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
+import { SignOutButton } from '@clerk/nextjs';
+import { LogOut, Mail, Phone } from 'lucide-react';
+import type { DetailField } from '@poolse/rules';
+import { TextField } from '@/components/ui/field';
+import { useSavedAction } from '@/lib/saved';
+import type { FormState } from '@/app/(app)/dashboard/actions';
+import { confirmDetailsAction } from './confirm-details.actions';
+
+export interface ChildRow {
+  id: string;
+  name: string;
+  relationship: string | null;
+}
+
+export interface ClubContact {
+  name: string;
+  phone: string | null;
+  email: string | null;
+}
+
+type Values = Record<'firstName' | 'lastName' | 'contactPhone' | 'taxNumber' | 'address' | 'postalCode' | 'locality', string>;
+
+/** The form's field for each detail — the API's own names, so its errors land under the right box. */
+const FORM_NAME: Record<DetailField, keyof Values> = {
+  firstName: 'firstName',
+  lastName: 'lastName',
+  mobile: 'contactPhone',
+  taxNumber: 'taxNumber',
+  address: 'address',
+  postalCode: 'postalCode',
+  locality: 'locality',
+};
+
+const INITIAL: FormState = { ok: false };
+
+/**
+ * The gate's form — POOLSE-227. Every required field is `*`, prefilled where the
+ * person or the office already gave it, and the first missing one takes the
+ * focus. The NIF and morada carry their reason as visible text (the GDPR line),
+ * never a tooltip.
+ */
+export function ConfirmDetailsForm({
+  required,
+  missing,
+  initial,
+  taxNumberLocked,
+  staffUnreadable,
+  children,
+  contact,
+}: {
+  required: DetailField[];
+  missing: DetailField[];
+  initial: Values;
+  taxNumberLocked: boolean;
+  staffUnreadable: boolean;
+  /** A guardian's children, read-only; null for anybody else. */
+  children: ChildRow[] | null;
+  contact: ClubContact | null;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [state, action, pending] = useSavedAction(confirmDetailsAction, INITIAL);
+  const formRef = useRef<HTMLFormElement>(null);
+  const asks = (field: DetailField): boolean => required.includes(field);
+  const error = (name: keyof Values): string | undefined => {
+    const key = state.fields?.[name];
+    return key === undefined ? undefined : t(key as never);
+  };
+
+  // The first missing field takes the focus, once, as the gate appears.
+  const first = missing[0];
+  useEffect(() => {
+    if (first === undefined) return;
+    const element = formRef.current?.elements.namedItem(FORM_NAME[first]);
+    if (element instanceof HTMLInputElement) element.focus();
+  }, [first]);
+
+  return (
+    <div className="flex w-full max-w-2xl flex-col gap-4">
+      <form ref={formRef} action={action} className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <TextField
+            name="firstName"
+            label={t('profile.firstName')}
+            initial={initial.firstName}
+            required={asks('firstName')}
+            autoComplete="given-name"
+            maxLength={100}
+            error={error('firstName')}
+          />
+          <TextField
+            name="lastName"
+            label={t('profile.lastName')}
+            initial={initial.lastName}
+            required={asks('lastName')}
+            autoComplete="family-name"
+            maxLength={100}
+            error={error('lastName')}
+          />
+        </div>
+        <TextField
+          name="contactPhone"
+          type="tel"
+          inputMode="tel"
+          label={t('confirmDetails.mobile')}
+          initial={initial.contactPhone}
+          required={asks('mobile')}
+          autoComplete="tel"
+          maxLength={30}
+          hint={t('confirmDetails.mobileHint')}
+          error={error('contactPhone')}
+        />
+
+        {asks('taxNumber') && (
+          <fieldset className="flex flex-col gap-3 border-t border-border pt-4">
+            <legend className="sr-only">{t('staffDetails.title')}</legend>
+            {staffUnreadable && (
+              <p className="text-sm text-danger" role="alert">
+                {t('staffDetails.loadFailed')}
+              </p>
+            )}
+            <TextField
+              name="taxNumber"
+              inputMode="numeric"
+              label={t('staffDetails.taxNumber')}
+              initial={initial.taxNumber}
+              required
+              readOnly={taxNumberLocked}
+              maxLength={11}
+              hint={taxNumberLocked ? t('staffDetails.errors.clubsToSet') : undefined}
+              error={error('taxNumber')}
+            />
+            <TextField
+              name="address"
+              label={t('staffDetails.address')}
+              initial={initial.address}
+              required
+              autoComplete="street-address"
+              maxLength={500}
+              error={error('address')}
+            />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <TextField
+                name="postalCode"
+                label={t('staffDetails.postalCode')}
+                initial={initial.postalCode}
+                required
+                autoComplete="postal-code"
+                placeholder="0000-000"
+                maxLength={8}
+                error={error('postalCode')}
+              />
+              <TextField
+                name="locality"
+                label={t('staffDetails.locality')}
+                initial={initial.locality}
+                required
+                autoComplete="address-level2"
+                maxLength={120}
+                error={error('locality')}
+              />
+            </div>
+            <p className="text-sm text-foreground-muted">{t('confirmDetails.gdpr')}</p>
+          </fieldset>
+        )}
+
+        <button
+          type="submit"
+          disabled={pending}
+          className="inline-flex h-control w-full items-center justify-center rounded-sm bg-primary px-6 text-control font-semibold text-primary-foreground disabled:opacity-60 sm:w-auto sm:self-start"
+        >
+          {pending ? t('common.working') : t('confirmDetails.confirm')}
+        </button>
+      </form>
+
+      {children !== null && children.length > 0 && (
+        <section aria-labelledby="confirm-details-children" className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
+          <div className="flex flex-col gap-0.5">
+            <h2 id="confirm-details-children" className="text-base font-semibold">
+              {t('confirmDetails.children')}
+            </h2>
+            <p className="text-sm text-foreground-muted">{t('confirmDetails.childrenHint')}</p>
+          </div>
+          <ul className="flex flex-col divide-y divide-border">
+            {children.map((child) => (
+              <li key={child.id} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col">
+                  <span className="font-medium">{child.name}</span>
+                  {child.relationship !== null && (
+                    <span className="text-sm text-foreground-muted">{child.relationship}</span>
+                  )}
+                </div>
+                <TellTheOffice child={child.name} contact={contact} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* The one way out that is not the form: somebody signed in as the wrong person. */}
+      <SignOutButton redirectUrl="/">
+        <button
+          type="button"
+          className="inline-flex min-h-control items-center gap-2 self-start text-sm text-foreground-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          <LogOut className="size-4" aria-hidden />
+          {t('app.profile.signOut')}
+        </button>
+      </SignOutButton>
+    </div>
+  );
+}
+
+/**
+ * *Avisar a secretaria* (Rui, 19-11-2026): the club's own email with the child
+ * named in the subject, and its published phone. No queue of its own.
+ */
+function TellTheOffice({ child, contact }: { child: string; contact: ClubContact | null }): React.ReactElement {
+  const t = useTranslations();
+  if (contact === null || (contact.email === null && contact.phone === null)) {
+    return <p className="text-sm text-foreground-muted">{t('confirmDetails.noClubContact')}</p>;
+  }
+  const subject = encodeURIComponent(t('confirmDetails.tellSubject', { child }));
+  const link =
+    'inline-flex min-h-control items-center justify-center gap-2 rounded-sm bg-surface px-4 text-control shadow-card';
+  return (
+    <div className="flex flex-wrap gap-2">
+      {contact.email !== null && (
+        <a href={`mailto:${contact.email}?subject=${subject}`} className={link}>
+          <Mail className="size-4" aria-hidden />
+          {t('confirmDetails.tellOffice')}
+        </a>
+      )}
+      {contact.phone !== null && (
+        <a href={`tel:${contact.phone.replace(/\s/g, '')}`} className={link}>
+          <Phone className="size-4" aria-hidden />
+          {t('confirmDetails.callOffice', { phone: contact.phone })}
+        </a>
+      )}
+    </div>
+  );
+}

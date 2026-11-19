@@ -8,6 +8,7 @@ import { readShell } from '@/lib/shell';
 import { SuspendedNotice } from '../dashboard/suspended-notice';
 import { AppFrame } from './app-frame';
 import { ViewBanner } from './view-banner';
+import { ConfirmDetails } from '@/components/confirm-details/confirm-details';
 
 /**
  * App mode's shell — POOLSE-90; its frame since POOLSE-136 (`app-frame.tsx`).
@@ -44,6 +45,12 @@ export default async function AppModeLayout({
         suspendedAt={membership.suspendedAt}
       />
     );
+  }
+
+  // POOLSE-227: the details the club still needs, in place of the home. Never
+  // under a view: `/me` answers an empty list there, and this checks again.
+  if (membership.view === null && (me.detailsMissing ?? []).length > 0) {
+    return <ConfirmDetails me={me} surface="app" />;
   }
 
   // POOLSE-188: under a view the one home is the one chosen, and the roles are

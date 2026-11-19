@@ -8796,5 +8796,21 @@
         }
       }
     }
+  },
+  "confirmDetails": {
+    "title": "Confirmar os seus dados",
+    "intro": "Antes de começar, confirme os dados que o clube precisa. O que já está registado vem preenchido.",
+    "mobile": "Telemóvel",
+    "mobileHint": "O clube usa-o para o contactar sobre aulas e avisos.",
+    "gdpr": "O seu NIF e morada são vistos apenas por si e pela administração do clube, para processar salários.",
+    "confirm": "Confirmar",
+    "children": "Os seus educandos",
+    "childrenHint": "Estes dados são da secretaria. Se algo estiver errado, avise-a.",
+    "tellOffice": "Avisar a secretaria",
+    "callOffice": "Ligar {phone}",
+    "tellSubject": "Dados a corrigir: {child}",
+    "noClubContact": "O clube ainda não indicou um contacto. Fale com a secretaria na próxima aula.",
+    "saved": "Dados confirmados.",
+    "failed": "Não foi possível guardar. Tente de novo."
   }
 }

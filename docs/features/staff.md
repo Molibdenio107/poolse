@@ -108,7 +108,16 @@ optional.
 - **Who.** The Owner, an Admin and the person on their own record read and edit it
   (`GET/PATCH /staff/:id/details`). Anybody else gets a 403, and the card is not shown.
 - **NIF and NISS are the club's.** The person reads theirs but cannot change them (403
-  `forbidden_role`). Everything else the person keeps up to date themself.
+  `forbidden_role`). Everything else the person keeps up to date themself. **Since POOLSE-227
+  (Rui, 19-11-2026) the person fills their own NIF when none is on file**, so *Confirmar os seus
+  dados* can ask for it; a NIF already set stays the Owner's to change, and the NISS stays the
+  club's. An Admin still does not fill somebody else's (POOLSE-196).
+- **Why the club asks for them** (POOLSE-227). An instructor or maintenance worker gives a NIF and
+  a morada before their first screen, at every club, whether or not Salários is on (Rui,
+  19-11-2026). Purpose: the club's payroll as an employer or contracting party (RGPD art. 6.º 1
+  b/c). Read only by the person, the Owner and the Admins, and the gate says so in visible text.
+  Kept while the membership is live; after it, the retention above (address and NIF stay, as
+  payroll records).
 - **Checks.** The NIF passes `isValidNif` and the NISS `isValidNiss`; the postcode is 0000-000.
   A refusal lands under its field and keeps what was typed. One NIF is one person in a club (409
   `tax_number_taken`).

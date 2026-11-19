@@ -78,6 +78,53 @@ setup('keep the E2E club open', async () => {
   }
 });
 
+/*
+ * Every E2E login is complete — POOLSE-227. A login with a blank mobile (or, for
+ * staff, NIF and morada) meets *Confirmar os seus dados* in place of every page,
+ * and every spec would fail on a form it never asked about. Only blanks are
+ * filled, so a spec that sets a value keeps it; `gate.spec` blanks one on its own.
+ */
+setup('every E2E login has its details', async () => {
+  const url = process.env['DATABASE_URL'];
+  if (url === undefined) return;
+  const emails = [E2E_EMAIL, E2E_INSTRUCTOR_EMAIL, E2E_GUARDIAN_EMAIL, E2E_MAINTENANCE_EMAIL].filter(
+    (email): email is string => email !== undefined,
+  );
+  if (emails.length === 0) return;
+  const db = new Client({ connectionString: url });
+  await db.connect();
+  try {
+    await db.query(
+      `UPDATE app_user SET contact_phone = '912000000'
+        WHERE lower(cached_email) = ANY($1::text[]) AND contact_phone IS NULL`,
+      [emails.map((email) => email.toLowerCase())],
+    );
+    // One NIF per person in a club, so each staff login gets its own valid one.
+    const staff: [string | undefined, string][] = [
+      [E2E_INSTRUCTOR_EMAIL, '234567899'],
+      [E2E_MAINTENANCE_EMAIL, '501964843'],
+    ];
+    for (const [email, nif] of staff) {
+      if (email === undefined) continue;
+      await db.query(
+        `UPDATE membership m
+            SET tax_number = coalesce(m.tax_number, $2),
+                address = coalesce(m.address, 'Rua da Piscina, 1'),
+                postal_code = coalesce(m.postal_code, '1000-001'),
+                locality = coalesce(m.locality, 'Lisboa')
+           FROM app_user u
+          WHERE u.id = m.app_user_id AND lower(u.cached_email) = lower($1) AND m.archived_at IS NULL
+            AND NOT EXISTS (SELECT 1 FROM membership o
+                             WHERE o.organization_id = m.organization_id AND o.id <> m.id
+                               AND o.tax_number = $2 AND o.archived_at IS NULL)`,
+        [email, nif],
+      );
+    }
+  } finally {
+    await db.end();
+  }
+});
+
 // The guardian, for app mode — POOLSE-90.
 setup('sign in the E2E guardian', async ({ page }) => {
   setup.setTimeout(90_000);

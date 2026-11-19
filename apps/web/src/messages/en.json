@@ -8796,5 +8796,21 @@
         }
       }
     }
+  },
+  "confirmDetails": {
+    "title": "Confirm your details",
+    "intro": "Before you start, confirm the details the club needs. Anything already on file is filled in.",
+    "mobile": "Mobile",
+    "mobileHint": "The club uses it to reach you about lessons and notices.",
+    "gdpr": "Your NIF and address are seen only by you and the club's management, to process salaries.",
+    "confirm": "Confirm",
+    "children": "Your children",
+    "childrenHint": "These details belong to the office. If something is wrong, let them know.",
+    "tellOffice": "Tell the office",
+    "callOffice": "Call {phone}",
+    "tellSubject": "Details to correct: {child}",
+    "noClubContact": "The club has not given a contact yet. Speak to the office at the next lesson.",
+    "saved": "Details confirmed.",
+    "failed": "Could not save. Please try again."
   }
 }

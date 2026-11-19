@@ -12,24 +12,28 @@ import { createOrganizationAction, type FormState } from './actions';
 
 const INITIAL: FormState = { ok: false };
 
+/** POOLSE-227: whether the form offers *A minha piscina*. One line brings it back. */
+const OFFER_PERSONAL = false;
+
 /**
  * The way out of belonging to nothing.
  *
  * Every account starts here — signing up creates an identity, not a tenant — so
  * this form is the first interactive thing most people will ever touch in
- * Poolse. It stays one screen on purpose: everything else about an organization
- * can be edited later, and a six-step wizard between someone and their first
- * screen is how trials end. What changed on 10-11-2026 (Rui) is the look — the
- * questions are grouped and numbered so the page reads as three short steps,
- * and choosing "a minha piscina" folds the club-only fields away with `Reveal`
- * instead of making them vanish in one frame.
+ * Poolse. **It stays one screen:** nothing stands between a person and their
+ * club but its name and how families reach it. What changed on 19-11-2026 (Rui,
+ * POOLSE-228, partly reversing "no wizard") is what comes *after* it: the
+ * Owner's setup steps, every one skippable, so the guide never becomes the wall
+ * that a six-step form before the first screen would be. The questions are
+ * grouped and numbered so the page reads as short steps (10-11-2026).
  *
- * **One question before the name, since 4.5: a club, or your own pool.** The
- * answer decides what the new tenant opens with — a season for a club, a pool
- * for a person — and which sections the navigation shows. It is asked here
- * rather than at sign-up because sign-up is Clerk's screen, and because a
- * person can hold both kinds of account. Two radio cards and not a select, so
- * both answers and what each one means are visible without opening anything.
+ * **A club or your own pool: the second answer is not offered since
+ * 19-11-2026** (Rui, POOLSE-227). Slice 4.5's personal tenant stays whole — the
+ * kind, the API, `provision_organization`'s branch, every screen — and the one
+ * that exists keeps working; the form simply opens on the club. `OFFER_PERSONAL`
+ * brings back the two radio cards, and with them *a minha piscina* folding the
+ * club-only fields away with `Reveal`. A hand-posted `kind=personal` still makes
+ * a personal tenant, as before: the action and the API are unchanged.
  *
  * On success the action sends the browser to `/dashboard/welcome`.
  */
@@ -47,30 +51,32 @@ export function CreateOrganizationForm({ ownerEmail }: { ownerEmail: string }): 
 
   return (
     <form action={action} className="flex flex-col gap-6">
-      <fieldset className="onboard-rise flex flex-col gap-3" style={{ '--i': 0 } as React.CSSProperties}>
-        <StepLegend step={1} label={t('organization.kindLabel')} />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <KindOption
-            value="business"
-            current={kind}
-            onChoose={setKind}
-            icon={Building2}
-            label={t('organization.kindBusiness')}
-            hint={t('organization.kindBusinessHint')}
-          />
-          <KindOption
-            value="personal"
-            current={kind}
-            onChoose={setKind}
-            icon={House}
-            label={t('organization.kindPersonal')}
-            hint={t('organization.kindPersonalHint')}
-          />
-        </div>
-      </fieldset>
+      {OFFER_PERSONAL && (
+        <fieldset className="onboard-rise flex flex-col gap-3" style={{ '--i': 0 } as React.CSSProperties}>
+          <StepLegend step={1} label={t('organization.kindLabel')} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <KindOption
+              value="business"
+              current={kind}
+              onChoose={setKind}
+              icon={Building2}
+              label={t('organization.kindBusiness')}
+              hint={t('organization.kindBusinessHint')}
+            />
+            <KindOption
+              value="personal"
+              current={kind}
+              onChoose={setKind}
+              icon={House}
+              label={t('organization.kindPersonal')}
+              hint={t('organization.kindPersonalHint')}
+            />
+          </div>
+        </fieldset>
+      )}
 
       <fieldset className="onboard-rise flex flex-col gap-2" style={{ '--i': 1 } as React.CSSProperties}>
-        <StepLegend step={2} label={business ? t('onboarding.stepClub') : t('onboarding.stepPool')} />
+        <StepLegend step={OFFER_PERSONAL ? 2 : 1} label={business ? t('onboarding.stepClub') : t('onboarding.stepPool')} />
         <label htmlFor="organization-name" className={FIELD_LABEL}>
           {business ? t('organization.nameLabel') : t('organization.nameLabelPersonal')}
         </label>
@@ -117,7 +123,7 @@ export function CreateOrganizationForm({ ownerEmail }: { ownerEmail: string }): 
 
       <Reveal open={business}>
         <fieldset className="onboard-rise flex flex-col gap-2" style={{ '--i': 2 } as React.CSSProperties}>
-          <StepLegend step={3} label={t('onboarding.stepContacts')} />
+          <StepLegend step={OFFER_PERSONAL ? 3 : 2} label={t('onboarding.stepContacts')} />
 
           {/* POOLSE-209 (Rui, 09-11-2026): asked now, changed later in Dados do clube. */}
           <label htmlFor="organization-reply-email" className={FIELD_LABEL}>

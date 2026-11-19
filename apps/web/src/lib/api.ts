@@ -1,4 +1,4 @@
-import type { AiReader, PoolseModule, PoolseSport } from '@poolse/rules';
+import type { AiReader, DetailField, PoolseModule, PoolseSport } from '@poolse/rules';
 import { auth } from '@clerk/nextjs/server';
 import { cookies } from 'next/headers';
 import type { SkillState } from './skills';
@@ -368,6 +368,8 @@ export interface Me {
    * quietly acting in another club.
    */
   requestedOrganizationMissing?: boolean;
+  /** POOLSE-227: what the active club still needs from this person; not empty draws the gate. */
+  detailsMissing?: DetailField[];
   /**
    * Platform-wide switches set from /admin (Rui, 30-10-2026). Absent, or a
    * switch missing from it, is off.

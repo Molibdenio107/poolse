@@ -121,3 +121,30 @@ test('POOLSE-149 A — the owner sets every detail, the person their own, a coll
     });
   });
 });
+
+test('POOLSE-227 — a person fills their own blank NIF; a set one, a colleague\'s and the NISS stay refused', async () => {
+  await withScratchTenant(async (tenant) => {
+    const coach = await addMember(tenant, 'Carla', 'Sousa', ['instructor']);
+    const colleague = await addMember(tenant, 'Duarte', 'Melo', ['maintenance']);
+    const staff = new StaffController();
+
+    await actingAs(tenant, { membershipId: coach, roles: ['instructor'] }, async () => {
+      // Blank on file: the person fills it, normalised and checksum-checked.
+      await expectStatus(() => staff.editDetails(coach, { taxNumber: '234567890' }), 400);
+      const filled = await staff.editDetails(coach, { taxNumber: '234 567 899' });
+      assert.equal(filled.taxNumber, '234567899');
+      // Set now: changing or clearing it is the Owner's.
+      await expectStatus(() => staff.editDetails(coach, { taxNumber: '999999990' }), 403);
+      await expectStatus(() => staff.editDetails(coach, { taxNumber: '' }), 403);
+      // The NISS is still the club's, blank or not.
+      await expectStatus(() => staff.editDetails(coach, { niss: NISS }), 403);
+      // A colleague's blank NIF is not theirs to fill.
+      await expectStatus(() => staff.editDetails(colleague, { taxNumber: '999999990' }), 403);
+    });
+
+    // An Admin does not fill somebody else's blank NIF either (POOLSE-196).
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      await expectStatus(() => staff.editDetails(colleague, { taxNumber: '999999990' }), 403);
+    });
+  });
+});

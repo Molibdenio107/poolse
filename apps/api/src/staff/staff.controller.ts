@@ -301,14 +301,23 @@ export class StaffController {
     @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
     @Body() body: Record<string, unknown>,
   ): Promise<StaffDetails> {
-    requireOwnOrManaged(membershipId);
+    const actor = requireOwnOrManaged(membershipId);
     const { organizationId } = currentTenant();
     const edit = parseDetails(body);
 
     const was = await readDetails(organizationId, membershipId);
     if (was === null) throw new NotFoundException('No such staff member');
     if (!hasRole('owner')) {
-      const clubs = CLUB_DETAIL_FIELDS.filter((field) => edit[field] !== undefined && edit[field] !== was[field]);
+      /*
+       * POOLSE-227 (Rui, 19-11-2026): a person fills their own NIF when none is
+       * on file, so the details gate can ask for it. A NIF already set stays the
+       * Owner's to change, and the NISS stays the club's.
+       */
+      const ownBlankNif = (field: keyof StaffDetails): boolean =>
+        field === 'taxNumber' && was.taxNumber === null && edit.taxNumber !== null && membershipId === actor;
+      const clubs = CLUB_DETAIL_FIELDS.filter(
+        (field) => edit[field] !== undefined && edit[field] !== was[field] && !ownBlankNif(field),
+      );
       if (clubs.length > 0) {
         throw new ForbiddenException({
           code: 'forbidden_role',

@@ -14,7 +14,8 @@ import { MAX_FILE_BYTES, sniffType } from '../files/storage.js';
 import { clubToday } from '../common/club-day.js';
 import { readSwitchesForClubs, type PlatformSwitchName } from '../platform/platform-switch.js';
 import { effectiveReadersFor } from '../ai/ai-reads.repository.js';
-import type { AiReader } from '@poolse/rules';
+import type { AiReader, DetailField } from '@poolse/rules';
+import { detailsMissingFor } from './details-gate.js';
 
 interface MeResponse {
   user: AppUserSummary;
@@ -42,6 +43,12 @@ interface MeResponse {
    * unreadable is none.
    */
   aiReaders?: AiReader[];
+  /**
+   * POOLSE-227: the details `memberships[0]`'s club still needs from this
+   * person. Not empty, the web app draws *Confirmar os seus dados* in place of
+   * the page. Empty under a view or a support membership.
+   */
+  detailsMissing?: DetailField[];
 }
 
 /** The requested club first; the rest in their usual order. */
@@ -132,8 +139,10 @@ export class MeController {
     const active = ordered.memberships[0];
     const aiReaders = active === undefined ? [] : await effectiveReadersFor(active.organizationId).catch(() => []);
     const view = active?.view ?? null;
+    const detailsMissing = await detailsMissingFor(user, active).catch(() => []);
     return {
       user,
+      detailsMissing,
       ...ordered,
       switches: await readSwitchesForClubs(),
       aiReaders,
