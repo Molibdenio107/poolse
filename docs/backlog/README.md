@@ -257,6 +257,8 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-233](./POOLSE-233-an-empty-list-offers-its-first-action.md) | Empty Inventário, Energia and Ocorrências offer their add (and import) as buttons, role-gated; Perdidos e achados says *Registar* | Interface / Instalações | Medium (pilot) | 232 | 0 |
 | [POOLSE-234](./POOLSE-234-ferias-a-floating-pedir-button-that-asks-first.md) | Férias: a floating *Pedir {n} dias* follows the year and opens a dialog listing the days by month; nothing sent before its confirm | Staff / Férias | Medium (pilot) | — | 0 |
 | [POOLSE-235](./POOLSE-235-ctrl-k-finds-people-turmas-and-clubs.md) | Ctrl+K finds students and families, staff, turmas and the reader's own clubs, by role (instructor: own turmas only), showing a name and one context line, never what matched | Navigation / Search | Medium (pilot) | 118 | 0 |
+| [POOLSE-236](./POOLSE-236-a-flexible-plan-sells-n-lessons-a-week-or-a-month.md) | A flexible plan sells N lessons a week or a month (unused expire at the unit's end), booked into any turma that opts in, with no level check; minted as `reposicao_credit` rows of a new source, booked through the reposição path; **backlog, build not decided** | Students / Fees / Calendar / Family app | Low (post go-live) | 21, 42, 144 | 1 |
+| [POOLSE-237](./POOLSE-237-the-family-app-shows-free-swim-hours-and-how-full-the-tank-is.md) | The app's *Natação livre* shows today + 7 days of free-swim hours, lanes and closures per site, and *Agora: N % ocupado* from `pool_occupancy()`; counts only, never a name; read-only; **backlog, build not decided** | Family app / Free swim | Low (post go-live) | 68, 84, 204 | 0 |
 
 ## To discuss — raised 01-11-2026, parked until after the pilot has used the app
 
