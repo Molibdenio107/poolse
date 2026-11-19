@@ -98,7 +98,11 @@ test('the person keeps their own identity, an Admin included', async () => {
     await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, async () => {
       const saved = await new StaffController().editIdentity(admin, { birthDate: '1990-05-17' });
       assert.equal(saved.birthDate, '1990-05-17');
-      await expectStatus(() => new StaffController().editDetails(admin, { taxNumber: '123 456 789' }), 403);
+      // POOLSE-227 (Rui, 19-11-2026): a blank NIF is the person's own to fill;
+      // changing one already on file stays the Owner's.
+      const filled = await new StaffController().editDetails(admin, { taxNumber: '123 456 789' });
+      assert.equal(filled.taxNumber, '123456789');
+      await expectStatus(() => new StaffController().editDetails(admin, { taxNumber: '501 964 843' }), 403);
     });
   });
 });
