@@ -8878,7 +8878,7 @@
         "pools": "Pools",
         "noPools": "This site has no pools yet.",
         "addPool": "Add tank",
-        "poolHint": "The name is enough. Photos, volume, depths and capacity are on the tank's page, under Open.",
+        "poolHint": "Only the name is required; the rest can wait. Photos go on the tank's page, under Open.",
         "open": "Open",
         "openPool": "Open the tank {name}"
       },

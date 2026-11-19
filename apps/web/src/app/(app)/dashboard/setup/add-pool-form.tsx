@@ -1,22 +1,18 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus } from 'lucide-react';
-import { useSavedAction } from '@/lib/saved';
-import { Button } from '@/components/ui/button';
-import { CONTROL_LINE, FIELD_LABEL } from '@/components/ui/field';
-import type { FormState } from '../actions';
-import { addSetupPoolAction } from '../facilities/facilities.actions';
-
-const INITIAL: FormState = { ok: false };
+import { buttonClass } from '@/components/ui/button';
+import { PoolForm } from '../facilities/pool-form';
 
 /**
- * *Adicionar tanque* inside the setup's step 2 — Rui, 19-11-2026: the Owner
- * adds tanks without leaving the setup. Name, length and lanes only; the tank
- * appears in the list above at once, and its *Abrir* takes the rest (photos,
- * volume, depths, capacity) to its own page. The boxes clear after each one, so
- * a club with three tanks types three names in a row.
+ * *Adicionar tanque* inside the setup's step 2 — Rui, 19-11-2026: the same form
+ * as Instalações, every measurement included, folded until the Owner opens it,
+ * and saved without leaving the setup. The new tank is listed above at once;
+ * the panel folds and the form starts empty for the next one (a new `key`).
+ * A native `<details>`, so `DetailsAnimator` moves it and a screen reader
+ * hears a disclosure.
  */
 export function AddPoolForm({
   organizationId,
@@ -26,84 +22,31 @@ export function AddPoolForm({
   facilityId: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [name, setName] = useState('');
-  const [lengthM, setLengthM] = useState('');
-  const [laneCount, setLaneCount] = useState('');
-  const [state, action, pending] = useSavedAction(addSetupPoolAction, INITIAL);
-  const nameRef = useRef<HTMLInputElement>(null);
+  const panel = useRef<HTMLDetailsElement>(null);
+  const [round, setRound] = useState(0);
 
-  // A tank added: empty boxes, and the cursor back on the name for the next one.
-  useEffect(() => {
-    if (!state.ok) return;
-    setName('');
-    setLengthM('');
-    setLaneCount('');
-    nameRef.current?.focus();
-  }, [state]);
+  const created = useCallback(() => {
+    if (panel.current !== null) panel.current.open = false;
+    setRound((n) => n + 1);
+  }, []);
 
   return (
-    <form action={action} className="flex flex-col gap-3">
-      <input type="hidden" name="organizationId" value={organizationId} />
-      <input type="hidden" name="facilityId" value={facilityId} />
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="flex min-w-0 flex-col gap-1">
-          <label htmlFor="setup-pool-name" className={FIELD_LABEL}>
-            {t('facilities.poolNameLabel')}
-          </label>
-          <input
-            ref={nameRef}
-            id="setup-pool-name"
-            name="name"
-            required
-            maxLength={120}
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder={t('facilities.poolNamePlaceholder')}
-            className={CONTROL_LINE}
-          />
-        </div>
-        <div className="flex min-w-0 flex-col gap-1">
-          <label htmlFor="setup-pool-length" className={FIELD_LABEL}>
-            {t('facilities.lengthLabel')}
-          </label>
-          <input
-            id="setup-pool-length"
-            name="lengthM"
-            type="number"
-            min={1}
-            step="0.01"
-            inputMode="decimal"
-            value={lengthM}
-            onChange={(event) => setLengthM(event.target.value)}
-            className={CONTROL_LINE}
-          />
-        </div>
-        <div className="flex min-w-0 flex-col gap-1">
-          <label htmlFor="setup-pool-lanes" className={FIELD_LABEL}>
-            {t('facilities.lanesLabel')}
-          </label>
-          <input
-            id="setup-pool-lanes"
-            name="laneCount"
-            type="number"
-            min={1}
-            inputMode="numeric"
-            value={laneCount}
-            onChange={(event) => setLaneCount(event.target.value)}
-            className={CONTROL_LINE}
-          />
-        </div>
-      </div>
-      <p className="text-sm text-foreground-muted">{t('setup.step.places.poolHint')}</p>
-      <Button type="submit" icon={Plus} disabled={pending} className="self-start">
+    <details ref={panel} className="group flex flex-col">
+      <summary className={buttonClass('primary', 'w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden')}>
+        <Plus className="size-4" aria-hidden />
         {t('setup.step.places.addPool')}
-      </Button>
-      {state.errorKey !== undefined && (
-        <p role="alert" className="text-sm text-danger">
-          {t(state.errorKey)}
-          {state.detail !== undefined && <span className="ml-2 text-xs text-foreground-muted">{state.detail}</span>}
-        </p>
-      )}
-    </form>
+      </summary>
+      <div className="mt-4 flex flex-col gap-3 rounded border border-border p-4">
+        <p className="text-sm text-foreground-muted">{t('setup.step.places.poolHint')}</p>
+        <PoolForm
+          key={round}
+          organizationId={organizationId}
+          facilityId={facilityId}
+          mode="create"
+          stay
+          onCreated={created}
+        />
+      </div>
+    </details>
   );
 }

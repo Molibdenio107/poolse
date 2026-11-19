@@ -7,7 +7,7 @@ import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, SelectField, useSeeded } from 
 import { POOL_USES, type PoolUse } from '@/lib/water';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../actions';
-import { createPoolAction, updatePoolAction } from './facilities.actions';
+import { addSetupPoolAction, createPoolAction, updatePoolAction } from './facilities.actions';
 
 const INITIAL: FormState = { ok: false };
 
@@ -328,19 +328,31 @@ export function PoolForm({
   facilityId,
   pool,
   mode,
+  stay = false,
+  onCreated,
 }: {
   organizationId: string;
   facilityId: string;
   pool?: PoolFormValues;
   mode: 'create' | 'edit';
+  /**
+   * Create without leaving the page — the setup's step 2 (Rui, 19-11-2026), which
+   * lists the new tank at once instead of opening its page.
+   */
+  stay?: boolean;
+  /** Called once per tank created with `stay`, so the setup can fold and clear the form. */
+  onCreated?: () => void;
 }): React.ReactElement {
   const [nameField, setNameField] = useSeeded<string>(String(pool?.name ?? ''));
   const [kindField, setKindField] = useSeeded<string>(String(pool?.kind ?? 'indoor'));
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(
-    mode === 'create' ? createPoolAction : updatePoolAction,
+    mode === 'edit' ? updatePoolAction : stay ? addSetupPoolAction : createPoolAction,
     INITIAL,
   );
+  useEffect(() => {
+    if (state !== INITIAL && state.ok) onCreated?.();
+  }, [state, onCreated]);
 
   return (
     <form action={action} className="flex flex-col gap-5">

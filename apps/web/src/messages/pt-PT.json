@@ -8878,7 +8878,7 @@
         "pools": "Piscinas",
         "noPools": "Ainda não há piscinas nesta instalação.",
         "addPool": "Adicionar tanque",
-        "poolHint": "Basta o nome. Fotografias, volume, profundidades e lotação ficam na página do tanque, em Abrir.",
+        "poolHint": "Só o nome é obrigatório; o resto pode ficar para depois. As fotografias ficam na página do tanque, em Abrir.",
         "open": "Abrir",
         "openPool": "Abrir o tanque {name}"
       },
