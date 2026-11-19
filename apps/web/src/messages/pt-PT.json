@@ -1917,10 +1917,12 @@
     },
     "waterThreshold": {
       "title": "Análises da água",
-      "label": "Idade máxima da última análise (horas)",
-      "hint": "Vazio: não é verificado. Um tanque sem análise mais recente aparece no painel.",
-      "notSet": "Não é verificada a idade das análises nesta instalação.",
-      "value": "Um tanque precisa de análise ao fim de {hours} horas."
+      "label": "Número máximo de horas entre análises da água",
+      "labelBefore": "Analisar a água pelo menos a cada",
+      "labelAfter": "horas",
+      "hint": "Se passar este tempo sem análise, o tanque aparece em «Água por analisar» no Painel. Vazio: não é verificado.",
+      "notSet": "Não está definido de quanto em quanto tempo se analisa a água nesta instalação.",
+      "value": "A água é analisada pelo menos a cada {hours, plural, one {# hora} other {# horas}}."
     },
     "waterThresholdInvalid": "Um número inteiro de horas, de 1 a 8760.",
     "waterThresholdFailed": "Não foi possível guardar o limite.",

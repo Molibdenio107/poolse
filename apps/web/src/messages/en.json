@@ -1917,10 +1917,12 @@
     },
     "waterThreshold": {
       "title": "Water analyses",
-      "label": "Maximum age of the latest analysis (hours)",
-      "hint": "Empty: not checked. A tank with no more recent analysis shows on the dashboard.",
-      "notSet": "The age of analyses is not checked at this site.",
-      "value": "A tank needs an analysis after {hours} hours."
+      "label": "Most hours between water tests",
+      "labelBefore": "Test the water at least every",
+      "labelAfter": "hours",
+      "hint": "If this long passes with no test, the tank shows under “Water due a test” on the Dashboard. Empty: not checked.",
+      "notSet": "How often the water is tested here is not set.",
+      "value": "The water is tested at least every {hours, plural, one {# hour} other {# hours}}."
     },
     "waterThresholdInvalid": "A whole number of hours, from 1 to 8760.",
     "waterThresholdFailed": "The limit could not be saved.",
