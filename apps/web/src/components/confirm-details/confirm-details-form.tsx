@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { SignOutButton } from '@clerk/nextjs';
-import { LogOut, Mail, Phone } from 'lucide-react';
+import { Landmark, LogOut, Mail, Phone, UserRound, Users, type LucideIcon } from 'lucide-react';
 import type { DetailField } from '@poolse/rules';
 import { TextField } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
@@ -51,7 +51,10 @@ export function ConfirmDetailsForm({
   staffUnreadable,
   children,
   contact,
+  confirmLabelKey = 'confirmDetails.confirm',
 }: {
+  /** What the button says: *Continuar* when this is a step of creating a club. */
+  confirmLabelKey?: string;
   required: DetailField[];
   missing: DetailField[];
   initial: Values;
@@ -79,8 +82,10 @@ export function ConfirmDetailsForm({
   }, [first]);
 
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-4">
-      <form ref={formRef} action={action} className="flex flex-col gap-4 rounded bg-surface p-5 shadow-card">
+    <div className="flex w-full flex-col gap-6">
+      <form ref={formRef} action={action} className="flex flex-col gap-6">
+        <fieldset className="onboard-rise flex flex-col gap-3" style={{ '--i': 1 } as React.CSSProperties}>
+          <GroupLegend icon={UserRound} label={t('confirmDetails.groupContact')} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <TextField
             name="firstName"
@@ -113,10 +118,11 @@ export function ConfirmDetailsForm({
           hint={t('confirmDetails.mobileHint')}
           error={error('contactPhone')}
         />
+        </fieldset>
 
         {asks('taxNumber') && (
-          <fieldset className="flex flex-col gap-3 border-t border-border pt-4">
-            <legend className="sr-only">{t('staffDetails.title')}</legend>
+          <fieldset className="onboard-rise flex flex-col gap-3" style={{ '--i': 2 } as React.CSSProperties}>
+            <GroupLegend icon={Landmark} label={t('confirmDetails.groupPayroll')} />
             {staffUnreadable && (
               <p className="text-sm text-danger" role="alert">
                 {t('staffDetails.loadFailed')}
@@ -163,23 +169,24 @@ export function ConfirmDetailsForm({
                 error={error('locality')}
               />
             </div>
-            <p className="text-sm text-foreground-muted">{t('confirmDetails.gdpr')}</p>
+            <p className="rounded-sm bg-surface-muted px-3 py-2 text-sm text-foreground-muted">{t('confirmDetails.gdpr')}</p>
           </fieldset>
         )}
 
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-control w-full items-center justify-center rounded-sm bg-primary px-6 text-control font-semibold text-primary-foreground disabled:opacity-60 sm:w-auto sm:self-start"
+          className="inline-flex h-control w-full items-center justify-center rounded-sm bg-primary px-6 text-control font-semibold text-primary-foreground transition-transform disabled:opacity-60 sm:w-auto sm:self-start motion-safe:hover:-translate-y-px"
         >
-          {pending ? t('common.working') : t('confirmDetails.confirm')}
+          {pending ? t('common.working') : t(confirmLabelKey as never)}
         </button>
       </form>
 
       {children !== null && children.length > 0 && (
-        <section aria-labelledby="confirm-details-children" className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
+        <section aria-labelledby="confirm-details-children" className="flex flex-col gap-3 rounded border border-border p-4">
           <div className="flex flex-col gap-0.5">
-            <h2 id="confirm-details-children" className="text-base font-semibold">
+            <h2 id="confirm-details-children" className="flex items-center gap-2 text-base font-semibold">
+              <Users className="size-4 text-primary" aria-hidden />
               {t('confirmDetails.children')}
             </h2>
             <p className="text-sm text-foreground-muted">{t('confirmDetails.childrenHint')}</p>
@@ -241,5 +248,17 @@ function TellTheOffice({ child, contact }: { child: string; contact: ClubContact
         </a>
       )}
     </div>
+  );
+}
+
+/** A group's heading: an icon in a circle, then the words, which are the legend. */
+function GroupLegend({ icon: Icon, label }: { icon: LucideIcon; label: string }): React.ReactElement {
+  return (
+    <legend className="mb-1 flex items-center gap-2 text-base font-semibold">
+      <span aria-hidden className="inline-flex size-7 items-center justify-center rounded-full bg-primary/15 text-primary">
+        <Icon className="size-4" />
+      </span>
+      {label}
+    </legend>
   );
 }

@@ -57,6 +57,7 @@ export default async function TeachingHome(): Promise<React.ReactElement> {
       ) : (
         <Link
           href={lessonHref(next, HOME)}
+          data-tour="next-lesson"
           className="app-hero flex flex-col gap-3 rounded bg-primary p-4 text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <span className="flex items-start justify-between gap-3">

@@ -56,7 +56,7 @@ export async function VamosComecar({
     turmas: '/dashboard/classes',
     // `fee_plan` is per site: its Preços tab, or the list when there is no one site.
     prices: siteHref === '/dashboard/facilities' ? siteHref : `${siteHref}?tab=prices`,
-    public_form: isOwner ? '/dashboard/students/pedidos' : null,
+    public_form: isOwner ? '/dashboard/students/pedidos?section=form' : null,
     tour: null,
   };
   const ordered = [...list.items.filter((item) => !item.done), ...list.items.filter((item) => item.done)];

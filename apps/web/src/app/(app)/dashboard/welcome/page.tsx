@@ -18,7 +18,9 @@ import { ScrollToTop } from './scroll-to-top';
 import { LandOn } from './land-on';
 import { LogoLockIn } from '@/components/logo-lock-in';
 import type { WizardState } from '../setup/steps';
-import { VamosComecar, type ChecklistAnswer } from './vamos-comecar';
+import type { ChecklistAnswer } from './vamos-comecar';
+import { SetupPanel } from './setup-panel';
+import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 
 type Step = { href: string; icon: LucideIcon; title: string; body: string };
 
@@ -41,10 +43,11 @@ type Step = { href: string; icon: LucideIcon; title: string; body: string };
 export default async function WelcomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ new?: string }>;
+  searchParams: Promise<{ new?: string; section?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const fresh = (await searchParams).new === '1';
+  const params = await searchParams;
+  const fresh = params.new === '1';
   const me = await apiFetch<Me>('/me').catch(() => null);
   const membership = me?.memberships[0] ?? null;
   if (membership === null || !membership.roles.some((role) => role === 'owner' || role === 'admin')) {
@@ -82,6 +85,19 @@ export default async function WelcomePage({
   const checklist = personal
     ? null
     : await apiFetch<ChecklistAnswer>('/onboarding/checklist').catch(() => null);
+  /*
+   * Two pages since 19-11-2026 (Rui): *Configurar o clube*, highlighted, and
+   * *Por onde começar*. The first exists while there is something to set up —
+   * the Owner's steps under way, or *Vamos começar* with lines still open — and
+   * is where Início opens until then.
+   */
+  const checklistOpen =
+    checklist?.checklist != null &&
+    !checklist.checklist.dismissed &&
+    checklist.checklist.items.some((item) => !item.done);
+  const hasSetupPage = !personal && (resume !== null || checklistOpen);
+  const offered = hasSetupPage ? (['setup', 'start'] as const) : (['start'] as const);
+  const section = pickSection<'setup' | 'start'>(offered, params.section, 'start');
   const steps: Step[] = personal
     ? [
         {
@@ -124,6 +140,27 @@ export default async function WelcomePage({
       subtitle={fresh ? t('welcome.subtitle', { club: membership.organizationName }) : undefined}
     >
       <ScrollToTop />
+      <SectionPills
+        label={t('welcome.sections')}
+        current={section}
+        items={offered.map((key) => ({
+          key,
+          label: t(`welcome.section.${key}`),
+          href: sectionHref('/dashboard/welcome', params, key),
+          ...(key === 'setup' ? { attention: t('welcome.setupWaiting') } : {}),
+        }))}
+      />
+
+      {section === 'setup' && (
+        <SetupPanel
+          wizard={wizard}
+          checklist={checklist}
+          siteHref={configureHref}
+          isOwner={membership.roles.includes('owner')}
+        />
+      )}
+
+      {section === 'start' && (
       <section className="overflow-hidden rounded bg-surface shadow-card">
         <WaterBanner tall>
           <LogoLockIn />
@@ -152,14 +189,6 @@ export default async function WelcomePage({
               </div>
             )}
           </div>
-
-          {checklist !== null && (
-            <VamosComecar
-              answer={checklist}
-              siteHref={configureHref}
-              isOwner={membership.roles.includes('owner')}
-            />
-          )}
 
           <div className="flex flex-col gap-3">
             <div className="onboard-rise flex flex-col gap-0.5" style={{ '--i': 1 } as React.CSSProperties}>
@@ -206,6 +235,7 @@ export default async function WelcomePage({
           </div>
         </div>
       </section>
+      )}
     </PageShell>
   );
 }

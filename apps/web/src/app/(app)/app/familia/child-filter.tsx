@@ -21,7 +21,7 @@ export async function ChildFilter({
   if (children.length < 2) return null;
   const t = await getTranslations();
   return (
-    <nav aria-label={t('app.family.childFilter')} className="flex flex-wrap gap-2">
+    <nav aria-label={t('app.family.childFilter')} data-tour="children" className="flex flex-wrap gap-2">
       {[{ id: undefined, name: t('app.family.everyone') }, ...children].map((one) => {
         const current = one.id === chosen;
         return (

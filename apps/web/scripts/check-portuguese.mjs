@@ -122,7 +122,6 @@ const SAME_ON_PURPOSE = new Map([
   ['progress.minutes', '"min" is the abbreviation in both languages'],
   ['slots.minutes', 'the same abbreviation, on the schedule grid'],
   ['staff.title', 'POOLSE-38 decided: "Staff" is the word Portuguese clubs use, and "Pessoal" is a translation nobody says'],
-  ['tour.backoffice.staff.title', 'the menu entry staff.title names, as above (POOLSE-230)'],
   ['facilities.volume', 'a unit — "{litres} L"'],
   ['facilities.size', 'a unit — "{size} m"'],
   ['classes.minutes', 'a unit — "{count} min"'],

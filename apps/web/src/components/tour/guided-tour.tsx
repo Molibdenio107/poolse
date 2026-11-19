@@ -4,15 +4,21 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { X } from 'lucide-react';
-import { MENU_BUTTON, TOURS, tourShellFor, type TourShell } from '@/lib/tours';
+import { Lightbulb, X } from 'lucide-react';
+import { MENU_BUTTON, TOURS, tourShellFor, type TourShell, type TourStep } from '@/lib/tours';
 import { START_TOUR_EVENT, TOUR_PARAM } from './start-tour-button';
 import { recordTourAction } from './tour.actions';
 
-interface Resolved {
-  id: string;
+/** How a step finds its target: on this page, after opening `via`, or behind the phone's menu. */
+type Mode = 'here' | 'via' | 'menu';
+
+interface Planned {
+  step: TourStep;
+  mode: Mode;
+}
+
+interface Target {
   element: HTMLElement;
-  /** Pointing at the phone's menu button instead of an entry hidden behind it. */
   viaMenu: boolean;
 }
 
@@ -24,7 +30,9 @@ interface Box {
 }
 
 const GAP = 10;
-const CARD_WIDTH = 320;
+const CARD_WIDTH = 340;
+/** How long a step that opened another page waits for its entry to be drawn. */
+const VIA_WAIT_MS = 6000;
 
 function visible(element: Element | null): element is HTMLElement {
   if (!(element instanceof HTMLElement)) return false;
@@ -33,39 +41,46 @@ function visible(element: Element | null): element is HTMLElement {
   return getComputedStyle(element).visibility !== 'hidden';
 }
 
-/** The first match of each step that is on screen; a step with none is skipped. */
-function resolve(shell: TourShell): Resolved[] {
+function findOnScreen(step: TourStep): HTMLElement | null {
+  for (const selector of step.selectors) {
+    const match = Array.from(document.querySelectorAll(selector)).find(visible);
+    if (match !== undefined) return match as HTMLElement;
+  }
+  return null;
+}
+
+/** Which steps this tour has, decided as it starts; a step with no way to its target is skipped. */
+function plan(shell: TourShell): Planned[] {
   const menu = shell === 'backoffice' ? document.querySelector(MENU_BUTTON) : null;
-  const found: Resolved[] = [];
+  const planned: Planned[] = [];
   for (const step of TOURS[shell]) {
-    let element: HTMLElement | null = null;
-    for (const selector of step.selectors) {
-      const match = Array.from(document.querySelectorAll(selector)).find(visible);
-      if (match !== undefined) {
-        element = match as HTMLElement;
-        break;
-      }
-    }
-    if (element !== null) found.push({ id: step.id, element, viaMenu: false });
-    else if (visible(menu) && (step.inMenu === true || step.selectors.some((selector) => document.querySelector(selector) !== null))) {
-      // Below `md` the entry sits behind the menu (a sport's tab is not even drawn
-      // until the menu opens): point at the button, and the card names the entry.
-      found.push({ id: step.id, element: menu, viaMenu: true });
+    if (findOnScreen(step) !== null) planned.push({ step, mode: 'here' });
+    else if (step.via !== undefined && visible(document.querySelector(step.via))) planned.push({ step, mode: 'via' });
+    else if (
+      visible(menu) &&
+      (step.inMenu === true || step.selectors.some((selector) => document.querySelector(selector) !== null))
+    ) {
+      // Below `md` the entry sits behind the menu (a sport's entries are not even
+      // drawn until it opens): point at the button, and the card names the entry.
+      planned.push({ step, mode: 'menu' });
     }
   }
-  return found;
+  return planned;
 }
 
 /**
  * The guided tour — POOLSE-230 (Rui, 19-11-2026). In-house coach marks, no
- * dependency: a ring round one menu entry with the page dimmed around it, and a
- * small card beside it. Mounted once per shell; it never starts on its own, only
- * on `START_TOUR_EVENT` (*Vamos começar*, Perfil → *Rever visita guiada*, Ctrl+K).
+ * dependency: a ring round one menu entry or control with the page dimmed
+ * around it, and a card beside it with what the area is for and two or three
+ * tips. Mounted once per shell; it never starts on its own, only on
+ * `START_TOUR_EVENT` (*Vamos começar*, *Rever visita guiada*, Ctrl+K) or the
+ * `?tour=1` a *Rever visita guiada* elsewhere opened the home with.
  *
- * Keyboard: focus moves into the card and stays there (Tab cycles its buttons),
- * the arrows move between steps, Escape closes, and focus goes back to whatever
- * started it. It is a labelled `role="dialog"`. Under reduced motion nothing
- * glides. *Concluir* and *Fechar* record the outcome for this person in this club.
+ * A step inside the sport's section (Calendário, Turmas, Piscinas) opens that
+ * section first and waits for its entry; *Concluir* goes back to where the tour
+ * started. Keyboard: focus moves into the card and stays there, the arrows move
+ * between steps, Escape closes, focus goes back to whatever started it. A
+ * labelled `role="dialog"`; nothing glides under reduced motion.
  */
 export function GuidedTour(): React.ReactElement | null {
   const t = useTranslations();
@@ -76,18 +91,23 @@ export function GuidedTour(): React.ReactElement | null {
   const asked = params.get(TOUR_PARAM) === '1';
   const shell = tourShellFor(pathname, home);
 
-  const [steps, setSteps] = useState<Resolved[] | null>(null);
+  const [tour, setTour] = useState<{ shell: TourShell; steps: Planned[]; from: string } | null>(null);
   const [index, setIndex] = useState(0);
+  const [target, setTarget] = useState<Target | null>(null);
   const [box, setBox] = useState<Box | null>(null);
   const card = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLElement | null>(null);
+  const here = useRef(pathname);
+  here.current = params.toString() === '' ? pathname : `${pathname}?${params.toString()}`;
 
   const start = useCallback(() => {
-    const found = resolve(shell);
-    if (found.length === 0) return;
+    const steps = plan(shell);
+    if (steps.length === 0) return;
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setIndex(0);
-    setSteps(found);
+    setTarget(null);
+    setBox(null);
+    setTour({ shell, steps, from: here.current });
   }, [shell]);
 
   useEffect(() => {
@@ -111,24 +131,75 @@ export function GuidedTour(): React.ReactElement | null {
 
   const close = useCallback(
     (outcome: 'finished' | 'dismissed') => {
-      setSteps(null);
+      const from = tour?.from;
+      setTour(null);
+      setTarget(null);
       setBox(null);
       void recordTourAction(outcome);
-      opener.current?.focus();
+      // A tour that moved into the sport's section goes back where it began.
+      if (from !== undefined && from !== here.current) router.push(from);
+      else opener.current?.focus();
     },
-    [],
+    [tour, router],
   );
 
-  const current = steps?.[index] ?? null;
+  const planned = tour?.steps[index] ?? null;
 
-  // Follow the entry as the window scrolls or resizes.
+  // Find this step's target, opening the sport's section first when it lives there.
+  useEffect(() => {
+    if (planned === null) return;
+    setTarget(null);
+    setBox(null);
+    const { step, mode } = planned;
+    if (mode === 'menu') {
+      const menu = document.querySelector(MENU_BUTTON);
+      if (visible(menu)) setTarget({ element: menu, viaMenu: true });
+      return;
+    }
+    const found = findOnScreen(step);
+    if (found !== null) {
+      setTarget({ element: found, viaMenu: false });
+      return;
+    }
+    if (step.via !== undefined) {
+      const link = document.querySelector<HTMLAnchorElement>(step.via);
+      const href = link?.getAttribute('href');
+      if (href) router.push(href);
+    } else if (tour !== null && tour.from !== here.current) {
+      // *Anterior* from the sport's section to a step on the page the tour began on.
+      router.push(tour.from);
+    }
+    // Wait for the entry to be drawn; past the wait, the step is passed over.
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      const late = findOnScreen(step);
+      if (late !== null) {
+        window.clearInterval(timer);
+        setTarget({ element: late, viaMenu: false });
+      } else if (Date.now() - started > VIA_WAIT_MS) {
+        window.clearInterval(timer);
+        setIndex((at) => at + 1);
+      }
+    }, 150);
+    return () => window.clearInterval(timer);
+    // `tour` is read for where it began, which does not change while it runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planned, router]);
+
+  // A step passed over at the very end closes the tour.
+  useEffect(() => {
+    if (tour !== null && index >= tour.steps.length) close('finished');
+  }, [tour, index, close]);
+
+  // Follow the target as the window scrolls or resizes.
   useLayoutEffect(() => {
-    if (current === null) return;
+    if (target === null) return;
     const measure = (): void => {
-      const rect = current.element.getBoundingClientRect();
+      if (!target.element.isConnected) return;
+      const rect = target.element.getBoundingClientRect();
       setBox({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
     };
-    current.element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    target.element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     measure();
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, true);
@@ -136,24 +207,23 @@ export function GuidedTour(): React.ReactElement | null {
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure, true);
     };
-  }, [current]);
+  }, [target]);
 
-  // Each step puts the focus on its main button, once the card is drawn (the
-  // card waits for the entry's measurements, one render after the step).
+  // Each step puts the focus on its main button, once the card is drawn.
   const drawn = box !== null;
   useEffect(() => {
-    if (current === null || !drawn) return;
+    if (!drawn) return;
     card.current?.querySelector<HTMLButtonElement>('[data-tour-primary]')?.focus();
-  }, [current, drawn]);
+  }, [drawn, index]);
 
-  const last = steps !== null && index === steps.length - 1;
+  const total = tour?.steps.length ?? 0;
+  const last = index === total - 1;
   const next = (): void => (last ? close('finished') : setIndex(index + 1));
   const previous = (): void => setIndex(Math.max(0, index - 1));
 
   /*
-   * The keys, on the window while the tour is open — whatever has the focus, the
+   * The keys, on the window while the tour is open: whatever has the focus, the
    * tour owns Escape, the arrows and Tab, and Tab is brought back into the card.
-   * Through a ref, so the listener is added once and always sees this step.
    */
   const onKey = useRef<(event: KeyboardEvent) => void>(() => undefined);
   onKey.current = (event: KeyboardEvent): void => {
@@ -176,7 +246,7 @@ export function GuidedTour(): React.ReactElement | null {
       buttons[to]?.focus();
     }
   };
-  const open = steps !== null;
+  const open = tour !== null;
   useEffect(() => {
     if (!open) return;
     const listener = (event: KeyboardEvent): void => onKey.current(event);
@@ -184,24 +254,23 @@ export function GuidedTour(): React.ReactElement | null {
     return () => window.removeEventListener('keydown', listener, true);
   }, [open]);
 
-  if (steps === null || current === null || box === null) return null;
+  if (tour === null || planned === null || target === null || box === null) return null;
 
-  // Below the entry when there is room, above it otherwise (the phone's tab bar).
+  // Below the target when there is room, beside a narrow one, above otherwise (the phone's tab bar).
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
   const width = Math.min(CARD_WIDTH, viewportWidth - 32);
-  const below = box.top + box.height + GAP + 220 < viewportHeight;
+  const below = box.top + box.height + GAP + 300 < viewportHeight;
   const sideways = box.width < 260 && box.left + box.width + GAP + width < viewportWidth && !below;
-  const left = sideways
-    ? box.left + box.width + GAP
-    : Math.min(Math.max(16, box.left), viewportWidth - width - 16);
+  const left = sideways ? box.left + box.width + GAP : Math.min(Math.max(16, box.left), viewportWidth - width - 16);
   const position: React.CSSProperties = sideways
-    ? { left, top: Math.max(16, box.top) }
+    ? { left, top: Math.max(16, Math.min(box.top, viewportHeight - 340)) }
     : below
       ? { left, top: box.top + box.height + GAP }
       : { left, bottom: viewportHeight - box.top + GAP };
 
-  const title = t(`tour.${shell}.${current.id}.title` as never);
+  const key = `tour.${tour.shell}.${planned.step.id}`;
+  const tips = Array.from({ length: planned.step.tips }, (_, at) => t(`${key}.tip${at + 1}` as never));
 
   return createPortal(
     <div className="fixed inset-0 z-[60]">
@@ -224,14 +293,14 @@ export function GuidedTour(): React.ReactElement | null {
         aria-modal="true"
         aria-labelledby="tour-title"
         aria-describedby="tour-body"
-        className="fixed flex flex-col gap-3 rounded bg-surface p-4 text-foreground shadow-card motion-safe:transition-all motion-safe:duration-300"
+        className="fixed flex max-h-[calc(100dvh-2rem)] flex-col gap-3 overflow-y-auto rounded bg-surface p-4 text-foreground shadow-card motion-safe:transition-all motion-safe:duration-300"
         style={{ ...position, width }}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-0.5">
-            <p className="text-xs text-foreground-muted">{t('tour.progress', { n: index + 1, total: steps.length })}</p>
+            <p className="text-xs text-foreground-muted">{t('tour.progress', { n: index + 1, total })}</p>
             <h2 id="tour-title" className="text-base font-semibold">
-              {title}
+              {t(`${key}.title` as never)}
             </h2>
           </div>
           <button
@@ -243,10 +312,25 @@ export function GuidedTour(): React.ReactElement | null {
             <X className="size-4" aria-hidden />
           </button>
         </div>
-        <p id="tour-body" className="text-sm">
-          {t(`tour.${shell}.${current.id}.body` as never)}
-          {current.viaMenu && <> {t('tour.viaMenu')}</>}
-        </p>
+        <div id="tour-body" className="flex flex-col gap-2 text-sm">
+          <p>
+            {t(`${key}.body` as never)}
+            {target.viaMenu && <> {t('tour.viaMenu')}</>}
+          </p>
+          {tips.length > 0 && (
+            <div className="flex flex-col gap-1 rounded-sm bg-surface-muted p-3">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+                <Lightbulb className="size-3.5" aria-hidden />
+                {t('tour.tipsTitle')}
+              </p>
+              <ul className="flex list-disc flex-col gap-1 pl-5">
+                {tips.map((tip) => (
+                  <li key={tip}>{tip}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"

@@ -86,6 +86,7 @@ export function NotificationBell({
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
+        data-tour="bell"
         onClick={() => setOpen((was) => !was)}
         className="relative inline-flex h-control w-control items-center justify-center rounded-sm bg-surface text-foreground-muted shadow-card hover:bg-surface-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >

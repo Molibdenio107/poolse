@@ -871,7 +871,13 @@
     "staffBody": "Invite instructors, office staff and maintenance.",
     "poolTitle": "The first reading",
     "poolBody": "Log pH and chlorine and follow the water from today.",
-    "goToDashboard": "Go to the dashboard"
+    "goToDashboard": "Go to the dashboard",
+    "sections": "Home pages",
+    "section": {
+      "setup": "Set up the club",
+      "start": "Where to start"
+    },
+    "setupWaiting": "Steps still to do"
   },
   "profile": {
     "title": "My profile",
@@ -8811,7 +8817,19 @@
     "tellSubject": "Details to correct: {child}",
     "noClubContact": "The club has not given a contact yet. Speak to the office at the next lesson.",
     "saved": "Details confirmed.",
-    "failed": "Could not save. Please try again."
+    "failed": "Could not save. Please try again.",
+    "groupContact": "How to reach you",
+    "groupPayroll": "For payroll",
+    "continue": "Continue",
+    "cardTitle": "{club}: a few details from you",
+    "creatingTitle": "Now, your details",
+    "creatingIntro": "The club is created. Confirm your name and mobile, the club owner's contact. Next, we set up the club.",
+    "creatingSteps": "Creating the club",
+    "creating": {
+      "club": "The club",
+      "details": "Your details",
+      "setup": "Set up the club"
+    }
   },
   "setup": {
     "title": "Set up the club",
@@ -8848,10 +8866,14 @@
         "students": "Import students",
         "studentsHint": "An Excel or CSV file with your students.",
         "timetable": "Import timetable",
-        "timetableHint": "The class timetable, as Excel, PDF or a photo, on the Calendar.",
+        "timetableHint": "The class timetable from a spreadsheet, on the Calendar.",
         "none": "No, start from scratch"
       }
-    }
+    },
+    "panelHint": "Any step can wait.",
+    "skippedLong": "Left for later.",
+    "toCome": "Coming up.",
+    "begin": "Start setting up"
   },
   "checklist": {
     "title": "Getting started",
@@ -8911,76 +8933,204 @@
     "finish": "Finish",
     "close": "Close the tour",
     "viaMenu": "On a phone, it is in the menu.",
+    "tipsTitle": "Tips",
     "backoffice": {
       "home": {
         "title": "Home",
-        "body": "Where you start: what is left to set up and the everyday shortcuts."
+        "body": "The club's starting point: setup and suggestions for the first days.",
+        "tip1": "Under “Set up the club” you see the steps left and pick up where you stopped.",
+        "tip2": "Under “Where to start” you have shortcuts to the most common tasks."
       },
-      "sport": {
-        "title": "Swimming",
-        "body": "The sport's Calendar, Classes and Pools are here."
+      "dashboard": {
+        "title": "Dashboard",
+        "body": "The day at a glance: lessons, occupancy, takings and the pools' water.",
+        "tip1": "Cards with something to deal with come first.",
+        "tip2": "Pin a note for the team with “New note”."
       },
-      "students": {
-        "title": "Students",
-        "body": "The student register, guardians, registration requests and messages."
+      "search": {
+        "title": "Search",
+        "body": "Go to any page or action without the menu.",
+        "tip1": "Press Ctrl+K on any screen.",
+        "tip2": "Type as you speak: “new student”, “overdue”, “holidays”."
+      },
+      "bell": {
+        "title": "Notifications",
+        "body": "Everything that needs you, in one place.",
+        "tip1": "Each line opens exactly where the problem is.",
+        "tip2": "A line goes when the matter is solved, not when you read it."
+      },
+      "facilities": {
+        "title": "Sites",
+        "body": "Your sites: pools, spaces, opening hours and maintenance.",
+        "tip1": "Staff lives here: invite instructors, office and maintenance.",
+        "tip2": "On each site you set the hours, prices and club documents.",
+        "tip3": "The club's details (tax number, contacts, logo) are on the General tab."
+      },
+      "energy": {
+        "title": "Energy",
+        "body": "Electricity, gas and water use and bills.",
+        "tip1": "Record the bills to follow each month's costs.",
+        "tip2": "See each pool's cost per use."
+      },
+      "reception": {
+        "title": "Reception",
+        "body": "The front desk: entries, free swim and who is in the water.",
+        "tip1": "Sell free-swim entries and passes.",
+        "tip2": "Registration requests arrive here, under “Registration requests”.",
+        "tip3": "See who is in and record check-outs."
       },
       "billing": {
         "title": "Billing",
-        "body": "Monthly fees, invoices, payments and what is owed."
+        "body": "The club's monthly fees, invoices and payments.",
+        "tip1": "Generate the month's fees in one go.",
+        "tip2": "Under “Overdue” you see who owes and send reminders.",
+        "tip3": "The club's costs are under “Costs”."
       },
-      "staff": {
-        "title": "Staff",
-        "body": "Under Sites: your team, invitations, holidays and qualifications."
+      "students": {
+        "title": "Students",
+        "body": "The register of students and families.",
+        "tip1": "Import students from an Excel sheet under “Import”.",
+        "tip2": "Invite families to the app from each student.",
+        "tip3": "Send messages and notices to classes."
+      },
+      "sport": {
+        "title": "Swimming",
+        "body": "The sport's section: the day-to-day of lessons.",
+        "tip1": "Calendar, Classes and Pools are inside.",
+        "tip2": "With more sports, each has its own tab."
+      },
+      "calendar": {
+        "title": "Calendar",
+        "body": "The week of lessons, by pool and by lane.",
+        "tip1": "Drag a lesson to change its time or lane.",
+        "tip2": "Import the timetable from a spreadsheet.",
+        "tip3": "Closures and holidays are under “Closures”."
+      },
+      "classes": {
+        "title": "Classes",
+        "body": "The season's classes: level, instructor, timetable and students.",
+        "tip1": "Create a class and enrol students.",
+        "tip2": "Levels and seasons are set up here.",
+        "tip3": "Make-up lessons are in this section too."
+      },
+      "pools": {
+        "title": "Pools",
+        "body": "Pools, lanes and water quality.",
+        "tip1": "Record water tests and see the alerts.",
+        "tip2": "Set each pool's lanes and capacity."
       }
     },
     "family": {
       "home": {
         "title": "Home",
-        "body": "The club's notices, the next lesson and payments."
+        "body": "What matters today: club notices, the next lesson and what is due.",
+        "tip1": "Important notices show as soon as you open the app.",
+        "tip2": "Tap a card to see the details."
+      },
+      "children": {
+        "title": "Your children",
+        "body": "Choose whose lessons and progress you see.",
+        "tip1": "“Everyone” shows the whole family.",
+        "tip2": "Your choice stays as you move around."
+      },
+      "payments": {
+        "title": "Payments",
+        "body": "What is due and what is paid.",
+        "tip1": "See the club's references and IBAN to pay.",
+        "tip2": "Receipts are under Profile, in “Statements”."
+      },
+      "enrol": {
+        "title": "Ask for a place",
+        "body": "Ask for a place in a class, for a child or a new student.",
+        "tip1": "The request goes to the office, which confirms it.",
+        "tip2": "You can pick the class by day and time."
       },
       "lessons": {
         "title": "Lessons",
-        "body": "The week's lessons. Say whether you are going to each one."
+        "body": "The week's lessons, day by day.",
+        "tip1": "Say “Going” or “Not going” for each lesson.",
+        "tip2": "After the lesson, leave your feedback.",
+        "tip3": "Closed days are marked."
       },
       "progress": {
         "title": "Progress",
-        "body": "Each child's level, skills and times."
+        "body": "Each child's level, skills and times.",
+        "tip1": "See what is left for the next level.",
+        "tip2": "Meet times and best times are here."
       },
       "profile": {
         "title": "Profile",
-        "body": "Your details, documents and settings."
+        "body": "Your details, documents and settings.",
+        "tip1": "Send documents, such as the medical certificate.",
+        "tip2": "Under “Settings” you choose the language, theme and notifications.",
+        "tip3": "You can replay this tour under “Settings”."
       }
     },
     "teaching": {
       "home": {
         "title": "Home",
-        "body": "Today's lessons. Open one to take the register."
+        "body": "Today's lessons and the next one.",
+        "tip1": "Open a lesson to take the register.",
+        "tip2": "See who said they are not coming before you start."
+      },
+      "nextLesson": {
+        "title": "Next lesson",
+        "body": "Tap to open the lesson: the register, the plan and the contacts.",
+        "tip1": "Mark attendance with one tap per student.",
+        "tip2": "Write the lesson plan or copy last week's.",
+        "tip3": "If you cannot teach it, ask for a stand-in."
+      },
+      "bell": {
+        "title": "Notifications",
+        "body": "What needs you: registers to take, requests and alerts.",
+        "tip1": "Each line opens exactly where the matter is.",
+        "tip2": "It goes when the matter is solved."
       },
       "lessons": {
         "title": "Lessons",
-        "body": "Your week of lessons, day by day."
+        "body": "Your week of lessons, day by day.",
+        "tip1": "Move through the weeks to see what is coming.",
+        "tip2": "Tap a lesson to open it."
       },
       "students": {
         "title": "Students",
-        "body": "The students in your classes and how to reach each one."
+        "body": "The students in your classes.",
+        "tip1": "See each student's level, skills and contacts.",
+        "tip2": "Mark the skills each one has mastered."
       },
       "profile": {
         "title": "Profile",
-        "body": "Your details, qualifications and settings."
+        "body": "Your details, qualifications and settings.",
+        "tip1": "Keep your qualifications up to date.",
+        "tip2": "You can replay this tour under “Settings”."
       }
     },
     "maintenance": {
       "today": {
         "title": "Today",
-        "body": "The day's tasks and cleaning still to do."
+        "body": "The day's tasks, cleaning and alerts.",
+        "tip1": "Mark a task done with one tap.",
+        "tip2": "Water alerts come first.",
+        "tip3": "Spaces due for cleaning are flagged."
+      },
+      "bell": {
+        "title": "Notifications",
+        "body": "What needs you, in one place.",
+        "tip1": "Each line opens exactly where the matter is.",
+        "tip2": "It goes when the matter is solved."
       },
       "record": {
         "title": "Record",
-        "body": "A water test, a meter reading or a fault."
+        "body": "Record a water test, a meter reading or a fault.",
+        "tip1": "Choose the pool and enter the measured values.",
+        "tip2": "Out-of-range values are flagged straight away.",
+        "tip3": "A fault is recorded for the office."
       },
       "profile": {
         "title": "Profile",
-        "body": "Your details and settings."
+        "body": "Your details and settings.",
+        "tip1": "Turn on notifications on this phone.",
+        "tip2": "You can replay this tour under “Settings”."
       }
     }
   }

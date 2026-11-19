@@ -85,9 +85,23 @@ No season step (Rui, 19-11-2026): the season provisioning opens stands, and *Ép
 - `/dashboard/setup` for anybody without a wizard (an Admin, a finished one, an older club) is
   handed on to Início.
 
+## Início's two pages (Rui, 19-11-2026)
+
+*Vamos começar* and *Por onde começar* on one page did not combine, so Início has two pages
+behind pills (`?section=setup|start`):
+
+- **Configurar o clube** (`setup-panel.tsx`) is highlighted with a ring, the water banner and a
+  cog. While the Owner's setup steps are under way it shows only them: the four steps (done,
+  left for later, current, to come) and *Começar a configuração* / *Continuar a configuração*.
+  Once they are finished, or for a club that never had them, it holds *Vamos começar*.
+- **Por onde começar** is the page Início always was: the Poolse mark, the club, the trial's
+  end, *Configurar o clube*, the four cards and *Ir para o painel*.
+- The setup page exists while there is something to set up, and Início opens on it until then.
+  Its pill carries the attention dot. With nothing left, Início is the second page alone.
+
 ## Vamos começar (POOLSE-229)
 
-A card on Início for a club's Owner and Admins: what the club still needs, each line ticked by
+On Início's setup page, for a club's Owner and Admins: what the club still needs, each line ticked by
 the API from the club's own data (`readChecklist`, one statement) and linked to its screen.
 
 | Line | Shown | Done when |
@@ -118,14 +132,20 @@ dependency. **It never starts on its own.** The ways in are *Fazer a visita guia
 começar*, *Rever visita guiada* on *O meu perfil* (desk) and on Perfil → Definições (`/app`),
 and Ctrl+K.
 
-- **Steps point at the real menu by selector, and a step whose entry is not on screen is
-  skipped.** Modules, roles and sports need no second list, because the menu already decided.
-  - **Backoffice:** Início, the sport's tab (*Natação*: Calendário, Turmas, Piscinas),
-    Alunos, Faturação, Instalações → *Staff*.
-  - **Family:** Início, Aulas (or *Modalidades*), Progressos, Perfil. Pagamentos is a card on
-    Início, not a tab.
-  - **Teacher:** Início, Aulas, Alunos, Perfil. The register opens from a lesson.
-  - **Maintenance:** Hoje, Registar, Perfil.
+- **One step per real area, each with what it is for and two or three tips** (made deeper the
+  same day: "it needs more details tips"). Steps point at the real menu entry or on-page control
+  by selector, and a step whose target is not on screen is skipped, so modules, roles and sports
+  need no second list.
+  - **Backoffice (13):** Início, Painel, Procurar, Notificações, Instalações (Staff is here),
+    Energia, Receção, Faturação, Alunos, the sport's tab, then Calendário, Turmas and Piscinas.
+    The last three carry `via`: the tour opens the sport's section and waits for the entry.
+    *Anterior* back past it returns to the starting page, and *Concluir* goes back there too.
+  - **Family (up to 7):** Início, the children filter (two or more children), Pagamentos (when
+    there is a card), *Pedir inscrição*, Aulas (or *Modalidades*), Progressos, Perfil.
+  - **Teacher (6):** Início, the next lesson's card, Notificações, Aulas, Alunos, Perfil.
+  - **Maintenance (4):** Hoje, Notificações, Registar, Perfil.
+- The tips promise only what a club has without a flag: no PDF or photo reading, which are the
+  AI readers, off by default.
 - **Below `md` in the backoffice** the sidebar is behind the menu, so the step rings the menu
   button (`data-tour="menu"`) and says the entry is in the menu. The sport tab is drawn only
   once the menu opens, so its step is `inMenu`.
@@ -173,8 +193,12 @@ A minor student with a login is not asked. Several roles ask for the union.
 - **A guardian sees their children read-only** (`GET /family`, name and relationship), with
   *Avisar a secretaria*: the club's reply email with the child named in the subject, and its
   published phone (`GET /app/club-contact`). No queue of its own.
-- **On the phone** it is a full screen on the app palette with no tab bar; **on the desk** a
-  `PageShell` card. *Terminar sessão* is the one way out other than the form.
+- **It looks like the screen that created the club** (Rui, 19-11-2026): the water banner and the
+  Poolse mark, then the fields in headed groups (*Como o contactamos*, *Para os salários*). For an
+  Owner whose club was made a moment ago (setup not yet moved), it is that creation's step 2. It
+  shows *O clube* ✓ → *Os seus dados* → *Configurar o clube* and the button says *Continuar*.
+- **On the phone** it is a full screen on the app palette with no tab bar; **on the desk** the
+  same card, centred. *Terminar sessão* is the one way out other than the form.
 - **E2E.** `auth.setup.ts` fills only the blanks of every E2E login (*every E2E login has its
   details*), or every spec would stop on the gate; `phone-gate.spec.ts` blanks the guardian's
   mobile and walks through it.

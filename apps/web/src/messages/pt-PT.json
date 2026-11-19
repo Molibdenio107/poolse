@@ -871,7 +871,13 @@
     "staffBody": "Convide professores, administrativos e a manutenção.",
     "poolTitle": "A primeira análise",
     "poolBody": "Registe o pH e o cloro e acompanhe a água a partir de hoje.",
-    "goToDashboard": "Ir para o painel"
+    "goToDashboard": "Ir para o painel",
+    "sections": "Páginas do Início",
+    "section": {
+      "setup": "Configurar o clube",
+      "start": "Por onde começar"
+    },
+    "setupWaiting": "Há passos por fazer"
   },
   "profile": {
     "title": "O meu perfil",
@@ -8811,7 +8817,19 @@
     "tellSubject": "Dados a corrigir: {child}",
     "noClubContact": "O clube ainda não indicou um contacto. Fale com a secretaria na próxima aula.",
     "saved": "Dados confirmados.",
-    "failed": "Não foi possível guardar. Tente de novo."
+    "failed": "Não foi possível guardar. Tente de novo.",
+    "groupContact": "Como o contactamos",
+    "groupPayroll": "Para os salários",
+    "continue": "Continuar",
+    "cardTitle": "{club}: faltam alguns dados seus",
+    "creatingTitle": "Agora, os seus dados",
+    "creatingIntro": "O clube está criado. Confirme o seu nome e telemóvel, que são o contacto do titular do clube. A seguir, configuramos o clube.",
+    "creatingSteps": "Criar o clube",
+    "creating": {
+      "club": "O clube",
+      "details": "Os seus dados",
+      "setup": "Configurar o clube"
+    }
   },
   "setup": {
     "title": "Configurar o clube",
@@ -8848,10 +8866,14 @@
         "students": "Importar alunos",
         "studentsHint": "Um ficheiro Excel ou CSV com os seus alunos.",
         "timetable": "Importar horário",
-        "timetableHint": "O horário das aulas, em Excel, PDF ou fotografia, no Calendário.",
+        "timetableHint": "O horário das aulas a partir de uma folha de cálculo, no Calendário.",
         "none": "Não, começar do zero"
       }
-    }
+    },
+    "panelHint": "Cada passo pode ficar para mais tarde.",
+    "skippedLong": "Ficou para mais tarde.",
+    "toCome": "A seguir.",
+    "begin": "Começar a configuração"
   },
   "checklist": {
     "title": "Vamos começar",
@@ -8911,76 +8933,204 @@
     "finish": "Concluir",
     "close": "Fechar a visita",
     "viaMenu": "Num telemóvel, está no menu.",
+    "tipsTitle": "Dicas",
     "backoffice": {
       "home": {
         "title": "Início",
-        "body": "O ponto de partida: o que falta configurar e os atalhos do dia a dia."
+        "body": "O ponto de partida do clube: a configuração e as sugestões para os primeiros dias.",
+        "tip1": "Em «Configurar o clube» vê os passos que faltam e retoma onde ficou.",
+        "tip2": "Em «Por onde começar» tem atalhos para as tarefas mais comuns."
       },
-      "sport": {
-        "title": "Natação",
-        "body": "Aqui estão o Calendário, as Turmas e as Piscinas da modalidade."
+      "dashboard": {
+        "title": "Painel",
+        "body": "O resumo do dia: aulas, ocupação, receitas e a água das piscinas.",
+        "tip1": "Os cartões com algo a tratar aparecem primeiro.",
+        "tip2": "Afixe um post-it para a equipa com «Nova nota»."
       },
-      "students": {
-        "title": "Alunos",
-        "body": "O registo dos alunos, os encarregados, os pedidos de inscrição e as mensagens."
+      "search": {
+        "title": "Procurar",
+        "body": "Vá a qualquer página ou ação sem passar pelo menu.",
+        "tip1": "Carregue em Ctrl+K em qualquer ecrã.",
+        "tip2": "Escreva como fala: «novo aluno», «em dívida», «férias»."
+      },
+      "bell": {
+        "title": "Notificações",
+        "body": "Tudo o que precisa de si, num só sítio.",
+        "tip1": "Cada linha abre o sítio exato onde está o problema.",
+        "tip2": "Uma linha desaparece quando o assunto fica resolvido, não quando a lê."
+      },
+      "facilities": {
+        "title": "Instalações",
+        "body": "As suas instalações: tanques, espaços, horário e manutenção.",
+        "tip1": "O Staff está aqui: convide professores, administração e manutenção.",
+        "tip2": "Em cada instalação define o horário, os preços e os documentos do clube.",
+        "tip3": "Os dados do clube (NIPC, contactos, logótipo) estão no separador Geral."
+      },
+      "energy": {
+        "title": "Energia",
+        "body": "Os consumos e as faturas de eletricidade, gás e água.",
+        "tip1": "Registe as faturas para acompanhar os custos de cada mês.",
+        "tip2": "Veja o custo por utilização de cada piscina."
+      },
+      "reception": {
+        "title": "Receção",
+        "body": "O balcão: entradas, natação livre e quem está na água.",
+        "tip1": "Venda entradas e passes de natação livre.",
+        "tip2": "Os pedidos de inscrição chegam aqui, em «Pedidos de inscrição».",
+        "tip3": "Veja quem está dentro e registe as saídas."
       },
       "billing": {
         "title": "Faturação",
-        "body": "Mensalidades, faturas, pagamentos e o que está em dívida."
+        "body": "Mensalidades, faturas e pagamentos do clube.",
+        "tip1": "Gere as mensalidades do mês de uma só vez.",
+        "tip2": "Em «Em dívida» vê quem tem pagamentos por fazer e envia lembretes.",
+        "tip3": "Os custos do clube ficam em «Custos»."
       },
-      "staff": {
-        "title": "Staff",
-        "body": "Em Instalações: a sua equipa, os convites, as férias e as qualificações."
+      "students": {
+        "title": "Alunos",
+        "body": "O registo dos alunos e das famílias.",
+        "tip1": "Importe os alunos de uma folha de Excel em «Importar».",
+        "tip2": "Convide as famílias para a app a partir de cada aluno.",
+        "tip3": "Envie mensagens e avisos às turmas."
+      },
+      "sport": {
+        "title": "Natação",
+        "body": "A secção da modalidade: o dia a dia das aulas.",
+        "tip1": "Calendário, Turmas e Piscinas estão aqui dentro.",
+        "tip2": "Com mais modalidades, cada uma tem o seu separador."
+      },
+      "calendar": {
+        "title": "Calendário",
+        "body": "A semana de aulas, por piscina e por pista.",
+        "tip1": "Arraste uma aula para a mudar de hora ou de pista.",
+        "tip2": "Importe o horário a partir de uma folha de cálculo.",
+        "tip3": "Os encerramentos e os feriados estão em «Encerramentos»."
+      },
+      "classes": {
+        "title": "Turmas",
+        "body": "As turmas da época: nível, professor, horário e alunos.",
+        "tip1": "Crie uma turma e inscreva os alunos.",
+        "tip2": "Os níveis e as épocas configuram-se aqui.",
+        "tip3": "As reposições de aulas faltadas também estão nesta secção."
+      },
+      "pools": {
+        "title": "Piscinas",
+        "body": "Os tanques, as pistas e a qualidade da água.",
+        "tip1": "Registe as análises da água e veja os alertas.",
+        "tip2": "Defina as pistas e a lotação de cada tanque."
       }
     },
     "family": {
       "home": {
         "title": "Início",
-        "body": "Os avisos do clube, a próxima aula e os pagamentos."
+        "body": "O que importa hoje: avisos do clube, a próxima aula e o que há para pagar.",
+        "tip1": "Os avisos importantes aparecem logo ao abrir.",
+        "tip2": "Toque num cartão para ver os detalhes."
+      },
+      "children": {
+        "title": "Os seus educandos",
+        "body": "Escolha de quem quer ver as aulas e os progressos.",
+        "tip1": "«Todos» mostra a família inteira.",
+        "tip2": "A escolha mantém-se enquanto navega."
+      },
+      "payments": {
+        "title": "Pagamentos",
+        "body": "O que há para pagar e o que já está pago.",
+        "tip1": "Veja as referências e o IBAN do clube para pagar.",
+        "tip2": "Os recibos ficam em Perfil, em «Extratos»."
+      },
+      "enrol": {
+        "title": "Pedir inscrição",
+        "body": "Peça um lugar numa turma, para um educando ou um novo aluno.",
+        "tip1": "O pedido chega à secretaria, que confirma a inscrição.",
+        "tip2": "Pode escolher a turma pelo dia e pela hora."
       },
       "lessons": {
         "title": "Aulas",
-        "body": "A semana de aulas. Diga se vai ou não vai a cada uma."
+        "body": "A semana de aulas, dia a dia.",
+        "tip1": "Diga «Vou» ou «Não vou» em cada aula.",
+        "tip2": "Depois da aula, deixe a sua opinião.",
+        "tip3": "Os dias de encerramento aparecem marcados."
       },
       "progress": {
         "title": "Progressos",
-        "body": "O nível, as competências e os tempos de cada educando."
+        "body": "O nível, as competências e os tempos de cada educando.",
+        "tip1": "Veja o que falta para o próximo nível.",
+        "tip2": "Os tempos das provas e os melhores tempos ficam aqui."
       },
       "profile": {
         "title": "Perfil",
-        "body": "Os seus dados, os documentos e as definições."
+        "body": "Os seus dados, os documentos e as definições.",
+        "tip1": "Envie documentos, como o atestado médico.",
+        "tip2": "Em «Definições» escolhe o idioma, o tema e as notificações.",
+        "tip3": "Pode rever esta visita em «Definições»."
       }
     },
     "teaching": {
       "home": {
         "title": "Início",
-        "body": "As aulas de hoje. Abra uma para fazer o registo de presenças."
+        "body": "As suas aulas de hoje e a próxima.",
+        "tip1": "Abra uma aula para fazer o registo de presenças.",
+        "tip2": "Veja quem disse que não vem antes de começar."
+      },
+      "nextLesson": {
+        "title": "A próxima aula",
+        "body": "Toque para abrir a aula: o registo, o plano e os contactos.",
+        "tip1": "Marque as presenças com um toque por aluno.",
+        "tip2": "Escreva o plano da aula ou copie o da semana anterior.",
+        "tip3": "Se não puder dar a aula, peça um substituto."
+      },
+      "bell": {
+        "title": "Notificações",
+        "body": "O que precisa de si: registos por fazer, pedidos e alertas.",
+        "tip1": "Cada linha abre o sítio exato onde está o assunto.",
+        "tip2": "Desaparece quando fica resolvido."
       },
       "lessons": {
         "title": "Aulas",
-        "body": "A sua semana de aulas, dia a dia."
+        "body": "A sua semana de aulas, dia a dia.",
+        "tip1": "Avance as semanas para ver o que vem.",
+        "tip2": "Toque numa aula para a abrir."
       },
       "students": {
         "title": "Alunos",
-        "body": "Os alunos das suas turmas e os contactos de cada um."
+        "body": "Os alunos das suas turmas.",
+        "tip1": "Veja o nível, as competências e os contactos de cada aluno.",
+        "tip2": "Marque as competências que cada um já domina."
       },
       "profile": {
         "title": "Perfil",
-        "body": "Os seus dados, as qualificações e as definições."
+        "body": "Os seus dados, as qualificações e as definições.",
+        "tip1": "Mantenha as suas qualificações em dia.",
+        "tip2": "Pode rever esta visita em «Definições»."
       }
     },
     "maintenance": {
       "today": {
         "title": "Hoje",
-        "body": "As tarefas e as limpezas do dia, por fazer."
+        "body": "As tarefas, as limpezas e os alertas do dia.",
+        "tip1": "Marque uma tarefa como feita com um toque.",
+        "tip2": "Os alertas da água aparecem primeiro.",
+        "tip3": "Os espaços por limpar estão assinalados."
+      },
+      "bell": {
+        "title": "Notificações",
+        "body": "O que precisa de si, num só sítio.",
+        "tip1": "Cada linha abre o sítio exato onde está o assunto.",
+        "tip2": "Desaparece quando fica resolvido."
       },
       "record": {
         "title": "Registar",
-        "body": "Uma análise da água, uma leitura ou uma avaria."
+        "body": "Registe uma análise da água, uma leitura ou uma avaria.",
+        "tip1": "Escolha o tanque e introduza os valores medidos.",
+        "tip2": "Os valores fora do intervalo são assinalados logo.",
+        "tip3": "Uma avaria fica registada para a administração."
       },
       "profile": {
         "title": "Perfil",
-        "body": "Os seus dados e as definições."
+        "body": "Os seus dados e as definições.",
+        "tip1": "Ative as notificações neste telemóvel.",
+        "tip2": "Pode rever esta visita em «Definições»."
       }
     }
   }

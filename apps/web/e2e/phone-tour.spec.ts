@@ -45,17 +45,18 @@ test('the tour never starts by itself, and plays from Definições on the tab ba
     await page.waitForTimeout(1500);
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
-    await page.goto('/app/perfil/definicoes?home=family', { waitUntil: 'load' });
+    await visit(page, '/app/perfil/definicoes?home=family');
     await page.getByRole('button', { name: /rever visita guiada|replay the guided tour/i }).click();
 
     const tour = page.getByRole('dialog');
     await expect(tour).toBeVisible({ timeout: 10_000 });
     await expect(page).toHaveURL(/\/app\/familia(?!.*tour=)/);
-    await expect(tour).toContainText(/1 (de|of) 4/);
+    // A family's tour is up to seven steps: the tabs plus what its Início holds.
+    await expect(tour).toContainText(/Passo 1 de \d|Step 1 of \d/);
     await expect(tour.getByRole('button', { name: /^(seguinte|next)$/i })).toBeFocused();
 
     await page.keyboard.press('ArrowRight');
-    await expect(tour).toContainText(/2 (de|of) 4/);
+    await expect(tour).toContainText(/Passo 2 de \d|Step 2 of \d/);
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
   } finally {
