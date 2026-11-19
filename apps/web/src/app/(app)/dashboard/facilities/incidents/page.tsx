@@ -12,6 +12,7 @@ import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { listIncidents } from './incidents.actions';
 import { SiteLinks } from './site-links';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * Ocorrências — POOLSE-70, slice 1.
@@ -80,7 +81,7 @@ export default async function IncidentsPage({
         incidents.state === 'ok' ? (
           <FromLink
             href={newHref}
-            className="inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-4 text-control text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold"
+            className={buttonClass('primary')}
           >
             {t('incidents.new')}
           </FromLink>

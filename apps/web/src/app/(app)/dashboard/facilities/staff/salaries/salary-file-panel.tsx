@@ -7,6 +7,7 @@ import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import { Dialog } from '@/components/ui/dialog';
 import { SalaryImportWizard } from './import-wizard';
 import { DownloadLink } from '@/components/download-link';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * Getting the pay list in and out — POOLSE-59, in the page header since
@@ -143,7 +144,7 @@ export function SalaryFileActions({
               setDropped(null);
               setImporting(true);
             }}
-            className={BUTTON_QUIET}
+            className={buttonClass('secondary')}
           >
             <Upload aria-hidden className="size-4" />
             {t('salaries.import.open')}

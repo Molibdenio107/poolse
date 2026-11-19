@@ -15,6 +15,7 @@ import { backProp, originBack } from '@/lib/back';
 import { describeLoad } from '@/lib/load-failure';
 import { sportNameKey } from '@/components/sport-icon';
 import { RecintosPanel } from '../facilities/[facilityId]/recintos-panel';
+import { buttonClass } from '@/components/ui/button';
 
 /** The word a sport's recintos go by — POOLSE-150, the menu's own. */
 function titleKey(sport: PoolseSport): string {
@@ -84,7 +85,7 @@ export default async function RecintosPage({
                   {manyPlaces ? site.name : t('recintos.nav.pool')}
                 </h2>
                 {canManage && (
-                  <FromLink href={`/dashboard/facilities/pools/new?facilityId=${site.id}`} className={ADD}>
+                  <FromLink href={`/dashboard/facilities/pools/new?facilityId=${site.id}`} className={buttonClass('primary')}>
                     <Plus aria-hidden className="size-4" />
                     {t('recintos.page.addPool')}
                     <LinkBusy />

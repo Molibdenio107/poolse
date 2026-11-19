@@ -18,6 +18,8 @@ import { RecordPurchase } from '../../faturacao/custos/cost-forms';
 import { DownloadLink } from '@/components/download-link';
 import { Reveal } from '@/components/ui/reveal';
 import { SelectList } from '@/components/ui/list-select';
+import { buttonClass } from '@/components/ui/button';
+import { scrollToId, usePageAction } from '@/components/ui/page-action';
 
 /**
  * What the club owns, at one site — round 6.
@@ -201,6 +203,17 @@ export function InventoryPanel({
     );
   };
 
+  // POOLSE-232: the page header's *Adicionar artigo* and *Importar de ficheiro*.
+  usePageAction('poolse:inventory-add', () => {
+    setAdding(true);
+    scrollToId('inventory-add');
+  });
+  usePageAction('poolse:inventory-import', () => {
+    setAccepted(null);
+    setOpen(true);
+    reveal();
+  });
+
   const accept = (): void => {
     if (pending === null || !isAccepted(pending)) return;
     setAccepted(pending);
@@ -332,7 +345,7 @@ export function InventoryPanel({
               reveal();
             }}
             aria-expanded={open}
-            className={BUTTON_QUIET}
+            className={buttonClass('secondary')}
           >
             {t('inventory.import.action')}
           </button>

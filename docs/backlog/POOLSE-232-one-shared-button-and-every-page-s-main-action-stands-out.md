@@ -12,6 +12,17 @@ Rui, 19-11-2026: *"+ Nova tarefa"*, *"+ Novo espaço"* and *"Importar"* look lik
 - Migrating every button. This ticket switches **only** each page's main add action and its *Importar*. The rest stays.
 - Row actions, dialog buttons, `ConfirmButton`, `ARCHIVE_TRIGGER`, the calendar's chips.
 
+### As built (19-11-2026) — wins over the rules below where they differ
+
+- **`buttonClass(variant)` in place, `<Button>` for new code.** Each switched control kept its element and markup (a `FromLink`, a button with its own handler), and only its class became the shared one. That is the smallest change, and the visual result is the same. `<Button>` is what new code uses.
+- **The outline is the primary *ink*, not the fill.** `contrast:check` found the fill at 2.72:1 on white, under a control edge's 3:1.
+- **Header buttons are `PageAction`**: a window event the panel listens for (`usePageAction`), so Inventário's add form and importer, and Energia's import card and add-meter dialog, stay where they were and open from the header. Energia's *Adicionar contador* is in the header only when the club has one site. With several, each site's panel keeps its own.
+- **Not switched**, because they are not page buttons:
+  - *Novo rascunho* (Épocas), *Adicionar nível* (Níveis) and Inventário's own *Adicionar artigo* are fold-out headings. The header button opens the latter.
+  - *Adicionar encerramento* is a dialog's submit.
+  - The maintenance home's *Registar análise* is a list row per tank.
+- **On `main`** the onboarding wizard does not exist yet, so its *Novo tanque* is not in this ticket. It lands with POOLSE-228.
+
 ### BA — rules
 
 1. **One component, `components/ui/button.tsx`**: `<Button variant="primary" | "secondary" icon={…}>`. It renders a `<button>`, or a `FromLink` when given `href`, so the existing `FromLink` back rule still holds.
@@ -66,7 +77,7 @@ Rui, 19-11-2026: *"+ Nova tarefa"*, *"+ Novo espaço"* and *"Importar"* look lik
 6. A long label (en) wraps inside `min-h-control` on a phone without clipping.
 
 ### Acceptance criteria
-- [ ] `components/ui/button.tsx` with primary and secondary, icon, disabled and focus states, contrast pairs added.
-- [ ] Every row of rule 3 switched; nothing else.
-- [ ] Inventário and Energia actions in the page header.
-- [ ] `interface.md` and `.claude/rules/interface.md` updated with the outlined-secondary exception; decision line written.
+- [x] `components/ui/button.tsx` with primary and secondary, icon, disabled and focus states, contrast pairs added.
+- [x] Every row of rule 3 switched; nothing else.
+- [x] Inventário and Energia actions in the page header.
+- [x] `interface.md` and `.claude/rules/interface.md` updated with the outlined-secondary exception; decision line written.

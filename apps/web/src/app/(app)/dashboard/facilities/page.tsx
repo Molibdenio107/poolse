@@ -15,6 +15,7 @@ import { ArchiveButton } from './facility-forms';
 import { PageError, PageShell, PageEmpty } from '@/components/page-shell';
 import { AttentionDot } from '@/components/attention-dot';
 import { readAttention } from '@/lib/attention';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * Slice 1.1 — an operator sets up their site.
@@ -99,7 +100,7 @@ export default async function FacilitiesPage({
             ) : (
               <FromLink
                 href="/dashboard/facilities/new"
-                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm hover:bg-surface-muted bg-surface shadow-card"
+                className={buttonClass('primary', 'self-start')}
               >
                 {t('facilities.addSite')}
               </FromLink>

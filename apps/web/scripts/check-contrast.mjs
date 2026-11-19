@@ -82,6 +82,9 @@ const PAIRS = [
   ['primary-ink', 'background', 4.5, 'links on the page'],
   ['primary-ink', 'surface', 4.5, 'links on a card'],
   ['primary-foreground', 'primary', 4.5, 'text on a primary button'],
+  // POOLSE-232: the outlined secondary (Importar) — its border is a control's edge, its hover a tint.
+  ['primary-ink', 'surface', 3, 'the outlined secondary button border'],
+  ['primary-ink', 'surface+primary@0.1', 4.5, 'an outlined secondary button, hovered'],
   ['destructive-foreground', 'destructive', 4.5, 'text on a destructive button — every confirm-to-delete'],
 
   // Status colours. These carry meaning, so they are paired with words

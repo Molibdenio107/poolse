@@ -9,6 +9,7 @@ import { backProp, originBack } from '@/lib/back';
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { audienceKey, targetLabel, deliveryKey } from './delivery-text';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * Mensagens — POOLSE-67.
@@ -55,7 +56,7 @@ export default async function MessagesPage({
         data?.canSend ? (
           <FromLink
             href="/dashboard/students/messages/new"
-            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground font-semibold"
+            className={buttonClass('primary')}
           >
             {t('messages.new')}
           </FromLink>

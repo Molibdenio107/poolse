@@ -13,6 +13,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import type { FormState } from '../actions';
 import { completeTask, createTask } from './maintenance.actions';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * Planned maintenance — slice 4.3.
@@ -128,7 +129,7 @@ export function MaintenancePanel({
         </p>
 
         {list.canPlan && (
-          <button type="button" onClick={() => setAdding(true)} className={BUTTON}>
+          <button type="button" onClick={() => setAdding(true)} className={buttonClass('primary')}>
             <Plus className="size-4" aria-hidden="true" />
             {t('maintenance.add')}
           </button>

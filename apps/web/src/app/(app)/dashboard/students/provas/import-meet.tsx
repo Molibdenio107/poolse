@@ -13,6 +13,7 @@ import { formatDate } from '@/lib/date-format';
 import type { MeetImportPreview, MeetSkipReason } from '@/lib/api';
 import type { LenexClub } from '@poolse/rules/lenex';
 import { importMeetAction, readMeetFileAction } from './meets.actions';
+import { buttonClass } from '@/components/ui/button';
 
 const BUTTON =
   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold';
@@ -58,7 +59,7 @@ export function ImportMeet({
       <DropOverlay shown={dragging} label={t('meets.import.drop')} />
       <div className="flex flex-col gap-1">
         <div>
-          <button type="button" className={BUTTON} onClick={() => input.current?.click()} aria-describedby="meet-import-format">
+          <button type="button" className={buttonClass('secondary')} onClick={() => input.current?.click()} aria-describedby="meet-import-format">
             <Upload className="size-4" aria-hidden />
             {t('meets.import.button')}
           </button>

@@ -34,6 +34,7 @@ import {
   type ActivityKind,
   type PoolChoice,
 } from '@/lib/timetable-mapping';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * Importing the wall timetable — POOLSE-57, the interface.
@@ -280,7 +281,7 @@ export function TimetableImport({
       <DropOverlay shown={dragging} label={t('timetableImport.dropHere')} />
 
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => setOpen((was) => !was)} className={BUTTON_QUIET}>
+        <button type="button" onClick={() => setOpen((was) => !was)} className={buttonClass('secondary')}>
           <span className="flex items-center gap-2">
             <Upload aria-hidden className="size-4" />
             {t('timetableImport.open')}

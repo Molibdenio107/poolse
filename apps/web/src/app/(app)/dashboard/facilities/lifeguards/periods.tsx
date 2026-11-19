@@ -12,6 +12,7 @@ import type { LifeguardPeriod } from '@/lib/api';
 import { PersonPicker } from '../incidents/person-picker';
 import { searchStaffAction } from '../incidents/incidents.actions';
 import { addPeriodAction, endPeriodAction, type PeriodState } from './roster.actions';
+import { buttonClass } from '@/components/ui/button';
 
 const QUIET =
   'inline-flex h-control items-center justify-center gap-2 rounded-sm px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card';
@@ -95,7 +96,7 @@ export function PeriodsPanel({
           />
         ) : (
           <div>
-            <button type="button" onClick={() => setAdding(true)} className={QUIET}>
+            <button type="button" onClick={() => setAdding(true)} className={buttonClass('primary')}>
               <Plus aria-hidden className="size-4" />
               {t('roster.period.new')}
             </button>

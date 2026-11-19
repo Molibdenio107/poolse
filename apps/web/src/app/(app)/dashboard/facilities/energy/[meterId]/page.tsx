@@ -18,6 +18,7 @@ import { GasFactorPanel } from './gas-factor-panel';
 import { FoldCard } from '@/components/fold-card';
 import { YearOnYearPanel, hasYearOnYear } from './year-on-year';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * One meter: its consumption by month, the form for the next reading, and the
@@ -432,7 +433,7 @@ export default async function MeterPage({
                   {bills.canRecord && !meter.archived && (
                     <FromLink
                       href={`${here}/invoices/new`}
-                      className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded-sm transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-surface shadow-card"
+                      className={buttonClass('secondary')}
                     >
                       <Plus className="size-4" aria-hidden="true" />
                       {t('energy.invoice.add')}

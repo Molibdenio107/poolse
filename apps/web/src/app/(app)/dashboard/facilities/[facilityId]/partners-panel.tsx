@@ -13,6 +13,7 @@ import type { FormState } from '../../actions';
 import { savePartnerAction } from './partners.actions';
 import { DownloadLink } from '@/components/download-link';
 import { Reveal } from '@/components/ui/reveal';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * Parcerias, on the facility page — POOLSE-47.
@@ -155,7 +156,7 @@ export function PartnersPanel({
               type="button"
               onClick={() => setImporting((was) => !was)}
               aria-expanded={importing}
-              className={BUTTON_QUIET}
+              className={buttonClass('secondary')}
             >
               <Upload className="size-4" aria-hidden />
               {t('partnerImport.open')}
@@ -163,7 +164,7 @@ export function PartnersPanel({
           )}
 
           {canManage && (
-            <button type="button" onClick={() => setOpen((was) => !was)} className={BUTTON_QUIET}>
+            <button type="button" onClick={() => setOpen((was) => !was)} className={buttonClass('primary')}>
               <Plus className="size-4" aria-hidden />
               {t('partners.add')}
             </button>

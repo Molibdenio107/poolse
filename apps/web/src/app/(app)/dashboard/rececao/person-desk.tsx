@@ -22,6 +22,7 @@ import { BUTTON, BUTTON_QUIET, PANEL, PANEL_TITLE } from './styles';
 import { today as todayOfClub } from '@/lib/dates';
 import { PersonCategoriesCard } from '@/components/person-categories-card';
 import { ageInYears } from '@/lib/ages';
+import { buttonClass } from '@/components/ui/button';
 
 const INITIAL: ReceptionState = { ok: false };
 
@@ -77,7 +78,7 @@ export function PersonDesk({
           <>
             <PersonSearch onPick={setChosen} />
             <div>
-              <button type="button" onClick={() => setAdding(true)} className={BUTTON_QUIET}>
+              <button type="button" onClick={() => setAdding(true)} className={buttonClass('primary')}>
                 <UserPlus aria-hidden className="size-4" />
                 {t('reception.newPerson')}
               </button>

@@ -8,6 +8,7 @@ import {
   type FacilityOption,
   type MeterOption,
 } from '../facilities/energy/[meterId]/invoices/invoice-form';
+import { scrollToId, usePageAction } from '@/components/ui/page-action';
 
 /**
  * *Importar fatura* — POOLSE-106. The Energia page's first job, folded.
@@ -63,6 +64,13 @@ export function ImportBillCard({
       // Not remembered this time; the card still works.
     }
   };
+
+  // POOLSE-232: the page header's *Importar fatura* opens this card and brings it into view.
+  usePageAction('poolse:energy-import', () => {
+    setOpen(true);
+    remember(true);
+    scrollToId('importar');
+  });
 
   return (
     <details

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Reveal } from '@/components/ui/reveal';
 import { InviteForm } from './invite-form';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * The invite form, folded away behind a button — backlog round 2, story 1.
@@ -82,7 +83,7 @@ export function InvitePanel({
           setOpening((count) => count + 1);
           setOpen(true);
         }}
-        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded-sm bg-primary text-primary-foreground font-semibold"
+        className={buttonClass('primary', 'self-start')}
       >
         {t('invite.open')}
       </button>

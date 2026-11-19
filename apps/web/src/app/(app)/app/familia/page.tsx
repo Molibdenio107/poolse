@@ -10,6 +10,7 @@ import { ChildFilter } from './child-filter';
 import { NextLessonHero } from '@/components/app/next-lesson-hero';
 import { RecentLessons } from './feedback';
 import { CalendarPlus } from 'lucide-react';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * The family agenda — POOLSE-90 slice 1 (roadmap 3.3 and 3.6).
@@ -100,7 +101,7 @@ export default async function FamilyAgenda({
       {agenda.entries.every((entry) => entry.status === 'cancelled') && (
       <Link
         href="/app/familia/inscrever"
-        className="flex min-h-control items-center justify-between gap-3 rounded-lg bg-surface p-3 shadow-card text-control font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className={buttonClass('primary', 'w-full justify-between')}
       >
         <span className="flex items-center gap-2">
           <CalendarPlus className="size-4 text-primary" aria-hidden />

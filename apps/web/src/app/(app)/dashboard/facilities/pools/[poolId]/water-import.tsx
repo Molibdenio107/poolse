@@ -30,6 +30,7 @@ import { chooseColumnForField } from '@/lib/column-mapping';
 import { Dialog } from '@/components/ui/dialog';
 import { formatReading } from '@/lib/pool-metrics';
 import { SelectList } from '@/components/ui/list-select';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * Importing a club's water log — round 5, ticket 5.
@@ -232,7 +233,7 @@ export function WaterImport({
         // Short on the button, which sits under Laboratório already; the dialog
         // it opens carries the whole name. `min-h-control` for a phone, where
         // the words may still wrap.
-        className={cn(BUTTON, 'self-start h-auto min-h-control py-1')}
+        className={buttonClass('secondary', 'self-start py-1')}
         onClick={() => setStep('reading')}
       >
         <Upload aria-hidden className="size-4 shrink-0" />

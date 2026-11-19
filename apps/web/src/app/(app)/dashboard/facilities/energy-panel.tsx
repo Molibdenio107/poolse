@@ -12,6 +12,8 @@ import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import type { FormState } from '../actions';
 import { createMeter } from './energy.actions';
 import { DIAL_SETS, UNITS_OF_CARRIER } from '@poolse/rules';
+import { buttonClass } from '@/components/ui/button';
+import { usePageAction } from '@/components/ui/page-action';
 
 /**
  * Energy — slices 5.1 and 5.2, on the site's page.
@@ -46,6 +48,8 @@ export function EnergyPanel({
   const locale = useLocale();
   const format = useFormatter();
   const [adding, setAdding] = useState(false);
+  // POOLSE-232: the Energia header's *Adicionar contador*, when the club has this one site.
+  usePageAction(`poolse:energy-add:${facilityId}`, () => setAdding(true));
 
   return (
     <div className="flex flex-col gap-4">
@@ -57,7 +61,7 @@ export function EnergyPanel({
         </p>
 
         {list.canPlan && (
-          <button type="button" onClick={() => setAdding(true)} className={BUTTON}>
+          <button type="button" onClick={() => setAdding(true)} className={buttonClass('primary')}>
             <Plus className="size-4" aria-hidden="true" />
             {t('energy.add')}
           </button>

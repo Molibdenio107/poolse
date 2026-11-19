@@ -15,6 +15,7 @@ import { SelectField, TextAreaField, TextField, useSeeded, useSuccessKey } from 
 import { cn } from '@/lib/utils';
 import type { FormState } from '../actions';
 import { createSpace } from './spaces.actions';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * Espaços — the parts of a site that are not tanks. Round 6.
@@ -194,7 +195,7 @@ export function SpacesPanel({
         </Heading>
 
         {canManage && open && (
-          <button type="button" onClick={() => setAdding(true)} className={BUTTON}>
+          <button type="button" onClick={() => setAdding(true)} className={buttonClass('primary')}>
             <Plus className="size-4" aria-hidden="true" />
             {t('spaces.add')}
           </button>

@@ -13,6 +13,7 @@ import type { FormState } from '../../../actions';
 import { METER_CARRIER_OPTIONS, METER_KINDS, UnitSelect } from '../../energy-panel';
 import { DIAL_DISPLAY_CODE, DIAL_SETS, DIALS_OF } from '@poolse/rules';
 import { archiveMeter, recordReading, removeReading, updateMeter } from '../../energy.actions';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * The controls on a meter's own page — slice 5.2.
@@ -146,7 +147,7 @@ export function ReadingForm({
       )}
 
       <div>
-        <button type="submit" disabled={pending} className={PRIMARY}>
+        <button type="submit" disabled={pending} className={buttonClass('primary')}>
           <Check className="mr-1.5 inline size-4" aria-hidden="true" />
           {t('energy.record')}
         </button>

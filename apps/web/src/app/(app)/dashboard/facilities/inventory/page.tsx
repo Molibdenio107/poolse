@@ -11,6 +11,7 @@ import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { backProp, originBack } from '@/lib/back';
 import { InventoryPanel } from './inventory-panel';
 import { LostAndFoundPanel } from './lost-and-found-panel';
+import { PageAction } from '@/components/ui/page-action';
 
 const BASE = '/dashboard/facilities/inventory';
 
@@ -119,7 +120,21 @@ export default async function InventoryPage({
       title={t('inventory.title')}
       subtitle={t('inventory.subtitle')}
       back={backProp(back, t)}
-      actions={<EntityIcon kind="facility" className="size-6 text-primary" />}
+      actions={
+        // POOLSE-232: the store room's two ways in, in the header, for who may use them.
+        data !== null && data.facilityId !== null && data.canManage && section !== 'lost' ? (
+          <div className="flex flex-wrap gap-2">
+            <PageAction event="poolse:inventory-add" icon="add">
+              {t('inventory.add')}
+            </PageAction>
+            <PageAction event="poolse:inventory-import" variant="secondary" icon="import">
+              {t('inventory.import.action')}
+            </PageAction>
+          </div>
+        ) : (
+          <EntityIcon kind="facility" className="size-6 text-primary" />
+        )
+      }
     >
       {noOrganization && (
         <section className="rounded bg-surface p-5 shadow-card">

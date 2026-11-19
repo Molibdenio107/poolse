@@ -26,6 +26,7 @@ import { PendingTurmas } from './pending-turmas';
 import { addonSportAsked } from '@/lib/modules';
 import { SportPending } from '../sport-pending';
 import { FilterSelect } from '@/components/filter-select';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * The whole week, and who is in it.
@@ -566,7 +567,7 @@ export default async function ClassesPage({
               {data.canManage && (
                 <FromLink
                   href="/dashboard/classes/new"
-                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded-sm bg-primary text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary font-semibold"
+                  className={buttonClass('primary')}
                 >
                   {t('classes.create')}
                 </FromLink>

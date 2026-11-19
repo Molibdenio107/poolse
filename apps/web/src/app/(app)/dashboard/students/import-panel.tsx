@@ -10,6 +10,7 @@ import { ImportWizard } from './import/import-wizard';
 import { Dialog } from '@/components/ui/dialog';
 import { DownloadLink } from '@/components/download-link';
 import { Reveal } from '@/components/ui/reveal';
+import { buttonClass } from '@/components/ui/button';
 
 /**
  * The import, on the register itself.
@@ -193,7 +194,7 @@ export function StudentActions({
   return (
     <>
       <div className="flex flex-wrap gap-3">
-        <FromLink href="/dashboard/students/new" className={BUTTON}>
+        <FromLink href="/dashboard/students/new" className={buttonClass('primary')}>
           {t('students.add')}
         </FromLink>
 
@@ -207,7 +208,7 @@ export function StudentActions({
             reveal();
           }}
           aria-expanded={open}
-          className={BUTTON_QUIET}
+          className={buttonClass('secondary')}
         >
           {t('students.import.action')}
         </button>

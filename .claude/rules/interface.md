@@ -17,6 +17,7 @@ Read [`docs/conventions/interface.md`](docs/conventions/interface.md) before tou
 - A section that opens and closes moves smoothly
 - Something slow says so in the corner, and the signal comes from where the work starts.
 - The look is tokens, from the design handoff
+- A page's main action is `<Button>` (`components/ui/button.tsx`), its *Importar* the outlined secondary; a header button that opens a panel is `PageAction` (POOLSE-232).
 - Every button and every form control is one size: `h-control` (36px) and `text-control` (15px).
 - On a phone the same tokens take a second value, and the shell clears the notch.
 - Form fields are controlled, never `defaultValue`.

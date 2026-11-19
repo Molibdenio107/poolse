@@ -7,6 +7,7 @@ import { backProp, originBack } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { PageError, PageShell, PageEmpty } from '@/components/page-shell';
 import { EnergyPanel } from '../facilities/energy-panel';
+import { PageAction } from '@/components/ui/page-action';
 import { listMeters } from '../facilities/energy.actions';
 import { invoiceImportAvailable } from '../facilities/energy/invoice.actions';
 import {
@@ -107,7 +108,24 @@ export default async function EnergyPage({
       back={backProp(back, t)}
       title={t('energy.title')}
       subtitle={t('energy.subtitle')}
-      actions={<EntityIcon kind="energy" className="size-6 text-primary" />}
+      actions={
+        // POOLSE-232: Energia's two ways in, in the header. *Adicionar contador* only
+        // with one site — with several, each site's own panel keeps its button.
+        canRecord && facilities.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {panels.length === 1 && panels[0]!.list?.canPlan === true && (
+              <PageAction event={`poolse:energy-add:${panels[0]!.site.id}`} icon="add">
+                {t('energy.add')}
+              </PageAction>
+            )}
+            <PageAction event="poolse:energy-import" variant="secondary" icon="import">
+              {t('energy.dashboard.importIt')}
+            </PageAction>
+          </div>
+        ) : (
+          <EntityIcon kind="energy" className="size-6 text-primary" />
+        )
+      }
     >
       {failure !== null && (
         <PageError
