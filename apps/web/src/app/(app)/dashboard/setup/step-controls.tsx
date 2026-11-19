@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
 import { useSavedAction } from '@/lib/saved';
@@ -11,9 +12,9 @@ import type { SetupStep } from './steps';
 const INITIAL: FormState = { ok: false };
 
 const PRIMARY =
-  'inline-flex h-control items-center justify-center rounded-sm bg-primary px-6 text-control font-semibold text-primary-foreground disabled:opacity-60';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-primary px-6 text-control font-semibold text-primary-foreground disabled:opacity-60';
 const SECONDARY =
-  'inline-flex h-control items-center justify-center rounded-sm bg-surface px-4 text-control shadow-card disabled:opacity-60';
+  'inline-flex h-control items-center justify-center gap-2 rounded-sm bg-surface px-4 text-control shadow-card disabled:opacity-60';
 
 /**
  * A step's way on — POOLSE-228. *Seguinte* (or the last step's own word) moves
@@ -42,6 +43,7 @@ export function StepControls({
         <form action={action}>
           <input type="hidden" name="step" value={previous} />
           <button type="submit" name="outcome" value="open" disabled={pending} className={SECONDARY}>
+            <ArrowLeft className="size-4" aria-hidden />
             {t('common.back')}
           </button>
         </form>
@@ -52,6 +54,7 @@ export function StepControls({
         <input type="hidden" name="step" value={step} />
         <button type="submit" name="outcome" value="done" disabled={pending} className={PRIMARY}>
           {t(nextLabelKey as never)}
+          <ArrowRight className="size-4" aria-hidden />
         </button>
       </form>
     </div>
