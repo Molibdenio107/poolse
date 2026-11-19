@@ -7,7 +7,7 @@ import { LinkBusy } from '@/components/link-busy';
 import { useSavedAction } from '@/lib/saved';
 import type { FormState } from '../actions';
 import { moveStepAction } from './setup.actions';
-import type { SetupStep } from './steps';
+import { SETUP_STEPS, type SetupStep } from './steps';
 
 const INITIAL: FormState = { ok: false };
 
@@ -28,13 +28,39 @@ export function StepControls({
   step,
   previous,
   nextLabelKey = 'setup.next',
+  reviewing = false,
 }: {
   step: SetupStep;
   previous: SetupStep | null;
   nextLabelKey?: string;
+  /** A finished setup opened again: the buttons only move between the steps. */
+  reviewing?: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const [, action, pending] = useSavedAction(moveStepAction, INITIAL);
+
+  if (reviewing) {
+    const at = SETUP_STEPS.indexOf(step);
+    const next = SETUP_STEPS[at + 1];
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-8">
+        {previous !== null ? (
+          <Link href={`/dashboard/setup?step=${previous}`} className={SECONDARY}>
+            <ArrowLeft className="size-4" aria-hidden />
+            {t('common.back')}
+            <LinkBusy />
+          </Link>
+        ) : (
+          <span aria-hidden />
+        )}
+        <Link href={next === undefined ? '/dashboard/welcome' : `/dashboard/setup?step=${next}`} className={PRIMARY}>
+          {next === undefined ? t('setup.toStart') : t('setup.next')}
+          <ArrowRight className="size-4" aria-hidden />
+          <LinkBusy />
+        </Link>
+      </div>
+    );
+  }
 
   return (
     // Along the setup card's bottom edge: Voltar on the left, Seguinte on the right (Rui, 19-11-2026).

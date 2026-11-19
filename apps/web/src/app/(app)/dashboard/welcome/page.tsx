@@ -21,6 +21,7 @@ import type { WizardState } from '../setup/steps';
 import type { ChecklistAnswer } from './vamos-comecar';
 import { SetupPanel } from './setup-panel';
 import { showMenusAction } from './menus.actions';
+import { ChecklistToggle } from './checklist-toggle';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 
 type Step = { href: string; icon: LucideIcon; title: string; body: string };
@@ -170,6 +171,16 @@ export default async function WelcomePage({
           siteHref={configureHref}
           isOwner={membership.roles.includes('owner')}
         />
+      )}
+
+      {/*
+        *Dispensar*, under the page and quiet, as *Terminar mais tarde* is under the
+        setup (Rui, 19-11-2026): only with the checklist showing, and the Owner's.
+      */}
+      {section === 'setup' && resume === null && checklistOpen && checklist?.canDismiss === true && (
+        <div className="flex justify-center">
+          <ChecklistToggle dismiss />
+        </div>
       )}
 
       {/*

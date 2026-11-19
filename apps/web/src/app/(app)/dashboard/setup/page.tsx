@@ -47,10 +47,16 @@ export default async function SetupPage({
   } catch (error) {
     if (!(error instanceof ApiError) || error.status !== 403) throw error;
   }
-  if (wizard === null || wizard.step === null) redirect('/dashboard/welcome');
+  if (wizard === null) redirect('/dashboard/welcome');
+  /*
+   * Nothing locks once done (Rui, 19-11-2026): a finished setup opens again, each
+   * step ticked, and its buttons only move between the steps — the pointer has
+   * nothing left to record.
+   */
+  const reviewing = wizard.step === null;
 
   const asked = (await searchParams).step;
-  const step: SetupStep = isSetupStep(asked) ? asked : wizard.step;
+  const step: SetupStep = isSetupStep(asked) ? asked : (wizard.step ?? 'club');
   const index = SETUP_STEPS.indexOf(step);
   const previous = index > 0 ? SETUP_STEPS[index - 1]! : null;
 
@@ -63,11 +69,12 @@ export default async function SetupPage({
       */}
       <SetupHeader
         step={step}
-        behind={SETUP_STEPS.indexOf(wizard.step)}
+        behind={wizard.step === null ? SETUP_STEPS.length : SETUP_STEPS.indexOf(wizard.step)}
         footer={
           <StepControls
             step={step}
             previous={previous}
+            reviewing={reviewing}
             {...(step === 'import' ? { nextLabelKey: 'setup.step.import.none' } : {})}
           />
         }

@@ -8875,7 +8875,9 @@
     },
     "skippedLong": "Ficou para mais tarde.",
     "toCome": "A seguir.",
-    "begin": "Começar a configuração"
+    "begin": "Começar a configuração",
+    "review": "Rever os passos da configuração",
+    "toStart": "Voltar ao Início"
   },
   "checklist": {
     "title": "Vamos começar",

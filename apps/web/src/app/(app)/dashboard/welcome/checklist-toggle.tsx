@@ -25,7 +25,7 @@ export function ChecklistToggle({ dismiss }: { dismiss: boolean }): React.ReactE
           message={t('checklist.dismissMessage')}
           confirmLabel={t('checklist.dismiss')}
           disabled={pending}
-          className="inline-flex min-h-control items-center text-sm text-foreground-muted hover:text-foreground"
+          className="inline-flex min-h-control items-center text-xs text-foreground-muted hover:text-foreground"
         >
           {t('checklist.dismiss')}
         </ConfirmButton>

@@ -8875,7 +8875,9 @@
     },
     "skippedLong": "Left for later.",
     "toCome": "Coming up.",
-    "begin": "Start setting up"
+    "begin": "Start setting up",
+    "review": "Review the setup steps",
+    "toStart": "Back to Home"
   },
   "checklist": {
     "title": "Getting started",

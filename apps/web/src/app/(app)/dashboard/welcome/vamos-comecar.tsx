@@ -3,7 +3,6 @@ import { ArrowRight, Check, Circle } from 'lucide-react';
 import { FromLink } from '@/components/from-link';
 import { StartTourButton } from '@/components/tour/start-tour-button';
 import { cn } from '@/lib/utils';
-import { ChecklistToggle } from './checklist-toggle';
 
 export type ChecklistKey =
   | 'club_details'
@@ -70,7 +69,6 @@ export async function VamosComecar({
           </h2>
           <p className="text-sm text-foreground-muted">{t('checklist.progress', { done: finished, total })}</p>
         </div>
-        {answer.canDismiss && <ChecklistToggle dismiss />}
       </div>
 
       <ul className="flex flex-col divide-y divide-border">
@@ -102,12 +100,13 @@ export async function VamosComecar({
           return (
             <li key={item.key} className="flex items-start gap-3 py-3 first:pt-1 last:pb-1">
               {item.done ? null : mark}
-              {item.key === 'tour' && !item.done ? (
+              {/* Nothing locks once done (Rui, 19-11-2026): a done line can be opened again. */}
+              {item.key === 'tour' ? (
                 <span className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
                   {label}
-                  <StartTourButton />
+                  <StartTourButton {...(item.done ? { labelKey: 'tour.replay' } : {})} />
                 </span>
-              ) : target !== null && !item.done ? (
+              ) : target !== null ? (
                 <FromLink
                   href={target}
                   className="group flex min-w-0 flex-1 items-start gap-2 rounded hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"

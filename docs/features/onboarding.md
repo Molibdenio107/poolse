@@ -115,6 +115,11 @@ behind pills (`?section=setup|start`):
 
 ## Vamos começar (POOLSE-229)
 
+**Nothing locks once done** (Rui, 19-11-2026). A done line keeps its link, and the tour's line offers
+*Rever visita guiada*. A finished setup opens again from *Rever os passos da configuração*,
+every step ticked, its buttons only moving between steps (*Voltar ao Início* at the end).
+*Dispensar* sits under the page, centred and small, like *Terminar mais tarde*.
+
 On Início's setup page, for a club's Owner and Admins: what the club still needs, each line ticked by
 the API from the club's own data (`readChecklist`, one statement) and linked to its screen.
 

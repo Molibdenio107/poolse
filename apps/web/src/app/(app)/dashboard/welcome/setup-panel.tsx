@@ -53,6 +53,15 @@ export async function SetupPanel({
               {t('checklist.title')}
             </h2>
             {checklist !== null && <VamosComecar answer={checklist} siteHref={siteHref} isOwner={isOwner} />}
+            {/* A finished setup can be opened again, step by step (Rui, 19-11-2026). */}
+            {wizard !== null && (
+              <FromLink
+                href="/dashboard/setup?step=club"
+                className="self-center text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {t('setup.review')}
+              </FromLink>
+            )}
           </>
         )}
       </div>
@@ -86,15 +95,16 @@ function WizardProgress({
           const skipped = wizard.skipped.includes(key) && !current;
           const done = index < at && !skipped;
           return (
-            <li
-              key={key}
-              aria-current={current ? 'step' : undefined}
-              className={cn(
-                'onboard-rise flex items-start gap-3 rounded p-3',
-                current ? 'bg-primary/10 ring-1 ring-primary/40' : 'bg-surface-muted/60',
-              )}
-              style={{ '--i': index + 1 } as React.CSSProperties}
-            >
+            <li key={key} className="onboard-rise" style={{ '--i': index + 1 } as React.CSSProperties}>
+              {/* Every step opens again, done or not (Rui, 19-11-2026). */}
+              <FromLink
+                href={`/dashboard/setup?step=${key}`}
+                aria-current={current ? 'step' : undefined}
+                className={cn(
+                  'flex items-start gap-3 rounded p-3 transition-colors hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                  current ? 'bg-primary/10 ring-1 ring-primary/40' : 'bg-surface-muted/60',
+                )}
+              >
               <span
                 aria-hidden
                 className={cn(
@@ -122,6 +132,7 @@ function WizardProgress({
                         : t('setup.toCome')}
                 </span>
               </span>
+              </FromLink>
             </li>
           );
         })}
