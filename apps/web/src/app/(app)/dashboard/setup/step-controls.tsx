@@ -36,27 +36,33 @@ export function StepControls({
   const [, action, pending] = useSavedAction(moveStepAction, INITIAL);
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      {/* Voltar on the left, Seguinte on the right (Rui, 19-11-2026). */}
-      <div className="flex w-full flex-wrap items-center justify-between gap-3 rounded bg-surface p-4 shadow-card">
-        {previous !== null ? (
-          <form action={action}>
-            <input type="hidden" name="step" value={previous} />
-            <button type="submit" name="outcome" value="open" disabled={pending} className={SECONDARY}>
-              {t('common.back')}
-            </button>
-          </form>
-        ) : (
-          <span aria-hidden />
-        )}
+    // Along the setup card's bottom edge: Voltar on the left, Seguinte on the right (Rui, 19-11-2026).
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-8">
+      {previous !== null ? (
         <form action={action}>
-          <input type="hidden" name="step" value={step} />
-          <button type="submit" name="outcome" value="done" disabled={pending} className={PRIMARY}>
-            {t(nextLabelKey as never)}
+          <input type="hidden" name="step" value={previous} />
+          <button type="submit" name="outcome" value="open" disabled={pending} className={SECONDARY}>
+            {t('common.back')}
           </button>
         </form>
-      </div>
-      {/* Leaving for later is the quiet way out: below the card, centred, smaller. */}
+      ) : (
+        <span aria-hidden />
+      )}
+      <form action={action}>
+        <input type="hidden" name="step" value={step} />
+        <button type="submit" name="outcome" value="done" disabled={pending} className={PRIMARY}>
+          {t(nextLabelKey as never)}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+/** Leaving for later, the quiet way out: under the card, centred, smaller. */
+export function FinishLater(): React.ReactElement {
+  const t = useTranslations();
+  return (
+    <div className="flex justify-center">
       <Link
         href="/dashboard/welcome"
         className="inline-flex min-h-control items-center text-xs text-foreground-muted hover:text-foreground"

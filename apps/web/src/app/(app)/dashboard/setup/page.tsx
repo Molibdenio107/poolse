@@ -12,14 +12,14 @@ import { CityPicker } from '../facilities/[facilityId]/city-picker';
 import { HoursPanel } from '../facilities/[facilityId]/hours-panel';
 import { readTaxSettings } from '../facilities/[facilityId]/club.actions';
 import { InviteForm } from '../facilities/staff/invite-form';
-import { StepControls } from './step-controls';
+import { FinishLater, StepControls } from './step-controls';
 import { SetupHeader } from './stepper';
 import { isSetupStep, SETUP_STEPS, type SetupStep, type WizardState } from './steps';
 
 /** The staff roles an Owner invites here; family roles come from the student (POOLSE-129). */
 const TEAM_ROLES = ['admin', 'instructor', 'maintenance'];
 
-const CARD = 'flex flex-col gap-4 rounded bg-surface p-5 shadow-card';
+const CARD = 'flex flex-col gap-4 border-t border-border px-5 py-6 sm:px-8';
 /** The card keeps the page's width; what is in it sits in a centred column (Rui, 19-11-2026). */
 const INNER = 'mx-auto flex w-full max-w-2xl flex-col gap-4';
 const HEADING = 'text-sm font-medium uppercase tracking-wider text-foreground-muted';
@@ -56,18 +56,28 @@ export default async function SetupPage({
 
   return (
     <PageShell title={t('setup.title')}>
-      <SetupHeader step={step} behind={SETUP_STEPS.indexOf(wizard.step)} />
-
-      {step === 'club' && <ClubStep />}
-      {step === 'places' && <PlacesStep />}
-      {step === 'team' && <TeamStep />}
-      {step === 'import' && <ImportStep />}
-
-      <StepControls
+      {/*
+        One card for the whole step (Rui, 19-11-2026): the banner and the steps on
+        top, the step's sections below them between hairlines, the buttons along
+        the bottom edge. Leaving for later sits under the card.
+      */}
+      <SetupHeader
         step={step}
-        previous={previous}
-        {...(step === 'import' ? { nextLabelKey: 'setup.step.import.none' } : {})}
-      />
+        behind={SETUP_STEPS.indexOf(wizard.step)}
+        footer={
+          <StepControls
+            step={step}
+            previous={previous}
+            {...(step === 'import' ? { nextLabelKey: 'setup.step.import.none' } : {})}
+          />
+        }
+      >
+        {step === 'club' && <ClubStep />}
+        {step === 'places' && <PlacesStep />}
+        {step === 'team' && <TeamStep />}
+        {step === 'import' && <ImportStep />}
+      </SetupHeader>
+      <FinishLater />
     </PageShell>
   );
 }
@@ -83,7 +93,11 @@ async function firstSite(): Promise<FacilityDetail | null> {
 async function ClubStep(): Promise<React.ReactElement> {
   const t = await getTranslations();
   const [tax, site] = await Promise.all([readTaxSettings(), firstSite().catch(() => null)]);
-  if (tax.state !== 'ok') return <PageError message={t('setup.loadFailed')} />;
+  if (tax.state !== 'ok') return (
+      <div className={CARD}>
+        <PageError message={t('setup.loadFailed')} />
+      </div>
+    );
   const locale = await getLocale();
   const regionNames = new Intl.DisplayNames([locale], { type: 'region' });
   const countries = COUNTRY_CODES.map((code) => ({ value: code, label: regionNames.of(code) ?? code })).sort(
@@ -91,7 +105,7 @@ async function ClubStep(): Promise<React.ReactElement> {
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col">
       <section className={CARD}>
         <div className={INNER}>
         <h3 className={HEADING}>{t('settings.tax.title')}</h3>
@@ -131,7 +145,7 @@ async function ClubStep(): Promise<React.ReactElement> {
         <ClubContactsPanel settings={tax.data} />
         </div>
       </section>
-      <LogoPanel centered />
+      <LogoPanel embedded />
     </div>
   );
 }
@@ -140,10 +154,14 @@ async function ClubStep(): Promise<React.ReactElement> {
 async function PlacesStep(): Promise<React.ReactElement> {
   const t = await getTranslations();
   const site = await firstSite().catch(() => null);
-  if (site === null) return <PageError message={t('setup.loadFailed')} />;
+  if (site === null) return (
+      <div className={CARD}>
+        <PageError message={t('setup.loadFailed')} />
+      </div>
+    );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col">
       <section className={CARD}>
         <div className={INNER}>
         <h3 className={HEADING}>{t('setup.step.places.pools')}</h3>
@@ -182,7 +200,11 @@ async function PlacesStep(): Promise<React.ReactElement> {
 async function TeamStep(): Promise<React.ReactElement> {
   const t = await getTranslations();
   const people = await apiFetch<People>('/people?page=1').catch(() => null);
-  if (people === null) return <PageError message={t('setup.loadFailed')} />;
+  if (people === null) return (
+      <div className={CARD}>
+        <PageError message={t('setup.loadFailed')} />
+      </div>
+    );
   const roles = people.grantableRoles.filter((role) => TEAM_ROLES.includes(role));
 
   return (
@@ -201,6 +223,8 @@ async function ImportStep(): Promise<React.ReactElement> {
     'flex items-start gap-3 rounded border border-border p-4 transition-colors hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary';
 
   return (
+    <section className={CARD}>
+      <div className={INNER}>
     <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <li className="flex">
         <FromLink href="/dashboard/students/import" className={`${link} w-full`}>
@@ -221,5 +245,7 @@ async function ImportStep(): Promise<React.ReactElement> {
         </FromLink>
       </li>
     </ul>
+      </div>
+    </section>
   );
 }

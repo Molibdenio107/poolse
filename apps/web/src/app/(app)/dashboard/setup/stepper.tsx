@@ -23,7 +23,19 @@ export const STEP_ICON: Record<SetupStep, LucideIcon> = {
  * link, so the Owner can go back to one or look ahead; the words under each
  * circle carry the meaning, never the colour alone.
  */
-export async function SetupHeader({ step, behind }: { step: SetupStep; behind: number }): Promise<React.ReactElement> {
+export async function SetupHeader({
+  step,
+  behind,
+  children,
+  footer,
+}: {
+  step: SetupStep;
+  behind: number;
+  /** The step's own sections, inside this same card (Rui, 19-11-2026). */
+  children?: React.ReactNode;
+  /** Voltar and Seguinte, along the card's bottom edge. */
+  footer?: React.ReactNode;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
   const Icon = STEP_ICON[step];
   const at = SETUP_STEPS.indexOf(step);
@@ -98,6 +110,8 @@ export async function SetupHeader({ step, behind }: { step: SetupStep; behind: n
           <p className="max-w-xl text-sm text-foreground-muted">{t(`setup.step.${step}.hint`)}</p>
         </div>
       </div>
+      {children}
+      {footer}
     </section>
   );
 }

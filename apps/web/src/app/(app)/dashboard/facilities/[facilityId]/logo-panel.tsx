@@ -15,10 +15,10 @@ import { storageConfigured } from '@/lib/storage-status';
  * admin, as the rest of the page.
  */
 export async function LogoPanel({
-  centered = false,
+  embedded = false,
 }: {
-  /** The setup wizard's look: the card full width, its content in a centred column. */
-  centered?: boolean;
+  /** Inside the setup's one card: a section under a hairline, its content in a centred column. */
+  embedded?: boolean;
 } = {}): Promise<React.ReactElement> {
   const t = await getTranslations();
   const [{ fileId }, ready] = await Promise.all([
@@ -28,8 +28,14 @@ export async function LogoPanel({
   const url = fileUrl(fileId);
 
   return (
-    <section className="flex flex-col gap-3 rounded bg-surface p-5 shadow-card">
-      <div className={centered ? 'mx-auto flex w-full max-w-2xl flex-col gap-3' : 'contents'}>
+    <section
+      className={
+        embedded
+          ? 'flex flex-col gap-3 border-t border-border px-5 py-6 sm:px-8'
+          : 'flex flex-col gap-3 rounded bg-surface p-5 shadow-card'
+      }
+    >
+      <div className={embedded ? 'mx-auto flex w-full max-w-2xl flex-col gap-3' : 'contents'}>
       <div>
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('files.logoTitle')}
